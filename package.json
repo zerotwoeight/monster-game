@@ -1,0 +1,10 @@
+{
+  "name": "monster-board-game",
+  "version": "1.0.0",
+  "description": "Monster board game — local multiplayer prototype",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {}
+}

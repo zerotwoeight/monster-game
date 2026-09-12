@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Art Preview — Summoners' Gambit</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg:#0d0e1c; --bg-deep:#10111e; --surface:#1c1e2b; --surface2:#1e2030;
+  --border:#272a38; --border2:#3f424d;
+  --text:#e9e9ed; --text-lo:#b2b6ca; --text-dim:#9397ab; --text-mute:#75798c;
+  --accent:#9184d9; --accent-lit:#b5abfc;
+  --gold:#a97b40; --gold-glow:#c9a05a;
+  --el-Light:#e0c07a; --el-Dark:#6b6b7a; --el-Arcane:#7f92e8;
+  --el-Undead:#5fb3a4; --el-Beast:#d98a5a; --el-Nature:#3aaa5c;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh;padding-bottom:80px;}
+
+/* Header */
+.site-header{background:var(--bg-deep);border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100;flex-wrap:wrap;}
+.site-logo{font-family:'Cinzel',serif;font-size:17px;font-weight:700;letter-spacing:.08em;color:var(--gold-glow);}
+.site-ver{font-size:10px;color:var(--text-mute);letter-spacing:.12em;text-transform:uppercase;}
+.nav-pills{display:flex;gap:5px;margin-left:auto;flex-wrap:wrap;}
+.nav-pill{font-size:11px;font-family:'Cinzel',serif;padding:5px 13px;border-radius:20px;border:1px solid var(--border2);color:var(--text-lo);background:transparent;cursor:pointer;text-decoration:none;letter-spacing:.05em;transition:all .15s;}
+.nav-pill:hover{border-color:var(--accent);color:var(--accent-lit);}
+.nav-pill.active{border-color:var(--gold);background:rgba(169,123,64,.12);color:var(--gold-glow);}
+
+/* Server notice */
+.server-notice{background:rgba(145,132,217,.1);border:1px solid rgba(145,132,217,.35);border-radius:8px;margin:18px 28px 0;padding:10px 16px;display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--text-lo);}
+.server-notice strong{color:var(--accent-lit);font-family:'Cinzel',serif;letter-spacing:.04em;}
+
+/* Summary bar */
+.summary-bar{margin:12px 28px 0;padding:10px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-size:11px;}
+.summary-bar .sb-label{color:var(--text-mute);letter-spacing:.04em;text-transform:uppercase;font-family:'Cinzel',serif;font-size:10px;}
+.summary-bar .sb-count{font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;}
+.sb-group{display:flex;flex-direction:column;gap:2px;}
+
+/* Layout */
+.section{padding:36px 28px 16px;}
+.section-title{font-family:'Cinzel',serif;font-size:20px;font-weight:700;letter-spacing:.1em;margin-bottom:4px;}
+.section-sub{font-size:11px;color:var(--text-mute);margin-bottom:24px;font-family:monospace;letter-spacing:.02em;}
+.section-divider{height:1px;background:var(--border);margin:8px 28px;}
+
+/* Card rows */
+.card-row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start;}
+
+/* Card outer wrapper */
+.card-outer{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;}
+.card-title{font-family:'Cinzel',serif;font-size:12px;font-weight:700;letter-spacing:.06em;text-align:center;}
+.card-sizes{display:flex;gap:10px;align-items:flex-end;}
+.card-size-wrap{display:flex;flex-direction:column;align-items:center;gap:5px;}
+.size-tag{font-size:9px;color:var(--text-mute);background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:1px 6px;letter-spacing:.04em;font-family:monospace;}
+
+/* PNG status badge */
+.png-badge{font-size:9px;font-weight:600;padding:2px 8px;border-radius:10px;font-family:'Cinzel',serif;letter-spacing:.04em;white-space:nowrap;}
+.png-badge.loading{background:rgba(115,121,140,.12);border:1px solid var(--border2);color:var(--text-mute);}
+.png-badge.ok{background:rgba(79,145,83,.18);border:1px solid #4f9153;color:#7dd982;}
+.png-badge.svg{background:rgba(145,132,217,.15);border:1px solid var(--accent);color:var(--accent-lit);}
+.png-badge.ph{background:rgba(201,160,90,.12);border:1px solid var(--gold);color:var(--gold-glow);}
+
+/* Path link */
+.path-link{font-size:9px;color:var(--accent);font-family:monospace;text-align:center;text-decoration:none;letter-spacing:.02em;padding:2px 4px;border-radius:3px;transition:background .12s;}
+.path-link:hover{background:rgba(145,132,217,.15);color:var(--accent-lit);text-decoration:underline;}
+
+/* ── Tile card board (70×102) ── */
+.tc-board{width:70px;height:102px;border-radius:6px;overflow:hidden;border:2px solid rgba(255,255,255,.1);position:relative;flex-shrink:0;background:#0d0e1c;}
+.tc-board .tc-img{width:100%;height:100%;object-fit:cover;display:block;}
+.tc-board .tc-svg{width:100%;height:100%;display:block;}
+.tc-board .tc-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px;}
+.tc-board .tc-lbl{position:absolute;bottom:4px;left:0;right:0;text-align:center;font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-family:'Cinzel',serif;text-shadow:0 1px 4px rgba(0,0,0,.95);pointer-events:none;}
+
+/* ── Tile card player (144×180) ── */
+.tc-player{width:144px;height:180px;border-radius:10px;overflow:hidden;border:2px solid;position:relative;flex-shrink:0;background:#0d0e1c;}
+.tc-player .tc-img{width:100%;height:100%;object-fit:cover;display:block;}
+.tc-player .tc-svg{width:100%;height:100%;display:block;}
+.tc-player .tc-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:48px;}
+.tc-player .tc-el-bar{position:absolute;bottom:0;left:0;right:0;padding:7px 10px 9px;background:linear-gradient(to top,rgba(0,0,0,.88) 0%,transparent 100%);}
+.tc-player .tc-el-lbl{font-family:'Cinzel',serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;}
+
+/* ── Monster full card (130×186) ── */
+.mc-full{width:130px;height:186px;border-radius:10px;overflow:hidden;border:2px solid;position:relative;flex-shrink:0;background:#0d0e1c;}
+.mc-full .mc-art{position:absolute;inset:0;width:100%;height:100%;}
+.mc-full .mc-art img{width:100%;height:100%;object-fit:cover;display:block;}
+.mc-full .mc-svg{position:absolute;inset:0;width:100%;height:100%;display:block;}
+.mc-full .mc-overlay{position:absolute;bottom:0;left:0;right:0;padding:6px 7px 7px;background:linear-gradient(to top,rgba(10,8,25,.97) 0%,rgba(10,8,25,.65) 55%,transparent 100%);}
+.mc-full .mc-name{font-size:10px;font-weight:700;font-family:'Cinzel',serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mc-full .mc-hp-row{display:flex;align-items:center;gap:4px;margin:3px 0;}
+.mc-full .mc-hp-track{flex:1;height:3px;background:rgba(255,255,255,.15);border-radius:2px;}
+.mc-full .mc-hp-fill{height:100%;border-radius:2px;width:100%;}
+.mc-full .mc-hp-num{font-size:9px;color:rgba(255,255,255,.45);font-variant-numeric:tabular-nums;}
+.mc-full .mc-stats{display:flex;gap:5px;}
+.mc-full .mc-stat{display:flex;flex-direction:column;align-items:center;}
+.mc-full .mc-stat-lbl{font-size:7px;color:rgba(255,255,255,.4);letter-spacing:.05em;text-transform:uppercase;}
+.mc-full .mc-stat-val{font-size:10px;font-weight:700;color:#e8e4f4;font-variant-numeric:tabular-nums;}
+.mc-full .mc-special{position:absolute;top:5px;left:5px;font-size:7px;background:rgba(145,132,217,.35);border:1px solid rgba(145,132,217,.55);border-radius:10px;padding:2px 5px;color:#c5bfee;font-family:'Cinzel',serif;z-index:2;}
+.mc-full .mc-arch{position:absolute;top:5px;right:5px;font-size:7px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:2px 5px;color:rgba(255,255,255,.55);font-family:'Cinzel',serif;z-index:2;}
+
+/* ── Monster mini card (70×100) ── */
+.mc-mini{width:70px;height:100px;border-radius:7px;overflow:hidden;border:1.5px solid;position:relative;flex-shrink:0;background:#0d0e1c;}
+.mc-mini .mc-art{position:absolute;inset:0;width:100%;height:100%;}
+.mc-mini .mc-art img{width:100%;height:100%;object-fit:cover;display:block;}
+.mc-mini .mc-svg{position:absolute;inset:0;width:100%;height:100%;display:block;}
+.mc-mini .mc-strip{position:absolute;bottom:0;left:0;right:0;height:6px;}
+
+/* Info column */
+.info-col{display:flex;flex-direction:column;gap:8px;align-self:center;}
+.monster-name{font-family:'Cinzel',serif;font-size:13px;font-weight:700;letter-spacing:.06em;}
+.monster-arch{font-size:10px;color:var(--text-mute);letter-spacing:.04em;margin-top:1px;}
+.stats-pill{display:flex;gap:8px;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;font-variant-numeric:tabular-nums;}
+.sp-item{display:flex;flex-direction:column;align-items:center;gap:1px;}
+.sp-lbl{font-size:7px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.07em;}
+.sp-val{font-size:12px;font-weight:600;color:var(--text-lo);}
+.ability-txt{font-size:10px;color:var(--text-dim);max-width:160px;line-height:1.45;font-style:italic;}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <span class="site-logo">Summoners' Gambit</span>
+  <span class="site-ver">Art Preview · v0.1.5</span>
+  <nav class="nav-pills">
+    <a class="nav-pill active" href="#tiles">Tiles</a>
+    <a class="nav-pill" href="#light">Light</a>
+    <a class="nav-pill" href="#dark">Dark</a>
+    <a class="nav-pill" href="#arcane">Arcane</a>
+    <a class="nav-pill" href="#undead">Undead</a>
+    <a class="nav-pill" href="#beast">Beast</a>
+    <a class="nav-pill" href="#nature">Nature</a>
+  </nav>
+</header>
+
+<div class="server-notice">
+  ⚠ <strong>Server Required</strong> &nbsp;—&nbsp; Open this page via the Node server:
+  <code style="background:rgba(0,0,0,.3);padding:2px 7px;border-radius:4px;font-size:11px;">http://&lt;your-ip&gt;:3000/art-preview.html</code>
+  &nbsp; Images won't load if you open the file directly.
+</div>
+
+<div class="summary-bar" id="summary-bar">
+  <div class="sb-group"><span class="sb-label">Tiles PNG</span><span class="sb-count" id="sb-tiles" style="color:#7dd982">—/10</span></div>
+  <div class="sb-group"><span class="sb-label">Monster PNG</span><span class="sb-count" id="sb-monsters" style="color:#7dd982">—/24</span></div>
+  <div class="sb-group"><span class="sb-label">SVG Fallback</span><span class="sb-count" id="sb-svg" style="color:var(--accent-lit)">—</span></div>
+  <div style="margin-left:auto;font-size:10px;color:var(--text-mute);">Click any path to open the file in a new tab</div>
+</div>
+
+<!-- Tiles -->
+<div id="tiles" class="section">
+  <div class="section-title">Tile Cards</div>
+  <div class="section-sub">public/img/tiles/tile-*.png — 10 tile types, board size (70×102) and player size (144×180)</div>
+  <div id="tile-grid" class="card-row"></div>
+</div>
+
+<div class="section-divider"></div>
+<div id="light"  class="section"><div class="section-title" style="color:var(--el-Light)">Light</div><div class="section-sub">public/img/monsters/monster-[id].png &amp; monster-[id]-mini.png</div><div id="light-grid"  class="card-row"></div></div>
+<div class="section-divider"></div>
+<div id="dark"   class="section"><div class="section-title" style="color:var(--el-Dark)">Dark</div><div class="section-sub">public/img/monsters/monster-[id].png &amp; monster-[id]-mini.png</div><div id="dark-grid"   class="card-row"></div></div>
+<div class="section-divider"></div>
+<div id="arcane" class="section"><div class="section-title" style="color:var(--el-Arcane)">Arcane</div><div class="section-sub">public/img/monsters/monster-[id].png &amp; monster-[id]-mini.png</div><div id="arcane-grid" class="card-row"></div></div>
+<div class="section-divider"></div>
+<div id="undead" class="section"><div class="section-title" style="color:var(--el-Undead)">Undead</div><div class="section-sub">public/img/monsters/monster-[id].png &amp; monster-[id]-mini.png</div><div id="undead-grid" class="card-row"></div></div>
+<div class="section-divider"></div>
+<div id="beast"  class="section"><div class="section-title" style="color:var(--el-Beast)">Beast</div><div class="section-sub">public/img/monsters/monster-[id].png &amp; monster-[id]-mini.png</div><div id="beast-grid"  class="card-row"></div></div>
+<div class="section-divider"></div>
+<div id="nature" class="section"><div class="section-title" style="color:var(--el-Nature)">Nature</div><div class="section-sub">public/img/monsters/monster-[id].png &amp; monster-[id]-mini.png</div><div id="nature-grid" class="card-row"></div></div>
+
+<script>
+// ─── Data ─────────────────────────────────────────────────────────────────────
+const TYPE_COLOR = {
+  Light:'#e0c07a', Dark:'#6b6b7a', Arcane:'#7f92e8',
+  Undead:'#5fb3a4', Beast:'#d98a5a', Nature:'#3aaa5c'
+};
+
+const TILES = [
+  {key:'Light',  src:'/img/tiles/tile-light.png',   label:'Light',     icon:null},
+  {key:'Dark',   src:'/img/tiles/tile-dark.png',    label:'Dark',      icon:null},
+  {key:'Arcane', src:'/img/tiles/tile-arcane.png',  label:'Arcane',    icon:null},
+  {key:'Undead', src:'/img/tiles/tile-undead.png',  label:'Undead',    icon:null},
+  {key:'Beast',  src:'/img/tiles/tile-beast.png',   label:'Beast',     icon:null},
+  {key:'Nature', src:'/img/tiles/tile-nature.png',  label:'Nature',    icon:null},
+  {key:'chest',  src:'/img/tiles/tile-chest.png',   label:'Chest',     icon:'❖'},
+  {key:'heal',   src:'/img/tiles/tile-heal.png',    label:'Healing',   icon:'✦'},
+  {key:'temple', src:'/img/tiles/tile-temple.png',  label:'Temple',    icon:'❖'},
+  {key:'start',  src:'/img/tiles/tile-well.png',    label:'Mana Well', icon:'✦'},
+];
+
+const MONSTERS = [
+  {id:'solar_knight',  name:'Solar Knight',  type:'Light',  arch:'Glass',    hp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
+  {id:'dawnguard',     name:'Dawnguard',     type:'Light',  arch:'Tanky',    hp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
+  {id:'high_paladin',  name:'High Paladin',  type:'Light',  arch:'Balanced', hp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'ardent_saint',  name:'Ardent Saint',  type:'Light',  arch:'Special',  hp:65, atk:15, def:15, cost:20, gen:5, isSpecial:true,
+    ability:'Aura of Renewal — heals all friendly stationed monsters 5 HP/turn'},
+  {id:'nightshard',    name:'Nightshard',    type:'Dark',   arch:'Glass',    hp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
+  {id:'void_sentinel', name:'Void Sentinel', type:'Dark',   arch:'Tanky',    hp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
+  {id:'shadow_paladin',name:'Shadow Paladin',type:'Dark',   arch:'Balanced', hp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'succubus',      name:'Succubus',      type:'Dark',   arch:'Special',  hp:45, atk:32, def:10, cost:20, gen:5, isSpecial:true,
+    ability:'Mana Drain — win a battle → steal 10 Mana from loser'},
+  {id:'sorcerer',       name:'Sorcerer',       type:'Arcane', arch:'Glass',    hp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
+  {id:'rune_priestess', name:'Rune Priestess', type:'Arcane', arch:'Tanky',    hp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
+  {id:'arch_mage',      name:'Arch Mage',      type:'Arcane', arch:'Balanced', hp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'arcane_arbiter', name:'Arcane Arbiter', type:'Arcane', arch:'Special',  hp:40, atk:27, def:15, cost:20, gen:5, isSpecial:true,
+    ability:'Nullify — cancel type modifier once per battle (forces 1× neutral)'},
+  {id:'bone_wraith',  name:'Bone Wraith',  type:'Undead', arch:'Glass',    hp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
+  {id:'death_knight', name:'Death Knight', type:'Undead', arch:'Tanky',    hp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
+  {id:'shade_walker', name:'Shade Walker', type:'Undead', arch:'Balanced', hp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'demon_lord',   name:'Demon Lord',   type:'Undead', arch:'Special',  hp:85, atk:17, def:8,  cost:20, gen:5, isSpecial:true,
+    ability:'Last Rite — survives at 15 HP when HP hits 0 (once per game)'},
+  {id:'razorclaw',   name:'Razorclaw',   type:'Beast', arch:'Glass',    hp:20, atk:27, def:8, cost:8,  gen:2, isSpecial:false},
+  {id:'iron_hide',   name:'Iron Hide',   type:'Beast', arch:'Tanky',    hp:55, atk:10, def:8, cost:12, gen:3, isSpecial:false},
+  {id:'pack_hunter', name:'Pack Hunter', type:'Beast', arch:'Balanced', hp:35, atk:17, def:9, cost:10, gen:2, isSpecial:false},
+  {id:'red_dragon',  name:'Red Dragon',  type:'Beast', arch:'Special',  hp:35, atk:40, def:9, cost:20, gen:5, isSpecial:true,
+    ability:'Intimidate — adjacent tile owners pay 5 Mana when their tile is claimed'},
+  {id:'thornling',   name:'Thornling',   type:'Nature', arch:'Glass',    hp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
+  {id:'ancient_oak', name:'Ancient Oak', type:'Nature', arch:'Tanky',    hp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
+  {id:'grove_warden',name:'Grove Warden',type:'Nature', arch:'Balanced', hp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'world_tree',  name:'World Tree',  type:'Nature', arch:'Special',  hp:55, atk:22, def:13, cost:20, gen:5, isSpecial:true,
+    ability:'Deep Roots — +1 Mana Gen per Nature tile controlled'},
+];
+
+// ─── SVG art generators (verbatim from board.html) ────────────────────────────
+let _uid=0; function uid(){return 'p'+(++_uid);}
+function svgLight(c,w,h){const id=uid(),cx=w/2,cy=h*.43;const rays=Array.from({length:8},(_,i)=>{const a=i*45*Math.PI/180,sp=.055,L=w*1.5;return`<polygon points="${cx},${cy} ${cx+Math.cos(a-sp)*L},${cy+Math.sin(a-sp)*L} ${cx+Math.cos(a+sp)*L},${cy+Math.sin(a+sp)*L}" fill="${c}" opacity=".065"/>`;}).join('');return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="43%" r="80%"><stop offset="0%" stop-color="#221c4a"/><stop offset="100%" stop-color="#0c0a1e"/></radialGradient><radialGradient id="g${id}" cx="50%" cy="43%" r="44%"><stop offset="0%" stop-color="${c}" stop-opacity=".5"/><stop offset="100%" stop-color="${c}" stop-opacity="0"/></radialGradient><filter id="f${id}"><feGaussianBlur stdDeviation="2.5"/></filter></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/>${rays}<ellipse cx="${cx}" cy="${cy}" rx="${w*.38}" ry="${h*.3}" fill="url(#g${id})"/><circle cx="${cx}" cy="${cy}" r="${w*.23}" fill="none" stroke="${c}" stroke-width=".8" opacity=".3"/><circle cx="${cx}" cy="${cy}" r="${w*.12}" fill="none" stroke="${c}" stroke-width="1.2" opacity=".5"/><g filter="url(#f${id})" fill="${c}" opacity=".55"><ellipse cx="${cx}" cy="${cy-h*.16}" rx="5.5" ry="6"/><rect x="${cx-6}" y="${cy-h*.09}" width="12" height="${h*.32}" rx="2"/><polygon points="${cx-6},${cy-h*.05} ${cx-12},${cy+h*.2} ${cx-8},${cy+h*.2}"/><polygon points="${cx+6},${cy-h*.05} ${cx+12},${cy+h*.2} ${cx+8},${cy+h*.2}"/></g><g fill="${c}" opacity=".8"><ellipse cx="${cx}" cy="${cy-h*.16}" rx="4" ry="4.5"/><rect x="${cx-5}" y="${cy-h*.09}" width="10" height="${h*.32}" rx="1.5"/><rect x="${cx-8}" y="${cy-h*.02}" width="16" height="3.5" rx="1" opacity=".85"/><polygon points="${cx-5},${cy-h*.05} ${cx-10},${cy+h*.2} ${cx-7},${cy+h*.2}"/><polygon points="${cx+5},${cy-h*.05} ${cx+10},${cy+h*.2} ${cx+7},${cy+h*.2}"/></g></svg>`;}
+function svgDark(c,w,h){const id=uid(),cx=w/2,cy=h*.45;const tendrils=Array.from({length:6},(_,i)=>{const a=i*60*Math.PI/180,L=w*(.5+i*.06);const sx=cx+Math.cos(a)*7,sy=cy+Math.sin(a)*7;const ex=cx+Math.cos(a)*L,ey=cy+Math.sin(a)*L;const mx=(sx+ex)/2+Math.cos(a+Math.PI/2)*9,my=(sy+ey)/2+Math.sin(a+Math.PI/2)*9;return`<path d="M${sx},${sy} Q${mx},${my} ${ex},${ey}" stroke="${c}" stroke-width="${1.3-i*.08}" fill="none" opacity="${.55-i*.06}"/>`;}).join('');return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="40%" cy="60%" r="80%"><stop offset="0%" stop-color="#1e0a2e"/><stop offset="100%" stop-color="#07060e"/></radialGradient><radialGradient id="v${id}" cx="50%" cy="48%" r="38%"><stop offset="0%" stop-color="#080510" stop-opacity=".92"/><stop offset="100%" stop-color="${c}" stop-opacity=".14"/></radialGradient><filter id="f${id}"><feGaussianBlur stdDeviation="2"/></filter></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><ellipse cx="${cx}" cy="${cy}" rx="${w*.4}" ry="${h*.38}" fill="url(#v${id})"/>${tendrils}<g fill="${c}" opacity=".6" filter="url(#f${id})"><ellipse cx="${cx}" cy="${cy-h*.16}" rx="5" ry="5.5"/><path d="M${cx-5},${cy-h*.09} Q${cx-16},${cy-h*.04} ${cx-18},${cy+h*.12} Q${cx-10},${cy+h*.07} ${cx-4},${cy+h*.2} L${cx+4},${cy+h*.2} Q${cx+10},${cy+h*.07} ${cx+18},${cy+h*.12} Q${cx+16},${cy-h*.04} ${cx+5},${cy-h*.09} Z"/><path d="M${cx-5},${cy-h*.09} Q${cx-20},${cy-h*.18} ${cx-22},${cy} Q${cx-14},${cy-h*.07} ${cx-5},${cy+h*.02}" opacity=".5"/><path d="M${cx+5},${cy-h*.09} Q${cx+20},${cy-h*.18} ${cx+22},${cy} Q${cx+14},${cy-h*.07} ${cx+5},${cy+h*.02}" opacity=".5"/></g><g fill="${c}" opacity=".85"><ellipse cx="${cx}" cy="${cy-h*.16}" rx="3.5" ry="4"/><path d="M${cx-4},${cy-h*.09} Q${cx-14},${cy-h*.04} ${cx-15},${cy+h*.1} Q${cx-9},${cy+h*.06} ${cx-3},${cy+h*.18} L${cx+3},${cy+h*.18} Q${cx+9},${cy+h*.06} ${cx+15},${cy+h*.1} Q${cx+14},${cy-h*.04} ${cx+4},${cy-h*.09} Z" opacity=".9"/></g></svg>`;}
+function svgArcane(c,w,h){const id=uid(),cx=w/2,cy=h*.45;const r1=w*.34,r2=w*.21;const hex=Array.from({length:6},(_,i)=>{const a=i*60*Math.PI/180-Math.PI/2;return[cx+Math.cos(a)*r1,cy+Math.sin(a)*r1];});const tri=Array.from({length:3},(_,i)=>{const a=i*120*Math.PI/180-Math.PI/2;return[cx+Math.cos(a)*r2,cy+Math.sin(a)*r2];});const lines=hex.map((p,i)=>`<line x1="${p[0]}" y1="${p[1]}" x2="${hex[(i+3)%6][0]}" y2="${hex[(i+3)%6][1]}" stroke="${c}" stroke-width=".5" opacity=".38"/>`).join('');const dots=hex.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="2.2" fill="${c}" opacity=".7"/>`).join('');return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="45%" r="78%"><stop offset="0%" stop-color="#111a42"/><stop offset="100%" stop-color="#080b1e"/></radialGradient><filter id="f${id}"><feGaussianBlur stdDeviation="2"/></filter></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><polygon points="${hex.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${c}" stroke-width=".7" opacity=".45"/><polygon points="${tri.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${c}" stroke-width=".9" opacity=".55"/>${lines}${dots}<circle cx="${cx}" cy="${cy}" r="${w*.1}" fill="none" stroke="${c}" stroke-width="1.4" opacity=".45"/><circle cx="${cx}" cy="${cy}" r="3" fill="${c}" opacity=".8"/><g fill="${c}" filter="url(#f${id})" opacity=".5"><ellipse cx="${cx}" cy="${cy-h*.2}" rx="4" ry="4.5"/><path d="M${cx-4},${cy-h*.14} L${cx-9},${cy+h*.18} L${cx+9},${cy+h*.18} L${cx+4},${cy-h*.14} Z" opacity=".85"/><line x1="${cx+4}" y1="${cy-h*.07}" x2="${cx+14}" y2="${cy+h*.05}" stroke="${c}" stroke-width="2.5" stroke-linecap="round"/><circle cx="${cx+14}" cy="${cy+h*.05}" r="3"/></g><g fill="${c}" opacity=".82"><ellipse cx="${cx}" cy="${cy-h*.2}" rx="3" ry="3.5"/><path d="M${cx-3.5},${cy-h*.14} L${cx-8},${cy+h*.18} L${cx+8},${cy+h*.18} L${cx+3.5},${cy-h*.14} Z" opacity=".85"/><line x1="${cx+3.5}" y1="${cy-h*.07}" x2="${cx+13}" y2="${cy+h*.05}" stroke="${c}" stroke-width="2" stroke-linecap="round"/><circle cx="${cx+13}" cy="${cy+h*.05}" r="2.5"/></g></svg>`;}
+function svgUndead(c,w,h){const id=uid(),cx=w/2,cy=h*.35;return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="70%" r="80%"><stop offset="0%" stop-color="#0b1e1a"/><stop offset="100%" stop-color="#060c0b"/></radialGradient><radialGradient id="m${id}" cx="50%" cy="85%" r="65%"><stop offset="0%" stop-color="${c}" stop-opacity=".22"/><stop offset="100%" stop-color="${c}" stop-opacity="0"/></radialGradient></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><ellipse cx="${cx}" cy="${h*.88}" rx="${w*.65}" ry="${h*.3}" fill="url(#m${id})"/>${Array.from({length:5},(_,i)=>{const x=w*(.1+i*.2),y=h*(.58+Math.sin(i*1.9)*.1),rot=i*38;return`<rect x="${x}" y="${y}" width="${5+i%3*2}" height="2.2" rx="1" fill="${c}" opacity="${.28+i*.07}" transform="rotate(${rot} ${x+3} ${y+1})"/>`;}).join('')}<g fill="${c}" opacity=".78"><ellipse cx="${cx}" cy="${cy}" rx="11.5" ry="12.5"/><rect x="${cx-9}" y="${cy+h*.08}" width="18" height="6.5" rx="1.2"/><rect x="${cx-3}" y="${cy+h*.1}" width="2" height="5" rx=".5" fill="#07100e"/><rect x="${cx+1}" y="${cy+h*.1}" width="2" height="5" rx=".5" fill="#07100e"/><ellipse cx="${cx-4.5}" cy="${cy-.5}" rx="3.8" ry="3.8" fill="#07100e"/><ellipse cx="${cx+4.5}" cy="${cy-.5}" rx="3.8" ry="3.8" fill="#07100e"/><ellipse cx="${cx-4.5}" cy="${cy-.5}" rx="2.2" ry="2.2" fill="${c}" opacity=".92"/><ellipse cx="${cx+4.5}" cy="${cy-.5}" rx="2.2" ry="2.2" fill="${c}" opacity=".92"/><path d="M${cx-8},${cy+h*.14} L${cx-11},${cy+h*.42} L${cx+11},${cy+h*.42} L${cx+8},${cy+h*.14} Z" opacity=".7"/>${Array.from({length:3},(_,i)=>`<path d="M${cx-6.5},${cy+h*(.2+i*.06)} Q${cx},${cy+h*(.22+i*.06)} ${cx+6.5},${cy+h*(.2+i*.06)}" stroke="#07100e" stroke-width="1.2" fill="none" opacity=".55"/>`).join('')}</g></svg>`;}
+function svgBeast(c,w,h){const id=uid(),cx=w/2,cy=h*.42;return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="38%" r="80%"><stop offset="0%" stop-color="#2c1205"/><stop offset="100%" stop-color="#0e0705"/></radialGradient><radialGradient id="fi${id}" cx="50%" cy="82%" r="62%"><stop offset="0%" stop-color="${c}" stop-opacity=".42"/><stop offset="100%" stop-color="#c03010" stop-opacity="0"/></radialGradient><filter id="f${id}"><feGaussianBlur stdDeviation="3"/></filter></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><ellipse cx="${cx}" cy="${h*.82}" rx="${w*.58}" ry="${h*.28}" fill="url(#fi${id})"/>${Array.from({length:3},(_,i)=>{const xo=(i-1)*8;return`<line x1="${w*.28+xo}" y1="${h*.08}" x2="${w*.62+xo+5}" y2="${h*.72}" stroke="${c}" stroke-width="${2.8-i*.4}" stroke-linecap="round" opacity="${.32+i*.07}"/>`;}).join('')}<g fill="${c}" opacity=".58" filter="url(#f${id})"><ellipse cx="${cx-.06*w}" cy="${cy-.06*h}" rx="15" ry="11"/><ellipse cx="${cx-.16*w}" cy="${cy-.18*h}" rx="6" ry="8"/><polygon points="${cx-.22*w},${cy-.26*h} ${cx-.3*w},${cy-.38*h} ${cx-.24*w},${cy-.24*h}"/><ellipse cx="${cx}" cy="${cy+.1*h}" rx="19" ry="12.5"/></g><g fill="${c}" opacity=".88"><ellipse cx="${cx-.06*w}" cy="${cy-.06*h}" rx="13" ry="9.5"/><ellipse cx="${cx-.16*w}" cy="${cy-.18*h}" rx="5" ry="7"/><polygon points="${cx-.22*w},${cy-.26*h} ${cx-.3*w},${cy-.38*h} ${cx-.24*w},${cy-.24*h}"/></g></svg>`;}
+function svgNature(c,w,h){const id=uid(),cx=w/2;const branches=[[cx,h*.52,cx-.18*w,h*.38,cx-.28*w,h*.28],[cx,h*.5,cx+.18*w,h*.36,cx+.28*w,h*.26],[cx,h*.56,cx-.3*w,h*.5,cx-.36*w,h*.5],[cx,h*.56,cx+.3*w,h*.5,cx+.36*w,h*.5]];const leaves=[[cx-.28*w,h*.28],[cx+.28*w,h*.26],[cx-.36*w,h*.5],[cx+.36*w,h*.5],[cx-.18*w,h*.26],[cx+.18*w,h*.24]];return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="45%" r="80%"><stop offset="0%" stop-color="#0c1f0b"/><stop offset="100%" stop-color="#060e06"/></radialGradient><radialGradient id="ca${id}" cx="50%" cy="28%" r="55%"><stop offset="0%" stop-color="${c}" stop-opacity=".18"/><stop offset="100%" stop-color="${c}" stop-opacity="0"/></radialGradient></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><ellipse cx="${cx}" cy="${h*.3}" rx="${w*.55}" ry="${h*.32}" fill="url(#ca${id})"/>${Array.from({length:4},(_,i)=>{const xo=(i-1.5)*w*.1;return`<path d="M${cx},${h*.68} Q${cx+xo},${h*.8} ${cx+xo*1.5},${h}" stroke="${c}" stroke-width="${2-i*.15}" fill="none" opacity="${.48-i*.05}"/>`;}).join('')}<rect x="${cx-4}" y="${h*.45}" width="8" height="${h*.27}" rx="2.5" fill="${c}" opacity=".7"/>${branches.map(([x1,y1,mx,my,x2,y2])=>`<path d="M${x1},${y1} Q${mx},${my} ${x2},${y2}" stroke="${c}" stroke-width="2.5" fill="none" opacity=".62"/>`).join('')}${leaves.map(([lx,ly],i)=>{const ang=Math.atan2(ly-h*.55,lx-cx)*180/Math.PI+90;return`<ellipse cx="${lx}" cy="${ly}" rx="6.5" ry="4.2" fill="${c}" opacity=".68" transform="rotate(${ang} ${lx} ${ly})"/>`;}).join('')}</svg>`;}
+const SVG_FNS={Light:svgLight,Dark:svgDark,Arcane:svgArcane,Undead:svgUndead,Beast:svgBeast,Nature:svgNature};
+function artSVG(type,w,h){const c=TYPE_COLOR[type]||'#9397ab';const fn=SVG_FNS[type];return fn?fn(c,w,h):'';}
+
+// ─── Summary counters ─────────────────────────────────────────────────────────
+let tilePng=0, monsterPng=0, svgFallback=0;
+function updateSummary(){
+  document.getElementById('sb-tiles').textContent    = `${tilePng}/10`;
+  document.getElementById('sb-monsters').textContent = `${monsterPng}/24`;
+  document.getElementById('sb-svg').textContent      = `${svgFallback}`;
+}
+
+// ─── Build Tile section ───────────────────────────────────────────────────────
+function buildTiles(){
+  const grid = document.getElementById('tile-grid');
+  for(const tile of TILES){
+    const isEl = TYPE_COLOR[tile.key]!==undefined;
+    const c = isEl ? TYPE_COLOR[tile.key] : '#c9a05a';
+
+    const outer = document.createElement('div');
+    outer.className = 'card-outer';
+
+    // Title + path link
+    const titleEl = document.createElement('div');
+    titleEl.className = 'card-title';
+    titleEl.style.color = c;
+    titleEl.textContent = tile.label;
+    outer.appendChild(titleEl);
+
+    // Clickable path link — opens PNG in new tab
+    const pathLink = document.createElement('a');
+    pathLink.className = 'path-link';
+    pathLink.href = tile.src;
+    pathLink.target = '_blank';
+    pathLink.rel = 'noopener';
+    pathLink.textContent = tile.src;
+    outer.appendChild(pathLink);
+
+    const sizesRow = document.createElement('div');
+    sizesRow.className = 'card-sizes';
+
+    // ── Board card (70×102) ──
+    const boardWrap = document.createElement('div');
+    boardWrap.className = 'card-size-wrap';
+    const boardCard = document.createElement('div');
+    boardCard.className = 'tc-board';
+    boardCard.style.borderColor = c+'66';
+    const boardBadge = document.createElement('span');
+    boardBadge.className = 'png-badge loading';
+    boardBadge.textContent = 'loading…';
+
+    const boardImg = document.createElement('img');
+    boardImg.className = 'tc-img';
+    boardImg.alt = tile.label;
+    // ★ Handlers BEFORE src — prevents missed event on cached images
+    boardImg.onload = ()=>{
+      boardBadge.textContent='✓ PNG'; boardBadge.className='png-badge ok';
+      tilePng++; updateSummary();
+    };
+    boardImg.onerror = ()=>{
+      boardCard.innerHTML='';
+      if(isEl){
+        const d=document.createElement('div'); d.className='tc-svg';
+        d.innerHTML=artSVG(tile.key,70,102); boardCard.appendChild(d);
+      } else {
+        const d=document.createElement('div'); d.className='tc-fallback';
+        d.textContent=tile.icon||'✦'; boardCard.appendChild(d);
+      }
+      const lbl=document.createElement('div'); lbl.className='tc-lbl';
+      lbl.style.color=c; lbl.textContent=tile.label; boardCard.appendChild(lbl);
+      boardBadge.textContent='SVG fallback'; boardBadge.className='png-badge svg';
+      svgFallback++; updateSummary();
+    };
+    boardImg.src = tile.src; // ★ src set LAST
+    boardCard.appendChild(boardImg);
+    const boardLbl=document.createElement('div'); boardLbl.className='tc-lbl';
+    boardLbl.style.color=c; boardLbl.textContent=tile.label; boardCard.appendChild(boardLbl);
+    boardWrap.appendChild(boardCard);
+    const bst=document.createElement('span'); bst.className='size-tag'; bst.textContent='70×102 board';
+    boardWrap.appendChild(bst);
+    boardWrap.appendChild(boardBadge);
+
+    // ── Player card (144×180) ──
+    const playerWrap = document.createElement('div');
+    playerWrap.className = 'card-size-wrap';
+    const playerCard = document.createElement('div');
+    playerCard.className = 'tc-player';
+    playerCard.style.borderColor = c+'88';
+    const playerBadge = document.createElement('span');
+    playerBadge.className = 'png-badge loading';
+    playerBadge.textContent = 'loading…';
+
+    const playerImg = document.createElement('img');
+    playerImg.className = 'tc-img';
+    playerImg.alt = tile.label;
+    playerImg.onload = ()=>{ playerBadge.textContent='✓ PNG'; playerBadge.className='png-badge ok'; };
+    playerImg.onerror = ()=>{
+      playerCard.innerHTML='';
+      if(isEl){
+        const d=document.createElement('div'); d.style.cssText='width:100%;height:100%;';
+        d.innerHTML=artSVG(tile.key,144,180); playerCard.appendChild(d);
+      } else {
+        const d=document.createElement('div'); d.className='tc-fallback';
+        d.textContent=tile.icon||'✦'; playerCard.appendChild(d);
+      }
+      const bar=document.createElement('div'); bar.className='tc-el-bar';
+      bar.innerHTML=`<div class="tc-el-lbl" style="color:${c}">${tile.label}</div>`;
+      playerCard.appendChild(bar);
+      playerBadge.textContent='SVG fallback'; playerBadge.className='png-badge svg';
+    };
+    playerImg.src = tile.src; // ★ src set LAST
+    playerCard.appendChild(playerImg);
+    const playerBar=document.createElement('div'); playerBar.className='tc-el-bar';
+    playerBar.innerHTML=`<div class="tc-el-lbl" style="color:${c}">${tile.label}</div>`;
+    playerCard.appendChild(playerBar);
+    playerWrap.appendChild(playerCard);
+    const pst=document.createElement('span'); pst.className='size-tag'; pst.textContent='144×180 player';
+    playerWrap.appendChild(pst);
+    playerWrap.appendChild(playerBadge);
+
+    sizesRow.appendChild(boardWrap);
+    sizesRow.appendChild(playerWrap);
+    outer.appendChild(sizesRow);
+    grid.appendChild(outer);
+  }
+}
+
+// ─── Build Monster section ────────────────────────────────────────────────────
+function buildMonsters(type){
+  const grid = document.getElementById(`${type.toLowerCase()}-grid`);
+  const list = MONSTERS.filter(m=>m.type===type);
+
+  for(const m of list){
+    const c = TYPE_COLOR[m.type];
+    const fullSrc = `/img/monsters/monster-${m.id}.png`;
+    const miniSrc = `/img/monsters/monster-${m.id}-mini.png`;
+    const svgFull = artSVG(m.type,130,186);
+    const svgMini = artSVG(m.type,70,100);
+    const border  = m.isSpecial ? `${c}cc` : `${c}88`;
+
+    const outer = document.createElement('div');
+    outer.className = 'card-outer';
+    outer.style.cssText='flex-direction:row;align-items:flex-start;gap:14px;';
+
+    const sizesRow = document.createElement('div');
+    sizesRow.style.cssText='display:flex;gap:10px;align-items:flex-end;';
+
+    // ── Full card (130×186) ──
+    const fullWrap = document.createElement('div');
+    fullWrap.className = 'card-size-wrap';
+    const fullBadge = document.createElement('span');
+    fullBadge.className = 'png-badge loading';
+    fullBadge.textContent = 'loading…';
+    const fullCard = document.createElement('div');
+    fullCard.className = 'mc-full';
+    fullCard.style.borderColor = border;
+
+    const artLayer = document.createElement('div');
+    artLayer.className = 'mc-art';
+
+    const fullImg = document.createElement('img');
+    fullImg.alt = m.name;
+    // ★ Handlers BEFORE src
+    fullImg.onload = ()=>{
+      fullBadge.textContent='✓ PNG'; fullBadge.className='png-badge ok';
+      monsterPng++; updateSummary();
+    };
+    fullImg.onerror = ()=>{
+      artLayer.innerHTML='';
+      const svgEl=document.createElement('div'); svgEl.className='mc-svg';
+      svgEl.innerHTML=svgFull; artLayer.appendChild(svgEl);
+      fullBadge.textContent='SVG fallback'; fullBadge.className='png-badge svg';
+      svgFallback++; updateSummary();
+    };
+    fullImg.style.cssText='width:100%;height:100%;object-fit:cover;display:block;';
+    fullImg.src = fullSrc; // ★ src set LAST
+    artLayer.appendChild(fullImg);
+    fullCard.appendChild(artLayer);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'mc-overlay';
+    overlay.innerHTML = `
+      <div class="mc-name" style="color:${c}">${m.name}</div>
+      <div class="mc-hp-row"><div class="mc-hp-track"><div class="mc-hp-fill" style="background:${c}"></div></div><span class="mc-hp-num">${m.hp}/${m.hp}</span></div>
+      <div class="mc-stats">
+        <div class="mc-stat"><span class="mc-stat-lbl">ATK</span><span class="mc-stat-val">${m.atk}</span></div>
+        <div class="mc-stat"><span class="mc-stat-lbl">DEF</span><span class="mc-stat-val">${m.def}</span></div>
+        <div class="mc-stat"><span class="mc-stat-lbl">✦</span><span class="mc-stat-val">${m.cost}</span></div>
+        <div class="mc-stat"><span class="mc-stat-lbl">GEN</span><span class="mc-stat-val">${m.gen}</span></div>
+      </div>`;
+    fullCard.appendChild(overlay);
+
+    if(m.isSpecial){
+      const b=document.createElement('div'); b.className='mc-special'; b.textContent='✦ Special'; fullCard.appendChild(b);
+    } else {
+      const b=document.createElement('div'); b.className='mc-arch'; b.textContent=m.arch; fullCard.appendChild(b);
+    }
+
+    fullWrap.appendChild(fullCard);
+    const fst=document.createElement('span'); fst.className='size-tag'; fst.textContent='130×186 full';
+    fullWrap.appendChild(fst);
+    fullWrap.appendChild(fullBadge);
+    // ★ Clickable path link
+    const fpth=document.createElement('a'); fpth.className='path-link';
+    fpth.href=fullSrc; fpth.target='_blank'; fpth.rel='noopener';
+    fpth.textContent=`monster-${m.id}.png`;
+    fullWrap.appendChild(fpth);
+
+    // ── Mini card (70×100) ──
+    const miniWrap = document.createElement('div');
+    miniWrap.className = 'card-size-wrap';
+    const miniBadge = document.createElement('span');
+    miniBadge.className = 'png-badge loading';
+    miniBadge.textContent = 'loading…';
+    const miniCard = document.createElement('div');
+    miniCard.className = 'mc-mini';
+    miniCard.style.borderColor = border;
+
+    const miniArtLayer = document.createElement('div');
+    miniArtLayer.className = 'mc-art';
+
+    const miniImg = document.createElement('img');
+    miniImg.alt = m.name;
+    miniImg.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+    // ★ Handlers BEFORE src
+    miniImg.onload = ()=>{ miniBadge.textContent='✓ mini PNG'; miniBadge.className='png-badge ok'; };
+    miniImg.onerror = ()=>{
+      // Fall back to full PNG first
+      const fallbackImg = document.createElement('img');
+      fallbackImg.alt = m.name;
+      fallbackImg.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+      fallbackImg.onload = ()=>{ miniBadge.textContent='full PNG'; miniBadge.className='png-badge ph'; };
+      fallbackImg.onerror = ()=>{
+        miniArtLayer.innerHTML='';
+        const svgEl=document.createElement('div'); svgEl.className='mc-svg';
+        svgEl.innerHTML=svgMini; miniArtLayer.appendChild(svgEl);
+        miniBadge.textContent='SVG fallback'; miniBadge.className='png-badge svg';
+      };
+      fallbackImg.src = fullSrc; // set LAST on fallback too
+      miniArtLayer.innerHTML='';
+      miniArtLayer.appendChild(fallbackImg);
+    };
+    miniImg.src = miniSrc; // ★ src set LAST
+    miniArtLayer.appendChild(miniImg);
+    miniCard.appendChild(miniArtLayer);
+
+    const strip=document.createElement('div'); strip.className='mc-strip';
+    strip.style.background=c; miniCard.appendChild(strip);
+
+    miniWrap.appendChild(miniCard);
+    const mst=document.createElement('span'); mst.className='size-tag'; mst.textContent='70×100 mini';
+    miniWrap.appendChild(mst);
+    miniWrap.appendChild(miniBadge);
+    // ★ Clickable path link
+    const mpth=document.createElement('a'); mpth.className='path-link';
+    mpth.href=miniSrc; mpth.target='_blank'; mpth.rel='noopener';
+    mpth.textContent=`monster-${m.id}-mini.png`;
+    miniWrap.appendChild(mpth);
+
+    sizesRow.appendChild(fullWrap);
+    sizesRow.appendChild(miniWrap);
+
+    // ── Info column ──
+    const infoCol = document.createElement('div');
+    infoCol.className = 'info-col';
+
+    const nameEl = document.createElement('div');
+    nameEl.innerHTML=`<div class="monster-name" style="color:${c}">${m.name}</div><div class="monster-arch">${m.isSpecial?'✦ ':''} ${m.arch}</div>`;
+    infoCol.appendChild(nameEl);
+
+    const statPill = document.createElement('div');
+    statPill.className = 'stats-pill';
+    statPill.innerHTML=`
+      <div class="sp-item"><span class="sp-lbl">HP</span><span class="sp-val" style="color:${c}">${m.hp}</span></div>
+      <div class="sp-item"><span class="sp-lbl">ATK</span><span class="sp-val">${m.atk}</span></div>
+      <div class="sp-item"><span class="sp-lbl">DEF</span><span class="sp-val">${m.def}</span></div>
+      <div class="sp-item"><span class="sp-lbl">Cost</span><span class="sp-val">${m.cost}✦</span></div>
+      <div class="sp-item"><span class="sp-lbl">Gen</span><span class="sp-val">${m.gen}✦</span></div>`;
+    infoCol.appendChild(statPill);
+
+    if(m.ability){
+      const ab=document.createElement('div'); ab.className='ability-txt';
+      ab.style.color=c; ab.textContent=m.ability; infoCol.appendChild(ab);
+    }
+
+    outer.appendChild(sizesRow);
+    outer.appendChild(infoCol);
+    grid.appendChild(outer);
+  }
+}
+
+// ─── Nav scroll highlight ─────────────────────────────────────────────────────
+function updateNav(){
+  const ids=['tiles','light','dark','arcane','undead','beast','nature'];
+  let active=ids[0];
+  for(const id of ids){const el=document.getElementById(id);if(el&&el.getBoundingClientRect().top<=110)active=id;}
+  document.querySelectorAll('.nav-pill').forEach(p=>p.classList.toggle('active',p.getAttribute('href')==='#'+active));
+}
+window.addEventListener('scroll',updateNav,{passive:true});
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+buildTiles();
+['Light','Dark','Arcane','Undead','Beast','Nature'].forEach(buildMonsters);
+updateSummary();
+</script>
+</body>
+</html>

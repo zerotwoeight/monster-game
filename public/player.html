@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Summoners Gambit — Player</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #0d0e1c; --bg-deep: #09091a; --surface: #151627; --surface2: #1c1e2b;
+  --border: #272a38; --border2: #3f424d;
+  --text: #e9e9ed; --text-lo: #b2b6ca; --text-dim: #9397ab; --text-mute: #75798c;
+  --accent: #9184d9; --accent-lit: #b5abfc; --accent-pale: #d2cefd;
+  --accent-glow: rgba(145,132,217,.35);
+  --gold: #a97b40; --gold-glow: #c9a05a;
+  --good: #4f9153; --warn: #c9843a; --danger: #b05050;
+  --el-Light:#e0c07a; --el-Dark:#6b6b7a; --el-Arcane:#7f92e8;
+  --el-Undead:#5fb3a4; --el-Beast:#d98a5a; --el-Nature:#3aaa5c;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-deep); color: var(--text); font-family: 'Inter', system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+#app { width: 100%; max-width: 430px; height: 100%; margin: 0 auto; display: flex; flex-direction: column; background: var(--bg); position: relative; overflow: hidden; }
+#status-bar { height: 56px; flex-shrink: 0; display: flex; align-items: center; padding: 0 16px; gap: 10px; border-bottom: 1px solid var(--border); background: var(--bg-deep); position: relative; z-index: 10; }
+.sb-sigil { width: 30px; height: 30px; flex-shrink: 0; }
+.sb-name { font-size: 14px; font-weight: 600; letter-spacing: .02em; line-height: 1; }
+.sb-turn-info { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.sb-mana { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.sb-mana-val { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.sb-mana-lbl { font-size: 9px; color: var(--text-mute); text-transform: uppercase; letter-spacing: .18em; font-family: 'Cinzel', serif; }
+.turn-badge { padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; font-family: 'Cinzel', serif; white-space: nowrap; }
+.turn-badge.yours { background: rgba(145,132,217,.2); color: var(--accent-pale); border: 1px solid rgba(145,132,217,.4); }
+.turn-badge.waiting { background: rgba(255,255,255,.05); color: var(--text-mute); border: 1px solid var(--border); }
+#main-content { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 200px; }
+#main-content.no-hand { padding-bottom: 0; }
+#hand-area { display: none; flex-direction: column; flex-shrink: 0; background: linear-gradient(to top, var(--bg-deep) 0%, var(--bg-deep) 70%, transparent 100%); padding-top: 20px; }
+#hand-area.visible { display: flex; }
+#hand-label { font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--text-mute); font-family: 'Cinzel', serif; padding: 0 16px; margin-bottom: 8px; }
+#hand-scroll { display: flex; gap: 8px; padding: 0 16px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+#hand-scroll::-webkit-scrollbar { display: none; }
+.hand-card-mini { flex-shrink: 0; }
+#action-bar { display: none; flex-direction: row; gap: 8px; padding: 8px 16px 12px; flex-shrink: 0; background: var(--bg-deep); }
+#action-bar.visible { display: flex; }
+.action-btn { flex: 1; padding: 16px; border-radius: 10px; border: none; font-size: 14px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; font-family: 'Cinzel', serif; cursor: pointer; transition: all 120ms; }
+.action-btn.primary { background: var(--accent); color: #fff; box-shadow: 0 0 20px var(--accent-glow); }
+.action-btn.primary:hover { background: var(--accent-lit); }
+.action-btn.primary:active { transform: scale(.96); }
+.action-btn.secondary { background: transparent; color: var(--text-lo); border: 1px solid var(--border2); }
+.action-btn.secondary:hover { background: rgba(255,255,255,.05); }
+.action-btn.danger-btn { background: rgba(176,80,80,.15); color: #e08080; border: 1px solid rgba(176,80,80,.35); }
+.action-btn.gold-btn { background: rgba(169,123,64,.18); color: var(--gold-glow); border: 1px solid rgba(169,123,64,.4); }
+.screen-section { padding: 20px 16px 0; }
+.screen-label { font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--text-mute); font-family: 'Cinzel', serif; margin-bottom: 16px; }
+.screen-title { font-size: 26px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-family: 'Cinzel', serif; color: var(--text); line-height: 1.1; margin-bottom: 4px; }
+.screen-sub { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; line-height: 1.5; }
+/* Join */
+.join-logo { text-align: center; padding: 28px 16px 16px; }
+.join-logo-mark { width: 60px; height: 60px; border-radius: 14px; background: linear-gradient(145deg, #2a1f4a, #1a1230); border: 2px solid var(--gold); box-shadow: 0 0 28px rgba(145,132,217,.35); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; }
+.join-logo-sigil { }
+.join-logo-name { font-family: 'Cinzel', serif; font-size: 17px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+.join-logo-sub { font-size: 10px; color: var(--text-mute); letter-spacing: .12em; margin-top: 3px; }
+/* Room code */
+.room-code-group { padding: 0 16px; margin-bottom: 20px; }
+.room-code-lbl { font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--text-mute); font-family: 'Cinzel', serif; margin-bottom: 10px; display: block; }
+.room-code-boxes { display: flex; gap: 8px; justify-content: center; }
+.room-code-input-wrap { position: relative; }
+.room-code-input { width: 100%; padding: 13px 15px; border-radius: 8px; border: 2px solid var(--accent); background: rgba(145,132,217,.06); color: var(--text); font-size: 28px; font-family: 'Cinzel', monospace; font-weight: 700; letter-spacing: .35em; text-align: center; text-transform: uppercase; outline: none; transition: border-color 120ms, box-shadow 120ms; }
+.room-code-input:focus { border-color: var(--accent-lit); box-shadow: 0 0 0 3px var(--accent-glow); }
+.room-code-input.error { border-color: #b05050; box-shadow: 0 0 0 3px rgba(176,80,80,.2); }
+.room-code-error { font-size: 11px; color: #e08080; margin-top: 7px; min-height: 16px; text-align: center; }
+.field-group { margin-bottom: 16px; }
+.field-lbl { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--text-mute); font-family: 'Cinzel', serif; margin-bottom: 7px; display: block; }
+.field-input { width: 100%; padding: 13px 15px; border-radius: 8px; border: 1px solid var(--border2); background: var(--surface); color: var(--text); font-size: 16px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 120ms; }
+.field-input:focus { border-color: var(--accent); }
+.starter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+.starter-card { border-radius: 10px; border: 1px solid var(--border2); background: var(--surface); padding: 12px; cursor: pointer; transition: all 120ms; }
+.starter-card.selected { border-color: var(--accent); background: rgba(145,132,217,.1); box-shadow: 0 0 0 1px var(--accent); }
+.starter-card-title { font-size: 13px; font-weight: 600; font-family: 'Cinzel', serif; margin-bottom: 4px; }
+.starter-card-sub { font-size: 11px; color: var(--text-dim); line-height: 1.4; margin-bottom: 8px; }
+.starter-pips { display: flex; gap: 3px; }
+.starter-pip { width: 10px; height: 10px; border-radius: 2px; }
+/* Waiting */
+.waiting-hero { padding: 20px 16px 16px; text-align: center; }
+.waiting-turn-info { display: inline-flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 24px; padding: 8px 16px; margin-bottom: 20px; }
+.waiting-pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--gold-glow); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+.waiting-turn-text { font-size: 13px; color: var(--text-lo); }
+.waiting-turn-name { font-weight: 600; color: var(--text); }
+.mini-board-wrap { width: 220px; height: 220px; margin: 0 auto 16px; }
+.waiting-players { display: flex; flex-direction: column; gap: 6px; padding: 0 16px; margin-bottom: 8px; }
+.waiting-player-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); }
+.waiting-player-row.active { border-color: var(--gold); background: rgba(169,123,64,.08); }
+.waiting-player-row.you { border-color: rgba(145,132,217,.4); background: rgba(145,132,217,.06); }
+.wp-name { font-size: 13px; font-weight: 500; flex: 1; }
+.wp-stat { font-size: 11px; color: var(--text-mute); text-align: right; }
+.wp-stat strong { color: var(--text-lo); }
+/* Shop */
+.mana-collect-banner { margin: 16px; padding: 12px 14px; border-radius: 8px; border: 1px solid rgba(169,123,64,.35); background: rgba(169,123,64,.1); display: flex; align-items: center; gap: 10px; }
+.mana-collect-icon { font-size: 18px; }
+.mana-collect-text { font-size: 13px; color: var(--gold-glow); line-height: 1.4; }
+.shop-cards-wrap { position: relative; }
+.shop-cards-scroll { display: flex; gap: 10px; padding: 0 16px 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; scroll-snap-type: x mandatory; }
+.shop-cards-scroll::-webkit-scrollbar { display: none; }
+.shop-cards-scroll .monster-card { scroll-snap-align: start; }
+.shop-scroll-nav { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 0 4px; }
+.shop-arrow { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border2); background: var(--surface2); color: var(--text-lo); font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; flex-shrink: 0; transition: background 100ms; }
+.shop-arrow:active { background: var(--border2); color: var(--text); }
+.shop-dots { display: flex; gap: 5px; }
+.shop-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--border2); transition: background 150ms; }
+.shop-dot.active { background: var(--accent-lit); }
+.shop-section-hdr { padding: 0 16px 8px; font-size: 10px; font-family: 'Cinzel', serif; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--text-mute); }
+.shop-one-action-note { margin: 0 16px 12px; padding: 8px 12px; border-radius: 6px; background: rgba(255,255,255,.04); border: 1px solid var(--border); font-size: 11px; color: var(--text-mute); line-height: 1.5; }
+/* Resolve */
+.resolve-banner { margin: 16px; padding: 14px; border-radius: 10px; display: flex; align-items: center; gap: 12px; }
+.resolve-banner.claim { border: 1px solid rgba(79,145,83,.4); background: rgba(79,145,83,.1); }
+.resolve-banner.battle { border: 1px solid rgba(176,80,80,.4); background: rgba(176,80,80,.1); }
+.resolve-banner.own { border: 1px solid rgba(169,123,64,.4); background: rgba(169,123,64,.1); }
+.resolve-banner.temple { border: 1px solid rgba(145,132,217,.4); background: rgba(145,132,217,.1); }
+.resolve-banner.chest { border: 1px solid rgba(201,160,90,.4); background: rgba(201,160,90,.1); }
+.resolve-banner.healing { border: 1px solid rgba(95,179,164,.4); background: rgba(95,179,164,.1); }
+.resolve-icon { font-size: 26px; flex-shrink: 0; }
+.resolve-title { font-size: 14px; font-weight: 600; line-height: 1.2; }
+.resolve-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; line-height: 1.4; }
+.picker-label { padding: 0 16px; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--text-mute); font-family: 'Cinzel', serif; margin-bottom: 10px; }
+.picker-scroll { display: flex; gap: 10px; padding: 0 16px 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.picker-scroll::-webkit-scrollbar { display: none; }
+.own-tile-options { display: flex; flex-direction: column; gap: 8px; padding: 0 16px; margin-bottom: 16px; }
+.own-tile-opt { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface); cursor: pointer; transition: all 120ms; }
+.own-tile-opt:hover { border-color: var(--accent); background: rgba(145,132,217,.07); }
+.own-tile-opt-icon { font-size: 20px; }
+.own-tile-opt-text { flex: 1; }
+.own-tile-opt-name { font-size: 14px; font-weight: 500; }
+.own-tile-opt-desc { font-size: 12px; color: var(--text-dim); margin-top: 1px; }
+.own-tile-opt-cost { font-size: 13px; color: var(--gold-glow); font-weight: 500; }
+.chest-reveal { text-align: center; padding: 20px 16px; }
+.chest-icon-big { font-size: 56px; margin-bottom: 12px; }
+.chest-reward-title { font-size: 20px; font-weight: 700; font-family: 'Cinzel', serif; margin-bottom: 6px; }
+.chest-reward-desc { font-size: 14px; color: var(--text-lo); line-height: 1.5; }
+.battle-matchup { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 16px; }
+.battle-slot { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.battle-slot-label { font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: var(--text-mute); font-family: 'Cinzel', serif; }
+.vs-badge { width: 32px; height: 32px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--text-dim); font-family: 'Cinzel', serif; flex-shrink: 0; }
+.type-eff-badge { font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 600; display: inline-block; }
+.type-eff-badge.strong { background: rgba(79,145,83,.2); color: #7dba81; border: 1px solid rgba(79,145,83,.4); }
+.type-eff-badge.weak { background: rgba(176,80,80,.2); color: #e08080; border: 1px solid rgba(176,80,80,.35); }
+.type-eff-badge.neutral { background: rgba(255,255,255,.06); color: var(--text-dim); border: 1px solid var(--border2); }
+/* ── Clash result animation (player view) ── */
+@keyframes pClashSlideL{from{transform:translateX(-24px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes pClashSlideR{from{transform:translateX(24px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes pClashProjR{0%{transform:translateX(0) scale(1.3);opacity:1}100%{transform:translateX(70px) scale(.4);opacity:0}}
+@keyframes pClashProjL{0%{transform:translateX(0) scale(1.3);opacity:1}100%{transform:translateX(-70px) scale(.4);opacity:0}}
+@keyframes pClashHit{0%,100%{transform:scale(1)}30%{transform:scale(1.06) rotate(-2deg)}65%{transform:scale(1.06) rotate(2deg)}}
+@keyframes pClashDmg{0%{opacity:0;transform:translateY(0) scale(.7)}15%{opacity:1;transform:translateY(-8px) scale(1.2)}75%{opacity:1;transform:translateY(-26px) scale(1)}100%{opacity:0;transform:translateY(-36px) scale(.85)}}
+@keyframes pClashOutcome{0%,52%{opacity:0;transform:scale(.6)}72%{transform:scale(1.12)}100%{opacity:1;transform:scale(1)}}
+.p-clash-wrap { display: flex; flex-direction: column; align-items: center; padding: 8px 0 16px; gap: 12px; }
+.p-clash-arena { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
+.p-clash-side { display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; flex: 1; max-width: 140px; }
+.p-clash-side.left  { animation: pClashSlideL .7s ease both; }
+.p-clash-side.right { animation: pClashSlideR .7s ease both; }
+.p-clash-label { font-size: 9px; letter-spacing: .14em; text-transform: uppercase; font-family: 'Cinzel', serif; color: var(--text-mute); }
+.p-clash-name  { font-size: 12px; font-weight: 700; font-family: 'Cinzel', serif; }
+.p-clash-hit   { animation: pClashHit .5s 1.7s ease both; display: inline-block; }
+.p-clash-dmg   { position: absolute; top: 55px; left: 50%; transform: translateX(-50%); font-size: 22px; font-weight: 900; font-family: 'Cinzel', serif; color: #e84040; text-shadow: 0 0 12px #e8404088; animation: pClashDmg 2.5s 1.7s ease both; pointer-events: none; white-space: nowrap; }
+.p-clash-dmg.zero { color: #888; font-size: 15px; }
+.p-clash-mid   { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 72px; }
+.p-clash-proj  { font-size: 15px; font-weight: 700; font-family: 'Cinzel', serif; white-space: nowrap; }
+.p-clash-proj.atk      { animation: pClashProjR .55s 1.0s ease both; color: #e87040; }
+.p-clash-proj.def-proj { animation: pClashProjL .55s 1.0s ease both; color: #6080e8; }
+.p-clash-vs    { font-size: 22px; font-weight: 900; color: var(--gold-glow); font-family: 'Cinzel', serif; opacity: .6; }
+.p-clash-outcome { font-size: 24px; font-weight: 700; font-family: 'Cinzel', serif; text-align: center; animation: pClashOutcome .6s 2.4s ease both; letter-spacing: .06em; }
+.p-clash-eff   { font-size: 12px; text-align: center; color: var(--text-lo); }
+
+.gameover-hero { text-align: center; padding: 32px 16px 16px; }
+.trophy-icon { font-size: 60px; margin-bottom: 12px; }
+.gameover-winner { font-family: 'Cinzel', serif; font-size: 22px; font-weight: 700; color: var(--gold-glow); letter-spacing: .1em; margin-bottom: 6px; }
+.gameover-sub { font-size: 13px; color: var(--text-dim); }
+.standings-list { display: flex; flex-direction: column; gap: 6px; padding: 0 16px; margin-top: 16px; }
+.standing-row { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); }
+.standing-row.winner { border-color: var(--gold); background: rgba(169,123,64,.1); }
+.standing-rank { font-size: 18px; font-weight: 700; font-family: 'Cinzel', serif; color: var(--text-mute); width: 24px; text-align: center; }
+.standing-rank.first { color: var(--gold-glow); }
+.standing-info { flex: 1; }
+.standing-name { font-size: 14px; font-weight: 500; }
+.standing-stats { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+/* Roll */
+.roll-hero { display: flex; flex-direction: column; align-items: center; padding: 32px 16px 16px; gap: 16px; }
+.roll-position-chip { background: var(--surface2); border: 1px solid var(--border2); border-radius: 20px; padding: 6px 14px; font-size: 12px; color: var(--text-dim); }
+.roll-position-chip span { color: var(--text); font-weight: 500; }
+.big-die { width: 130px; height: 130px; border-radius: 24px; background: linear-gradient(145deg, #2a1f4a, #1a1230); border: 2px solid var(--gold); box-shadow: 0 0 40px rgba(145,132,217,.35); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 120ms; user-select: none; position: relative; }
+.big-die:hover { box-shadow: 0 0 60px rgba(145,132,217,.55); }
+.big-die:active { transform: scale(.93); }
+.big-die.rolling { animation: dieShake .35s ease; }
+@keyframes dieShake { 0%{transform:rotate(0) scale(1)} 25%{transform:rotate(-9deg) scale(.94)} 50%{transform:rotate(9deg) scale(.94)} 75%{transform:rotate(-4deg) scale(.97)} 100%{transform:rotate(0) scale(1)} }
+.big-die.die-cycling { animation: dieCycleBounce .09s ease-in-out; }
+@keyframes dieCycleBounce { 0%{transform:scale(1.06) rotate(4deg)} 50%{transform:scale(0.92) rotate(-4deg)} 100%{transform:scale(1) rotate(0)} }
+.big-die.die-landed { animation: dieLand .4s cubic-bezier(.36,.07,.19,.97) forwards; }
+@keyframes dieLand { 0%{transform:scale(1.4) rotate(-6deg)} 35%{transform:scale(0.87) rotate(5deg)} 65%{transform:scale(1.1) rotate(-2deg)} 100%{transform:scale(1) rotate(0)} }
+.die-face.die-flash { animation: dieFaceFlash .07s ease; }
+@keyframes dieFaceFlash { 0%{opacity:.15;transform:scale(0.65)} 100%{opacity:1;transform:scale(1)} }
+.die-face { font-size: 72px; font-weight: 700; font-family: 'Cinzel', serif; color: var(--text); text-shadow: 0 0 20px rgba(145,132,217,.8); line-height: 1; }
+.die-pip { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 6px var(--gold-glow); }
+.pip-tl{top:10px;left:10px} .pip-tr{top:10px;right:10px} .pip-bl{bottom:10px;left:10px} .pip-br{bottom:10px;right:10px}
+.roll-hint { font-size: 13px; color: var(--text-mute); text-align: center; }
+.roll-result { display: none; text-align: center; padding: 14px 20px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface2); width: 100%; }
+.roll-result.visible { display: block; }
+.roll-result-num { font-size: 36px; font-weight: 700; font-family: 'Cinzel', serif; color: var(--accent-pale); }
+.roll-result-dest { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+/* Monster cards */
+.monster-card { border-radius: 10px; border: 2px solid; cursor: pointer; transition: all 120ms; overflow: hidden; position: relative; flex-shrink: 0; user-select: none; }
+.monster-card:hover { filter: brightness(1.12); }
+.monster-card.selected { box-shadow: 0 0 0 2px white, 0 0 16px var(--accent-glow) !important; filter: brightness(1.15); }
+.monster-card.unaffordable { opacity: .45; cursor: default; }
+.monster-card.full { width: 130px; height: 186px; }
+.mc-art { position: absolute; inset: 0; width: 100%; height: 100%; }
+.mc-art svg { display: block; width: 100%; height: 100%; }
+.mc-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 5px 6px 4px; background: linear-gradient(to top, rgba(6,5,20,.97) 0%, rgba(6,5,20,.82) 58%, transparent 100%); z-index: 1; }
+.mc-ov-name { font-family: 'Cinzel', serif; font-size: 9px; margin-bottom: 3px; display: flex; justify-content: space-between; align-items: center; line-height: 1.2; }
+.mc-ov-eldot { width: 9px; height: 9px; border-radius: 50%; opacity: .75; flex-shrink: 0; margin-left: 3px; }
+.mc-ov-hp-row { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; }
+.mc-hp-track { flex: 1; height: 3.5px; border-radius: 2px; background: rgba(255,255,255,.15); overflow: hidden; }
+.mc-hp-fill { height: 100%; border-radius: 2px; transition: width .3s; }
+.mc-hp-num { font-size: 7px; color: #dde; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mc-ov-stats { display: flex; gap: 0; }
+.mc-ov-sc { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.mc-ov-si { font-size: 7px; color: #8880aa; line-height: 1; }
+.mc-ov-sv { font-size: 10px; font-weight: 600; color: #ede8ff; font-variant-numeric: tabular-nums; }
+.mc-cost-strip { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: flex-end; padding: 4px 7px; background: linear-gradient(to bottom, rgba(6,5,20,.78) 0%, transparent 100%); z-index: 1; }
+.mc-cost-val { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mc-cost-lbl { font-size: 8px; color: rgba(200,190,255,.6); text-transform: uppercase; letter-spacing: .1em; margin-left: 3px; }
+.special-badge { position: absolute; top: 5px; left: 6px; font-size: 7px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-family: 'Cinzel', serif; color: var(--gold-glow); background: rgba(169,123,64,.22); border: 1px solid rgba(169,123,64,.45); border-radius: 4px; padding: 1px 4px; line-height: 1.4; z-index: 1; }
+.monster-card.mini { width: 70px; height: 100px; }
+.monster-card.mini .mc-overlay { display: none; }
+.monster-card.mini .mc-cost-strip { display: none; }
+.mc-mini-strip { position: absolute; bottom: 0; left: 0; right: 0; height: 6px; z-index: 1; }
+.charm-dot { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--gold-glow); box-shadow: 0 0 6px var(--gold-glow); }
+.divider { height: 1px; background: var(--border); margin: 16px 0; }
+/* Connection status */
+#conn-status { position: fixed; top: 8px; right: 8px; z-index: 999; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-family: 'Cinzel', serif; font-weight: 600; letter-spacing: .1em; pointer-events: none; }
+#conn-status.connected { background: rgba(79,145,83,.2); color: #7dba81; border: 1px solid rgba(79,145,83,.35); }
+#conn-status.disconnected { background: rgba(176,80,80,.2); color: #e08080; border: 1px solid rgba(176,80,80,.35); }
+/* Lobby waiting for start */
+.lobby-players { display: flex; flex-direction: column; gap: 6px; padding: 0 16px; margin-top: 16px; }
+.lobby-player-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); }
+.element-pick { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px; margin-bottom: 16px; }
+.el-btn { flex: 1; min-width: 80px; padding: 10px 6px; border-radius: 8px; border: 1px solid var(--border2); background: transparent; font-size: 12px; font-family: 'Cinzel', serif; font-weight: 600; color: var(--text-dim); cursor: pointer; transition: all 120ms; text-align: center; }
+.el-btn.selected { color: #fff; }
+.el-btn:hover:not(.selected) { background: rgba(255,255,255,.05); }
+</style>
+</head>
+<body>
+<div id="conn-status" class="disconnected">●  Connecting…</div>
+<div id="app">
+  <div id="status-bar" style="display:none">
+    <svg class="sb-sigil" id="sb-sigil-svg" viewBox="0 0 30 30"></svg>
+    <div>
+      <div class="sb-name" id="sb-name">—</div>
+      <div class="sb-turn-info" id="sb-turn-info"></div>
+    </div>
+    <div id="sb-badge"></div>
+    <div class="sb-mana">
+      <div class="sb-mana-val" id="sb-mana-val">0</div>
+      <div class="sb-mana-lbl">Mana</div>
+    </div>
+  </div>
+  <div id="main-content" class="no-hand"></div>
+  <div id="hand-area">
+    <div id="hand-label">Your Hand</div>
+    <div id="hand-scroll"></div>
+  </div>
+  <div id="action-bar"></div>
+</div>
+
+<script>
+// ─── CONSTANTS ─────────────────────────────────────────────────────────────
+const TYPE_COLOR = { Light:'#e0c07a', Dark:'#6b6b7a', Arcane:'#7f92e8', Undead:'#5fb3a4', Beast:'#d98a5a', Nature:'#3aaa5c' };
+const TYPE_STRONG = {Light:'Dark',Dark:'Arcane',Arcane:'Undead',Undead:'Beast',Beast:'Nature',Nature:'Light'};
+const TYPE_WEAK   = {Light:'Nature',Dark:'Light',Arcane:'Dark',Undead:'Arcane',Beast:'Undead',Nature:'Beast'};
+const TYPE_ICON   = {Light:'✦',Dark:'◉',Arcane:'✶',Undead:'☠',Beast:'⚔',Nature:'❧'};
+const SPECIAL_ICONS = {start:'✦',temple:'❖',chest:'❖',heal:'❖',healing:'❖',mana:'❖','mana well':'❖',well:'❖'};
+const TILE_IMG = {
+  Light:'/img/tiles/tile-light.png', Dark:'/img/tiles/tile-dark.png',
+  Arcane:'/img/tiles/tile-arcane.png', Undead:'/img/tiles/tile-undead.png',
+  Beast:'/img/tiles/tile-beast.png', Nature:'/img/tiles/tile-nature.png',
+  chest:'/img/tiles/tile-chest.png', heal:'/img/tiles/tile-heal.png',
+  healing:'/img/tiles/tile-heal.png', temple:'/img/tiles/tile-temple.png',
+  start:'/img/tiles/tile-well.png', well:'/img/tiles/tile-well.png',
+  mana:'/img/tiles/tile-well.png', 'mana well':'/img/tiles/tile-well.png'
+};
+const PLAYER_COLORS = ['#e05252','#5ca8e0','#5dc97d','#e0b050','#c07fd8','#60cdc0'];
+
+// ─── SFX (Web Audio API — procedural, no external files) ────────────────────
+const SFX = (() => {
+  let _ctx = null;
+  function ctx() {
+    if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_ctx.state === 'suspended') _ctx.resume().catch(()=>{});
+    return _ctx;
+  }
+  document.addEventListener('click',      () => ctx(), {once:true, capture:true});
+  document.addEventListener('touchstart', () => ctx(), {once:true, capture:true});
+
+  function tone(freq, type='sine', vol=0.15, dur=0.12, attack=0.005, rel=0.1, delay=0) {
+    try {
+      const c = ctx(), now = c.currentTime;
+      const o = c.createOscillator(), g = c.createGain();
+      o.connect(g); g.connect(c.destination);
+      o.type = type; o.frequency.setValueAtTime(freq, now + delay);
+      g.gain.setValueAtTime(0.001, now + delay);
+      g.gain.linearRampToValueAtTime(vol, now + delay + attack);
+      g.gain.exponentialRampToValueAtTime(0.001, now + delay + dur);
+      o.start(now + delay); o.stop(now + delay + dur + 0.02);
+    } catch(e){}
+  }
+  function noise(vol=0.08, dur=0.1, delay=0, hipass=0) {
+    try {
+      const c = ctx(), now = c.currentTime;
+      const buf = c.createBuffer(1, Math.ceil(c.sampleRate * dur), c.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+      const src = c.createBufferSource(); src.buffer = buf;
+      const g = c.createGain();
+      if (hipass) {
+        const f = c.createBiquadFilter(); f.type='highpass'; f.frequency.value=hipass;
+        src.connect(f); f.connect(g);
+      } else { src.connect(g); }
+      g.connect(c.destination);
+      g.gain.setValueAtTime(vol, now + delay);
+      g.gain.exponentialRampToValueAtTime(0.001, now + delay + dur);
+      src.start(now + delay); src.stop(now + delay + dur + 0.02);
+    } catch(e){}
+  }
+
+  return {
+    // Die cycling tick — wooden rattle
+    dieTick() {
+      noise(0.06, 0.035, 0, 800);
+      tone(180, 'square', 0.035, 0.035, 0.001, 0.03);
+    },
+    // Die lands — thud, scales with roll value
+    dieLand(val=3) {
+      noise(0.18, 0.18);
+      tone(55 + val*10, 'sine', 0.28, 0.35, 0.002, 0.32);
+      tone(110 + val*18, 'triangle', 0.12, 0.22, 0.002, 0.20);
+    },
+    // Buy from shop — coin clink
+    buy() {
+      tone(440, 'sine',  0.12, 0.14, 0.003, 0.12);
+      tone(660, 'sine',  0.09, 0.20, 0.003, 0.18, 0.10);
+    },
+    // Sell — reversed coin
+    sell() {
+      tone(660, 'sine',  0.10, 0.12, 0.003, 0.10);
+      tone(440, 'sine',  0.08, 0.18, 0.003, 0.16, 0.10);
+    },
+    // Claim tile — place-down thud + chime
+    claim() {
+      noise(0.08, 0.12, 0, 200);
+      tone(480, 'sine',  0.10, 0.18, 0.003, 0.15);
+      tone(720, 'sine',  0.065,0.14, 0.002, 0.12, 0.10);
+    },
+    // Attack — weapon swing
+    attack() {
+      noise(0.12, 0.18);
+      tone(120, 'sawtooth', 0.16, 0.25, 0.002, 0.22);
+      tone(240, 'square',   0.08, 0.20, 0.002, 0.18, 0.08);
+    },
+    // Heal — soft restorative chime
+    heal() {
+      tone(528,  'sine', 0.13, 0.30, 0.010, 0.28);
+      tone(792,  'sine', 0.09, 0.25, 0.008, 0.22, 0.08);
+      tone(1056, 'sine', 0.055,0.20, 0.005, 0.18, 0.16);
+    },
+    // Chest / reward reveal — ascending sparkle
+    chest() {
+      tone(400,  'sine', 0.10, 0.10, 0.004, 0.09);
+      tone(600,  'sine', 0.12, 0.12, 0.004, 0.10, 0.10);
+      tone(800,  'sine', 0.14, 0.30, 0.004, 0.27, 0.22);
+    },
+    // Temple trade — magical exchange
+    temple() {
+      noise(0.07, 0.20);
+      tone(280,  'sine',     0.10, 0.18, 0.010, 0.16);
+      tone(420,  'triangle', 0.12, 0.25, 0.008, 0.22, 0.10);
+      tone(560,  'sine',     0.09, 0.30, 0.006, 0.27, 0.20);
+    },
+    // Potion applied
+    potion() {
+      tone(500,  'sine', 0.12, 0.22, 0.006, 0.20);
+      tone(750,  'sine', 0.09, 0.18, 0.005, 0.16, 0.12);
+    },
+    // Battle charm assigned
+    charm() {
+      noise(0.05, 0.10);
+      tone(360,  'triangle', 0.10, 0.18, 0.004, 0.16);
+      tone(540,  'triangle', 0.08, 0.22, 0.004, 0.20, 0.10);
+    },
+    // Retreat / skip — muted click
+    retreat() {
+      noise(0.05, 0.08, 0, 400);
+      tone(200, 'sine', 0.07, 0.12, 0.003, 0.10);
+    },
+  };
+})();
+
+// ─── LOCAL STATE ───────────────────────────────────────────────────────────
+let G = null;         // server game state
+let myIdx = null;     // my player index
+let myHand = [];      // my hand from server
+let selectedIid = null; // currently selected card iid
+let tradeIid = null;    // temple sacrifice iid
+
+// Join form values
+let joinCode = '';
+let joinName = 'Player';
+let joinSet = 'C';
+let joinError = '';
+
+// Session key for reconnection
+let mySessionKey = null;
+
+// Roll animation state
+let rollAnimating = false;
+let pendingGameState = null;
+let pendingRollValue = null;
+let rollShowCallback = null;
+
+// ─── WEBSOCKET ─────────────────────────────────────────────────────────────
+const WS_URL = `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}`;
+let ws = null;
+
+function connect() {
+  ws = new WebSocket(WS_URL);
+  ws.onopen = () => {
+    document.getElementById('conn-status').className = 'connected';
+    document.getElementById('conn-status').textContent = '●  Live';
+    setTimeout(()=>{ document.getElementById('conn-status').style.opacity='0.5'; }, 2000);
+    // Attempt to rejoin if we have a session key
+    if (mySessionKey) {
+      send('rejoin', { sessionKey: mySessionKey });
+    }
+  };
+  ws.onclose = () => {
+    document.getElementById('conn-status').className = 'disconnected';
+    document.getElementById('conn-status').textContent = '●  Reconnecting…';
+    document.getElementById('conn-status').style.opacity = '1';
+    setTimeout(connect, 2000);
+  };
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'session') {
+      mySessionKey = msg.sessionKey;
+    } else if (msg.type === 'state') {
+      if (rollAnimating) {
+        const ng = msg.game, ni = msg.myIdx !== undefined ? msg.myIdx : myIdx, nh = msg.hand !== undefined ? msg.hand : myHand;
+        pendingGameState = { game: ng, myIdx: ni, hand: nh };
+        const roller = ng.players[ni];
+        const rv = roller != null ? roller.lastDiceRoll : null;
+        if (rv != null) {
+          if (rollShowCallback) { const cb = rollShowCallback; rollShowCallback = null; cb(rv); }
+          else pendingRollValue = rv;
+        }
+      } else {
+        G = msg.game;
+        if (msg.myIdx !== undefined) myIdx = msg.myIdx;
+        if (msg.hand !== undefined) myHand = msg.hand;
+        render();
+      }
+    } else if (msg.type === 'error') {
+      if (msg.message === 'Invalid room code') {
+        joinError = 'Invalid room code — check with your host';
+        renderJoin();
+      } else if (msg.message === 'Session expired — please rejoin') {
+        mySessionKey = null;
+        myIdx = null;
+        G = null;
+        renderJoin();
+      } else {
+        showToast('⚠ ' + msg.message);
+      }
+    }
+  };
+}
+
+function send(action, data = {}) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ action, ...data }));
+  }
+}
+
+// ─── SVG ART ───────────────────────────────────────────────────────────────
+let _uid = 0;
+function uid() { return 'u' + (++_uid); }
+
+function svgLight(c,w,h){const id=uid(),cx=w/2,cy=h*.43;const rays=Array.from({length:8},(_,i)=>{const a=i*45*Math.PI/180,sp=.055,L=w*1.5;return`<polygon points="${cx},${cy} ${cx+Math.cos(a-sp)*L},${cy+Math.sin(a-sp)*L} ${cx+Math.cos(a+sp)*L},${cy+Math.sin(a+sp)*L}" fill="${c}" opacity=".065"/>`;}).join('');return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="43%" r="80%"><stop offset="0%" stop-color="#221c4a"/><stop offset="100%" stop-color="#0c0a1e"/></radialGradient><radialGradient id="g${id}" cx="50%" cy="43%" r="44%"><stop offset="0%" stop-color="${c}" stop-opacity=".5"/><stop offset="100%" stop-color="${c}" stop-opacity="0"/></radialGradient><filter id="f${id}"><feGaussianBlur stdDeviation="2.5"/></filter></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/>${rays}<ellipse cx="${cx}" cy="${cy}" rx="${w*.38}" ry="${h*.3}" fill="url(#g${id})"/><circle cx="${cx}" cy="${cy}" r="${w*.23}" fill="none" stroke="${c}" stroke-width=".8" opacity=".3"/><circle cx="${cx}" cy="${cy}" r="${w*.12}" fill="none" stroke="${c}" stroke-width="1.2" opacity=".5"/><g filter="url(#f${id})" fill="${c}" opacity=".55"><ellipse cx="${cx}" cy="${cy-h*.16}" rx="5.5" ry="6"/><rect x="${cx-6}" y="${cy-h*.09}" width="12" height="${h*.32}" rx="2"/><polygon points="${cx-6},${cy-h*.05} ${cx-12},${cy+h*.2} ${cx-8},${cy+h*.2}"/><polygon points="${cx+6},${cy-h*.05} ${cx+12},${cy+h*.2} ${cx+8},${cy+h*.2}"/></g><g fill="${c}" opacity=".8"><ellipse cx="${cx}" cy="${cy-h*.16}" rx="4" ry="4.5"/><rect x="${cx-5}" y="${cy-h*.09}" width="10" height="${h*.32}" rx="1.5"/><rect x="${cx-8}" y="${cy-h*.02}" width="16" height="3.5" rx="1" opacity=".85"/><polygon points="${cx-5},${cy-h*.05} ${cx-10},${cy+h*.2} ${cx-7},${cy+h*.2}"/><polygon points="${cx+5},${cy-h*.05} ${cx+10},${cy+h*.2} ${cx+7},${cy+h*.2}"/></g></svg>`;}
+
+function svgDark(c,w,h){const id=uid(),cx=w/2,cy=h*.45;const tendrils=Array.from({length:6},(_,i)=>{const a=i*60*Math.PI/180,L=w*(.5+i*.06);const sx=cx+Math.cos(a)*7,sy=cy+Math.sin(a)*7;const ex=cx+Math.cos(a)*L,ey=cy+Math.sin(a)*L;const mx=(sx+ex)/2+Math.cos(a+Math.PI/2)*9,my=(sy+ey)/2+Math.sin(a+Math.PI/2)*9;return`<path d="M${sx},${sy} Q${mx},${my} ${ex},${ey}" stroke="${c}" stroke-width="${1.3-i*.08}" fill="none" opacity="${.55-i*.06}"/>`;}).join('');return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="40%" cy="60%" r="80%"><stop offset="0%" stop-color="#1e0a2e"/><stop offset="100%" stop-color="#07060e"/></radialGradient><radialGradient id="v${id}" cx="50%" cy="48%" r="38%"><stop offset="0%" stop-color="#080510" stop-opacity=".92"/><stop offset="100%" stop-color="${c}" stop-opacity=".14"/></radialGradient><filter id="f${id}"><feGaussianBlur stdDeviation="2"/></filter></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><ellipse cx="${cx}" cy="${cy}" rx="${w*.4}" ry="${h*.38}" fill="url(#v${id})"/>${tendrils}<g fill="${c}" opacity=".6" filter="url(#f${id})"><ellipse cx="${cx}" cy="${cy-h*.16}" rx="5" ry="5.5"/><path d="M${cx-5},${cy-h*.09} Q${cx-16},${cy-h*.04} ${cx-18},${cy+h*.12} Q${cx-10},${cy+h*.07} ${cx-4},${cy+h*.2} L${cx+4},${cy+h*.2} Q${cx+10},${cy+h*.07} ${cx+18},${cy+h*.12} Q${cx+16},${cy-h*.04} ${cx+5},${cy-h*.09} Z"/><path d="M${cx-5},${cy-h*.09} Q${cx-20},${cy-h*.18} ${cx-22},${cy} Q${cx-14},${cy-h*.07} ${cx-5},${cy+h*.02}" opacity=".5"/><path d="M${cx+5},${cy-h*.09} Q${cx+20},${cy-h*.18} ${cx+22},${cy} Q${cx+14},${cy-h*.07} ${cx+5},${cy+h*.02}" opacity=".5"/></g><g fill="${c}" opacity=".85"><ellipse cx="${cx}" cy="${cy-h*.16}" rx="3.5" ry="4"/><path d="M${cx-4},${cy-h*.09} Q${cx-14},${cy-h*.04} ${cx-15},${cy+h*.1} Q${cx-9},${cy+h*.06} ${cx-3},${cy+h*.18} L${cx+3},${cy+h*.18} Q${cx+9},${cy+h*.06} ${cx+15},${cy+h*.1} Q${cx+14},${cy-h*.04} ${cx+4},${cy-h*.09} Z" opacity=".9"/></g></svg>`;}
+
+function svgArcane(c,w,h){const id=uid(),cx=w/2,cy=h*.45;const r1=w*.34,r2=w*.21;const hex=Array.from({length:6},(_,i)=>{const a=i*60*Math.PI/180-Math.PI/2;return[cx+Math.cos(a)*r1,cy+Math.sin(a)*r1];});const tri=Array.from({length:3},(_,i)=>{const a=i*120*Math.PI/180-Math.PI/2;return[cx+Math.cos(a)*r2,cy+Math.sin(a)*r2];});const lines=hex.map((p,i)=>`<line x1="${p[0]}" y1="${p[1]}" x2="${hex[(i+3)%6][0]}" y2="${hex[(i+3)%6][1]}" stroke="${c}" stroke-width=".5" opacity=".38"/>`).join('');const dots=hex.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="2.2" fill="${c}" opacity=".7"/>`).join('');return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="45%" r="78%"><stop offset="0%" stop-color="#111a42"/><stop offset="100%" stop-color="#080b1e"/></radialGradient><filter id="f${id}"><feGaussianBlur stdDeviation="2"/></filter></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><polygon points="${hex.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${c}" stroke-width=".7" opacity=".45"/><polygon points="${tri.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${c}" stroke-width=".9" opacity=".55"/>${lines}${dots}<circle cx="${cx}" cy="${cy}" r="${w*.1}" fill="none" stroke="${c}" stroke-width="1.4" opacity=".45"/><circle cx="${cx}" cy="${cy}" r="3" fill="${c}" opacity=".8"/><g fill="${c}" filter="url(#f${id})" opacity=".5"><ellipse cx="${cx}" cy="${cy-h*.2}" rx="4" ry="4.5"/><path d="M${cx-4},${cy-h*.14} L${cx-9},${cy+h*.18} L${cx+9},${cy+h*.18} L${cx+4},${cy-h*.14} Z" opacity=".85"/><line x1="${cx+4}" y1="${cy-h*.07}" x2="${cx+14}" y2="${cy+h*.05}" stroke="${c}" stroke-width="2.5" stroke-linecap="round"/><circle cx="${cx+14}" cy="${cy+h*.05}" r="3"/></g><g fill="${c}" opacity=".82"><ellipse cx="${cx}" cy="${cy-h*.2}" rx="3" ry="3.5"/><path d="M${cx-3.5},${cy-h*.14} L${cx-8},${cy+h*.18} L${cx+8},${cy+h*.18} L${cx+3.5},${cy-h*.14} Z" opacity=".85"/><line x1="${cx+3.5}" y1="${cy-h*.07}" x2="${cx+13}" y2="${cy+h*.05}" stroke="${c}" stroke-width="2" stroke-linecap="round"/><circle cx="${cx+13}" cy="${cy+h*.05}" r="2.5"/></g></svg>`;}
+
+function svgUndead(c,w,h){const id=uid(),cx=w/2,cy=h*.35;return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="70%" r="80%"><stop offset="0%" stop-color="#0b1e1a"/><stop offset="100%" stop-color="#060c0b"/></radialGradient><radialGradient id="m${id}" cx="50%" cy="85%" r="65%"><stop offset="0%" stop-color="${c}" stop-opacity=".22"/><stop offset="100%" stop-color="${c}" stop-opacity="0"/></radialGradient></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><ellipse cx="${cx}" cy="${h*.88}" rx="${w*.65}" ry="${h*.3}" fill="url(#m${id})"/>${Array.from({length:5},(_,i)=>{const x=w*(.1+i*.2),y=h*(.58+Math.sin(i*1.9)*.1),rot=i*38;return`<rect x="${x}" y="${y}" width="${5+i%3*2}" height="2.2" rx="1" fill="${c}" opacity="${.28+i*.07}" transform="rotate(${rot} ${x+3} ${y+1})"/>`;}).join('')}<g fill="${c}" opacity=".78"><ellipse cx="${cx}" cy="${cy}" rx="11.5" ry="12.5"/><rect x="${cx-9}" y="${cy+h*.08}" width="18" height="6.5" rx="1.2"/><rect x="${cx-3}" y="${cy+h*.1}" width="2" height="5" rx=".5" fill="#07100e"/><rect x="${cx+1}" y="${cy+h*.1}" width="2" height="5" rx=".5" fill="#07100e"/><ellipse cx="${cx-4.5}" cy="${cy-.5}" rx="3.8" ry="3.8" fill="#07100e"/><ellipse cx="${cx+4.5}" cy="${cy-.5}" rx="3.8" ry="3.8" fill="#07100e"/><ellipse cx="${cx-4.5}" cy="${cy-.5}" rx="2.2" ry="2.2" fill="${c}" opacity=".92"/><ellipse cx="${cx+4.5}" cy="${cy-.5}" rx="2.2" ry="2.2" fill="${c}" opacity=".92"/><path d="M${cx-8},${cy+h*.14} L${cx-11},${cy+h*.42} L${cx+11},${cy+h*.42} L${cx+8},${cy+h*.14} Z" opacity=".7"/>${Array.from({length:3},(_,i)=>`<path d="M${cx-6.5},${cy+h*(.2+i*.06)} Q${cx},${cy+h*(.22+i*.06)} ${cx+6.5},${cy+h*(.2+i*.06)}" stroke="#07100e" stroke-width="1.2" fill="none" opacity=".55"/>`).join('')}</g></svg>`;}
+
+function svgBeast(c,w,h){const id=uid(),cx=w/2,cy=h*.42;return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="38%" r="80%"><stop offset="0%" stop-color="#2c1205"/><stop offset="100%" stop-color="#0e0705"/></radialGradient><radialGradient id="fi${id}" cx="50%" cy="82%" r="62%"><stop offset="0%" stop-color="${c}" stop-opacity=".42"/><stop offset="100%" stop-color="#c03010" stop-opacity="0"/></radialGradient><filter id="f${id}"><feGaussianBlur stdDeviation="3"/></filter></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><ellipse cx="${cx}" cy="${h*.82}" rx="${w*.58}" ry="${h*.28}" fill="url(#fi${id})"/>${Array.from({length:3},(_,i)=>{const xo=(i-1)*8;return`<line x1="${w*.28+xo}" y1="${h*.08}" x2="${w*.62+xo+5}" y2="${h*.72}" stroke="${c}" stroke-width="${2.8-i*.4}" stroke-linecap="round" opacity="${.32+i*.07}"/>`;}).join('')}<g fill="${c}" opacity=".58" filter="url(#f${id})"><ellipse cx="${cx-.06*w}" cy="${cy-.06*h}" rx="15" ry="11"/><ellipse cx="${cx-.16*w}" cy="${cy-.18*h}" rx="6" ry="8"/><polygon points="${cx-.22*w},${cy-.26*h} ${cx-.3*w},${cy-.38*h} ${cx-.24*w},${cy-.24*h}"/><ellipse cx="${cx}" cy="${cy+.1*h}" rx="19" ry="12.5"/></g><g fill="${c}" opacity=".88"><ellipse cx="${cx-.06*w}" cy="${cy-.06*h}" rx="13" ry="9.5"/><ellipse cx="${cx-.16*w}" cy="${cy-.18*h}" rx="5" ry="7"/><polygon points="${cx-.22*w},${cy-.26*h} ${cx-.3*w},${cy-.38*h} ${cx-.24*w},${cy-.24*h}"/></g></svg>`;}
+
+function svgNature(c,w,h){const id=uid(),cx=w/2;const branches=[[cx,h*.52,cx-.18*w,h*.38,cx-.28*w,h*.28],[cx,h*.5,cx+.18*w,h*.36,cx+.28*w,h*.26],[cx,h*.56,cx-.3*w,h*.5,cx-.36*w,h*.5],[cx,h*.56,cx+.3*w,h*.5,cx+.36*w,h*.5]];const leaves=[[cx-.28*w,h*.28],[cx+.28*w,h*.26],[cx-.36*w,h*.5],[cx+.36*w,h*.5],[cx-.18*w,h*.26],[cx+.18*w,h*.24]];return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="45%" r="80%"><stop offset="0%" stop-color="#0c1f0b"/><stop offset="100%" stop-color="#060e06"/></radialGradient><radialGradient id="ca${id}" cx="50%" cy="28%" r="55%"><stop offset="0%" stop-color="${c}" stop-opacity=".18"/><stop offset="100%" stop-color="${c}" stop-opacity="0"/></radialGradient></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><ellipse cx="${cx}" cy="${h*.3}" rx="${w*.55}" ry="${h*.32}" fill="url(#ca${id})"/>${Array.from({length:4},(_,i)=>{const xo=(i-1.5)*w*.1;return`<path d="M${cx},${h*.68} Q${cx+xo},${h*.8} ${cx+xo*1.5},${h}" stroke="${c}" stroke-width="${2-i*.15}" fill="none" opacity="${.48-i*.05}"/>`;}).join('')}<rect x="${cx-4}" y="${h*.45}" width="8" height="${h*.27}" rx="2.5" fill="${c}" opacity=".7"/>${branches.map(([x1,y1,mx,my,x2,y2])=>`<path d="M${x1},${y1} Q${mx},${my} ${x2},${y2}" stroke="${c}" stroke-width="2.5" fill="none" opacity=".62"/>`).join('')}${leaves.map(([lx,ly],i)=>{const ang=Math.atan2(ly-h*.55,lx-cx)*180/Math.PI+90;return`<ellipse cx="${lx}" cy="${ly}" rx="6.5" ry="4.2" fill="${c}" opacity=".68" transform="rotate(${ang} ${lx} ${ly})"/>`;}).join('')}</svg>`;}
+
+function artSVG(type, w, h) {
+  const c = TYPE_COLOR[type] || '#9184d9';
+  const fns = {Light:svgLight,Dark:svgDark,Arcane:svgArcane,Undead:svgUndead,Beast:svgBeast,Nature:svgNature};
+  return (fns[type] || svgLight)(c, w, h);
+}
+
+function monsterImg(id, suffix='') {
+  return `<img src="/img/monsters/monster-${id}${suffix}.png" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none'" alt="">`;
+}
+
+// ─── CARD RENDERER ─────────────────────────────────────────────────────────
+function renderCard(m, {size='full', selected=false, showCost=true, dim=false, onclick=''}={}) {
+  const c = TYPE_COLOR[m.type] || '#9184d9';
+  const pct = Math.max(0, Math.min(1, m.hp / m.maxHp));
+  const hpColor = pct < .35 ? '#b05050' : c;
+  const hpPct = Math.round(pct * 100);
+  const borderColor = m.isSpecial ? `${c}bb` : `${c}88`;
+  const glowShadow = m.isSpecial ? `box-shadow:0 0 0 2.5px ${c}44,0 0 20px ${c}44` : `box-shadow:0 0 14px ${c}28`;
+  const classes = `monster-card ${size}${selected?' selected':''}${dim?' unaffordable':''}${m.isSpecial?' special-card':''}`;
+  const art = m.id ? monsterImg(m.id, size === 'mini' ? '-mini' : '') : artSVG(m.type, size==='mini'?70:130, size==='mini'?100:186);
+  const clickAttr = onclick ? ` onclick="${onclick}"` : '';
+
+  if (size === 'mini') {
+    return `<div class="${classes}" style="border-color:${borderColor};${glowShadow}"${clickAttr}>
+      ${m.charm ? `<div class="charm-dot"></div>` : ''}
+      <div class="mc-art">${art}</div>
+      <div class="mc-mini-strip" style="background:${c}"></div>
+    </div>`;
+  }
+  return `<div class="${classes}" style="border-color:${borderColor};${glowShadow}"${clickAttr}>
+    ${m.charm ? `<div class="charm-dot"></div>` : ''}
+    ${m.isSpecial ? `<div class="special-badge">✦ Special</div>` : ''}
+    ${showCost ? `<div class="mc-cost-strip"><span class="mc-cost-val" style="color:${c}">${m.cost}</span><span class="mc-cost-lbl">Mana</span></div>` : ''}
+    <div class="mc-art">${art}</div>
+    <div class="mc-overlay">
+      <div class="mc-ov-name" style="color:${c}"><span>${m.name}</span><div class="mc-ov-eldot" style="background:${c}"></div></div>
+      <div class="mc-ov-hp-row"><div class="mc-hp-track"><div class="mc-hp-fill" style="width:${hpPct}%;background:${hpColor}"></div></div><span class="mc-hp-num">${m.hp}/${m.maxHp}</span></div>
+      <div class="mc-ov-stats">${['ATK','DEF','✦','GEN'].map((l,i)=>`<div class="mc-ov-sc"><span class="mc-ov-si">${l}</span><span class="mc-ov-sv">${[m.atk,m.def,m.cost,m.gen][i]}</span></div>`).join('')}</div>
+    </div>
+  </div>`;
+}
+
+// ─── SIGIL ─────────────────────────────────────────────────────────────────
+function sigilShape(idx, cx, cy, r, color) {
+  const sw = `stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none"`;
+  switch(idx % 6) {
+    case 0: return `<circle ${sw} cx="${cx}" cy="${cy}" r="${r}"/>`;
+    case 1: return `<polygon ${sw} points="${cx},${cy-r} ${cx+r},${cy} ${cx},${cy+r} ${cx-r},${cy}"/>`;
+    case 2: return `<polygon ${sw} points="${cx},${cy-r} ${cx+r*.87},${cy+r*.5} ${cx-r*.87},${cy+r*.5}"/>`;
+    case 3: { const a=2*Math.PI/5; const pts=Array.from({length:5},(_,i)=>{const t=-Math.PI/2+i*a;return`${cx+r*Math.cos(t)},${cy+r*Math.sin(t)}`;}).join(' '); return`<polygon ${sw} points="${pts}"/>`; }
+    case 4: return `<line ${sw} x1="${cx}" y1="${cy-r}" x2="${cx}" y2="${cy+r}"/><line ${sw} x1="${cx-r}" y1="${cy}" x2="${cx+r}" y2="${cy}"/>`;
+    case 5: { const pts=[0,1,2,3,4,5].map(i=>{const t=-Math.PI/2+i*Math.PI/3;const rr=i%2===0?r*.5:r;return`${cx+rr*Math.cos(t)},${cy+rr*Math.sin(t)}`;}).join(' ');return`<polygon ${sw} points="${pts}"/>`; }
+    default: return `<circle ${sw} cx="${cx}" cy="${cy}" r="${r}"/>`;
+  }
+}
+
+// ─── MINI BOARD ─────────────────────────────────────────────────────────────
+function miniBoardSVG(w=220, h=220) {
+  if (!G) return '';
+  const cx=w/2, cy=h/2, R=88, N=28;
+  let tiles='', tokens='';
+  const me = G.players[myIdx];
+  for (let i=0; i<N; i++) {
+    const a = (i/N)*2*Math.PI - Math.PI/2;
+    const tx=cx+R*Math.cos(a), ty=cy+R*Math.sin(a);
+    const tile = G.board[i];
+    let col = tile.element ? TYPE_COLOR[tile.element] : '#a97b40';
+    if (tile.ownerId !== null && tile.ownerId !== undefined) {
+      col = G.players[tile.ownerId]?.color || col;
+    }
+    tiles += `<circle cx="${tx}" cy="${ty}" r="7" fill="${col}33" stroke="${col}" stroke-width="1.2" opacity=".8"/>`;
+    G.players.forEach(p => {
+      if (p.position === i) {
+        const isMe = p.idx === myIdx;
+        tokens += `<circle cx="${tx}" cy="${ty}" r="${isMe?5.5:4}" fill="${p.color}" stroke="${isMe?'white':'transparent'}" stroke-width="${isMe?1.5:0}" opacity=".9"/>`;
+      }
+    });
+  }
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <circle cx="${cx}" cy="${cy}" r="${R+10}" fill="none" stroke="#272a38" stroke-width=".5"/>
+    ${tiles}${tokens}
+    ${me ? `<text x="${cx}" y="${cy+5}" text-anchor="middle" fill="${me.color}" font-family="Cinzel,serif" font-size="11" font-weight="700">YOU</text>` : ''}
+  </svg>`;
+}
+
+// ─── TILE CARD (player-view) ─────────────────────────────────────────────────
+function renderPlayerTileCard(tile) {
+  if (!tile) return '';
+  const isSpecial = tile.kind !== 'element';
+  const color = isSpecial ? '#c0392b' : (TYPE_COLOR[tile.element] || '#9397ab');
+  const label = tile.label || tile.element || tile.kind;
+  // Match board.html gradient formula exactly
+  const bg = isSpecial
+    ? 'linear-gradient(160deg,#4a1a1a,#2a0e0e)'
+    : `linear-gradient(160deg,color-mix(in srgb,${color} 62%,#10111e 38%),color-mix(in srgb,${color} 40%,#0c0d1a 60%))`;
+  const border = `1px solid ${color}cc`;
+  // Art: image if available, else glyph fallback (matching board art logic)
+  const imgSrc = isSpecial ? TILE_IMG[tile.kind] : TILE_IMG[tile.element];
+  const artHTML = imgSrc
+    ? `<div style="display:flex;align-items:center;justify-content:center;width:100%;flex:1;min-height:0;">
+         <img src="${imgSrc}" style="width:100%;height:100%;object-fit:contain;display:block;" alt="">
+       </div>`
+    : isSpecial
+      ? `<div style="display:flex;align-items:center;justify-content:center;font-size:26px;width:100%;flex:1;color:${color};">${SPECIAL_ICONS[tile.kind] || '❖'}</div>`
+      : `<div style="display:flex;align-items:center;justify-content:center;width:100%;flex:1;min-height:0;font-size:24px;line-height:1;text-shadow:0 0 8px currentColor;color:#fff;">${TYPE_ICON[tile.element] || '✦'}</div>`;
+  // 20% bigger than before (was 120×150 → now 144×180), board card style
+  return `<div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:flex-start;
+      width:144px;height:180px;border-radius:8px;border:${border};
+      background:${bg};overflow:hidden;padding:5px 4px 5px;">
+    ${artHTML}
+    <div style="font-size:11px;font-weight:500;letter-spacing:.03em;text-transform:uppercase;text-align:center;line-height:1.2;margin-top:4px;color:${color};">${label}</div>
+  </div>`;
+}
+
+// ─── TYPE EFFECTIVENESS ─────────────────────────────────────────────────────
+function typeEff(atkType, defType) {
+  if (TYPE_STRONG[atkType]===defType) return {label:'2× Strong', cls:'strong'};
+  if (TYPE_WEAK[atkType]===defType)   return {label:'½× Weak',   cls:'weak'};
+  return {label:'1× Neutral', cls:'neutral'};
+}
+
+// ─── TOAST ──────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1c1e2b;border:1px solid #3f424d;border-radius:8px;padding:10px 16px;font-size:13px;color:#e9e9ed;z-index:9999;pointer-events:none;max-width:300px;text-align:center';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ─── STATUS BAR ─────────────────────────────────────────────────────────────
+function updateStatusBar(showIt = true) {
+  const sb = document.getElementById('status-bar');
+  if (!showIt || !G || myIdx === null) { sb.style.display = 'none'; return; }
+  sb.style.display = 'flex';
+  const me = G.players[myIdx];
+  if (!me) return;
+  const isMyTurn = G.currentPlayer === myIdx;
+  document.getElementById('sb-name').textContent = me.name;
+  document.getElementById('sb-turn-info').textContent = `Turn ${G.turnCount + 1} · Tile ${me.position}`;
+  document.getElementById('sb-badge').innerHTML = `<span class="turn-badge ${isMyTurn ? 'yours' : 'waiting'}">${isMyTurn ? 'Your Turn' : 'Waiting'}</span>`;
+  document.getElementById('sb-mana-val').textContent = me.mana;
+  document.getElementById('sb-sigil-svg').innerHTML = sigilShape(myIdx, 15, 15, 6, me.color);
+}
+
+function updateHandStrip(show = true) {
+  const ha = document.getElementById('hand-area');
+  const hs = document.getElementById('hand-scroll');
+  if (!show || !myHand.length) { ha.classList.remove('visible'); return; }
+  ha.classList.add('visible');
+  hs.innerHTML = myHand.map(m => renderCard(m, {size:'mini'})).join('');
+}
+
+// ─── SCROLL NAVIGATION HELPERS ──────────────────────────────────────────────
+function shopScroll(scrollId, dotPrefix, count, dir) {
+  const el = document.getElementById(scrollId);
+  if (!el) return;
+  el.scrollBy({left: dir * 140, behavior: 'smooth'});
+}
+function attachShopScrollListener(scrollId, dotPrefix, count) {
+  const el = document.getElementById(scrollId);
+  if (!el) return;
+  el.onscroll = () => updateScrollDots(scrollId, dotPrefix, count);
+  updateScrollDots(scrollId, dotPrefix, count);
+}
+function updateScrollDots(scrollId, dotPrefix, count) {
+  const el = document.getElementById(scrollId);
+  if (!el) return;
+  const idx = Math.min(Math.round(el.scrollLeft / 140), count - 1);
+  for (let i = 0; i < count; i++) {
+    const d = document.getElementById(`${dotPrefix}-${i}`);
+    if (d) d.classList.toggle('active', i === idx);
+  }
+}
+function scrollNavHTML(scrollId, dotPrefix, count) {
+  if (count <= 1) return '';
+  const dots = Array.from({length: count}, (_, i) => `<div id="${dotPrefix}-${i}" class="shop-dot${i===0?' active':''}"></div>`).join('');
+  return `<div class="shop-scroll-nav">
+    <button class="shop-arrow" onclick="shopScroll('${scrollId}','${dotPrefix}',${count},-1)">‹</button>
+    <div class="shop-dots">${dots}</div>
+    <button class="shop-arrow" onclick="shopScroll('${scrollId}','${dotPrefix}',${count},1)">›</button>
+  </div>`;
+}
+
+// ─── MAIN RENDER ROUTER ─────────────────────────────────────────────────────
+function render() {
+  if (!G) { renderConnecting(); return; }
+  if (myIdx === null) { renderJoin(); return; }
+
+  // If we're joined but haven't seen our player in the array yet
+  const me = G.players[myIdx];
+  if (!me) { renderJoin(); return; }
+
+  const isMyTurn = G.currentPlayer === myIdx;
+
+  switch (G.phase) {
+    case 'lobby':     renderLobby(); break;
+    case 'shop':      isMyTurn ? renderShop() : renderWaiting(); break;
+    case 'roll':      isMyTurn ? renderRoll() : renderWaiting(); break;
+    case 'stalemate': isMyTurn ? renderStalemate() : renderWaiting(); break;
+    case 'resolve:claim':    isMyTurn ? renderClaim() : renderWaiting(); break;
+    case 'resolve:battle':        isMyTurn ? renderBattle() : renderWaiting(); break;
+    case 'resolve:battle_result': renderBattleResult(); break;
+    case 'resolve:own':      isMyTurn ? renderOwn() : renderWaiting(); break;
+    case 'resolve:chest':    isMyTurn ? renderChest() : renderWaiting(); break;
+    case 'resolve:temple':   isMyTurn ? renderTemple() : renderWaiting(); break;
+    case 'resolve:heal_tile':isMyTurn ? renderHealTile() : renderWaiting(); break;
+    case 'game_over': renderGameOver(); break;
+    default: renderWaiting();
+  }
+}
+
+// ─── CONNECTING SCREEN ──────────────────────────────────────────────────────
+function renderConnecting() {
+  document.getElementById('status-bar').style.display = 'none';
+  document.getElementById('hand-area').classList.remove('visible');
+  document.getElementById('action-bar').classList.remove('visible');
+  document.getElementById('main-content').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;padding:32px">
+      <div style="font-size:32px">🎮</div>
+      <div style="font-family:'Cinzel',serif;font-size:16px;letter-spacing:.1em;color:var(--text-lo)">Connecting…</div>
+      <div style="font-size:12px;color:var(--text-mute)">Waiting for server</div>
+    </div>`;
+}
+
+// ─── JOIN SCREEN ────────────────────────────────────────────────────────────
+function renderJoin() {
+  updateStatusBar(false);
+  document.getElementById('hand-area').classList.remove('visible');
+  document.getElementById('action-bar').classList.remove('visible');
+  document.getElementById('main-content').classList.add('no-hand');
+
+  const starterDefs = {
+    A:{title:'Aggressive',sub:'Hit hard, hit fast. High risk.',types:['Dark','Dark','Dark']},
+    B:{title:'Defensive', sub:'Survive anything early.',types:['Light','Light','Light']},
+    C:{title:'Balanced',  sub:'Safest pick for beginners.',types:['Arcane','Arcane','Arcane']},
+    D:{title:'Versatile', sub:'True type diversity.',types:['Undead','Beast','Nature']},
+  };
+  const starters = Object.entries(starterDefs).map(([k,v])=>`
+    <div class="starter-card${joinSet===k?' selected':''}" onclick="joinSet='${k}';renderJoin()">
+      <div class="starter-card-title">${k} — ${v.title}</div>
+      <div class="starter-card-sub">${v.sub}</div>
+      <div class="starter-pips">${v.types.map(t=>`<div class="starter-pip" style="background:${TYPE_COLOR[t]}88;border:1px solid ${TYPE_COLOR[t]}"></div>`).join('')}</div>
+    </div>`).join('');
+
+  const codeHasError = !!joinError;
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="join-logo">
+      <div class="join-logo-mark">
+        <svg class="join-logo-sigil" width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <polygon stroke="#a97b40" stroke-width="2" stroke-linejoin="round" points="18,4 32,28 4,28"/>
+          <circle stroke="#9184d9" stroke-width="1.5" cx="18" cy="18" r="7"/>
+          <line stroke="#9184d9" stroke-width="1.5" x1="18" y1="4" x2="18" y2="11"/>
+          <line stroke="#9184d9" stroke-width="1.5" x1="32" y1="28" x2="26.06" y2="24.5"/>
+          <line stroke="#9184d9" stroke-width="1.5" x1="4" y1="28" x2="9.94" y2="24.5"/>
+        </svg>
+      </div>
+      <div class="join-logo-name">Summoners Gambit</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.3.3</div>
+    </div>
+
+    <div class="room-code-group">
+      <label class="room-code-lbl">Room Code</label>
+      <input
+        class="room-code-input${codeHasError?' error':''}"
+        id="room-code-field"
+        type="text"
+        inputmode="text"
+        placeholder="— — — —"
+        maxlength="4"
+        autocomplete="off"
+        autocapitalize="characters"
+        value="${joinCode}"
+        oninput="joinCode=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4);this.value=joinCode;joinError='';this.classList.remove('error');document.getElementById('join-code-error').textContent=''"
+      >
+      <div class="room-code-error" id="join-code-error">${joinError}</div>
+    </div>
+
+    <div class="screen-section">
+      <div class="field-group">
+        <label class="field-lbl">Your Name</label>
+        <input class="field-input" id="name-field" type="text" placeholder="Enter name" value="${joinName}" oninput="joinName=this.value" maxlength="18">
+      </div>
+      <div class="field-group">
+        <label class="field-lbl">Starter Set</label>
+        <div class="starter-grid">${starters}</div>
+      </div>
+      <button class="action-btn primary" style="width:100%;margin-bottom:32px" onclick="doJoin()">Join Game</button>
+    </div>`;
+}
+
+function doJoin() {
+  const codeEl = document.getElementById('room-code-field');
+  const nameEl = document.getElementById('name-field');
+  if (codeEl) joinCode = codeEl.value.toUpperCase().trim();
+  if (nameEl) joinName = nameEl.value.trim() || joinName;
+  if (!joinCode || joinCode.length < 4) {
+    joinError = 'Enter the 4-character room code';
+    renderJoin();
+    return;
+  }
+  joinName = joinName || 'Player';
+  send('join', { roomCode: joinCode, name: joinName, starterSet: joinSet });
+}
+
+function doStartGame() {
+  send('start_game');
+}
+
+// ─── LOBBY (post-join, waiting for start) ───────────────────────────────────
+function renderLobby() {
+  updateStatusBar(false);
+  document.getElementById('hand-area').classList.remove('visible');
+  document.getElementById('action-bar').classList.remove('visible');
+  document.getElementById('main-content').classList.add('no-hand');
+
+  const me = G.players[myIdx];
+  const rows = G.players.map(p => `
+    <div class="lobby-player-row${p.idx===myIdx?' you':''}">
+      <svg width="20" height="20" viewBox="0 0 20 20">${sigilShape(p.idx,10,10,5,p.color)}</svg>
+      <span style="font-size:13px;font-weight:500;color:${p.color}">${p.name}${p.idx===myIdx?' (you)':''}</span>
+      <span style="font-size:11px;color:var(--text-mute);margin-left:auto">✓ Ready</span>
+    </div>`).join('');
+
+  document.getElementById('main-content').innerHTML = `
+    <div style="padding:32px 16px 20px;text-align:center">
+      <div style="font-size:32px;margin-bottom:12px">🏰</div>
+      <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
+      <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.3.3</div>
+    </div>
+    <div class="lobby-players">${rows}</div>
+    <div style="padding:16px 20px 24px">
+      <div style="background:rgba(145,132,217,.07);border:1px solid rgba(145,132,217,.18);border-radius:10px;padding:16px">
+        <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:10px">Objective</div>
+        <div style="font-size:12px;line-height:1.7;color:var(--text-mute)">
+          Summon monsters and battle for control of the board. Roll the dice to move, claim tiles by playing cards from your hand, and outmanoeuvre your rivals. The summoner who commands the most tiles when the board is full claims victory.
+        </div>
+      </div>
+    </div>`;
+}
+
+// ─── WAITING SCREEN ──────────────────────────────────────────────────────────
+function renderWaiting() {
+  const me = G.players[myIdx];
+  updateStatusBar(true);
+  updateHandStrip(true);
+  document.getElementById('action-bar').classList.remove('visible');
+  document.getElementById('main-content').classList.remove('no-hand');
+
+  const currentP = G.players[G.currentPlayer];
+  const rows = G.players.map(p => `
+    <div class="waiting-player-row${p.idx===G.currentPlayer?' active':''}${p.idx===myIdx?' you':''}">
+      <svg width="20" height="20" viewBox="0 0 20 20">${sigilShape(p.idx,10,10,5,p.color)}</svg>
+      <span class="wp-name" style="color:${p.color}">${p.name}${p.idx===myIdx?' (you)':''}</span>
+      <span class="wp-stat"><strong>${p.tileCount}</strong> tiles · <strong>${p.mana}</strong> ✦</span>
+    </div>`).join('');
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="waiting-hero">
+      <div class="waiting-turn-info">
+        <div class="waiting-pulse"></div>
+        <span class="waiting-turn-text"><span class="waiting-turn-name" style="color:${currentP?.color}">${currentP?.name || '?'}</span>'s turn</span>
+      </div>
+      <div class="mini-board-wrap">${miniBoardSVG()}</div>
+    </div>
+    <div class="waiting-players">${rows}</div>
+    <div style="padding:12px 16px">
+      <div class="screen-label" style="margin-bottom:8px">Recent Events</div>
+      ${G.events.slice(0,5).map(e=>`<div style="font-size:12px;color:var(--text-dim);padding:4px 0;border-bottom:1px solid var(--border)">${e.text}</div>`).join('')}
+    </div>`;
+}
+
+// ─── SHOP ────────────────────────────────────────────────────────────────────
+function renderShop() {
+  const me = G.players[myIdx];
+  updateStatusBar(true);
+  updateHandStrip(true);
+  document.getElementById('main-content').classList.remove('no-hand');
+
+  const canAfford = (m) => me.mana >= m.cost && myHand.length < 5;
+
+  const buyCards = G.shopOffers.map(m => renderCard(m, {
+    size:'full', selected: selectedIid===m.iid, dim: !canAfford(m),
+    onclick: `selectCard(${m.iid})`
+  })).join('');
+
+  const sellCards = myHand.length === 0
+    ? `<div style="padding:14px 0;color:var(--text-mute);font-size:13px">Hand is empty</div>`
+    : myHand.map(m => {
+        const sv = Math.round(m.cost * (m.hp / m.maxHp));
+        return `<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:3px">
+          ${renderCard(m, {size:'full', selected: selectedIid===m.iid, showCost:false, onclick:`selectCard(${m.iid})`})}
+          <div style="font-size:11px;color:var(--gold-glow);font-weight:600">+${sv} ✦</div>
+        </div>`;
+      }).join('');
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="mana-collect-banner">
+      <span class="mana-collect-icon">✦</span>
+      <span class="mana-collect-text"><strong>${me.mana} Mana</strong> available</span>
+    </div>
+    <div class="screen-section" style="padding-bottom:0">
+      <div class="screen-label">Shop</div>
+    </div>
+    <div class="shop-one-action-note">One action only — buy <em>or</em> sell, then roll. Or skip.</div>
+    <div class="shop-section-hdr">Buy</div>
+    <div class="shop-cards-wrap">
+      <div class="shop-cards-scroll" id="shop-buy-scroll">${buyCards}</div>
+      ${scrollNavHTML('shop-buy-scroll','shop-buy-dot',G.shopOffers.length)}
+    </div>
+    <div class="shop-section-hdr" style="margin-top:14px">Sell from Hand</div>
+    <div class="shop-cards-wrap">
+      <div class="shop-cards-scroll" id="shop-sell-scroll">${sellCards}</div>
+      ${myHand.length > 1 ? scrollNavHTML('shop-sell-scroll','shop-sell-dot',myHand.length) : ''}
+    </div>`;
+
+  attachShopScrollListener('shop-buy-scroll','shop-buy-dot',G.shopOffers.length);
+  attachShopScrollListener('shop-sell-scroll','shop-sell-dot',myHand.length);
+
+  const selShop = G.shopOffers.find(m => m.iid === selectedIid);
+  const selHand = myHand.find(m => m.iid === selectedIid);
+  const ab = document.getElementById('action-bar');
+  ab.classList.add('visible');
+
+  if (selShop) {
+    const ok = canAfford(selShop);
+    ab.innerHTML = `<button class="action-btn secondary" onclick="selectCard(null)">Cancel</button>
+      <button class="action-btn primary"${ok?'':' disabled style="opacity:.4"'} onclick="${ok?'doBuy()':''}">Buy · ${selShop.cost} ✦</button>`;
+  } else if (selHand) {
+    const sv = Math.round(selHand.cost * (selHand.hp / selHand.maxHp));
+    ab.innerHTML = `<button class="action-btn secondary" onclick="selectCard(null)">Cancel</button>
+      <button class="action-btn gold-btn" onclick="doSell()">Sell · +${sv} ✦</button>`;
+  } else {
+    ab.innerHTML = `<button class="action-btn secondary" onclick="send('skip_shop')">Skip Shop</button>
+      <button class="action-btn primary" disabled style="opacity:.4">Select Card</button>`;
+  }
+}
+
+// ─── ROLL ─────────────────────────────────────────────────────────────────
+function renderRoll() {
+  const me = G.players[myIdx];
+  updateStatusBar(true);
+  updateHandStrip(true);
+  document.getElementById('main-content').classList.remove('no-hand');
+  document.getElementById('action-bar').classList.remove('visible');
+
+  const tile = G.board[me.position];
+  document.getElementById('main-content').innerHTML = `
+    <div class="roll-hero">
+      <div class="roll-position-chip">Currently on tile <span>${me.position}</span> · <span style="color:${tile.element?TYPE_COLOR[tile.element]:'var(--gold-glow)'}">${tile.label || tile.kind}</span></div>
+      <div class="big-die" id="die-btn" onclick="doRoll()">
+        <div class="die-pip pip-tl"></div><div class="die-pip pip-tr"></div>
+        <div class="die-pip pip-bl"></div><div class="die-pip pip-br"></div>
+        <span class="die-face">?</span>
+      </div>
+      <div class="roll-hint">Tap to roll</div>
+      <div class="roll-result" id="roll-result">
+        <div class="roll-result-num" id="roll-num"></div>
+        <div class="roll-result-dest" id="roll-dest"></div>
+      </div>
+    </div>`;
+}
+
+function doRoll() {
+  if (rollAnimating) return;
+  const die = document.getElementById('die-btn');
+  if (!die) return;
+
+  rollAnimating = true;
+  pendingGameState = null;
+  pendingRollValue = null;
+  rollShowCallback = null;
+
+  const face = die.querySelector('.die-face');
+  const hint = document.querySelector('.roll-hint');
+  if (hint) hint.textContent = 'Rolling…';
+
+  const seq = [1,2,3,4,5,6,1,2,3,4,5,6];
+  let step = 0;
+
+  function cycleStep() {
+    if (step < seq.length) {
+      SFX.dieTick();
+      if (face) {
+        face.textContent = seq[step];
+        face.classList.remove('die-flash');
+        void face.offsetWidth;
+        face.classList.add('die-flash');
+      }
+      die.classList.remove('die-cycling');
+      void die.offsetWidth;
+      die.classList.add('die-cycling');
+      step++;
+      setTimeout(cycleStep, 85);
+    } else {
+      die.classList.remove('die-cycling');
+      showFinalResult();
+    }
+  }
+
+  function showFinalResult() {
+    if (pendingRollValue != null) {
+      displayResult(pendingRollValue);
+    } else {
+      rollShowCallback = displayResult;
+    }
+  }
+
+  function displayResult(val) {
+    SFX.dieLand(val);
+    if (face) {
+      face.textContent = val;
+      face.classList.remove('die-flash');
+      void face.offsetWidth;
+      face.classList.add('die-flash');
+    }
+    die.classList.add('die-landed');
+    if (hint) {
+      hint.style.color = 'var(--gold-glow)';
+      hint.style.fontSize = '16px';
+      hint.textContent = `You rolled a ${val}!`;
+    }
+    setTimeout(() => {
+      rollAnimating = false;
+      if (pendingGameState) {
+        G = pendingGameState.game;
+        myIdx = pendingGameState.myIdx;
+        myHand = pendingGameState.hand;
+        pendingGameState = null;
+        render();
+      }
+    }, 2500);
+  }
+
+  send('roll');
+  setTimeout(cycleStep, 40);
+}
+
+// ─── STALEMATE ──────────────────────────────────────────────────────────────
+function renderStalemate() {
+  const me = G.players[myIdx];
+  updateStatusBar(true);
+  updateHandStrip(true);
+  document.getElementById('main-content').classList.remove('no-hand');
+
+  const tile = G.board[G.stalemateData?.tilePos ?? me.position];
+  const defM = tile?.monster;
+  const defOwner = tile ? G.players[tile.ownerId] : null;
+
+  const pickerCards = myHand.map(m => renderCard(m, {
+    size:'full', selected: selectedIid===m.iid,
+    dim: !(m.canUse ?? true),
+    onclick: `selectCard(${m.iid})`
+  })).join('');
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="resolve-banner battle">
+      <span class="resolve-icon">🤝</span>
+      <div>
+        <div class="resolve-title">Stalemate</div>
+        <div class="resolve-sub">Both monsters survived. Choose: fight again or move on.</div>
+      </div>
+    </div>
+    ${defM && defOwner ? `<div class="battle-matchup">
+      <div class="battle-slot"><div class="battle-slot-label">Defending</div>${renderCard(defM,{size:'full',showCost:false})}</div>
+      <div class="vs-badge">VS</div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div class="battle-slot-label">Your Attacker</div><div style="width:130px;height:186px;border-radius:10px;border:2px dashed var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-mute)">Pick below</div></div>
+    </div>` : ''}
+    <div class="picker-label">Choose your monster</div>
+    <div class="picker-scroll" id="stalemate-picker-scroll">${pickerCards}</div>
+    ${scrollNavHTML('stalemate-picker-scroll','stalemate-dot',myHand.length)}`;
+
+  attachShopScrollListener('stalemate-picker-scroll','stalemate-dot',myHand.length);
+
+  const ab = document.getElementById('action-bar');
+  ab.classList.add('visible');
+  const selM = myHand.find(m => m.iid === selectedIid);
+  if (selM) {
+    ab.innerHTML = `<button class="action-btn secondary" onclick="send('stalemate_move')">Move On</button>
+      <button class="action-btn primary" onclick="doStalemateAttack()">Attack Again</button>`;
+  } else {
+    ab.innerHTML = `<button class="action-btn secondary" onclick="send('stalemate_move')">Move On</button>
+      <button class="action-btn primary" disabled style="opacity:.4">Pick Monster</button>`;
+  }
+}
+
+// ─── CLAIM ──────────────────────────────────────────────────────────────────
+function renderClaim() {
+  const me = G.players[myIdx];
+  updateStatusBar(true);
+  updateHandStrip(true);
+  document.getElementById('main-content').classList.remove('no-hand');
+
+  const tile = G.board[me.position];
+  const pickerCards = myHand.map(m => renderCard(m, {
+    size:'full', selected: selectedIid===m.iid,
+    dim: me.mana < m.cost || !(m.canUse ?? true),
+    onclick: `selectCard(${m.iid})`
+  })).join('');
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="resolve-banner claim">
+      <span class="resolve-icon">🚩</span>
+      <div>
+        <div class="resolve-title">Empty Tile — Claim It?</div>
+        <div class="resolve-sub">Tile ${me.position} · <span style="color:${TYPE_COLOR[tile.element]}">${tile.element}</span> — station a monster to claim.</div>
+      </div>
+    </div>
+    <div class="picker-label">Choose a monster to station</div>
+    <div class="picker-scroll" id="claim-picker-scroll">${pickerCards}</div>
+    ${scrollNavHTML('claim-picker-scroll','claim-dot',myHand.length)}
+    <div style="display:flex;justify-content:center;padding:20px 16px 8px;">
+      ${renderPlayerTileCard(tile)}
+    </div>`;
+
+  attachShopScrollListener('claim-picker-scroll','claim-dot',myHand.length);
+
+  const ab = document.getElementById('action-bar');
+  ab.classList.add('visible');
+  const selM = myHand.find(m => m.iid === selectedIid);
+  if (selM && me.mana >= selM.cost) {
+    ab.innerHTML = `<button class="action-btn secondary" onclick="send('skip_claim')">Skip</button>
+      <button class="action-btn primary" onclick="doClaim()">Claim · ${selM.cost} ✦</button>`;
+  } else {
+    ab.innerHTML = `<button class="action-btn secondary" onclick="send('skip_claim')">Skip</button>
+      <button class="action-btn primary" disabled style="opacity:.4">${selM?'Not enough Mana':'Pick Monster'}</button>`;
+  }
+}
+
+// ─── BATTLE RESULT CLASH ─────────────────────────────────────────────────────
+function renderBattleResult() {
+  updateStatusBar(false);
+  updateHandStrip(false);
+  document.getElementById('main-content').classList.add('no-hand');
+  document.getElementById('action-bar').classList.remove('visible');
+
+  const lb = G.lastBattle;
+  if (!lb) { render(); return; }
+
+  const attPlayer = G.players[lb.attackerIdx];
+  const defPlayer = lb.defOwnerIdx != null ? G.players.find(p => p.idx === lb.defOwnerIdx) : null;
+  const outcomeLabel = { attacker_wins:'Victory!', defender_wins:'Defeated!', mutual:'Mutual!', stalemate:'Stalemate' }[lb.outcome] || lb.outcome;
+  const outcomeColor = { attacker_wins:'#5dc97d', defender_wins:'#e05252', mutual:'#e0b050', stalemate:'#9184d9' }[lb.outcome] || 'var(--gold-glow)';
+  const eff = lb.attM && lb.defM ? typeEff(lb.attM.type, lb.defM.type) : null;
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="p-clash-wrap">
+      <div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;">⚔ Battle Result</div>
+      <div class="p-clash-arena">
+        <div class="p-clash-side left">
+          <div class="p-clash-label">Attacker</div>
+          <div class="p-clash-name" style="color:${attPlayer?.color||'var(--text)'}">${attPlayer?.name||'?'}</div>
+          <div class="p-clash-hit">${renderCard(lb.attM,{size:'full',showCost:false})}</div>
+          ${lb.defDmg > 0 ? `<div class="p-clash-dmg">-${lb.defDmg}</div>` : `<div class="p-clash-dmg zero">—</div>`}
+        </div>
+        <div class="p-clash-mid">
+          <div class="p-clash-proj atk">⚔ ${lb.atkDmg}</div>
+          <div class="p-clash-vs">VS</div>
+          <div class="p-clash-proj def-proj">🛡 ${lb.defDmg}</div>
+          ${eff ? `<div class="p-clash-eff">${eff.label}</div>` : ''}
+          <div class="p-clash-outcome" style="color:${outcomeColor}">${outcomeLabel}</div>
+        </div>
+        <div class="p-clash-side right">
+          <div class="p-clash-label">Defender</div>
+          <div class="p-clash-name" style="color:${defPlayer?.color||'var(--text-dim)'}">${defPlayer?.name||'?'}</div>
+          <div class="p-clash-hit">${renderCard(lb.defM,{size:'full',showCost:false})}</div>
+          ${lb.atkDmg > 0 ? `<div class="p-clash-dmg">-${lb.atkDmg}</div>` : `<div class="p-clash-dmg zero">—</div>`}
+        </div>
+      </div>
+    </div>`;
+}
+
+// ─── BATTLE ──────────────────────────────────────────────────────────────────
+function renderBattle() {
+  const me = G.players[myIdx];
+  updateStatusBar(true);
+  updateHandStrip(true);
+  document.getElementById('main-content').classList.remove('no-hand');
+
+  const tile = G.board[me.position];
+  const defM = tile?.monster;
+  const defOwner = tile ? G.players[tile.ownerId] : null;
+  const selM = myHand.find(m => m.iid === selectedIid);
+
+  let effBadge = '';
+  if (selM && defM) {
+    const eff = typeEff(selM.type, defM.type);
+    effBadge = `<div style="text-align:center;padding-bottom:8px"><span class="type-eff-badge ${eff.cls}">${eff.label}</span></div>`;
+  }
+
+  const pickerCards = myHand.map(m => renderCard(m, {
+    size:'full', selected: selectedIid===m.iid,
+    dim: !(m.canUse ?? true),
+    onclick: `selectCard(${m.iid})`
+  })).join('');
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="resolve-banner battle">
+      <span class="resolve-icon">⚔️</span>
+      <div>
+        <div class="resolve-title">Enemy Tile!</div>
+        <div class="resolve-sub">Owned by <span style="color:${defOwner?.color}">${defOwner?.name || '?'}</span> — fight or retreat (−20 ✦ penalty).</div>
+      </div>
+    </div>
+    ${defM ? `<div class="battle-matchup">
+      <div class="battle-slot"><div class="battle-slot-label">Defending</div>${renderCard(defM,{size:'full',showCost:false})}</div>
+      <div class="vs-badge">VS</div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div class="battle-slot-label">Your Attacker</div>${selM ? renderCard(selM,{size:'full',showCost:false}) : `<div style="width:130px;height:186px;border-radius:10px;border:2px dashed var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-mute)">Pick below</div>`}</div>
+    </div>
+    ${effBadge}` : ''}
+    <div class="picker-label">Choose your attacker</div>
+    <div class="picker-scroll" id="battle-picker-scroll">${pickerCards}</div>
+    ${scrollNavHTML('battle-picker-scroll','battle-dot',myHand.length)}`;
+
+  attachShopScrollListener('battle-picker-scroll','battle-dot',myHand.length);
+
+  const ab = document.getElementById('action-bar');
+  ab.classList.add('visible');
+  if (selM) {
+    ab.innerHTML = `<button class="action-btn danger-btn" onclick="send('retreat')">Retreat (−20 ✦)</button>
+      <button class="action-btn primary" onclick="doAttack()">Attack!</button>`;
+  } else {
+    ab.innerHTML = `<button class="action-btn danger-btn" onclick="send('retreat')">Retreat (−20 ✦)</button>
+      <button class="action-btn primary" disabled style="opacity:.4">Pick Monster</button>`;
+  }
+}
+
+// ─── OWN TILE ────────────────────────────────────────────────────────────────
+function renderOwn() {
+  const me = G.players[myIdx];
+  updateStatusBar(true);
+  updateHandStrip(true);
+  document.getElementById('main-content').classList.remove('no-hand');
+
+  const tile = G.board[me.position];
+  const stationed = tile?.monster;
+  const missing = stationed ? stationed.maxHp - stationed.hp : 0;
+  const healCost = stationed ? Math.ceil(1.5 * missing) : 0;
+  const canSwap = myHand.length < 5;
+  const CHANGE_COST = 18;
+
+  const swapCards = myHand.map(m => renderCard(m, {
+    size:'full', selected: selectedIid===m.iid,
+    dim: me.mana < m.cost || !(m.canUse ?? true),
+    onclick: `selectCard(${m.iid})`
+  })).join('');
+
+  const elBtns = ['Light','Dark','Arcane','Undead','Beast','Nature'].map(el =>
+    `<button class="el-btn${tile.element===el?' selected':''}" style="${tile.element===el?`background:${TYPE_COLOR[el]}33;border-color:${TYPE_COLOR[el]};color:${TYPE_COLOR[el]}`:''}" onclick="doChangeElement('${el}')">${el}</button>`
+  ).join('');
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="resolve-banner own">
+      <span class="resolve-icon">🏠</span>
+      <div>
+        <div class="resolve-title">Your Tile</div>
+        <div class="resolve-sub">Tile ${me.position} · <span style="color:${TYPE_COLOR[tile.element]}">${tile.element}</span>${stationed ? ` · ${stationed.name} stationed (${stationed.hp}/${stationed.maxHp} HP)` : ' · Empty'}</div>
+      </div>
+    </div>
+    ${stationed ? `
+    <div class="own-tile-options">
+      ${canSwap ? '' : '<div style="font-size:11px;color:var(--text-mute);padding:0 0 8px">Hand full — sell a monster to swap</div>'}
+      <div class="own-tile-opt${missing===0?' unaffordable':''}" onclick="${missing>0&&me.mana>=healCost?'doHeal()':''}">
+        <span class="own-tile-opt-icon">💚</span>
+        <div class="own-tile-opt-text">
+          <div class="own-tile-opt-name">Heal ${stationed.name}</div>
+          <div class="own-tile-opt-desc">${missing>0?`${missing} HP missing`:'Already at full HP'}</div>
+        </div>
+        <span class="own-tile-opt-cost">${healCost} ✦</span>
+      </div>
+    </div>
+    ${canSwap ? `<div class="picker-label">Swap stationed monster</div><div class="picker-scroll">${swapCards}</div>` : ''}` : ''}
+    <div style="padding:12px 16px 4px"><div class="picker-label" style="padding:0;margin-bottom:8px">Change tile element (${CHANGE_COST} ✦)</div>
+    <div class="element-pick">${elBtns}</div></div>`;
+
+  const ab = document.getElementById('action-bar');
+  ab.classList.add('visible');
+  const selM = myHand.find(m => m.iid === selectedIid);
+  if (selM && canSwap && me.mana >= selM.cost) {
+    ab.innerHTML = `<button class="action-btn secondary" onclick="selectCard(null)">Cancel</button>
+      <button class="action-btn primary" onclick="doSwap()">Swap · ${selM.cost} ✦</button>`;
+  } else {
+    ab.innerHTML = `<button class="action-btn secondary" onclick="send('skip_own')">Leave</button>
+      <button class="action-btn primary" disabled style="opacity:.4">${selM?'Not enough Mana':'Select action above'}</button>`;
+  }
+}
+
+// ─── CHEST ───────────────────────────────────────────────────────────────────
+function renderChest() {
+  const me = G.players[myIdx];
+  const chest = G.pendingChest;
+  if (!chest) return;
+
+  // Play chest reveal sound once when this screen first renders
+  if (!renderChest._played || renderChest._lastPhase !== G.phase) {
+    SFX.chest();
+    renderChest._played = true;
+    renderChest._lastPhase = G.phase;
+  }
+
+  updateStatusBar(true);
+  const needPicker = chest.kind === 'potion' || chest.kind === 'charm';
+  updateHandStrip(needPicker);
+  document.getElementById('main-content').classList.remove('no-hand');
+
+  const rarityColor = {Common:'#4f9153',Uncommon:'#9184d9',Rare:'#a97b40'}[chest.rarity] || '#888';
+  const titles = {potion:'Healing Potion',charm:'Battle Charm',warp:'Warp Portal','free_monster':'Free Monster'};
+  const descs = {
+    potion: `${chest.tier} Potion — ${chest.tier==='Minor'?'heal 15 HP flat':chest.tier==='Major'?'heal 50% of missing HP':'full heal!'}`,
+    charm: 'Assign to any monster — +25% damage on their next battle.',
+    warp: 'Warp to a random tile, or discard and stay put.',
+    free_monster: myHand.length >= 5 ? 'Hand full — reward lost!' : 'A free monster was added to your hand!',
+  };
+
+  // Picker for stationed monsters (all tiles you own)
+  const stationedTiles = G.board.filter(t => t.ownerId === myIdx && t.monster);
+
+  let pickerHtml = '';
+  if (chest.kind === 'potion') {
+    const cards = stationedTiles.map(t =>
+      renderCard(t.monster, {size:'full', selected: selectedIid===t.pos, showCost:false, onclick:`selectCard(${t.pos})`})
+    ).join('');
+    if (cards) pickerHtml = `<div class="picker-label">Apply potion to a stationed monster</div><div class="picker-scroll">${cards}</div>`;
+    else pickerHtml = `<div style="padding:12px 16px;font-size:12px;color:var(--text-mute)">No stationed monsters to heal.</div>`;
+  } else if (chest.kind === 'charm') {
+    const handCards = myHand.map(m => renderCard(m, {size:'full', selected: selectedIid===m.iid, showCost:false, onclick:`selectCard(${m.iid})`})).join('');
+    const stCards = stationedTiles.map(t => renderCard(t.monster, {size:'full', selected: selectedIid===t.pos, showCost:false, onclick:`selectCard(${t.pos})`})).join('');
+    pickerHtml = `<div class="picker-label">Assign charm to a monster</div><div class="picker-scroll">${handCards}${stCards}</div>`;
+  }
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="resolve-banner chest">
+      <span class="resolve-icon">📦</span>
+      <div><div class="resolve-title">Treasure Chest!</div><div class="resolve-sub">You drew a reward.</div></div>
+    </div>
+    <div class="chest-reveal">
+      <div class="chest-icon-big">${chest.icon}</div>
+      <div style="font-size:11px;font-weight:600;color:${rarityColor};text-transform:uppercase;letter-spacing:.12em;font-family:'Cinzel',serif;margin-bottom:8px">${chest.rarity}</div>
+      <div class="chest-reward-title">${titles[chest.kind]||chest.kind}</div>
+      <div class="chest-reward-desc">${descs[chest.kind]||''}</div>
+      ${chest.kind === 'free_monster' && chest.monster ? `
+        <div style="display:flex;justify-content:center;padding-top:16px;">
+          ${renderCard(chest.monster, {size:'full', showCost:false})}
+        </div>` : ''}
+    </div>
+    ${pickerHtml}`;
+
+  const ab = document.getElementById('action-bar');
+  ab.classList.add('visible');
+  if (chest.kind === 'potion') {
+    if (selectedIid !== null) {
+      ab.innerHTML = `<button class="action-btn secondary" onclick="send('chest_skip')">Skip</button>
+        <button class="action-btn primary" onclick="doApplyPotion()">Apply Potion</button>`;
+    } else {
+      ab.innerHTML = `<button class="action-btn secondary" onclick="send('chest_skip')">Skip</button>
+        <button class="action-btn primary" disabled style="opacity:.4">Select Monster</button>`;
+    }
+  } else if (chest.kind === 'charm') {
+    if (selectedIid !== null) {
+      ab.innerHTML = `<button class="action-btn secondary" onclick="send('chest_skip')">Skip</button>
+        <button class="action-btn primary" onclick="doAssignCharm()">Assign Charm</button>`;
+    } else {
+      ab.innerHTML = `<button class="action-btn secondary" onclick="send('chest_skip')">Skip</button>
+        <button class="action-btn primary" disabled style="opacity:.4">Select Monster</button>`;
+    }
+  } else if (chest.kind === 'warp') {
+    ab.innerHTML = `<button class="action-btn secondary" onclick="send('chest_discard')">Discard</button>
+      <button class="action-btn primary" onclick="send('chest_warp')">Warp!</button>`;
+  } else {
+    ab.innerHTML = `<button class="action-btn primary" style="width:100%" onclick="send('chest_skip')">Continue</button>`;
+  }
+}
+
+// ─── TEMPLE ──────────────────────────────────────────────────────────────────
+function renderTemple() {
+  const me = G.players[myIdx];
+  if (!G.pendingTemple) return;
+
+  updateStatusBar(true);
+  updateHandStrip(false);
+  document.getElementById('main-content').classList.add('no-hand');
+
+  const selSpecial = G.pendingTemple.offers.find(o => o.iid === selectedIid);
+  const selSacrifice = selSpecial ? myHand.find(m => m.iid === tradeIid) : null;
+
+  const specialCards = G.pendingTemple.offers.map(o => {
+    const canTrade = myHand.some(m => m.type === o.type) && me.mana >= o.cost;
+    return `<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px">
+      ${renderCard(o, {size:'full', selected: selectedIid===o.iid, dim: !canTrade, onclick:`selectTempleSpecial(${o.iid})`})}
+      <div style="font-size:10px;color:var(--text-mute);font-family:'Cinzel',serif;letter-spacing:.08em">${o.type}</div>
+    </div>`;
+  }).join('');
+
+  const sacrificeable = selSpecial
+    ? myHand.filter(m => m.type === selSpecial.type)
+    : myHand.filter(m => G.pendingTemple.offers.some(o => o.type === m.type));
+  const sacrificeCards = sacrificeable.map(m =>
+    renderCard(m, {size:'full', selected: tradeIid===m.iid, showCost:false, onclick:`selectTemplatSacrifice(${m.iid})`})
+  ).join('');
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="resolve-banner temple">
+      <span class="resolve-icon">🏛</span>
+      <div>
+        <div class="resolve-title">Temple of Specials</div>
+        <div class="resolve-sub">Trade a matching monster for a Special. You can only use it if the condition is met.</div>
+      </div>
+    </div>
+    <div class="picker-label">Special offers (3)</div>
+    <div class="picker-scroll" id="temple-special-scroll">${specialCards}</div>
+    ${scrollNavHTML('temple-special-scroll','temple-sp-dot',G.pendingTemple.offers.length)}
+    <div style="height:12px"></div>
+    ${selSpecial ? `<div class="picker-label">Sacrifice a ${selSpecial.type} monster (${selSpecial.cost} ✦)</div><div class="picker-scroll" id="temple-sac-scroll">${sacrificeCards}</div>${scrollNavHTML('temple-sac-scroll','temple-sac-dot',sacrificeable.length)}` : `<div style="padding:0 16px 16px;font-size:12px;color:var(--text-mute)">Select a Special above to see matching sacrifices.</div>`}`;
+
+  attachShopScrollListener('temple-special-scroll','temple-sp-dot',G.pendingTemple.offers.length);
+  if (selSpecial) attachShopScrollListener('temple-sac-scroll','temple-sac-dot',sacrificeable.length);
+
+  const ab = document.getElementById('action-bar');
+  ab.classList.add('visible');
+  if (selSpecial && selSacrifice && me.mana >= selSpecial.cost) {
+    ab.innerHTML = `<button class="action-btn secondary" onclick="send('temple_leave')">Leave</button>
+      <button class="action-btn primary" onclick="doTempleTrade()">Confirm Trade · ${selSpecial.cost} ✦</button>`;
+  } else {
+    ab.innerHTML = `<button class="action-btn secondary" onclick="send('temple_leave')">Leave</button>
+      <button class="action-btn primary" disabled style="opacity:.4">${selSpecial&&!selSacrifice?'Pick sacrifice':selSpecial&&me.mana<selSpecial.cost?'Not enough Mana':'Pick Special'}</button>`;
+  }
+}
+
+// ─── HEAL TILE ───────────────────────────────────────────────────────────────
+function renderHealTile() {
+  const me = G.players[myIdx];
+  updateStatusBar(true);
+  updateHandStrip(false);
+  document.getElementById('main-content').classList.add('no-hand');
+
+  const stationedTiles = G.board.filter(t => t.ownerId === myIdx && t.monster);
+
+  const stCards = stationedTiles.map(t =>
+    renderCard(t.monster, {size:'full', selected: selectedIid===t.pos, showCost:false, onclick:`selectCard(${t.pos})`})
+  ).join('');
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="resolve-banner healing">
+      <span class="resolve-icon">💚</span>
+      <div>
+        <div class="resolve-title">Healing Tile</div>
+        <div class="resolve-sub">Spend Mana to heal any stationed monster. (${me.mana} ✦ available)</div>
+      </div>
+    </div>
+    <div class="picker-label">Choose a monster to heal</div>
+    <div class="picker-scroll">${stCards || `<div style="color:var(--text-mute);font-size:12px;padding:16px">No stationed monsters.</div>`}</div>`;
+
+  const ab = document.getElementById('action-bar');
+  ab.classList.add('visible');
+  if (selectedIid !== null) {
+    const t = G.board.find(t => t.pos === selectedIid);
+    const m = t?.monster;
+    const cost = m ? Math.ceil(1.5 * (m.maxHp - m.hp)) : 0;
+    const canHeal = m && m.hp < m.maxHp && me.mana >= cost;
+    ab.innerHTML = `<button class="action-btn secondary" onclick="send('heal_tile_skip')">Skip</button>
+      <button class="action-btn primary"${canHeal?'':' disabled style="opacity:.4"'} onclick="${canHeal?'doHealTile()':''}">${m?`Heal · ${cost} ✦`:'Select Monster'}</button>`;
+  } else {
+    ab.innerHTML = `<button class="action-btn secondary" onclick="send('heal_tile_skip')">Skip</button>
+      <button class="action-btn primary" disabled style="opacity:.4">Select Monster</button>`;
+  }
+}
+
+// ─── GAME OVER ────────────────────────────────────────────────────────────────
+function renderGameOver() {
+  updateStatusBar(false);
+  document.getElementById('hand-area').classList.remove('visible');
+  document.getElementById('action-bar').classList.remove('visible');
+  document.getElementById('main-content').classList.add('no-hand');
+
+  const rankings = G.rankings || G.players.map(p => ({...p, tiles: G.board.filter(t=>t.ownerId===p.idx).length}))
+    .sort((a,b) => b.tiles - a.tiles || b.mana - a.mana);
+  const winner = rankings[0];
+
+  const rows = rankings.map((p,i) => `
+    <div class="standing-row${i===0?' winner':''}">
+      <div class="standing-rank${i===0?' first':''}">${['🥇','🥈','🥉'][i]||i+1}</div>
+      <svg width="24" height="24" viewBox="0 0 24 24">${sigilShape(p.idx,12,12,6,p.color)}</svg>
+      <div class="standing-info">
+        <div class="standing-name" style="color:${p.color}">${p.name}${p.idx===myIdx?' (you)':''}</div>
+        <div class="standing-stats">${p.tiles} tiles · ${p.mana} ✦</div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="gameover-hero">
+      <div class="trophy-icon">🏆</div>
+      <div class="gameover-winner">${winner.name} Wins!</div>
+      <div class="gameover-sub">${winner.tiles} tiles · ${winner.mana} ✦ Mana</div>
+    </div>
+    <div class="standings-list">${rows}</div>
+    <div style="padding:24px 16px 48px">
+      <button class="action-btn secondary" style="width:100%" onclick="location.reload()">New Game</button>
+    </div>`;
+}
+
+// ─── ACTIONS ────────────────────────────────────────────────────────────────
+function selectCard(iid) {
+  selectedIid = (selectedIid === iid) ? null : iid;
+  // Live preview on board during battle selection
+  if (G && G.phase === 'resolve:battle') {
+    send('preview_attacker', { iid: selectedIid });
+  }
+  render();
+}
+
+function selectTempleSpecial(iid) {
+  selectedIid = (selectedIid === iid) ? null : iid;
+  tradeIid = null;
+  render();
+}
+
+function selectTemplatSacrifice(iid) {
+  tradeIid = (tradeIid === iid) ? null : iid;
+  render();
+}
+
+function doBuy() {
+  if (!selectedIid) return;
+  SFX.buy();
+  send('buy', { iid: selectedIid });
+  selectedIid = null;
+}
+
+function doSell() {
+  if (!selectedIid) return;
+  SFX.sell();
+  send('sell', { iid: selectedIid });
+  selectedIid = null;
+}
+
+function doClaim() {
+  if (!selectedIid) return;
+  SFX.claim();
+  send('claim', { iid: selectedIid });
+  selectedIid = null;
+}
+
+function doAttack() {
+  if (!selectedIid) return;
+  SFX.attack();
+  send('attack', { iid: selectedIid });
+  selectedIid = null;
+}
+
+function doStalemateAttack() {
+  if (!selectedIid) return;
+  SFX.attack();
+  send('stalemate_attack', { attackerIid: selectedIid });
+  selectedIid = null;
+}
+
+function doSwap() {
+  if (!selectedIid) return;
+  SFX.claim();
+  send('swap', { newMonsterIid: selectedIid });
+  selectedIid = null;
+}
+
+function doHeal() {
+  SFX.heal();
+  send('heal_stationed');
+  selectedIid = null;
+}
+
+function doChangeElement(el) {
+  SFX.charm();
+  send('change_element', { element: el });
+  selectedIid = null;
+}
+
+function doApplyPotion() {
+  if (selectedIid === null) return;
+  SFX.potion();
+  // selectedIid is the tile.pos for stationed monsters
+  send('chest_apply_potion', { tilePos: selectedIid });
+  selectedIid = null;
+}
+
+function doAssignCharm() {
+  if (selectedIid === null) return;
+  SFX.charm();
+  // selectedIid could be an iid (hand) or a tilePos (stationed)
+  // Stationed tiles have pos as integer; hand iids are also integers but won't overlap with tile positions in a meaningful way
+  // The server handles both: data.iid for hand, data.tilePos for stationed
+  const handM = myHand.find(m => m.iid === selectedIid);
+  if (handM) {
+    send('chest_assign_charm', { iid: selectedIid });
+  } else {
+    send('chest_assign_charm', { tilePos: selectedIid });
+  }
+  selectedIid = null;
+}
+
+function doHealTile() {
+  if (selectedIid === null) return;
+  SFX.heal();
+  send('heal_tile_apply', { tilePos: selectedIid });
+  selectedIid = null;
+}
+
+function doTempleTrade() {
+  if (!selectedIid || !tradeIid) return;
+  SFX.temple();
+  send('temple_trade', { specialIid: selectedIid, sacrificeIid: tradeIid });
+  selectedIid = null;
+  tradeIid = null;
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+connect();
+renderConnecting();
+</script>
+</body>
+</html>

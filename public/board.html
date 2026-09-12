@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Monster Board — Game View</title>
+<meta name="viewport" content="width=1440">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg:#0d0e1c; --bg-deep:#10111e; --surface:#1c1e2b; --surface2:#1e2030;
+  --border:#272a38; --border2:#3f424d;
+  --text:#e9e9ed; --text-lo:#b2b6ca; --text-dim:#9397ab; --text-mute:#75798c;
+  --accent:#9184d9; --accent-lit:#b5abfc; --accent-pale:#d2cefd;
+  --gold:#a97b40; --gold-glow:#c9a05a;
+  --parch-hi:#f5efe0; --parch-lo:#e8d5b0;
+  --parch-ink:#1a1710; --parch-sub:#6b5a3a; --parch-dim:#9397ab; --parch-stamp:#7a6040;
+  --violet-deep:#2a1f4a;
+  --el-Light:#e0c07a; --el-Dark:#6b6b7a; --el-Arcane:#7f92e8;
+  --el-Undead:#5fb3a4; --el-Beast:#d98a5a; --el-Nature:#3aaa5c;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;}
+
+/* Scale wrapper */
+#scale-root{width:1440px;height:900px;transform-origin:top left;position:absolute;top:0;left:0;display:flex;flex-direction:column;}
+
+/* Connection chip */
+#conn-chip{position:fixed;top:10px;right:10px;z-index:9999;font-size:11px;padding:4px 10px;border-radius:20px;font-weight:500;letter-spacing:.06em;transition:all .3s;}
+#conn-chip.ok{background:rgba(79,145,83,.25);border:1px solid #4f9153;color:#7dd982;}
+#conn-chip.err{background:rgba(180,60,60,.25);border:1px solid #b43c3c;color:#f08080;}
+#conn-chip.wait{background:rgba(145,132,217,.2);border:1px solid #9184d9;color:#b5abfc;animation:pulse 1.4s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* Topbar */
+.topbar{height:80px;flex-shrink:0;display:flex;align-items:center;padding:0 26px;border-bottom:1px solid var(--border);background:var(--bg-deep);position:relative;gap:16px;}
+.logo{width:42px;height:42px;border:1px solid var(--border2);border-radius:8px;background:repeating-linear-gradient(45deg,rgba(145,132,217,.1) 0,rgba(145,132,217,.1) 3px,transparent 3px,transparent 10px),var(--surface);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.room-block{display:flex;flex-direction:column;gap:1px;}
+.room-lbl{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;}
+.room-code{font-size:22px;font-weight:500;letter-spacing:.08em;}
+.tb-center{position:absolute;left:50%;transform:translateX(-50%);text-align:center;}
+.turn-lbl{font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.18em;font-family:'Cinzel',serif;}
+.active-name{font-size:28px;font-weight:500;letter-spacing:-.01em;line-height:1.1;}
+.phase-lbl{font-size:11px;color:var(--text-lo);margin-top:1px;}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:16px;}
+.roll-block{display:flex;flex-direction:column;align-items:flex-end;gap:1px;}
+.roll-lbl{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;}
+.roll-val{font-size:28px;font-weight:500;letter-spacing:.1em;font-variant-numeric:tabular-nums;font-family:'Cinzel',serif;}
+.vdiv{width:1px;height:34px;background:var(--border2);}
+
+/* Main */
+.main{flex:1;display:flex;overflow:hidden;}
+
+/* Board area */
+.board-area{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.board-bg{position:absolute;inset:0;background-size:cover;background-position:center;}
+.board-bg::after{content:'';position:absolute;inset:0;background:rgba(10,10,20,.18);}
+
+/* Wheel */
+.wheel{position:relative;width:720px;height:720px;flex-shrink:0;z-index:1;}
+
+/* Board art overlay */
+.board-art{position:absolute;width:620px;height:620px;top:50%;left:50%;transform:translate(-50%,-50%);background-size:contain;background-repeat:no-repeat;background-position:center;z-index:0;opacity:.92;}
+
+/* Tiles */
+.tile{position:absolute;width:70px;height:102px;border-radius:6px;top:50%;left:50%;margin-left:-35px;margin-top:-51px;will-change:transform;z-index:2;cursor:pointer;transition:filter 120ms;}
+.tile:hover{filter:brightness(1.18);}
+.tile.selected .tile-inner{box-shadow:0 0 0 2px var(--accent),0 0 22px rgba(145,132,217,.45);border-radius:6px;}
+.tile.active-tile .tile-inner{box-shadow:0 0 0 2px var(--gold-glow),0 0 18px rgba(201,160,90,.4);border-radius:6px;}
+.tile-inner{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:4px 3px 4px;position:relative;border-radius:6px;overflow:hidden;}
+.tile-badge{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:4px;pointer-events:none;z-index:2;}
+.tile-idx{position:absolute;top:-17px;left:50%;transform:translateX(-50%);font-size:10px;color:rgba(255,255,255,.85);line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.tile-icon{font-size:17px;margin-top:2px;}
+.tile-name{font-size:10px;font-weight:500;letter-spacing:.03em;text-transform:uppercase;text-align:center;line-height:1.2;margin-top:3px;}
+.tile-monster-row{display:flex;align-items:center;justify-content:center;margin-top:4px;}
+.tile-target{position:relative;width:32px;height:32px;flex-shrink:0;}
+.tile-target svg{position:absolute;inset:0;}
+
+/* Player token */
+.player-token{position:absolute;width:36px;height:36px;border-radius:50%;background:rgba(13,14,28,.9);border:2.5px solid;box-shadow:0 0 12px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;top:50%;left:50%;margin-left:-18px;margin-top:-18px;pointer-events:none;z-index:10;}
+/* Token hop: lands with a bounce pop */
+@keyframes tokenHopIn{0%{opacity:.55;transform:var(--tok-pos) scale(1.4);}65%{opacity:1;transform:var(--tok-pos) scale(.94);}100%{transform:var(--tok-pos) scale(1);}}
+.player-token.hopping{animation:tokenHopIn 190ms cubic-bezier(.34,1.56,.64,1);}
+
+/* Tile body — wrapper, allows independent transform from tile's radial position */
+.tile-body{width:100%;height:100%;position:relative;transform-origin:center;}
+/* Tile being visited mid-hop: card springs up 80ms after the token, springy easing */
+.tile.is-visiting{z-index:5!important;}
+.tile.is-visiting .tile-body{animation:tilePop 320ms cubic-bezier(0.68,-0.55,0.27,1.55) 80ms both;}
+@keyframes tilePop{from{transform:scale(1);}to{transform:scale(1.5);}}
+/* Settled destination tile: static outward shift only (no animation — avoids re-firing on every render) */
+.tile.is-settled{z-index:6!important;}
+.tile.is-settled .tile-body{transform:translateY(-25px);}
+
+/* Wheel center */
+.wheel-center{position:absolute;width:490px;height:490px;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;border-radius:50%;z-index:4;pointer-events:none;}
+.center-idle{display:flex;flex-direction:column;align-items:center;gap:12px;}
+.arcane-die{width:108px;height:108px;border-radius:20px;background:linear-gradient(145deg,#2a1f4a,#1a1230);border:2px solid var(--gold);box-shadow:0 0 30px rgba(145,132,217,.35);display:flex;align-items:center;justify-content:center;position:relative;}
+.arcane-die.die-cycling{animation:boardDieCycle .09s ease-in-out;}
+@keyframes boardDieCycle{0%{transform:scale(1.08) rotate(4deg)}50%{transform:scale(0.91) rotate(-4deg)}100%{transform:scale(1) rotate(0)}}
+.arcane-die.die-landed{animation:boardDieLand .45s cubic-bezier(.36,.07,.19,.97);}
+@keyframes boardDieLand{0%{transform:scale(1.45) rotate(-6deg)}35%{transform:scale(0.86) rotate(5deg)}65%{transform:scale(1.12) rotate(-2deg)}100%{transform:scale(1) rotate(0)}}
+.board-die-flash{animation:boardFaceFlash .07s ease;}
+@keyframes boardFaceFlash{0%{opacity:.15;transform:scale(0.65)}100%{opacity:1;transform:scale(1)}}
+.die-face{font-size:62px;font-weight:700;color:var(--text);text-shadow:0 0 18px rgba(145,132,217,.9),0 0 36px rgba(145,132,217,.4);line-height:1;font-family:'Cinzel',serif;font-variant-numeric:tabular-nums;}
+.die-pip{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--gold);box-shadow:0 0 5px var(--gold-glow);}
+.pip-tl{top:8px;left:8px}.pip-tr{top:8px;right:8px}.pip-bl{bottom:8px;left:8px}.pip-br{bottom:8px;right:8px}
+.center-title{font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;text-align:center;color:#3d1f0d;}
+.center-sub{font-size:12px;color:#3d1f0d;text-align:center;margin-top:2px;}
+
+/* Battle center overlay */
+.battle-center{position:absolute;width:480px;height:480px;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,11,22,.95);border-radius:50%;border:2px solid #5d5294;box-shadow:0 0 40px rgba(93,82,148,.3);display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:5;padding:40px;}
+.battle-center.visible{display:flex;}
+.battle-eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent-pale);font-family:'Cinzel',serif;}
+.battle-row{display:flex;align-items:center;gap:14px;}
+.battle-nums{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.battle-dmg{font-size:28px;font-weight:500;color:var(--accent-lit);font-family:'Cinzel',serif;font-variant-numeric:tabular-nums;}
+.battle-note{font-size:9px;color:var(--text-dim);}
+.battle-foot{font-size:10px;color:var(--text-dim);text-align:center;}
+
+/* ── Clash result animation ── */
+@keyframes clashSlideL{from{transform:translateX(-28px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes clashSlideR{from{transform:translateX(28px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes clashProjR{0%{transform:translateX(0) scale(1.3);opacity:1}100%{transform:translateX(60px) scale(.4);opacity:0}}
+@keyframes clashProjL{0%{transform:translateX(0) scale(1.3);opacity:1}100%{transform:translateX(-60px) scale(.4);opacity:0}}
+@keyframes clashHit{0%,100%{transform:scale(1)}30%{transform:scale(1.07) rotate(-2deg)}65%{transform:scale(1.07) rotate(2deg)}}
+@keyframes clashDmg{0%{opacity:0;transform:translateY(0) scale(.7)}15%{opacity:1;transform:translateY(-6px) scale(1.15)}75%{opacity:1;transform:translateY(-20px) scale(1)}100%{opacity:0;transform:translateY(-28px) scale(.85)}}
+@keyframes clashOutcome{0%,52%{opacity:0;transform:scale(.65)}72%{transform:scale(1.1)}100%{opacity:1;transform:scale(1)}}
+.clash-arena{display:flex;align-items:center;gap:8px;}
+.clash-side{display:flex;flex-direction:column;align-items:center;gap:5px;position:relative;}
+.clash-side.left{animation:clashSlideL .7s ease both;}
+.clash-side.right{animation:clashSlideR .7s ease both;}
+.clash-eyebrow{font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-family:'Cinzel',serif;}
+.clash-mid{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:80px;}
+.clash-proj{font-size:14px;font-weight:700;font-family:'Cinzel',serif;white-space:nowrap;}
+.clash-proj.atk{animation:clashProjR .55s 1.0s ease both;color:#e87040;}
+.clash-proj.def-proj{animation:clashProjL .55s 1.0s ease both;color:#6080e8;}
+.clash-vs{font-size:16px;font-weight:900;color:var(--accent-lit);font-family:'Cinzel',serif;opacity:.55;}
+.clash-outcome-label{font-size:14px;font-weight:700;font-family:'Cinzel',serif;text-align:center;line-height:1.2;animation:clashOutcome .6s 2.4s ease both;}
+.clash-hit{animation:clashHit .5s 1.7s ease both;display:inline-block;}
+.clash-dmg{position:absolute;top:28px;left:50%;transform:translateX(-50%);font-size:17px;font-weight:900;font-family:'Cinzel',serif;color:#e84040;animation:clashDmg 2.5s 1.7s ease both;pointer-events:none;text-shadow:0 0 10px #e8404088;white-space:nowrap;}
+.clash-dmg.zero{color:#888;font-size:13px;}
+
+/* Monster card (board battle view) */
+.board-monster-card{width:130px;height:186px;border-radius:10px;position:relative;overflow:hidden;border:2px solid;flex-shrink:0;}
+.bmc-art{position:absolute;top:0;left:0;width:100%;height:100%;}
+.bmc-overlay{position:absolute;bottom:0;left:0;right:0;padding:6px 7px 7px;background:linear-gradient(to top,rgba(10,8,25,.97) 0%,rgba(10,8,25,.65) 55%,transparent 100%);}
+.bmc-name{font-size:10px;font-weight:700;font-family:'Cinzel',serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bmc-hp-row{display:flex;align-items:center;gap:4px;margin:3px 0;}
+.bmc-hp-track{flex:1;height:3px;background:rgba(255,255,255,.15);border-radius:2px;}
+.bmc-hp-fill{height:100%;border-radius:2px;}
+.bmc-hp-num{font-size:9px;color:rgba(255,255,255,.45);font-variant-numeric:tabular-nums;}
+.bmc-stats{display:flex;gap:6px;}
+.bmc-stat{display:flex;flex-direction:column;align-items:center;}
+.bmc-stat-lbl{font-size:7px;color:rgba(255,255,255,.4);letter-spacing:.06em;text-transform:uppercase;}
+.bmc-stat-val{font-size:11px;font-weight:700;color:#e8e4f4;font-variant-numeric:tabular-nums;}
+.bmc-special{position:absolute;top:5px;left:5px;font-size:7px;background:rgba(145,132,217,.35);border:1px solid rgba(145,132,217,.55);border-radius:10px;padding:2px 5px;color:#c5bfee;font-family:'Cinzel',serif;z-index:2;}
+
+/* Right rail */
+.right-rail{width:330px;flex-shrink:0;background:var(--bg-deep);border-left:1px solid var(--border);padding:14px 12px;display:flex;flex-direction:column;gap:10px;}
+
+/* Paper */
+.paper{position:relative;border:2px solid var(--gold);border-radius:9px;background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.22),transparent 55%),linear-gradient(150deg,var(--parch-hi),var(--parch-lo));box-shadow:inset 0 0 32px rgba(103,69,30,.14);color:var(--parch-ink);overflow:hidden;padding:44px 18px 18px;display:flex;flex-direction:column;flex:1;min-height:0;}
+.paper-corner{position:absolute;font-size:24px;color:var(--gold-glow);line-height:1;}
+.corner-tl{top:8px;left:8px}.corner-tr{top:8px;right:8px}.corner-bl{bottom:8px;left:8px}.corner-br{bottom:8px;right:8px}
+.paper-lbl{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--parch-sub);margin-bottom:7px;font-family:'Cinzel',serif;flex-shrink:0;}
+
+/* Player chips */
+.players-list{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;flex-shrink:0;}
+.player-chip{display:flex;align-items:center;gap:8px;padding:7px 9px;background:rgba(255,255,255,.38);border:1px solid rgba(169,123,64,.28);border-radius:7px;}
+.player-chip.active{background:rgba(255,255,255,.56);border-color:rgba(169,123,64,.6);}
+.chip-dot{width:20px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.chip-info{flex:1;min-width:0;}
+.chip-name{font-size:13px;font-weight:600;color:var(--parch-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.chip-sub{font-size:10px;color:var(--parch-dim);font-variant-numeric:tabular-nums;}
+.chip-mana{display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;}
+.chip-mana-val{font-size:15px;font-weight:600;color:var(--parch-ink);font-variant-numeric:tabular-nums;}
+.chip-mana-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--parch-sub);font-family:'Cinzel',serif;}
+
+/* Paper scroll */
+.paper-scroll{flex:1;overflow-y:auto;min-height:0;display:flex;flex-direction:column;gap:0;}
+.paper-scroll::-webkit-scrollbar{width:4px;}
+.paper-scroll::-webkit-scrollbar-thumb{background:rgba(169,123,64,.3);border-radius:2px;}
+
+/* Event log */
+.log-row{display:flex;gap:7px;padding:5px 0;border-bottom:1px solid rgba(103,69,30,.16);align-items:flex-start;}
+.log-icon{font-size:11px;flex-shrink:0;padding-top:1px;}
+.log-text{font-size:11px;color:#2a2015;line-height:1.4;}
+
+/* Tile inspector panel */
+.inspector-lbl{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--parch-sub);margin-bottom:4px;font-family:'Cinzel',serif;}
+.inspector-box{background:rgba(255,255,255,.3);border:1px solid rgba(169,123,64,.3);border-radius:7px;padding:10px;}
+.inspector-tile-num{font-size:10px;color:var(--parch-dim);margin-bottom:2px;}
+.inspector-tile-name{font-size:16px;font-weight:600;margin-bottom:4px;}
+.inspector-tile-desc{font-size:11px;color:var(--parch-sub);line-height:1.4;margin-bottom:8px;}
+.inspector-monster-hdr{font-size:10px;color:var(--parch-sub);margin-bottom:4px;}
+.inspector-back{font-size:11px;color:var(--parch-sub);background:none;border:none;cursor:pointer;padding:0 0 6px 0;font-family:'Inter',sans-serif;text-decoration:underline;}
+.inspector-back:hover{color:var(--parch-ink);}
+.mini-card-insp{width:100%;height:140px;border-radius:8px;overflow:hidden;position:relative;}
+
+/* Lobby splash screen */
+.lobby-splash{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;}
+.lobby-brand{text-align:center;margin-bottom:36px;}
+.lobby-brand-title{font-family:'Cinzel',serif;font-size:52px;font-weight:700;letter-spacing:.14em;color:var(--gold-glow);text-shadow:0 0 50px rgba(201,160,90,.45);}
+.lobby-brand-sub{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--text-mute);margin-top:8px;font-family:'Cinzel',serif;}
+.lobby-panels{display:flex;gap:18px;align-items:stretch;width:100%;max-width:960px;}
+.lobby-panel{background:rgba(10,10,22,.86);border:1px solid rgba(169,123,64,.28);border-radius:14px;padding:26px 28px;backdrop-filter:blur(4px);}
+.lobby-panel-title{font-family:'Cinzel',serif;font-size:9px;letter-spacing:.32em;text-transform:uppercase;color:var(--text-mute);margin-bottom:18px;}
+.lobby-code-box{background:rgba(169,123,64,.07);border:2px solid rgba(169,123,64,.38);border-radius:10px;padding:18px 24px;text-align:center;margin-bottom:18px;overflow:hidden;}
+.lobby-code-value{font-family:'Cinzel',serif;font-size:46px;font-weight:700;letter-spacing:.16em;padding-right:.16em;color:var(--gold-glow);text-shadow:0 0 30px rgba(201,160,90,.5);line-height:1.1;display:block;text-align:center;}
+.lobby-code-hint{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);margin-top:6px;font-family:'Cinzel',serif;}
+.lobby-url-lbl{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);margin-bottom:6px;font-family:'Cinzel',serif;}
+.lobby-url-box{background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:10px 14px;font-family:monospace;font-size:12px;color:var(--accent-lit);letter-spacing:.03em;word-break:break-all;line-height:1.5;}
+.lobby-count-ring{display:flex;align-items:center;justify-content:center;flex-direction:column;padding:12px 0 4px;}
+.lobby-count-num{font-family:'Cinzel',serif;font-size:40px;font-weight:700;color:var(--gold-glow);line-height:1;}
+.lobby-count-sub{font-size:11px;color:var(--text-dim);margin-top:2px;}
+.lobby-slot-grid{display:flex;flex-direction:column;gap:7px;}
+.lobby-slot{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);transition:all .3s;}
+.lobby-slot.filled{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.14);}
+.lobby-slot.empty{opacity:.38;}
+.lobby-slot-name{font-size:14px;font-weight:500;flex:1;letter-spacing:.01em;}
+.lobby-slot-set{font-size:10px;color:var(--text-dim);font-family:'Cinzel',serif;letter-spacing:.1em;flex-shrink:0;}
+.lobby-slot-empty-text{font-size:11px;color:var(--text-mute);letter-spacing:.1em;font-family:'Cinzel',serif;}
+.lobby-start-wrap{margin-top:28px;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.lobby-start-btn{font-family:'Cinzel',serif;font-size:15px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#0c0c1a;background:linear-gradient(135deg,var(--gold-glow),#b8862e);border:none;border-radius:10px;padding:15px 60px;cursor:pointer;box-shadow:0 0 28px rgba(201,160,90,.28);transition:all .2s;}
+.lobby-start-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 4px 44px rgba(201,160,90,.5);}
+.lobby-start-btn:disabled{opacity:.38;cursor:not-allowed;background:rgba(169,123,64,.3);color:var(--text-dim);}
+.lobby-start-hint{font-size:11px;color:var(--text-mute);}
+.lobby-dot-row{display:flex;gap:8px;}
+.lobby-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:bounce 1.2s ease-in-out infinite;}
+.lobby-dot:nth-child(2){animation-delay:.2s;}
+.lobby-dot:nth-child(3){animation-delay:.4s;}
+@keyframes bounce{0%,100%{transform:translateY(0);opacity:.45}50%{transform:translateY(-6px);opacity:1}}
+
+/* Game over / Winners screen */
+.winners-overlay{position:absolute;inset:0;z-index:30;background:rgba(6,6,16,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;overflow:hidden;}
+.winners-bg-art{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(145,132,217,.08) 0%,transparent 65%),radial-gradient(ellipse at 80% 80%,rgba(201,160,90,.05) 0%,transparent 50%);pointer-events:none;}
+.winners-eyebrow{font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent-pale);font-family:'Cinzel',serif;margin-bottom:10px;position:relative;}
+.winners-title{font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--text-mute);margin-bottom:4px;position:relative;}
+.winners-champion{font-family:'Cinzel',serif;font-size:54px;font-weight:700;letter-spacing:.06em;text-shadow:0 0 60px currentColor;position:relative;line-height:1.05;text-align:center;}
+.winners-champion-sub{font-size:13px;color:var(--text-lo);margin-top:6px;margin-bottom:28px;position:relative;}
+.winners-table{display:grid;grid-template-columns:minmax(120px,1fr) repeat(6,auto);gap:0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden;width:100%;max-width:860px;position:relative;}
+.wt-head{font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;padding:9px 12px;background:rgba(0,0,0,.35);text-align:center;}
+.wt-head:first-child{text-align:left;}
+.wt-cell{font-size:13px;padding:10px 12px;border-top:1px solid rgba(255,255,255,.05);text-align:center;font-variant-numeric:tabular-nums;}
+.wt-cell:first-child{text-align:left;font-weight:600;}
+.wt-row-1 .wt-cell{background:rgba(201,160,90,.07);}
+.wt-award{font-size:8px;display:block;color:var(--gold-glow);letter-spacing:.1em;text-transform:uppercase;margin-top:2px;}
+
+/* Round limit selector */
+.round-limit-wrap{margin-top:20px;display:flex;flex-direction:column;align-items:center;gap:10px;}
+.round-limit-lbl{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;}
+.round-limit-btns{display:flex;gap:8px;}
+.round-limit-btn{font-family:'Cinzel',serif;font-size:13px;font-weight:700;letter-spacing:.1em;padding:10px 22px;border-radius:8px;border:2px solid rgba(169,123,64,.28);background:rgba(169,123,64,.05);color:var(--text-lo);cursor:pointer;transition:all .2s;}
+.round-limit-btn:hover{border-color:rgba(169,123,64,.5);background:rgba(169,123,64,.12);color:var(--gold-glow);}
+.round-limit-btn.selected{border-color:var(--gold-glow);background:rgba(201,160,90,.16);color:var(--gold-glow);box-shadow:0 0 14px rgba(201,160,90,.25);}
+
+/* Tile art */
+.tile-art{width:100%;flex:1;min-height:0;border-radius:4px;overflow:hidden;position:relative;}
+.tile-art svg{display:block;width:100%;height:100%;}
+.tile-art-icon{display:flex;align-items:center;justify-content:center;width:100%;flex:1;min-height:0;font-size:20px;line-height:1;text-shadow:0 0 8px currentColor;}
+.tile-art-img{width:100%;height:100%;object-fit:contain;display:block;}
+.tile-art-special{display:flex;align-items:center;justify-content:center;font-size:22px;width:100%;flex:1;}
+</style>
+</head>
+<body>
+
+<div id="conn-chip" class="wait">Connecting…</div>
+<div id="app"></div>
+
+<script>
+'use strict';
+
+// ─── Background image ────────────────────────────────────────────────────────────────────────────────
+const BKG_SRC = "/images/bkg_1140.png";
+
+// ─── SFX (Web Audio API — procedural, no external files) ─────────────────────────────────────────────
+const SFX = (() => {
+  let _ctx = null;
+  function ctx() {
+    if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_ctx.state === 'suspended') _ctx.resume().catch(()=>{});
+    return _ctx;
+  }
+  document.addEventListener('click',   () => ctx(), {once:true, capture:true});
+  document.addEventListener('keydown', () => ctx(), {once:true, capture:true});
+
+  function tone(freq, type='sine', vol=0.15, dur=0.12, attack=0.005, rel=0.1, delay=0) {
+    try {
+      const c = ctx(), now = c.currentTime;
+      const o = c.createOscillator(), g = c.createGain();
+      o.connect(g); g.connect(c.destination);
+      o.type = type; o.frequency.setValueAtTime(freq, now + delay);
+      g.gain.setValueAtTime(0.001, now + delay);
+      g.gain.linearRampToValueAtTime(vol, now + delay + attack);
+      g.gain.exponentialRampToValueAtTime(0.001, now + delay + dur);
+      o.start(now + delay); o.stop(now + delay + dur + 0.02);
+    } catch(e){}
+  }
+  function noise(vol=0.08, dur=0.1, delay=0, hipass=0) {
+    try {
+      const c = ctx(), now = c.currentTime;
+      const buf = c.createBuffer(1, Math.ceil(c.sampleRate * dur), c.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+      const src = c.createBufferSource(); src.buffer = buf;
+      const g = c.createGain();
+      if (hipass) {
+        const f = c.createBiquadFilter(); f.type='highpass'; f.frequency.value=hipass;
+        src.connect(f); f.connect(g);
+      } else { src.connect(g); }
+      g.connect(c.destination);
+      g.gain.setValueAtTime(vol, now + delay);
+      g.gain.exponentialRampToValueAtTime(0.001, now + delay + dur);
+      src.start(now + delay); src.stop(now + delay + dur + 0.02);
+    } catch(e){}
+  }
+
+  return {
+    unlock() { ctx(); },
+    // Die cycling tick — wooden click
+    dieTick() {
+      noise(0.06, 0.035, 0, 800);
+      tone(180, 'square', 0.035, 0.035, 0.001, 0.03);
+    },
+    // Die lands — weighted thud, scales with value
+    dieLand(val=3) {
+      noise(0.18, 0.18);
+      tone(55 + val*10, 'sine', 0.28, 0.35, 0.002, 0.32);
+      tone(110 + val*18, 'triangle', 0.12, 0.22, 0.002, 0.20);
+    },
+    // Token hop — soft footstep per tile
+    tokenHop() {
+      noise(0.04, 0.04, 0, 600);
+      tone(320, 'sine', 0.065, 0.07, 0.002, 0.065);
+    },
+    // Token arrives at destination — ascending chime
+    tokenArrive() {
+      tone(660,  'sine', 0.14, 0.35, 0.005, 0.32);
+      tone(880,  'sine', 0.09, 0.28, 0.004, 0.25, 0.05);
+      tone(1100, 'sine', 0.055,0.22, 0.003, 0.20, 0.10);
+    },
+    // Battle engaged — low dramatic swell
+    battleStart() {
+      noise(0.14, 0.5);
+      tone(65,  'sawtooth', 0.18, 0.55, 0.025, 0.50);
+      tone(130, 'sawtooth', 0.09, 0.45, 0.020, 0.42, 0.12);
+      tone(390, 'sine',     0.07, 0.35, 0.010, 0.32, 0.22);
+    },
+    // Attacker wins — triumphant ascending triad
+    battleWin() {
+      tone(440, 'sine', 0.20, 0.22, 0.005, 0.20);
+      tone(554, 'sine', 0.17, 0.22, 0.005, 0.20, 0.20);
+      tone(660, 'sine', 0.20, 0.40, 0.005, 0.36, 0.40);
+      noise(0.06, 0.18, 0.35);
+    },
+    // Defender wins — descending defeat
+    battleLose() {
+      tone(330, 'sawtooth', 0.16, 0.22, 0.005, 0.20);
+      tone(277, 'sawtooth', 0.14, 0.22, 0.005, 0.20, 0.22);
+      tone(207, 'sine',     0.16, 0.50, 0.005, 0.46, 0.44);
+      noise(0.08, 0.25, 0.40);
+    },
+    // Mutual destruction — crash + burst
+    battleMutual() {
+      noise(0.22, 0.45);
+      tone(140, 'sawtooth', 0.18, 0.55, 0.001, 0.50);
+      tone(200, 'square',   0.10, 0.42, 0.001, 0.38, 0.06);
+    },
+    // Stalemate — unresolved wobble
+    battleStalemate() {
+      tone(370, 'sine', 0.13, 0.18, 0.005, 0.15);
+      tone(350, 'sine', 0.11, 0.18, 0.005, 0.15, 0.22);
+      tone(370, 'sine', 0.09, 0.22, 0.005, 0.20, 0.44);
+    },
+    // Claim tile — place + chime
+    claimTile() {
+      noise(0.08, 0.12, 0, 200);
+      tone(480, 'sine', 0.10, 0.18, 0.003, 0.15);
+      tone(720, 'sine', 0.065,0.14, 0.002, 0.12, 0.10);
+    },
+  };
+})();
+
+// ─── Constants ────────────────────────────────────────────────────────────────────────────────
+const TYPE_COLOR  = {Light:'#e0c07a',Dark:'#6b6b7a',Arcane:'#7f92e8',Undead:'#5fb3a4',Beast:'#d98a5a',Nature:'#3aaa5c'};
+const TYPE_ICON   = {Light:'✦',Dark:'◉',Arcane:'✶',Undead:'☠',Beast:'⚔',Nature:'❧'};
+const TYPE_STRONG = {Light:'Dark',Dark:'Arcane',Arcane:'Undead',Undead:'Beast',Beast:'Nature',Nature:'Light'};
+const TYPE_WEAK   = {Light:'Nature',Dark:'Light',Arcane:'Dark',Undead:'Arcane',Beast:'Undead',Nature:'Beast'};
+const SPECIAL_ICONS = {start:'✦',temple:'❖',chest:'❖',heal:'❖',healing:'❖',mana:'❖','mana well':'❖',well:'❖'};
+const TILE_IMG = {
+  Light:'/img/tiles/tile-light.png', Dark:'/img/tiles/tile-dark.png',
+  Arcane:'/img/tiles/tile-arcane.png', Undead:'/img/tiles/tile-undead.png',
+  Beast:'/img/tiles/tile-beast.png', Nature:'/img/tiles/tile-nature.png',
+  chest:'/img/tiles/tile-chest.png', heal:'/img/tiles/tile-heal.png',
+  healing:'/img/tiles/tile-heal.png', temple:'/img/tiles/tile-temple.png',
+  start:'/img/tiles/tile-well.png', well:'/img/tiles/tile-well.png',
+  mana:'/img/tiles/tile-well.png', 'mana well':'/img/tiles/tile-well.png'
+};
+const PHASE_LABELS = {
+  lobby:'Lobby',shop:'Shop Phase',roll:'Roll Phase',
+  'resolve:claim':'Claim Tile',stalemate:'Stalemate',
+  'resolve:battle':'Battle!','resolve:own':'Own Tile',
+  'resolve:chest':'Chest Opened','resolve:temple':'Temple',
+  'resolve:heal_tile':'Healing Tile',game_over:'Game Over'
+};
+
+// ─── State ────────────────────────────────────────────────────────────────────────────────
+let G = null;
+let ws = null;
+let boardPrevPhase = null;           // tracks phase to detect roll completion
+let boardPrevCurrentPlayer = null;   // tracks player to avoid cross-turn false triggers
+let boardRollAnimating = false;      // true while die cycles + holds
+let boardPendingG = null;            // state received during animation
+let boardShowIdleDie = false;        // forces idle die even in battle phase
+let boardTokenAnim = null;           // {playerIdx, path:[tileIdxs], step} — hop-by-hop movement
+let reconnectTimer = null;
+let selectedTile = null;
+let selectedRoundLimit = 30;
+let _uid = 0;
+function uid(){ return 'b'+(++_uid); }
+
+// ─── SVG art generators ──────────────────────────────────────────────────────────────────────
+function svgLight(c,w,h){const id=uid(),cx=w/2,cy=h*.43;const rays=Array.from({length:8},(_,i)=>{const a=i*45*Math.PI/180,sp=.055,L=w*1.5;return`<polygon points="${cx},${cy} ${cx+Math.cos(a-sp)*L},${cy+Math.sin(a-sp)*L} ${cx+Math.cos(a+sp)*L},${cy+Math.sin(a+sp)*L}" fill="${c}" opacity=".065"/>`;}).join('');return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="43%" r="80%"><stop offset="0%" stop-color="#221c4a"/><stop offset="100%" stop-color="#0c0a1e"/></radialGradient><radialGradient id="g${id}" cx="50%" cy="43%" r="44%"><stop offset="0%" stop-color="${c}" stop-opacity=".5"/><stop offset="100%" stop-color="${c}" stop-opacity="0"/></radialGradient><filter id="f${id}"><feGaussianBlur stdDeviation="2.5"/></filter></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/>${rays}<ellipse cx="${cx}" cy="${cy}" rx="${w*.38}" ry="${h*.3}" fill="url(#g${id})"/><circle cx="${cx}" cy="${cy}" r="${w*.23}" fill="none" stroke="${c}" stroke-width=".8" opacity=".3"/><circle cx="${cx}" cy="${cy}" r="${w*.12}" fill="none" stroke="${c}" stroke-width="1.2" opacity=".5"/><g filter="url(#f${id})" fill="${c}" opacity=".55"><ellipse cx="${cx}" cy="${cy-h*.16}" rx="5.5" ry="6"/><rect x="${cx-6}" y="${cy-h*.09}" width="12" height="${h*.32}" rx="2"/><polygon points="${cx-6},${cy-h*.05} ${cx-12},${cy+h*.2} ${cx-8},${cy+h*.2}"/><polygon points="${cx+6},${cy-h*.05} ${cx+12},${cy+h*.2} ${cx+8},${cy+h*.2}"/></g><g fill="${c}" opacity=".8"><ellipse cx="${cx}" cy="${cy-h*.16}" rx="4" ry="4.5"/><rect x="${cx-5}" y="${cy-h*.09}" width="10" height="${h*.32}" rx="1.5"/><rect x="${cx-8}" y="${cy-h*.02}" width="16" height="3.5" rx="1" opacity=".85"/><polygon points="${cx-5},${cy-h*.05} ${cx-10},${cy+h*.2} ${cx-7},${cy+h*.2}"/><polygon points="${cx+5},${cy-h*.05} ${cx+10},${cy+h*.2} ${cx+7},${cy+h*.2}"/></g></svg>`;}
+function svgDark(c,w,h){const id=uid(),cx=w/2,cy=h*.45;const tendrils=Array.from({length:6},(_,i)=>{const a=i*60*Math.PI/180,L=w*(.5+i*.06);const sx=cx+Math.cos(a)*7,sy=cy+Math.sin(a)*7;const ex=cx+Math.cos(a)*L,ey=cy+Math.sin(a)*L;const mx=(sx+ex)/2+Math.cos(a+Math.PI/2)*9,my=(sy+ey)/2+Math.sin(a+Math.PI/2)*9;return`<path d="M${sx},${sy} Q${mx},${my} ${ex},${ey}" stroke="${c}" stroke-width="${1.3-i*.08}" fill="none" opacity="${.55-i*.06}"/>`;}).join('');return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="40%" cy="60%" r="80%"><stop offset="0%" stop-color="#1e0a2e"/><stop offset="100%" stop-color="#07060e"/></radialGradient><radialGradient id="v${id}" cx="50%" cy="48%" r="38%"><stop offset="0%" stop-color="#080510" stop-opacity=".92"/><stop offset="100%" stop-color="${c}" stop-opacity=".14"/></radialGradient><filter id="f${id}"><feGaussianBlur stdDeviation="2"/></filter></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><ellipse cx="${cx}" cy="${cy}" rx="${w*.4}" ry="${h*.38}" fill="url(#v${id})"/>${tendrils}<g fill="${c}" opacity=".6" filter="url(#f${id})"><ellipse cx="${cx}" cy="${cy-h*.16}" rx="5" ry="5.5"/><path d="M${cx-5},${cy-h*.09} Q${cx-16},${cy-h*.04} ${cx-18},${cy+h*.12} Q${cx-10},${cy+h*.07} ${cx-4},${cy+h*.2} L${cx+4},${cy+h*.2} Q${cx+10},${cy+h*.07} ${cx+18},${cy+h*.12} Q${cx+16},${cy-h*.04} ${cx+5},${cy-h*.09} Z"/><path d="M${cx-5},${cy-h*.09} Q${cx-20},${cy-h*.18} ${cx-22},${cy} Q${cx-14},${cy-h*.07} ${cx-5},${cy+h*.02}" opacity=".5"/><path d="M${cx+5},${cy-h*.09} Q${cx+20},${cy-h*.18} ${cx+22},${cy} Q${cx+14},${cy-h*.07} ${cx+5},${cy+h*.02}" opacity=".5"/></g><g fill="${c}" opacity=".85"><ellipse cx="${cx}" cy="${cy-h*.16}" rx="3.5" ry="4"/><path d="M${cx-4},${cy-h*.09} Q${cx-14},${cy-h*.04} ${cx-15},${cy+h*.1} Q${cx-9},${cy+h*.06} ${cx-3},${cy+h*.18} L${cx+3},${cy+h*.18} Q${cx+9},${cy+h*.06} ${cx+15},${cy+h*.1} Q${cx+14},${cy-h*.04} ${cx+4},${cy-h*.09} Z" opacity=".9"/></g></svg>`;}
+function svgArcane(c,w,h){const id=uid(),cx=w/2,cy=h*.45;const r1=w*.34,r2=w*.21;const hex=Array.from({length:6},(_,i)=>{const a=i*60*Math.PI/180-Math.PI/2;return[cx+Math.cos(a)*r1,cy+Math.sin(a)*r1];});const tri=Array.from({length:3},(_,i)=>{const a=i*120*Math.PI/180-Math.PI/2;return[cx+Math.cos(a)*r2,cy+Math.sin(a)*r2];});const lines=hex.map((p,i)=>`<line x1="${p[0]}" y1="${p[1]}" x2="${hex[(i+3)%6][0]}" y2="${hex[(i+3)%6][1]}" stroke="${c}" stroke-width=".5" opacity=".38"/>`).join('');const dots=hex.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="2.2" fill="${c}" opacity=".7"/>`).join('');return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="45%" r="78%"><stop offset="0%" stop-color="#111a42"/><stop offset="100%" stop-color="#080b1e"/></radialGradient><filter id="f${id}"><feGaussianBlur stdDeviation="2"/></filter></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><polygon points="${hex.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${c}" stroke-width=".7" opacity=".45"/><polygon points="${tri.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${c}" stroke-width=".9" opacity=".55"/>${lines}${dots}<circle cx="${cx}" cy="${cy}" r="${w*.1}" fill="none" stroke="${c}" stroke-width="1.4" opacity=".45"/><circle cx="${cx}" cy="${cy}" r="3" fill="${c}" opacity=".8"/><g fill="${c}" filter="url(#f${id})" opacity=".5"><ellipse cx="${cx}" cy="${cy-h*.2}" rx="4" ry="4.5"/><path d="M${cx-4},${cy-h*.14} L${cx-9},${cy+h*.18} L${cx+9},${cy+h*.18} L${cx+4},${cy-h*.14} Z" opacity=".85"/><line x1="${cx+4}" y1="${cy-h*.07}" x2="${cx+14}" y2="${cy+h*.05}" stroke="${c}" stroke-width="2.5" stroke-linecap="round"/><circle cx="${cx+14}" cy="${cy+h*.05}" r="3"/></g><g fill="${c}" opacity=".82"><ellipse cx="${cx}" cy="${cy-h*.2}" rx="3" ry="3.5"/><path d="M${cx-3.5},${cy-h*.14} L${cx-8},${cy+h*.18} L${cx+8},${cy+h*.18} L${cx+3.5},${cy-h*.14} Z" opacity=".85"/><line x1="${cx+3.5}" y1="${cy-h*.07}" x2="${cx+13}" y2="${cy+h*.05}" stroke="${c}" stroke-width="2" stroke-linecap="round"/><circle cx="${cx+13}" cy="${cy+h*.05}" r="2.5"/></g></svg>`;}
+function svgUndead(c,w,h){const id=uid(),cx=w/2,cy=h*.35;return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="70%" r="80%"><stop offset="0%" stop-color="#0b1e1a"/><stop offset="100%" stop-color="#060c0b"/></radialGradient><radialGradient id="m${id}" cx="50%" cy="85%" r="65%"><stop offset="0%" stop-color="${c}" stop-opacity=".22"/><stop offset="100%" stop-color="${c}" stop-opacity="0"/></radialGradient></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><ellipse cx="${cx}" cy="${h*.88}" rx="${w*.65}" ry="${h*.3}" fill="url(#m${id})"/>${Array.from({length:5},(_,i)=>{const x=w*(.1+i*.2),y=h*(.58+Math.sin(i*1.9)*.1),rot=i*38;return`<rect x="${x}" y="${y}" width="${5+i%3*2}" height="2.2" rx="1" fill="${c}" opacity="${.28+i*.07}" transform="rotate(${rot} ${x+3} ${y+1})"/>`;}).join('')}<g fill="${c}" opacity=".78"><ellipse cx="${cx}" cy="${cy}" rx="11.5" ry="12.5"/><rect x="${cx-9}" y="${cy+h*.08}" width="18" height="6.5" rx="1.2"/><rect x="${cx-3}" y="${cy+h*.1}" width="2" height="5" rx=".5" fill="#07100e"/><rect x="${cx+1}" y="${cy+h*.1}" width="2" height="5" rx=".5" fill="#07100e"/><ellipse cx="${cx-4.5}" cy="${cy-.5}" rx="3.8" ry="3.8" fill="#07100e"/><ellipse cx="${cx+4.5}" cy="${cy-.5}" rx="3.8" ry="3.8" fill="#07100e"/><ellipse cx="${cx-4.5}" cy="${cy-.5}" rx="2.2" ry="2.2" fill="${c}" opacity=".92"/><ellipse cx="${cx+4.5}" cy="${cy-.5}" rx="2.2" ry="2.2" fill="${c}" opacity=".92"/><path d="M${cx-8},${cy+h*.14} L${cx-11},${cy+h*.42} L${cx+11},${cy+h*.42} L${cx+8},${cy+h*.14} Z" opacity=".7"/>${Array.from({length:3},(_,i)=>`<path d="M${cx-6.5},${cy+h*(.2+i*.06)} Q${cx},${cy+h*(.22+i*.06)} ${cx+6.5},${cy+h*(.2+i*.06)}" stroke="#07100e" stroke-width="1.2" fill="none" opacity=".55"/>`).join('')}</g></svg>`;}
+function svgBeast(c,w,h){const id=uid(),cx=w/2,cy=h*.42;return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="38%" r="80%"><stop offset="0%" stop-color="#2c1205"/><stop offset="100%" stop-color="#0e0705"/></radialGradient><radialGradient id="fi${id}" cx="50%" cy="82%" r="62%"><stop offset="0%" stop-color="${c}" stop-opacity=".42"/><stop offset="100%" stop-color="#c03010" stop-opacity="0"/></radialGradient><filter id="f${id}"><feGaussianBlur stdDeviation="3"/></filter></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><ellipse cx="${cx}" cy="${h*.82}" rx="${w*.58}" ry="${h*.28}" fill="url(#fi${id})"/>${Array.from({length:3},(_,i)=>{const xo=(i-1)*8;return`<line x1="${w*.28+xo}" y1="${h*.08}" x2="${w*.62+xo+5}" y2="${h*.72}" stroke="${c}" stroke-width="${2.8-i*.4}" stroke-linecap="round" opacity="${.32+i*.07}"/>`;}).join('')}<g fill="${c}" opacity=".58" filter="url(#f${id})"><ellipse cx="${cx-.06*w}" cy="${cy-.06*h}" rx="15" ry="11"/><ellipse cx="${cx-.16*w}" cy="${cy-.18*h}" rx="6" ry="8"/><polygon points="${cx-.22*w},${cy-.26*h} ${cx-.3*w},${cy-.38*h} ${cx-.24*w},${cy-.24*h}"/><ellipse cx="${cx}" cy="${cy+.1*h}" rx="19" ry="12.5"/></g><g fill="${c}" opacity=".88"><ellipse cx="${cx-.06*w}" cy="${cy-.06*h}" rx="13" ry="9.5"/><ellipse cx="${cx-.16*w}" cy="${cy-.18*h}" rx="5" ry="7"/><polygon points="${cx-.22*w},${cy-.26*h} ${cx-.3*w},${cy-.38*h} ${cx-.24*w},${cy-.24*h}"/></g></svg>`;}
+function svgNature(c,w,h){const id=uid(),cx=w/2;const branches=[[cx,h*.52,cx-.18*w,h*.38,cx-.28*w,h*.28],[cx,h*.5,cx+.18*w,h*.36,cx+.28*w,h*.26],[cx,h*.56,cx-.3*w,h*.5,cx-.36*w,h*.5],[cx,h*.56,cx+.3*w,h*.5,cx+.36*w,h*.5]];const leaves=[[cx-.28*w,h*.28],[cx+.28*w,h*.26],[cx-.36*w,h*.5],[cx+.36*w,h*.5],[cx-.18*w,h*.26],[cx+.18*w,h*.24]];return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="45%" r="80%"><stop offset="0%" stop-color="#0c1f0b"/><stop offset="100%" stop-color="#060e06"/></radialGradient><radialGradient id="ca${id}" cx="50%" cy="28%" r="55%"><stop offset="0%" stop-color="${c}" stop-opacity=".18"/><stop offset="100%" stop-color="${c}" stop-opacity="0"/></radialGradient></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><ellipse cx="${cx}" cy="${h*.3}" rx="${w*.55}" ry="${h*.32}" fill="url(#ca${id})"/>${Array.from({length:4},(_,i)=>{const xo=(i-1.5)*w*.1;return`<path d="M${cx},${h*.68} Q${cx+xo},${h*.8} ${cx+xo*1.5},${h}" stroke="${c}" stroke-width="${2-i*.15}" fill="none" opacity="${.48-i*.05}"/>`;}).join('')}<rect x="${cx-4}" y="${h*.45}" width="8" height="${h*.27}" rx="2.5" fill="${c}" opacity=".7"/>${branches.map(([x1,y1,mx,my,x2,y2])=>`<path d="M${x1},${y1} Q${mx},${my} ${x2},${y2}" stroke="${c}" stroke-width="2.5" fill="none" opacity=".62"/>`).join('')}${leaves.map(([lx,ly],i)=>{const ang=Math.atan2(ly-h*.55,lx-cx)*180/Math.PI+90;return`<ellipse cx="${lx}" cy="${ly}" rx="6.5" ry="4.2" fill="${c}" opacity=".68" transform="rotate(${ang} ${lx} ${ly})"/>`;}).join('')}</svg>`;}
+
+const SVG_FNS = {Light:svgLight,Dark:svgDark,Arcane:svgArcane,Undead:svgUndead,Beast:svgBeast,Nature:svgNature};
+function artSVG(type,w,h){ const c=TYPE_COLOR[type]||'#9397ab'; const fn=SVG_FNS[type]; return fn?fn(c,w,h):''; }
+function monsterImg(id,suffix=''){ return `<img src="/img/monsters/monster-${id}${suffix}.png" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none'" alt="">`; }
+
+function renderBoardCard(m) {
+  if (!m) return '';
+  const c = TYPE_COLOR[m.type] || '#9184d9';
+  const pct = Math.max(0, Math.min(1, m.hp / m.maxHp));
+  const hpColor = pct < .35 ? '#b05050' : c;
+  const border = m.isSpecial ? `${c}cc` : `${c}88`;
+  const shadow = m.isSpecial ? `box-shadow:0 0 0 2.5px ${c}33,0 0 22px ${c}44` : `box-shadow:0 0 14px ${c}28`;
+  const art = m.id ? monsterImg(m.id) : artSVG(m.type, 130, 186);
+  return `<div class="board-monster-card" style="border-color:${border};${shadow}">
+    ${m.isSpecial ? `<div class="bmc-special">✦ Special</div>` : ''}
+    <div class="bmc-art">${art}</div>
+    <div class="bmc-overlay">
+      <div class="bmc-name" style="color:${c}">${m.name}</div>
+      <div class="bmc-hp-row"><div class="bmc-hp-track"><div class="bmc-hp-fill" style="width:${Math.round(pct*100)}%;background:${hpColor}"></div></div><span class="bmc-hp-num">${m.hp}/${m.maxHp}</span></div>
+      <div class="bmc-stats">
+        <div class="bmc-stat"><span class="bmc-stat-lbl">ATK</span><span class="bmc-stat-val">${m.atk}</span></div>
+        <div class="bmc-stat"><span class="bmc-stat-lbl">DEF</span><span class="bmc-stat-val">${m.def}</span></div>
+        <div class="bmc-stat"><span class="bmc-stat-lbl">TYPE</span><span class="bmc-stat-val" style="font-size:8px;color:${c}">${m.type}</span></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ─── Player sigil SVG ──────────────────────────────────────────────────────────────────────────
+function playerSigilSVG(player, size=20){
+  const c = player.color;
+  const i = (player.idx !== undefined ? player.idx : 0) % 6;
+  const s = size, h = s/2;
+  // Distinct geometric shape per player slot
+  if(i===0){
+    // Circle (ring)
+    return `<svg width="${s}" height="${s}" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5" fill="${c}33" stroke="${c}" stroke-width="2"/><circle cx="10" cy="10" r="3" fill="${c}" opacity=".85"/></svg>`;
+  } else if(i===1){
+    // Diamond
+    return `<svg width="${s}" height="${s}" viewBox="0 0 20 20"><polygon points="10,2 18,10 10,18 2,10" fill="${c}44" stroke="${c}" stroke-width="1.8"/><polygon points="10,6 14,10 10,14 6,10" fill="${c}" opacity=".85"/></svg>`;
+  } else if(i===2){
+    // Triangle
+    return `<svg width="${s}" height="${s}" viewBox="0 0 20 20"><polygon points="10,2 18.5,17.5 1.5,17.5" fill="${c}44" stroke="${c}" stroke-width="1.8"/><polygon points="10,7 15,16 5,16" fill="${c}" opacity=".85"/></svg>`;
+  } else if(i===3){
+    // Star
+    return `<svg width="${s}" height="${s}" viewBox="0 0 20 20"><polygon points="10,1 12.5,7.5 19.5,7.5 14,12 16,18.5 10,14.5 4,18.5 6,12 0.5,7.5 7.5,7.5" fill="${c}55" stroke="${c}" stroke-width="1.2"/><polygon points="10,4.5 11.8,9.5 17,9.5 12.8,12.5 14.4,17.5 10,14.5 5.6,17.5 7.2,12.5 3,9.5 8.2,9.5" fill="${c}" opacity=".85"/></svg>`;
+  } else if(i===4){
+    // Pentagon
+    const pts=(r,cy=10)=>Array.from({length:5},(_,j)=>{const a=j*72-90;return `${10+Math.cos(a*Math.PI/180)*r},${cy+Math.sin(a*Math.PI/180)*r}`;}).join(' ');
+    return `<svg width="${s}" height="${s}" viewBox="0 0 20 20"><polygon points="${pts(8.5)}" fill="${c}44" stroke="${c}" stroke-width="1.8"/><polygon points="${pts(4.5)}" fill="${c}" opacity=".85"/></svg>`;
+  } else {
+    // Hexagon
+    const pts=r=>Array.from({length:6},(_,j)=>{const a=j*60-30;return `${10+Math.cos(a*Math.PI/180)*r},${10+Math.sin(a*Math.PI/180)*r}`;}).join(' ');
+    return `<svg width="${s}" height="${s}" viewBox="0 0 20 20"><polygon points="${pts(8.5)}" fill="${c}44" stroke="${c}" stroke-width="1.8"/><polygon points="${pts(4.5)}" fill="${c}" opacity=".85"/></svg>`;
+  }
+}
+
+// ─── Mini monster badge (HP ring) ─────────────────────────────────────────────────────────────────
+function miniMonsterBadge(monster, ownerColor){
+  const c = TYPE_COLOR[monster.type] || '#9397ab';
+  const pct = Math.max(0, monster.hp / monster.maxHp);
+  const ringR=14, circ=2*Math.PI*ringR, sz=36, cx=sz/2, cy=sz/2;
+  const dash = pct * circ, gap = circ - dash;
+  const trackColor = c + '44';
+  return `<svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}">
+    <g transform="rotate(-90 ${cx} ${cy})">
+      <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="${trackColor}" stroke-width="3.5"/>
+      <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="${c}" stroke-width="3.5"
+        stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}" stroke-linecap="round"/>
+    </g>
+    <circle cx="${cx}" cy="${cy}" r="4.5" fill="${ownerColor}" stroke="${ownerColor}" stroke-width="1"/>
+  </svg>`;
+}
+
+// ─── Token hop animation ─────────────────────────────────────────────────────────────────
+function getEffectivePosition(playerIdx) {
+  if (boardTokenAnim && boardTokenAnim.playerIdx === playerIdx) {
+    return boardTokenAnim.path[boardTokenAnim.step];
+  }
+  return G.players[playerIdx]?.position;
+}
+
+// Build a path array [fromPos, fromPos+1, ..., toPos] wrapping at 28
+function buildHopPath(fromPos, toPos) {
+  const N = 28;
+  const path = [fromPos];
+  let p = fromPos;
+  while (p !== toPos) {
+    p = (p + 1) % N;
+    path.push(p);
+  }
+  return path;
+}
+
+// Advance boardTokenAnim one step; call this every 230ms after the die lands
+function advanceTokenAnim() {
+  if (!boardTokenAnim) return;
+  boardTokenAnim.step++;
+  if (boardTokenAnim.step >= boardTokenAnim.path.length) {
+    boardTokenAnim = null; // animation done — token is now "settled"
+    SFX.tokenArrive();
+    // Phase-based landing sound cue
+    if (G) {
+      if (G.phase === 'resolve:battle') SFX.battleStart();
+      else if (G.phase === 'resolve:claim') SFX.claimTile();
+    }
+    render();
+    return;
+  }
+  SFX.tokenHop();
+  render();
+  setTimeout(advanceTokenAnim, 230);
+}
+
+// Used as fallback if boardTokenAnim wasn't pre-seeded (shouldn't happen in normal flow)
+function startTokenAnim(playerIdx, fromPos, toPos) {
+  const path = buildHopPath(fromPos, toPos);
+  if (path.length <= 1) { render(); return; }
+  boardTokenAnim = {playerIdx, path, step: 0};
+  advanceTokenAnim(); // immediately steps to path[1] (fromPos+1)
+}
+
+// ─── Board die animation ─────────────────────────────────────────────────────────────────
+function startBoardDieAnimation(finalVal, fromPos, toPos, animPlayerIdx) {
+  boardShowIdleDie = true;
+  render(); // renders board with idle die showing '?'
+
+  const dieEl = document.getElementById('board-anim-die');
+  const faceEl = document.getElementById('board-die-face');
+  if (!dieEl || !faceEl) {
+    boardShowIdleDie = false;
+    boardRollAnimating = false;
+    render();
+    return;
+  }
+
+  const seq = [1,2,3,4,5,6,1,2,3,4,5,6];
+  let step = 0;
+
+  function boardCycle() {
+    if (!faceEl.isConnected) return;
+    if (step < seq.length) {
+      SFX.dieTick();
+      faceEl.textContent = seq[step++];
+      faceEl.classList.remove('board-die-flash');
+      void faceEl.offsetWidth;
+      faceEl.classList.add('board-die-flash');
+      dieEl.classList.remove('die-cycling');
+      void dieEl.offsetWidth;
+      dieEl.classList.add('die-cycling');
+      setTimeout(boardCycle, 85);
+    } else {
+      dieEl.classList.remove('die-cycling');
+      dieEl.classList.add('die-landed');
+      SFX.dieLand(finalVal);
+      faceEl.textContent = finalVal;
+      faceEl.classList.remove('board-die-flash');
+      void faceEl.offsetWidth;
+      faceEl.classList.add('board-die-flash');
+      setTimeout(() => {
+        boardShowIdleDie = false;
+        boardRollAnimating = false;
+        if (boardPendingG) {
+          boardPrevPhase = boardPendingG.phase;
+          boardPrevCurrentPlayer = boardPendingG.currentPlayer;
+          G = boardPendingG; boardPendingG = null;
+        }
+        // Continue token animation: boardTokenAnim was pre-seeded at fromPos,
+        // now advance it hop-by-hop. Falls back to render() if nothing to animate.
+        if (boardTokenAnim && boardTokenAnim.playerIdx === animPlayerIdx) {
+          advanceTokenAnim(); // steps from path[0]=fromPos → path[1]...toPos
+        } else if (fromPos != null && toPos != null && fromPos !== toPos && animPlayerIdx != null) {
+          startTokenAnim(animPlayerIdx, fromPos, toPos); // fallback
+        } else {
+          render();
+        }
+      }, 2500);
+    }
+  }
+
+  setTimeout(boardCycle, 50);
+}
+
+// ─── WebSocket connection ────────────────────────────────────────────────────────────────
+function connect(){
+  const chip = document.getElementById('conn-chip');
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}`);
+
+  ws.onopen = () => {
+    chip.className = 'ok';
+    chip.textContent = '● Board View';
+    clearTimeout(reconnectTimer);
+  };
+
+  ws.onmessage = e => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'state') {
+      if (boardRollAnimating) {
+        boardPendingG = msg.game;
+        return;
+      }
+      const newG = msg.game;
+      const prevPhase = boardPrevPhase;
+      const prevPlayer = boardPrevCurrentPlayer;
+      // Only trigger roll animation if the same player's turn is still active
+      // (cross-turn: prevPlayer changes → not a roll completion for the new player)
+      const rollJustHappened = prevPhase === 'roll'
+        && newG.phase !== 'roll'
+        && (prevPlayer === null || prevPlayer === newG.currentPlayer);
+      const rollVal = newG.players[newG.currentPlayer]?.lastDiceRoll;
+      // Capture previous positions BEFORE overwriting G (needed for token animation)
+      const prevPositions = G ? G.players.map(p => p.position) : null;
+      boardPrevPhase = newG.phase;
+      boardPrevCurrentPlayer = newG.currentPlayer;
+      G = newG;
+      if (rollJustHappened && rollVal != null) {
+        boardRollAnimating = true;
+        boardPendingG = null;
+        const animPlayerIdx = newG.currentPlayer;
+        const fromPos = prevPositions ? prevPositions[animPlayerIdx] : null;
+        const toPos = newG.players[animPlayerIdx]?.position;
+        // Pre-seed boardTokenAnim at fromPos so the token STAYS at the old tile
+        // while the die is spinning — prevents the "jump-to-destination" bug.
+        if (fromPos != null && toPos != null && fromPos !== toPos) {
+          boardTokenAnim = {playerIdx: animPlayerIdx, path: buildHopPath(fromPos, toPos), step: 0};
+        }
+        startBoardDieAnimation(rollVal, fromPos, toPos, animPlayerIdx);
+      } else if (newG.phase === 'resolve:battle' && prevPhase !== 'resolve:battle') {
+        // Battle arrived without going through roll animation (warp, reconnect, etc.)
+        // Block render and show idle die for 2s so battle overlay isn't instant
+        boardRollAnimating = true;
+        boardPendingG = null;
+        boardShowIdleDie = true;
+        render();
+        setTimeout(() => {
+          boardShowIdleDie = false;
+          boardRollAnimating = false;
+          if (boardPendingG) {
+            boardPrevPhase = boardPendingG.phase;
+            boardPrevCurrentPlayer = boardPendingG.currentPlayer;
+            G = boardPendingG; boardPendingG = null;
+          }
+          SFX.battleStart();
+          render();
+        }, 2000);
+      } else {
+        // Phase-transition sound cues
+        if (newG.phase === 'resolve:battle_result' && prevPhase !== 'resolve:battle_result' && newG.lastBattle) {
+          const oc = newG.lastBattle.outcome;
+          if      (oc === 'attacker_wins') SFX.battleWin();
+          else if (oc === 'defender_wins') SFX.battleLose();
+          else if (oc === 'mutual')        SFX.battleMutual();
+          else if (oc === 'stalemate')     SFX.battleStalemate();
+        }
+        render();
+      }
+    }
+  };
+
+  ws.onclose = ws.onerror = () => {
+    chip.className = 'err';
+    chip.textContent = '✕ Disconnected';
+    G = null;
+    render();
+    reconnectTimer = setTimeout(connect, 2000);
+  };
+}
+
+// ─── Render entry ───────────────────────────────────────────────────────────────────────────
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  if (!G) { renderConnecting(app); return; }
+  if (G.phase === 'lobby') { renderLobby(app); return; }
+  renderGame(app);
+}
+
+function renderConnecting(app){
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
+  d.innerHTML = `<div style="font-family:'Cinzel',serif;font-size:32px;font-weight:700;letter-spacing:.12em;color:#b5abfc;">Monster Board</div>
+    <div style="font-size:13px;color:#9397ab;">Waiting for server connection…</div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <div style="width:8px;height:8px;border-radius:50%;background:#9184d9;animation:bounce 1.2s ease-in-out infinite;"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:#9184d9;animation:bounce 1.2s ease-in-out infinite .2s;"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:#9184d9;animation:bounce 1.2s ease-in-out infinite .4s;"></div>
+    </div>`;
+  app.appendChild(d);
+}
+
+function doStartGame(){
+  if(ws && ws.readyState === WebSocket.OPEN){
+    ws.send(JSON.stringify({action:'start_game', roundLimit: selectedRoundLimit}));
+  }
+}
+
+function renderLobby(app){
+  const root = document.createElement('div');
+  root.id = 'scale-root';
+  scaleRoot(root);
+
+  // Background image
+  const bg = document.createElement('div');
+  bg.style.cssText = `position:absolute;inset:0;background:url(${BKG_SRC}) center/cover no-repeat;z-index:0;`;
+  root.appendChild(bg);
+
+  // Dark overlay
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:absolute;inset:0;background:rgba(6,6,16,.76);z-index:1;';
+  root.appendChild(ov);
+
+  const splash = document.createElement('div');
+  splash.className = 'lobby-splash';
+
+  const playerCount = G.players.length;
+  const canStart = playerCount >= 2;
+  const code = G.roomCode || '????';
+  const playerURL = `${location.protocol}//${location.host}/player`;
+  const SET_NAMES = {A:'Aggressive',B:'Defensive',C:'Balanced',D:'Versatile'};
+
+  // ── Brand
+  const brand = document.createElement('div');
+  brand.className = 'lobby-brand';
+  brand.innerHTML = `
+    <div class="lobby-brand-title">Summoners Gambit</div>
+    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.3.9</div>`;
+  splash.appendChild(brand);
+
+  // ── Two panels
+  const panels = document.createElement('div');
+  panels.className = 'lobby-panels';
+
+  // Left: Join info
+  const leftPanel = document.createElement('div');
+  leftPanel.className = 'lobby-panel';
+  leftPanel.style.cssText = 'width:300px;flex-shrink:0;';
+  leftPanel.innerHTML = `
+    <div class="lobby-panel-title">Room Code</div>
+    <div class="lobby-code-box">
+      <div class="lobby-code-value">${code}</div>
+      <div class="lobby-code-hint">Share with players</div>
+    </div>
+    <div style="margin-top:18px;">
+      <div class="lobby-url-lbl">Player URL</div>
+      <div class="lobby-url-box">${playerURL}</div>
+    </div>
+    <div class="lobby-count-ring">
+      <div class="lobby-count-num">${playerCount}<span style="font-size:20px;color:var(--text-dim);"> / 6</span></div>
+      <div class="lobby-count-sub">Players joined</div>
+    </div>`;
+  panels.appendChild(leftPanel);
+
+  // Right: Player roster
+  const rightPanel = document.createElement('div');
+  rightPanel.className = 'lobby-panel';
+  rightPanel.style.cssText = 'flex:1;';
+  rightPanel.innerHTML = `<div class="lobby-panel-title">Players</div>`;
+
+  const grid = document.createElement('div');
+  grid.className = 'lobby-slot-grid';
+
+  for(let i = 0; i < 6; i++){
+    const p = G.players[i];
+    const slot = document.createElement('div');
+    slot.className = `lobby-slot ${p ? 'filled' : 'empty'}`;
+    if(p){
+      const setLabel = p.starterSet ? `Set ${p.starterSet} — ${SET_NAMES[p.starterSet]||''}` : '';
+      slot.innerHTML = `
+        <div style="flex-shrink:0;">${playerSigilSVG(p, 30)}</div>
+        <div class="lobby-slot-name" style="color:${p.color};">${p.name}</div>
+        <div class="lobby-slot-set">${setLabel}</div>`;
+    } else {
+      slot.innerHTML = `
+        <div style="width:30px;height:30px;border-radius:50%;border:1px dashed rgba(255,255,255,.18);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:14px;color:rgba(255,255,255,.18);">+</span>
+        </div>
+        <div class="lobby-slot-empty-text">Open Slot</div>`;
+    }
+    grid.appendChild(slot);
+  }
+
+  // Waiting dots if no players yet
+  if(playerCount === 0){
+    const dots = document.createElement('div');
+    dots.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 0;';
+    dots.innerHTML = `<div class="lobby-dot-row"><div class="lobby-dot"></div><div class="lobby-dot"></div><div class="lobby-dot"></div></div>
+      <span style="font-size:11px;color:var(--text-mute);">Waiting for players to connect…</span>`;
+    rightPanel.appendChild(dots);
+  }
+
+  rightPanel.appendChild(grid);
+  panels.appendChild(rightPanel);
+  splash.appendChild(panels);
+
+  // ── Round limit selector
+  const rlWrap = document.createElement('div');
+  rlWrap.className = 'round-limit-wrap';
+  rlWrap.innerHTML = `<div class="round-limit-lbl">Rounds per Player</div>
+    <div class="round-limit-btns">
+      ${[30,40,60].map(n=>`<button class="round-limit-btn${selectedRoundLimit===n?' selected':''}" data-limit="${n}">${n}</button>`).join('')}
+    </div>`;
+  rlWrap.querySelectorAll('.round-limit-btn').forEach(btn => {
+    btn.onclick = () => {
+      selectedRoundLimit = Number(btn.dataset.limit);
+      // Update button states without full re-render
+      rlWrap.querySelectorAll('.round-limit-btn').forEach(b => b.classList.toggle('selected', Number(b.dataset.limit) === selectedRoundLimit));
+    };
+  });
+  splash.appendChild(rlWrap);
+
+  // ── Start button
+  const startWrap = document.createElement('div');
+  startWrap.className = 'lobby-start-wrap';
+  const startBtn = document.createElement('button');
+  startBtn.className = 'lobby-start-btn';
+  startBtn.disabled = !canStart;
+  startBtn.textContent = canStart ? 'Start Game' : 'Waiting for Players…';
+  startBtn.onclick = doStartGame;
+  startWrap.appendChild(startBtn);
+  const hint = document.createElement('div');
+  hint.className = 'lobby-start-hint';
+  hint.textContent = canStart
+    ? `${playerCount} player${playerCount!==1?'s':''} ready — ${selectedRoundLimit} rounds per player`
+    : 'Need at least 2 players to start';
+  startWrap.appendChild(hint);
+  splash.appendChild(startWrap);
+
+  root.appendChild(splash);
+
+  app.appendChild(root);
+}
+
+function renderGame(app){
+  const root = document.createElement('div');
+  root.id = 'scale-root';
+
+  const curPlayer = G.players[G.currentPlayer];
+  const phaseLabel = PHASE_LABELS[G.phase] || G.phase;
+  const lastRoll = curPlayer ? curPlayer.lastDiceRoll : null;
+
+  // ── Topbar
+  const tb = document.createElement('div');
+  tb.className = 'topbar';
+  tb.innerHTML = `
+    <div class="logo">⚔️</div>
+    <div class="room-block">
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.3.9</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
+    </div>
+    <div class="tb-center">
+      <div class="turn-lbl">Round ${Math.floor(G.turnCount / G.players.length) + 1} of ${G.roundLimit || 30}</div>
+      <div class="active-name" style="color:${curPlayer ? curPlayer.color : 'var(--text)'}">${curPlayer ? curPlayer.name : '—'}</div>
+      <div class="phase-lbl">${phaseLabel}</div>
+    </div>
+    <div class="tb-right">
+      <div class="roll-block">
+        <span class="roll-lbl">Last Roll</span>
+        <span class="roll-val">${lastRoll != null ? lastRoll : '—'}</span>
+      </div>
+    </div>`;
+  root.appendChild(tb);
+
+  // ── Main
+  const main = document.createElement('div');
+  main.className = 'main';
+  root.appendChild(main);
+
+  // ── Board area
+  const boardArea = document.createElement('div');
+  boardArea.className = 'board-area';
+
+  // Background image layer
+  const boardBg = document.createElement('div');
+  boardBg.className = 'board-bg';
+  boardBg.style.backgroundImage = `url(${BKG_SRC})`;
+  boardArea.appendChild(boardBg);
+
+  main.appendChild(boardArea);
+
+  // ── Wheel
+  const wheel = document.createElement('div');
+  wheel.className = 'wheel';
+
+  // Board art overlay (the circular board image behind tiles)
+  const boardArt = document.createElement('div');
+  boardArt.className = 'board-art';
+  boardArt.style.backgroundImage = `url(${BKG_SRC})`;
+  wheel.appendChild(boardArt);
+
+  const N = 28, R = 316;
+
+  // Pre-compute effective position for every player (accounts for hop animation)
+  const effPos = G.players.map((p, pi) => getEffectivePosition(pi));
+
+  G.board.forEach((tile, i) => {
+    const angleDeg = (i / N) * 360;
+
+    const isSpecial = tile.kind !== 'element';
+    const color = isSpecial ? '#c0392b' : (TYPE_COLOR[tile.element] || '#9397ab');
+    const label = tile.label || tile.element || tile.kind;
+    const bg = isSpecial
+      ? 'linear-gradient(160deg,#4a1a1a,#2a0e0e)'
+      : `linear-gradient(160deg,color-mix(in srgb,${color} 62%,#10111e 38%),color-mix(in srgb,${color} 40%,#0c0d1a 60%))`;
+    const border = `1px solid ${color}cc`;
+
+    // Art: image if available, else glyph fallback
+    const imgSrc = isSpecial ? TILE_IMG[tile.kind] : TILE_IMG[tile.element];
+    const artHTML = imgSrc
+      ? `<div class="tile-art-icon"><img src="${imgSrc}" class="tile-art-img" alt=""></div>`
+      : isSpecial
+        ? `<div class="tile-art-special" style="color:${color};">${SPECIAL_ICONS[tile.kind] || '❖'}</div>`
+        : `<div class="tile-art-icon" style="color:#fff;">${TYPE_ICON[tile.element] || '✦'}</div>`;
+
+    // HP ring badge if a monster is stationed
+    let badgeHTML = '';
+    if (tile.monster && tile.ownerId !== null && tile.ownerId !== undefined) {
+      const owner = G.players.find(p => p.idx === tile.ownerId);
+      if (owner) {
+        badgeHTML = `<div class="tile-badge">${miniMonsterBadge(tile.monster, owner.color)}</div>`;
+      }
+    } else if (tile.ownerId !== null && tile.ownerId !== undefined) {
+      const owner = G.players.find(p => p.idx === tile.ownerId);
+      if (owner) {
+        badgeHTML = `<div class="tile-badge"><svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="${owner.color}55" stroke="${owner.color}" stroke-width="1.5"/></svg></div>`;
+      }
+    }
+
+    // Classify tile state for animation:
+    // is-visiting: the animating token's current hop step is here
+    // is-settled:  a player is resting here (no active hop animation for that player)
+    const animHere = boardTokenAnim && boardTokenAnim.path[boardTokenAnim.step] === i;
+    const settledHere = G.players.some((p, pi) =>
+      effPos[pi] === i && !(boardTokenAnim && boardTokenAnim.playerIdx === pi)
+    );
+    // Active-tile glow follows the current player's effective position
+    const isActiveTile = effPos[G.currentPlayer] === i;
+
+    const div = document.createElement('div');
+    div.className = 'tile'
+      + (selectedTile === i ? ' selected' : '')
+      + (isActiveTile ? ' active-tile' : '')
+      + (animHere ? ' is-visiting' : '')
+      + (settledHere ? ' is-settled' : '');
+    // Tile's own transform is ONLY radial positioning — scale is inside .tile-body
+    div.style.cssText = `transform:rotate(${angleDeg}deg) translateY(-${R}px);`;
+    div.innerHTML = `<span class="tile-idx">${i}</span>
+    <div class="tile-body">
+      <div class="tile-inner" style="background:${bg};border:${border};">
+        ${artHTML}
+        <span class="tile-name" style="color:${color};font-size:9px;">${label}</span>
+      </div>${badgeHTML}
+    </div>`;
+    div.onclick = () => {
+      selectedTile = selectedTile === i ? null : i;
+      render();
+    };
+    wheel.appendChild(div);
+  });
+
+  // Render player tokens in a separate pass using effective positions
+  G.players.forEach((p, pi) => {
+    const tileIdx = effPos[pi];
+    const angleDeg = (tileIdx / N) * 360;
+    const angleRad = angleDeg * Math.PI / 180;
+    // Spread tokens that share the same tile
+    const tokensAtTile = G.players.filter((q, qi) => effPos[qi] === tileIdx);
+    const ti = tokensAtTile.findIndex(q => q.idx === p.idx);
+    const offsetX = ti * 15 - 7 * tokensAtTile.length;
+
+    const isHopping = boardTokenAnim && boardTokenAnim.playerIdx === pi;
+    // --tok-pos is used by the CSS animation to start transform from correct position
+    const posTransform = `translate(${Math.sin(angleRad)*R}px,${-Math.cos(angleRad)*R}px) translate(${offsetX}px,0px)`;
+
+    const tok = document.createElement('div');
+    tok.className = 'player-token' + (isHopping ? ' hopping' : '');
+    tok.style.cssText = `border-color:${p.color};box-shadow:0 0 10px ${p.color}66;transform:${posTransform};--tok-pos:${posTransform};`;
+    tok.innerHTML = playerSigilSVG(p, 18);
+    wheel.appendChild(tok);
+  });
+
+  // Wheel center — idle die or battle overlay
+  const wc = document.createElement('div');
+  wc.className = 'wheel-center';
+
+  if (G.phase === 'resolve:battle_result' && G.lastBattle) {
+    // ── Full-area clash result overlay (appended to boardArea after wheel) ──
+    // wc stays as idle die placeholder — actual content goes in a rect overlay
+    wc.innerHTML = `<div class="center-idle">
+      <div class="arcane-die" id="board-anim-die">
+        <div class="die-pip pip-tl"></div><div class="die-pip pip-tr"></div>
+        <div class="die-pip pip-bl"></div><div class="die-pip pip-br"></div>
+        <div class="die-face" id="board-die-face">⚔</div>
+      </div>
+    </div>`;
+  } else if (G.phase === 'resolve:battle' && !boardShowIdleDie) {
+    const tile = G.board[curPlayer ? curPlayer.position : 0];
+    const defOwner = tile && tile.ownerId != null ? G.players.find(p => p.idx === tile.ownerId) : null;
+    const defM = tile ? (tile.monster || tile.monsterInstance) : null;
+    const attM = G.pendingAttackerMonster || null;
+    const attSlot = attM
+      ? `${renderBoardCard(attM)}`
+      : `<div style="width:90px;height:128px;border-radius:8px;border:2px dashed var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:10px;color:var(--text-mute);">
+           <span style="font-size:20px;opacity:.4;">⚔</span>choosing…
+         </div>`;
+    wc.innerHTML = `<div class="battle-center visible">
+      <div class="battle-eyebrow">Battle Engaged</div>
+      <div style="display:flex;align-items:center;gap:14px;margin:6px 0;">
+        <div style="text-align:center;">
+          <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-mute);margin-bottom:5px;font-family:'Cinzel',serif;">Attacker</div>
+          ${attSlot}
+          <div style="font-size:10px;color:${curPlayer ? curPlayer.color : 'var(--text-dim)'};margin-top:5px;font-weight:600;">${curPlayer ? curPlayer.name : '?'}</div>
+        </div>
+        <div class="battle-nums">
+          <div class="battle-dmg">⚔</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-mute);margin-bottom:5px;font-family:'Cinzel',serif;">Defending</div>
+          ${renderBoardCard(defM)}
+          ${defOwner ? `<div style="font-size:10px;color:${defOwner.color};margin-top:5px;font-weight:600;">${defOwner.name}</div>` : ''}
+        </div>
+      </div>
+      <div class="battle-foot">Tile ${curPlayer ? curPlayer.position : '?'}</div>
+    </div>`;
+  } else {
+    wc.innerHTML = `<div class="center-idle">
+      <div class="arcane-die" id="board-anim-die">
+        <div class="die-pip pip-tl"></div><div class="die-pip pip-tr"></div>
+        <div class="die-pip pip-bl"></div><div class="die-pip pip-br"></div>
+        <div class="die-face" id="board-die-face">${boardShowIdleDie ? '?' : (lastRoll != null ? lastRoll : '?')}</div>
+      </div>
+      <div class="center-title">Summoners Gambit</div>
+      <div class="center-sub">${curPlayer ? curPlayer.name + ' — ' + phaseLabel : 'Waiting…'}</div>
+    </div>`;
+  }
+  wheel.appendChild(wc);
+
+  // Game over — full screen winners overlay injected into boardArea after wheel is added
+
+  boardArea.appendChild(wheel);
+
+  // ── Battle result full overlay (rectangular, sits above wheel) ──
+  if (G.phase === 'resolve:battle_result' && G.lastBattle) {
+    const lb = G.lastBattle;
+    const attPlayer = G.players[lb.attackerIdx];
+    const defPlayer = lb.defOwnerIdx != null ? G.players.find(p => p.idx === lb.defOwnerIdx) : null;
+    const outcomeLabel = {attacker_wins:'Victory!',defender_wins:'Defeated',mutual:'Mutual!',stalemate:'Stalemate'}[lb.outcome] || lb.outcome;
+    const outcomeColor = {attacker_wins:'#5dc97d',defender_wins:'#e05252',mutual:'#e0b050',stalemate:'#9184d9'}[lb.outcome] || 'var(--accent-lit)';
+    const effLabel = lb.attM && lb.defM ? (TYPE_STRONG[lb.attM.type]===lb.defM.type ? '2× Strong!' : TYPE_WEAK[lb.attM.type]===lb.defM.type ? '½× Weak' : '') : '';
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:absolute;inset:0;z-index:15;background:rgba(8,8,20,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;';
+    overlay.innerHTML = `
+      <div style="font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:var(--accent-pale);font-family:'Cinzel',serif;">⚔ Battle Result</div>
+      <div class="clash-arena">
+        <div class="clash-side left">
+          <div class="clash-eyebrow" style="color:${attPlayer?.color||'var(--accent-lit)'}">${attPlayer?.name||'Attacker'}</div>
+          <div class="clash-hit">${renderBoardCard(lb.attM)}</div>
+          ${lb.defDmg > 0 ? `<div class="clash-dmg">-${lb.defDmg}</div>` : `<div class="clash-dmg zero">—</div>`}
+        </div>
+        <div class="clash-mid">
+          <div class="clash-proj atk">⚔ ${lb.atkDmg}</div>
+          <div class="clash-vs">VS</div>
+          <div class="clash-proj def-proj">🛡 ${lb.defDmg}</div>
+          ${effLabel ? `<div class="battle-note" style="margin-top:4px;text-align:center;font-size:11px;color:var(--text-lo)">${effLabel}</div>` : ''}
+          <div class="clash-outcome-label" style="color:${outcomeColor};font-size:18px;">${outcomeLabel}</div>
+        </div>
+        <div class="clash-side right">
+          <div class="clash-eyebrow" style="color:${defPlayer?.color||'var(--text-dim)'}">${defPlayer?.name||'Defender'}</div>
+          <div class="clash-hit">${renderBoardCard(lb.defM)}</div>
+          ${lb.atkDmg > 0 ? `<div class="clash-dmg">-${lb.atkDmg}</div>` : `<div class="clash-dmg zero">—</div>`}
+        </div>
+      </div>`;
+    boardArea.appendChild(overlay);
+  }
+
+  // ── Winners screen (full overlay)
+  if (G.phase === 'game_over') {
+    const rankings = G.rankings || [...G.players].sort((a,b)=>{
+      const ta = G.board.filter(t=>t.ownerId===a.idx).length;
+      const tb = G.board.filter(t=>t.ownerId===b.idx).length;
+      return tb !== ta ? tb - ta : b.mana - a.mana;
+    }).map(p=>({...p, tiles: G.board.filter(t=>t.ownerId===p.idx).length}));
+
+    const champ = rankings[0];
+
+    // Awards: find who has the most of each stat
+    const statMax = (fn) => {
+      const vals = rankings.map(fn);
+      const max = Math.max(...vals);
+      return rankings.filter((p,i)=>vals[i]===max).map(p=>p.name);
+    };
+    const awards = {};
+    const addAward = (names, label) => names.forEach(n => { if(!awards[n]) awards[n]=[]; awards[n].push(label); });
+    addAward(statMax(p=>p.tiles||p.tileCount||0), '🏆 Most Tiles');
+    addAward(statMax(p=>p.mana||0), '💎 Most Mana');
+    addAward(statMax(p=>p.battlesWon||0), '⚔ Most Wins');
+    addAward(statMax(p=>p.totalManaEarned||0), '✨ Top Earner');
+    addAward(statMax(p=>p.peakTiles||0), '📍 Peak Tiles');
+
+    const wo = document.createElement('div');
+    wo.className = 'winners-overlay';
+    wo.style.cssText = 'position:absolute;inset:0;z-index:30;';
+
+    const tableRows = rankings.map((p,rank) => {
+      const tiles = p.tiles ?? p.tileCount ?? 0;
+      const playerAwards = awards[p.name] || [];
+      const awardBadge = playerAwards.length ? `<span class="wt-award">${playerAwards.join(' · ')}</span>` : '';
+      const medal = rank===0 ? '🥇' : rank===1 ? '🥈' : rank===2 ? '🥉' : `${rank+1}.`;
+      return `<div class="wt-cell wt-row-${rank+1}" style="color:${p.color};padding-left:16px;">${medal} ${p.name}${awardBadge}</div>
+        <div class="wt-cell wt-row-${rank+1}">${tiles}</div>
+        <div class="wt-cell wt-row-${rank+1}">${p.mana ?? '—'}</div>
+        <div class="wt-cell wt-row-${rank+1}">${p.battlesWon ?? '—'}</div>
+        <div class="wt-cell wt-row-${rank+1}">${p.battlesLost ?? '—'}</div>
+        <div class="wt-cell wt-row-${rank+1}">${p.peakTiles ?? '—'}</div>
+        <div class="wt-cell wt-row-${rank+1}">${p.totalManaEarned ?? '—'}</div>`;
+    }).join('');
+
+    wo.innerHTML = `
+      <div class="winners-bg-art"></div>
+      <div class="winners-eyebrow">Game Over — Final Standings</div>
+      <div class="winners-title">Champion</div>
+      <div class="winners-champion" style="color:${champ?.color||'var(--gold-glow)'}">
+        ${champ?.name||'—'}
+      </div>
+      <div class="winners-champion-sub">${champ ? (champ.tiles??champ.tileCount??0) + ' tiles · ' + (champ.mana??0) + ' mana' : ''}</div>
+      <div class="winners-table">
+        <div class="wt-head" style="text-align:left;padding-left:16px;">Player</div>
+        <div class="wt-head">Tiles</div>
+        <div class="wt-head">Mana</div>
+        <div class="wt-head">Wins</div>
+        <div class="wt-head">Losses</div>
+        <div class="wt-head">Peak</div>
+        <div class="wt-head">Earned</div>
+        ${tableRows}
+      </div>`;
+    boardArea.appendChild(wo);
+  }
+
+  // ── Right rail
+  const rail = document.createElement('div');
+  rail.className = 'right-rail';
+  rail.appendChild(renderPaper());
+  main.appendChild(rail);
+
+  scaleRoot(root);
+  app.appendChild(root);
+}
+
+function renderPaper(){
+  const paper = document.createElement('div');
+  paper.className = 'paper';
+  paper.innerHTML = `<span class="paper-corner corner-tl">✦</span><span class="paper-corner corner-tr">✦</span>
+    <span class="paper-corner corner-bl">✦</span><span class="paper-corner corner-br">✦</span>`;
+
+  // Players section
+  const plbl = document.createElement('div');
+  plbl.className = 'paper-lbl';
+  plbl.textContent = 'Adventurers';
+  paper.appendChild(plbl);
+
+  const plist = document.createElement('div');
+  plist.className = 'players-list';
+  G.players.forEach(p => {
+    const isActive = p.idx === G.currentPlayer;
+    const chip = document.createElement('div');
+    chip.className = 'player-chip' + (isActive ? ' active' : '');
+    chip.innerHTML = `<div class="chip-dot">${playerSigilSVG(p, 18)}</div>
+      <div class="chip-info">
+        <div class="chip-name" style="color:${p.idx===G.currentPlayer?p.color:'var(--parch-ink)'}">${p.name}${isActive ? ' ◄' : ''}</div>
+        <div class="chip-sub">${p.tileCount} tiles · ${p.handSize}/5 hand · ${p.stationedCount} stationed</div>
+      </div>
+      <div class="chip-mana">
+        <div class="chip-mana-val">${p.mana}</div>
+        <div class="chip-mana-lbl">Mana</div>
+      </div>`;
+    plist.appendChild(chip);
+  });
+  paper.appendChild(plist);
+
+  // Scroll area
+  const scroll = document.createElement('div');
+  scroll.className = 'paper-scroll';
+
+  if (selectedTile !== null) {
+    // Tile inspector
+    const back = document.createElement('button');
+    back.className = 'inspector-back';
+    back.textContent = '← Back to log';
+    back.onclick = () => { selectedTile = null; render(); };
+    scroll.appendChild(back);
+
+    const tile = G.board[selectedTile];
+    const isSpecial = tile.kind !== 'element';
+    const color = isSpecial ? '#c0392b' : (TYPE_COLOR[tile.element] || '#9397ab');
+    const label = tile.label || tile.element || tile.kind;
+
+    const box = document.createElement('div');
+    box.className = 'inspector-box';
+
+    let ownerHTML = '';
+    if (tile.ownerId !== null && tile.ownerId !== undefined) {
+      const owner = G.players.find(p => p.idx === tile.ownerId);
+      if (owner) ownerHTML = `<div style="font-size:11px;margin-bottom:4px;">Owned by <span style="color:${owner.color};font-weight:600;">${owner.name}</span></div>`;
+    }
+
+    let monsterHTML = '';
+    if (tile.monster) {
+      const m = tile.monster;
+      const mc = TYPE_COLOR[m.type] || '#9397ab';
+      const pct = Math.max(0, m.hp / m.maxHp * 100).toFixed(0);
+      monsterHTML = `
+        <div style="margin-top:8px;border-top:1px solid rgba(103,69,30,.2);padding-top:8px;">
+          <div class="inspector-monster-hdr">Stationed Monster</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+            <div style="width:32px;height:32px;border-radius:6px;overflow:hidden;flex-shrink:0;">${m.id ? monsterImg(m.id,'-mini') : artSVG(m.type,32,32)}</div>
+            <div style="flex:1;">
+              <div style="font-size:12px;font-weight:600;color:${mc};">${m.name}</div>
+              <div style="font-size:10px;color:var(--parch-dim);">HP ${m.hp}/${m.maxHp} · ATK ${m.atk} · DEF ${m.def}</div>
+              <div style="height:4px;background:rgba(0,0,0,.1);border-radius:2px;margin-top:3px;overflow:hidden;">
+                <div style="height:100%;width:${pct}%;background:${mc};border-radius:2px;transition:width .3s;"></div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    box.innerHTML = `<div class="inspector-tile-num">Tile ${selectedTile}</div>
+      <div class="inspector-tile-name" style="color:${color};">${label}</div>
+      ${ownerHTML}${monsterHTML}`;
+    scroll.appendChild(box);
+  } else {
+    // Event log
+    const elbl = document.createElement('div');
+    elbl.className = 'paper-lbl';
+    elbl.textContent = 'Event Log';
+    scroll.appendChild(elbl);
+
+    if (!G.events || G.events.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'font-size:11px;color:var(--parch-dim);font-style:italic;padding:4px 0;';
+      empty.textContent = 'No events yet.';
+      scroll.appendChild(empty);
+    } else {
+      [...G.events].reverse().forEach(ev => {
+        const row = document.createElement('div');
+        row.className = 'log-row';
+        const txt = typeof ev === 'string' ? ev : (ev.text || String(ev));
+        row.innerHTML = `<span class="log-icon">·</span><span class="log-text">${txt}</span>`;
+        scroll.appendChild(row);
+      });
+    }
+  }
+
+  paper.appendChild(scroll);
+  return paper;
+}
+
+// ─── Scale root to viewport ──────────────────────────────────────────────────────────────────────────
+function scaleRoot(root){
+  const scaleX = window.innerWidth / 1440;
+  const scaleY = window.innerHeight / 900;
+  const s = Math.min(scaleX, scaleY);
+  root.style.transform = `scale(${s})`;
+  root.style.left = Math.max(0, (window.innerWidth - 1440 * s) / 2) + 'px';
+  root.style.top  = Math.max(0, (window.innerHeight - 900 * s) / 2) + 'px';
+  document.body.style.background = '#0d0e1c';
+}
+
+window.addEventListener('resize', () => {
+  const root = document.getElementById('scale-root');
+  if (root) scaleRoot(root);
+});
+
+// ─── Boot ───────────────────────────────────────────────────────────────────────────────────
+connect();
+</script>
+</body>
+</html>
