@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.3';
+const SERVER_VERSION = 'v1.0.4';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -29,44 +29,44 @@ const TYPE_WEAK   = { Light:'Nature', Dark:'Light', Arcane:'Dark', Undead:'Arcan
 // Master monster roster
 const ROSTER = [
   // Light
-  {id:'solar_knight',  type:'Light',  name:'Solar Knight',  arch:'glass', hp:20, maxHp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
-  {id:'dawnguard',     type:'Light',  name:'Dawnguard',     arch:'tanky', hp:55, maxHp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
-  {id:'high_paladin',  type:'Light',  name:'High Paladin',  arch:'bal',   hp:35, maxHp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'solar_knight',  type:'Light',  name:'Solar Knight',  arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'dawnguard',     type:'Light',  name:'Dawnguard',     arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
+  {id:'high_paladin',  type:'Light',  name:'High Paladin',  arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
   {id:'ardent_saint',  type:'Light',  name:'Ardent Saint',  arch:'spec',  hp:65, maxHp:65, atk:15, def:15, cost:20, gen:5, isSpecial:true,
     special:'Aura of Renewal',  specialDesc:'Heal all friendly stationed monsters 5 HP/turn',
     condition:'healed4', conditionDesc:'Healed 4+ monsters this game'},
   // Dark
-  {id:'nightshard',    type:'Dark',   name:'Nightshard',    arch:'glass', hp:20, maxHp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
-  {id:'void_sentinel', type:'Dark',   name:'Void Sentinel', arch:'tanky', hp:55, maxHp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
-  {id:'shadow_paladin',type:'Dark',   name:'Shadow Paladin',arch:'bal',   hp:35, maxHp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'nightshard',    type:'Dark',   name:'Nightshard',    arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'void_sentinel', type:'Dark',   name:'Void Sentinel', arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
+  {id:'shadow_paladin',type:'Dark',   name:'Shadow Paladin',arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
   {id:'succubus',      type:'Dark',   name:'Succubus',      arch:'spec',  hp:45, maxHp:45, atk:32, def:10, cost:20, gen:5, isSpecial:true,
     special:'Mana Drain', specialDesc:'Win a battle → steal 10 Mana from loser\'s owner',
     condition:'moreManaThanAll', conditionDesc:'Have more Mana than every other player'},
   // Arcane
-  {id:'sorcerer',      type:'Arcane', name:'Sorcerer',      arch:'glass', hp:20, maxHp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
-  {id:'rune_priestess',type:'Arcane', name:'Rune Priestess',arch:'tanky', hp:55, maxHp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
-  {id:'arch_mage',     type:'Arcane', name:'Arch Mage',     arch:'bal',   hp:35, maxHp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'sorcerer',      type:'Arcane', name:'Sorcerer',      arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'rune_priestess',type:'Arcane', name:'Rune Priestess',arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
+  {id:'arch_mage',     type:'Arcane', name:'Arch Mage',     arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
   {id:'arcane_arbiter',type:'Arcane', name:'Arcane Arbiter',arch:'spec',  hp:40, maxHp:40, atk:27, def:15, cost:20, gen:5, isSpecial:true,
     special:'Nullify', specialDesc:'Cancel type modifier once per battle (forces 1× neutral)',
     condition:'changed3', conditionDesc:'Changed tile element 3+ times this game'},
   // Undead
-  {id:'bone_wraith',   type:'Undead', name:'Bone Wraith',   arch:'glass', hp:20, maxHp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
-  {id:'death_knight',  type:'Undead', name:'Death Knight',  arch:'tanky', hp:55, maxHp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
-  {id:'shade_walker',  type:'Undead', name:'Shade Walker',  arch:'bal',   hp:35, maxHp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'bone_wraith',   type:'Undead', name:'Bone Wraith',   arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'death_knight',  type:'Undead', name:'Death Knight',  arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
+  {id:'shade_walker',  type:'Undead', name:'Shade Walker',  arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
   {id:'demon_lord',    type:'Undead', name:'Demon Lord',    arch:'spec',  hp:85, maxHp:85, atk:17, def:8,  cost:20, gen:5, isSpecial:true,
     special:'Last Rite', specialDesc:'When HP hits 0, survive at 15 HP instead (once per game)',
     condition:'lost4', conditionDesc:'Had 4+ monsters destroyed this game', lastRiteUsed:false},
   // Beast
-  {id:'razorclaw',     type:'Beast',  name:'Razorclaw',     arch:'glass', hp:20, maxHp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
-  {id:'iron_hide',     type:'Beast',  name:'Iron Hide',     arch:'tanky', hp:55, maxHp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
-  {id:'pack_hunter',   type:'Beast',  name:'Pack Hunter',   arch:'bal',   hp:35, maxHp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'razorclaw',     type:'Beast',  name:'Razorclaw',     arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'iron_hide',     type:'Beast',  name:'Iron Hide',     arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
+  {id:'pack_hunter',   type:'Beast',  name:'Pack Hunter',   arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
   {id:'red_dragon',    type:'Beast',  name:'Red Dragon',    arch:'spec',  hp:35, maxHp:35, atk:40, def:9,  cost:20, gen:5, isSpecial:true,
     special:'Intimidate', specialDesc:'When claiming a tile, adjacent owners pay 5 Mana each',
     condition:'mostMonsters', conditionDesc:'Have the most monsters stationed on board'},
   // Nature
-  {id:'thornling',     type:'Nature', name:'Thornling',     arch:'glass', hp:20, maxHp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
-  {id:'ancient_oak',   type:'Nature', name:'Ancient Oak',   arch:'tanky', hp:55, maxHp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
-  {id:'grove_warden',  type:'Nature', name:'Grove Warden',  arch:'bal',   hp:35, maxHp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'thornling',     type:'Nature', name:'Thornling',     arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'ancient_oak',   type:'Nature', name:'Ancient Oak',   arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
+  {id:'grove_warden',  type:'Nature', name:'Grove Warden',  arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
   {id:'world_tree',    type:'Nature', name:'World Tree',    arch:'spec',  hp:55, maxHp:55, atk:22, def:13, cost:20, gen:5, isSpecial:true,
     special:'Deep Roots', specialDesc:'+1 Mana Gen per Nature tile owner controls',
     condition:'own4Nature', conditionDesc:'Own 4+ Nature tiles currently'},
@@ -260,7 +260,11 @@ function doStrike(attacker, defender, tile, nullify = false) {
   const typeMod = typeMultiplier(attacker, defender, nullify);
   const roll    = rand(0, 3);
   let dmg = Math.round(baseDmg * typeMod) + roll;
-  if (attacker.charm) { dmg = Math.round(dmg * 1.25); attacker.charm = false; }
+  if (attacker.charm) {
+    dmg = Math.round(dmg * 1.25);
+    attacker.charm = false;
+    log(`⚡ Battle Charm activated on ${attacker.name}! +25% damage`);
+  }
   return Math.max(1, dmg);
 }
 
@@ -441,7 +445,17 @@ function startShopPhase() {
   G.lastBattle = null;    // clear battle result so it doesn't persist across turns
   G.pendingAttackerMonster = null; // clear attacker preview
   collectPassiveIncome(G.currentPlayer);
-  G.shopOffers = pickShopOffers();
+  G.shopOffers = pickShopOffers(); // always generate offers (needed for stalemate buy option too)
+
+  // Stalemate check — if this player has a pending stalemate, skip normal shop/roll
+  // and go straight to stalemate resolution with buy/sell/attack options
+  if (G.stalemateData && G.stalemateData.attackerIdx === G.currentPlayer) {
+    G.phase = 'stalemate';
+    log(`⚔️ ${p.name} must resolve the stalemate on tile ${G.stalemateData.tilePos}`);
+    broadcast();
+    return;
+  }
+
   G.phase = 'shop';
   log(`🛒 ${p.name}'s turn — shop open`);
   broadcast();
@@ -454,7 +468,15 @@ function advanceTurn() {
     return;
   }
   G.currentPlayer = (G.currentPlayer + 1) % G.players.length;
-  G.stalemateData = null;
+  // Only clear stalemateData when the stalemate player has actually resolved it.
+  // If the incoming current player isn't the stalemate attacker, keep it alive so
+  // startShopPhase can detect it when we cycle back around to them.
+  if (G.stalemateData && G.stalemateData.attackerIdx === G.currentPlayer) {
+    // This is the stalemate player's resolution turn — stalemateData stays until
+    // startShopPhase routes them into the stalemate phase and they act on it.
+  } else if (!G.stalemateData) {
+    // nothing to do
+  }
   startShopPhase();
 }
 
@@ -686,30 +708,62 @@ const handlers = {
       atkDmg, defDmg, outcome
     };
     _applyBattleOutcome(outcome, p, attM, defOwner, defM, tile, sd.tilePos);
-    const stalemateAgain = outcome === 'stalemate';
-    const captureTilePos = sd.tilePos;
-    const captureCurrentPlayer = G.currentPlayer;
+    // If stalemate again, keep stalemateData so it's detected on their next turn
+    if (outcome === 'stalemate') {
+      G.stalemateData = { attackerIdx: G.currentPlayer, tilePos: sd.tilePos };
+    } else {
+      G.stalemateData = null;
+    }
     G.phase = 'resolve:battle_result';
     broadcast();
-    setTimeout(() => {
-      G.stalemateData = null;
-      if (stalemateAgain) {
-        G.stalemateData = { attackerIdx: captureCurrentPlayer, tilePos: captureTilePos };
-        G.phase = 'stalemate';
-        broadcast();
-      } else {
-        advanceTurn();
-      }
-    }, 3500);
+    setTimeout(advanceTurn, 3500);
   },
 
-  stalemate_move(ws, conn, data) {
+  // Buy during stalemate — player gets one purchase from the fresh shop, then turn ends
+  stalemate_buy(ws, conn, data) {
+    if (G.phase !== 'stalemate') return sendError(ws, 'Not stalemate phase');
+    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    const p = G.players[G.currentPlayer];
+    if (p.hand.length >= 5) return sendError(ws, 'Hand full');
+    const offer = G.shopOffers.find(o => o.iid === data.iid);
+    if (!offer) return sendError(ws, 'Invalid offer');
+    if (p.mana < offer.cost) return sendError(ws, 'Not enough Mana');
+    p.mana -= offer.cost;
+    const m = makeMonster(offer.id);
+    p.hand.push(m);
+    log(`🛒 ${p.name} bought ${m.name} during stalemate (−${m.cost}✦)`);
+    G.stalemateData = null;
+    advanceTurn();
+  },
+
+  // Sell during stalemate — player sells one hand monster for mana, then turn ends
+  stalemate_sell(ws, conn, data) {
+    if (G.phase !== 'stalemate') return sendError(ws, 'Not stalemate phase');
+    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    const p = G.players[G.currentPlayer];
+    const idx = p.hand.findIndex(m => m.iid === data.iid);
+    if (idx === -1) return sendError(ws, 'Monster not in hand');
+    const m = p.hand[idx];
+    const refund = Math.floor(m.cost * (m.hp / m.maxHp));
+    p.hand.splice(idx, 1);
+    p.mana += refund;
+    log(`💰 ${p.name} sold ${m.name} for ${refund}✦ during stalemate`);
+    G.stalemateData = null;
+    advanceTurn();
+  },
+
+  // Skip stalemate — player opts to do nothing, turn ends (no rolling)
+  stalemate_skip(ws, conn, data) {
     if (G.phase !== 'stalemate') return sendError(ws, 'Not stalemate phase');
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
     G.stalemateData = null;
-    G.phase = 'roll';
-    log(`${G.players[G.currentPlayer].name} chose to move on from stalemate`);
-    broadcast();
+    log(`${G.players[G.currentPlayer].name} skipped stalemate resolution`);
+    advanceTurn();
+  },
+
+  // Legacy alias — kept for backwards compat with older player.html clients
+  stalemate_move(ws, conn, data) {
+    return handlers.stalemate_skip(ws, conn, data);
   },
 
   // ── Roll ───────────────────────────────────────────────────────────────────
@@ -790,6 +844,10 @@ const handlers = {
     };
     _applyBattleOutcome(outcome, p, attM, defOwner, defM, tile, p.position);
     G.pendingAttackerMonster = null;
+    // Track stalemate — resolved on this player's next turn
+    if (outcome === 'stalemate') {
+      G.stalemateData = { attackerIdx: G.currentPlayer, tilePos: p.position };
+    }
     G.phase = 'resolve:battle_result';
     broadcast();
     setTimeout(advanceTurn, 7000);
