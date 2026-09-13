@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player</title>
+<title>Summoners Gambit — Player v0.3.7</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -245,6 +245,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .el-btn { flex: 1; min-width: 80px; padding: 10px 6px; border-radius: 8px; border: 1px solid var(--border2); background: transparent; font-size: 12px; font-family: 'Cinzel', serif; font-weight: 600; color: var(--text-dim); cursor: pointer; transition: all 120ms; text-align: center; }
 .el-btn.selected { color: #fff; }
 .el-btn:hover:not(.selected) { background: rgba(255,255,255,.05); }
+@keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 </style>
 </head>
 <body>
@@ -653,7 +654,146 @@ function updateHandStrip(show = true) {
   const hs = document.getElementById('hand-scroll');
   if (!show || !myHand.length) { ha.classList.remove('visible'); return; }
   ha.classList.add('visible');
-  hs.innerHTML = myHand.map(m => renderCard(m, {size:'mini'})).join('');
+  hs.innerHTML = myHand.map(m => {
+    const card = renderCard(m, {size:'mini'});
+    // Wrap in a clickable container for detail view
+    return `<div onclick="showCardDetail(${m.iid})" style="cursor:pointer;position:relative;flex-shrink:0;">${card}</div>`;
+  }).join('');
+}
+
+// ─── MONSTER LORE ───────────────────────────────────────────────────────────
+const MONSTER_LORE = {
+  // ── LIGHT ──
+  'Solar Knight':   { role:'Glass Cannon', lore:'A warrior wreathed in living sunfire, the Solar Knight charges into battle with reckless brilliance. Their armor blazes so brightly that enemies are blinded before the blade even lands — but the intensity that makes them lethal also burns through their endurance fast.', ability:null },
+  'Dawnguard':      { role:'Tank', lore:'The Dawnguard were founded to hold the line at the world\'s edge, and they have done so for a thousand years. Slow but unyielding, a Dawnguard unit doesn\'t retreat. Ever. Their shields are blessed to turn aside blows that would fell lesser warriors, and their patience outlasts nearly any assault.', ability:null },
+  'High Paladin':   { role:'Balanced', lore:'Chosen from among the bravest and most disciplined of the Light orders, the High Paladin combines martial skill with divine judgment. They are neither the fastest nor the most powerful, but their balance of offense and defense makes them reliable in almost any engagement.', ability:null },
+  'Ardent Saint':   { role:'Special · Temple Only', lore:'Legends say the Ardent Saint ascended to the Light after taking a wound that should have been fatal — and stood back up anyway. Now she radiates a gentle healing aura that sustains all friendly monsters on the field, turning attrition into advantage over a long game.', ability:'Aura of Renewal — heals all your stationed monsters 5 HP each turn.' },
+
+  // ── DARK ──
+  'Nightshard':     { role:'Glass Cannon', lore:'Crystallized shadow given lethal purpose, the Nightshard moves like a rumor and hits like a verdict. What they lack in durability they make up for in aggression — a monster that lives or dies in the opening exchange.', ability:null },
+  'Void Sentinel':  { role:'Tank', lore:'The Void Sentinel was carved from the space between stars and set to guard a gateway that no longer exists. It protects tiles with the same impassive resolve regardless of what crosses its path, drawing on an endless reservoir of shadow to endure.', ability:null },
+  'Shadow Paladin': { role:'Balanced', lore:'Where Light Paladins serve order, Shadow Paladins serve inevitability. They have studied every fighting style and countered every tactic, making them adaptable soldiers who can hold ground or push forward depending on what the moment demands.', ability:null },
+  'Succubus':       { role:'Special · Temple Only', lore:'Beautiful, ruthless, and economically devastating. The Succubus doesn\'t just win battles — she taxes them. Every victory drains the loser\'s treasury, turning combat into a Mana siphon that compounds with every fight.', ability:'Mana Drain — steal 10 Mana from the opposing player each time you win a battle.' },
+
+  // ── ARCANE ──
+  'Sorcerer':       { role:'Glass Cannon', lore:'Pure channeled spellfire in a mortal frame. The Sorcerer can disintegrate enemies in seconds, but maintaining those output levels leaves almost nothing for self-defense. High risk, high reward — one wrong trade ends them.', ability:null },
+  'Rune Priestess': { role:'Tank', lore:'She inscribed every ward she knows onto her own body, and now each rune absorbs a measure of incoming force. Attacking a Rune Priestess is an exercise in frustration — the damage just keeps getting absorbed, layer by layer.', ability:null },
+  'Arch Mage':      { role:'Balanced', lore:'The Arch Mage has spent decades mastering not just destruction, but efficiency. Every spell is precisely calibrated for the situation. Not flashy, but rarely caught off-guard, and never wasteful.', ability:null },
+  'Arcane Arbiter': { role:'Special · Temple Only', lore:'Once a judge in the Great Arcane Courts, the Arbiter discovered that type advantages were being exploited as legal loopholes. They devised a countermeasure: a field-disruption technique that collapses elemental affinities to neutral, leveling any fight.', ability:'Nullify — cancel the type modifier in one battle per fight, forcing 1× neutral damage.' },
+
+  // ── UNDEAD ──
+  'Bone Wraith':    { role:'Glass Cannon', lore:'What it lacks in flesh it makes up for in fury. The Bone Wraith is animated by spite and propelled by the memory of every grievance it suffered in life. It hits hard and disintegrates fast — exactly as planned.', ability:null },
+  'Death Knight':   { role:'Tank', lore:'A paladin who refused to die and cut a deal to keep going. The Death Knight\'s oath binds them to the tile they guard with unnatural persistence. Killing them once isn\'t always enough — they have a way of not staying down.', ability:null },
+  'Shade Walker':   { role:'Balanced', lore:'The Shade Walker exists between states — partially corporeal, partially not. This makes them genuinely hard to read in combat: they can absorb a blow or dodge it depending on their angle. Versatile survivors of the Undead roster.', ability:null },
+  'Demon Lord':     { role:'Special · Temple Only', lore:'The Demon Lord has died so many times that death simply stopped sticking. Once per game, when their HP drops to zero, they stabilize at 15 and keep fighting — a nightmare to put down permanently.', ability:'Last Rite — survives fatal damage once per game, continuing at 15 HP.' },
+
+  // ── BEAST ──
+  'Razorclaw':      { role:'Glass Cannon', lore:'Part predator, part projectile. The Razorclaw doesn\'t have a defensive strategy because it has never needed one — it closes the distance so fast that the opponent rarely gets to counterattack. Fragile in a prolonged fight, lethal in a short one.', ability:null },
+  'Iron Hide':      { role:'Tank', lore:'An ancient creature armored by centuries of scar tissue. The Iron Hide has survived things that should have ended it a dozen times, and each survival made it harder. A reliable defensive anchor that enemies learn to respect or route around.', ability:null },
+  'Pack Hunter':    { role:'Balanced', lore:'The Pack Hunter is most dangerous when it feels like a fair fight — because that means you\'re not watching the flanks. Even alone it applies pressure from multiple angles, feinting and circling rather than committing to a straight exchange.', ability:null },
+  'Red Dragon':     { role:'Special · Temple Only', lore:'A dragon that has claimed a territory burns that claim into the land itself. Neighboring tile owners feel the heat every time someone new tries to stake a claim — the Red Dragon\'s intimidating presence costs them Mana even before the battle starts.', ability:'Intimidate — neighboring tile owners pay 5 Mana each time a new claim is made on an adjacent tile.' },
+
+  // ── NATURE ──
+  'Thornling':      { role:'Glass Cannon', lore:'A creature made of compressed briar and thorns, launched at problems. The Thornling explodes with violent speed from a standing position, impaling anything in range before the target has time to react. Its fragility is the cost of being mostly made of spikes.', ability:null },
+  'Ancient Oak':    { role:'Tank', lore:'Older than the kingdom it now defends, the Ancient Oak moves slowly and doesn\'t need to move quickly. Its roots stabilize in every tile it stands on, making it extraordinarily difficult to dislodge. It has simply outlasted everything that has ever challenged it.', ability:null },
+  'Grove Warden':   { role:'Balanced', lore:'The Grove Warden tends the living battlefield with as much care as it fights on it. Neither the most aggressive nor the most defensive of the Nature roster, but adaptable — capable of holding tiles or applying pressure depending on what the board demands.', ability:null },
+  'World Tree':     { role:'Special · Temple Only', lore:'The World Tree\'s roots run under every Nature tile on the board. The more Nature territory your team controls, the faster it grows — feeding Mana back into your reserves with every passing round through the network it maintains beneath the surface.', ability:'Deep Roots — generates +1 bonus Mana Gen for each Nature tile you currently own.' },
+};
+
+// ─── CARD DETAIL OVERLAY ────────────────────────────────────────────────────
+function showCardDetail(iid) {
+  const m = myHand.find(x => x.iid === iid);
+  if (!m) return;
+  const lore = MONSTER_LORE[m.name] || { role: m.archetype || '', lore: 'A mysterious creature of unknown origin.', ability: null };
+  const elColor = TYPE_COLOR[m.element] || 'var(--accent)';
+  const hpPct = Math.round((m.hp / m.maxHp) * 100);
+
+  const overlay = document.createElement('div');
+  overlay.id = 'card-detail-overlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:9999;
+    background:rgba(6,5,20,.92);
+    display:flex;flex-direction:column;align-items:center;
+    padding:20px 20px 32px;overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    animation:fadeIn .18s ease;
+  `;
+  overlay.onclick = (e) => { if (e.target === overlay) closeCardDetail(); };
+
+  overlay.innerHTML = `
+    <div style="width:100%;max-width:360px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:${elColor};">Card Detail</div>
+        <button onclick="closeCardDetail()" style="background:none;border:none;color:var(--text-mute);font-size:22px;cursor:pointer;line-height:1;padding:0 4px;">✕</button>
+      </div>
+
+      <!-- Large card centered -->
+      <div style="display:flex;justify-content:center;margin-bottom:20px;">
+        <div style="transform:scale(1.5);transform-origin:top center;margin-bottom:100px;">
+          ${renderCard(m, {size:'full', showCost:true})}
+        </div>
+      </div>
+
+      <!-- Monster info block -->
+      <div style="background:var(--surface);border:1px solid ${elColor}44;border-radius:14px;padding:18px;margin-top:8px;">
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;">
+          <div style="font-family:'Cinzel',serif;font-size:16px;font-weight:700;color:${elColor};">${m.name}</div>
+          ${m.archetype === 'special' ? `<div style="font-size:9px;color:var(--gold-glow);font-family:'Cinzel',serif;letter-spacing:.1em;">✦ SPECIAL</div>` : ''}
+        </div>
+        <div style="font-size:10px;color:var(--text-mute);letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px;">${lore.role} · ${m.element}</div>
+
+        <!-- Stat row -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;">
+          ${[['⚔','ATK',m.atk],['🛡','DEF',m.def],['✦','GEN',m.gen],['💰','COST',m.cost]].map(([icon,label,val]) => `
+            <div style="background:var(--surface2);border-radius:8px;padding:8px 4px;text-align:center;">
+              <div style="font-size:14px;line-height:1;">${icon}</div>
+              <div style="font-size:16px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;">${val}</div>
+              <div style="font-size:8px;color:var(--text-mute);letter-spacing:.1em;">${label}</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- HP bar -->
+        <div style="margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-mute);margin-bottom:4px;">
+            <span>HP</span><span>${m.hp} / ${m.maxHp}</span>
+          </div>
+          <div style="height:5px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden;">
+            <div style="height:100%;width:${hpPct}%;border-radius:3px;background:${hpPct > 50 ? '#4fa355' : hpPct > 25 ? '#c9a028' : '#b84a4a'};transition:width .3s;"></div>
+          </div>
+        </div>
+
+        <!-- Type matchup -->
+        <div style="margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:10px;font-size:11px;line-height:1.6;">
+          <div style="color:var(--text-mute);font-size:9px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">Type Matchup</div>
+          <div><span style="color:${TYPE_COLOR[TYPE_STRONG[m.element]]}">▲ Strong vs ${TYPE_STRONG[m.element]}</span> <span style="color:var(--text-mute);font-size:10px;">(2× dmg)</span></div>
+          <div><span style="color:${TYPE_COLOR[TYPE_WEAK[m.element]]||'#e08080'}">▼ Weak vs ${TYPE_WEAK[m.element]}</span> <span style="color:var(--text-mute);font-size:10px;">(0.5× dmg)</span></div>
+        </div>
+
+        ${lore.ability ? `
+        <!-- Special ability -->
+        <div style="margin-bottom:14px;padding:10px 12px;background:rgba(169,123,64,.12);border:1px solid rgba(169,123,64,.3);border-radius:10px;">
+          <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-glow);font-family:'Cinzel',serif;margin-bottom:5px;">✦ Special Ability</div>
+          <div style="font-size:12px;color:var(--text);line-height:1.5;">${lore.ability}</div>
+        </div>` : ''}
+
+        <!-- Lore text -->
+        <div>
+          <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;margin-bottom:8px;">Lore</div>
+          <div style="font-size:12px;color:var(--text-dim);line-height:1.65;font-style:italic;">${lore.lore}</div>
+        </div>
+      </div>
+
+      <button onclick="closeCardDetail()" style="margin-top:20px;width:100%;padding:14px;background:var(--surface);border:1px solid var(--border2);border-radius:10px;color:var(--text-mute);font-size:13px;font-family:'Cinzel',serif;cursor:pointer;letter-spacing:.08em;">Close</button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+}
+
+function closeCardDetail() {
+  const el = document.getElementById('card-detail-overlay');
+  if (el) el.remove();
 }
 
 // ─── SCROLL NAVIGATION HELPERS ──────────────────────────────────────────────
@@ -1094,9 +1234,8 @@ function renderStalemate() {
 
     <div style="padding:16px 16px 4px;">
       <div style="font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;margin-bottom:10px;">Your Hand</div>
-      <div style="display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px;">
-        ${handCards}
-      </div>
+      <div class="picker-scroll" id="stalemate-hand-scroll">${handCards}</div>
+      ${scrollNavHTML('stalemate-hand-scroll','stalemate-hand-dot',myHand.length)}
     </div>
 
     <div style="padding:12px 16px 0;font-size:12px;color:var(--text-dim);line-height:1.5;">
@@ -1104,6 +1243,8 @@ function renderStalemate() {
         ? '⚔️ <strong style="color:var(--text)">Battle Again</strong> — fight fresh, this uses your turn.<br>🚶 <strong style="color:var(--text)">Continue On</strong> — retreat for <span style="color:var(--gold-glow)">8✦</span>, then shop as normal.'
         : '🚶 You have no monsters in hand. You must <strong style="color:var(--text)">Continue On</strong> (costs <span style="color:var(--gold-glow)">8✦</span>).'}
     </div>`;
+
+  attachShopScrollListener('stalemate-hand-scroll','stalemate-hand-dot',myHand.length);
 
   const ab = document.getElementById('action-bar');
   ab.classList.add('visible');
