@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.3.7</title>
+<title>Summoners Gambit — Player v0.3.8</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -705,8 +705,10 @@ function showCardDetail(iid) {
   const m = myHand.find(x => x.iid === iid);
   if (!m) return;
   const lore = MONSTER_LORE[m.name] || { role: m.archetype || '', lore: 'A mysterious creature of unknown origin.', ability: null };
-  const elColor = TYPE_COLOR[m.element] || 'var(--accent)';
+  const elColor = TYPE_COLOR[m.type] || 'var(--accent)';
   const hpPct = Math.round((m.hp / m.maxHp) * 100);
+  const strongType = TYPE_STRONG[m.type];
+  const weakType   = TYPE_WEAK[m.type];
 
   const overlay = document.createElement('div');
   overlay.id = 'card-detail-overlay';
@@ -738,16 +740,16 @@ function showCardDetail(iid) {
       <div style="background:var(--surface);border:1px solid ${elColor}44;border-radius:14px;padding:18px;margin-top:8px;">
         <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;">
           <div style="font-family:'Cinzel',serif;font-size:16px;font-weight:700;color:${elColor};">${m.name}</div>
-          ${m.archetype === 'special' ? `<div style="font-size:9px;color:var(--gold-glow);font-family:'Cinzel',serif;letter-spacing:.1em;">✦ SPECIAL</div>` : ''}
+          ${m.isSpecial ? `<div style="font-size:9px;color:var(--gold-glow);font-family:'Cinzel',serif;letter-spacing:.1em;">✦ SPECIAL</div>` : ''}
         </div>
-        <div style="font-size:10px;color:var(--text-mute);letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px;">${lore.role} · ${m.element}</div>
+        <div style="font-size:10px;color:var(--text-mute);letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px;">${lore.role} · ${m.type}</div>
 
         <!-- Stat row -->
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;">
           ${[['⚔','ATK',m.atk],['🛡','DEF',m.def],['✦','GEN',m.gen],['💰','COST',m.cost]].map(([icon,label,val]) => `
             <div style="background:var(--surface2);border-radius:8px;padding:8px 4px;text-align:center;">
               <div style="font-size:14px;line-height:1;">${icon}</div>
-              <div style="font-size:16px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;">${val}</div>
+              <div style="font-size:16px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;">${val ?? '—'}</div>
               <div style="font-size:8px;color:var(--text-mute);letter-spacing:.1em;">${label}</div>
             </div>
           `).join('')}
@@ -766,8 +768,8 @@ function showCardDetail(iid) {
         <!-- Type matchup -->
         <div style="margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:10px;font-size:11px;line-height:1.6;">
           <div style="color:var(--text-mute);font-size:9px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">Type Matchup</div>
-          <div><span style="color:${TYPE_COLOR[TYPE_STRONG[m.element]]}">▲ Strong vs ${TYPE_STRONG[m.element]}</span> <span style="color:var(--text-mute);font-size:10px;">(2× dmg)</span></div>
-          <div><span style="color:${TYPE_COLOR[TYPE_WEAK[m.element]]||'#e08080'}">▼ Weak vs ${TYPE_WEAK[m.element]}</span> <span style="color:var(--text-mute);font-size:10px;">(0.5× dmg)</span></div>
+          <div><span style="color:${TYPE_COLOR[strongType] || '#7dba81'}">▲ Strong vs ${strongType || '—'}</span> <span style="color:var(--text-mute);font-size:10px;">(2× dmg)</span></div>
+          <div><span style="color:${TYPE_COLOR[weakType] || '#e08080'}">▼ Weak vs ${weakType || '—'}</span> <span style="color:var(--text-mute);font-size:10px;">(0.5× dmg)</span></div>
         </div>
 
         ${lore.ability ? `
