@@ -442,6 +442,7 @@ function renderBoardCard(m) {
   const art = m.id ? monsterImg(m.id) : artSVG(m.type, 130, 186);
   return `<div class="board-monster-card" style="border-color:${border};${shadow}">
     ${m.isSpecial ? `<div class="bmc-special">✦ Special</div>` : ''}
+    ${m.charm ? `<div style="position:absolute;top:4px;right:4px;width:14px;height:14px;border-radius:50%;background:#c9a05a;box-shadow:0 0 8px #c9a05acc;z-index:3;display:flex;align-items:center;justify-content:center;font-size:8px;line-height:1;" title="Battle Charm">⚡</div>` : ''}
     <div class="bmc-art">${art}</div>
     <div class="bmc-overlay">
       <div class="bmc-name" style="color:${c}">${m.name}</div>
@@ -753,7 +754,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.3.9</div>`;
+    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.0</div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -874,7 +875,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.3.9</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.0</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">

@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.2';
+const SERVER_VERSION = 'v1.0.3';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -1199,6 +1199,19 @@ const PUBLIC = path.join(__dirname, 'public');
 
 function serveStatic(req, res) {
   let urlPath = req.url.split('?')[0];
+
+  // Health-check endpoint — used by Railway and other platforms to confirm the server is alive
+  if (urlPath === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      status: 'ok',
+      version: SERVER_VERSION,
+      phase: G ? G.phase : 'unknown',
+      players: G ? G.players.length : 0,
+    }));
+    return;
+  }
+
   if (urlPath === '/' || urlPath === '') urlPath = '/board.html';
   if (urlPath === '/board')  urlPath = '/board.html';
   if (urlPath === '/player') urlPath = '/player.html';
