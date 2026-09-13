@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.4';
+const SERVER_VERSION = 'v1.0.6';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -451,6 +451,7 @@ function startShopPhase() {
   // and go straight to stalemate resolution with buy/sell/attack options
   if (G.stalemateData && G.stalemateData.attackerIdx === G.currentPlayer) {
     G.phase = 'stalemate';
+    console.log(`[SG] *** STALEMATE PHASE for player ${G.currentPlayer} (${p.name}) on tile ${G.stalemateData.tilePos} ***`);
     log(`⚔️ ${p.name} must resolve the stalemate on tile ${G.stalemateData.tilePos}`);
     broadcast();
     return;
@@ -683,88 +684,49 @@ const handlers = {
 
   // ── Stalemate ──────────────────────────────────────────────────────────────
 
-  stalemate_attack(ws, conn, data) {
+  // Player chooses to fight — enters normal resolve:battle so they pick attacker via select_attacker/attack
+  stalemate_fight(ws, conn, data) {
     if (G.phase !== 'stalemate') return sendError(ws, 'Not stalemate phase');
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
     const p = G.players[G.currentPlayer];
-    const attM = p.hand.find(m => m.iid === data.attackerIid);
-    if (!attM) return sendError(ws, 'Monster not in hand');
-    if (!canUseSpecial(G.currentPlayer, attM)) return sendError(ws, 'Special condition not met');
+    if (!p.hand || p.hand.length === 0) return sendError(ws, 'No monsters in hand');
     const sd = G.stalemateData;
+    // Verify the tile is still contested (defender's monster still there)
     const tile = G.board[sd.tilePos];
-    const defM = tile.monsterInstance;
-    if (!defM) { G.stalemateData = null; advanceTurn(); return; }
-    const defOwner = G.players[tile.ownerId];
-
-    const { atkDmg, defDmg, outcome } = resolveBattle(attM, defM, tile);
-    log(`⚔️ Stalemate rematch: ${p.name}(${attM.name}) vs ${defOwner.name}(${defM.name})`);
-    log(`   Dealt ${atkDmg}, took ${defDmg} — ${outcome}`);
-
-    G.lastBattle = {
-      attackerIdx: G.currentPlayer,
-      defOwnerIdx: tile.ownerId,
-      attM: { name:attM.name, type:attM.type, atk:attM.atk, def:attM.def, id:attM.id, isSpecial:attM.isSpecial||false, hp:attM.hp, maxHp:attM.maxHp },
-      defM: { name:defM.name, type:defM.type, atk:defM.atk, def:defM.def, id:defM.id, isSpecial:defM.isSpecial||false, hp:defM.hp, maxHp:defM.maxHp },
-      atkDmg, defDmg, outcome
-    };
-    _applyBattleOutcome(outcome, p, attM, defOwner, defM, tile, sd.tilePos);
-    // If stalemate again, keep stalemateData so it's detected on their next turn
-    if (outcome === 'stalemate') {
-      G.stalemateData = { attackerIdx: G.currentPlayer, tilePos: sd.tilePos };
-    } else {
+    if (!tile || !tile.monsterInstance) {
+      // Defender monster gone somehow — just clear and advance
       G.stalemateData = null;
+      advanceTurn();
+      return;
     }
-    G.phase = 'resolve:battle_result';
+    G.stalemateData = null;
+    G.pendingAttackerMonster = null;
+    G.phase = 'resolve:battle';
+    log(`⚔️ ${p.name} chooses to battle again on tile ${sd.tilePos}!`);
     broadcast();
-    setTimeout(advanceTurn, 3500);
   },
 
-  // Buy during stalemate — player gets one purchase from the fresh shop, then turn ends
-  stalemate_buy(ws, conn, data) {
+  // Player retreats from stalemate — pays 8 Mana, skips rolling, goes straight to shop
+  stalemate_continue(ws, conn, data) {
     if (G.phase !== 'stalemate') return sendError(ws, 'Not stalemate phase');
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
     const p = G.players[G.currentPlayer];
-    if (p.hand.length >= 5) return sendError(ws, 'Hand full');
-    const offer = G.shopOffers.find(o => o.iid === data.iid);
-    if (!offer) return sendError(ws, 'Invalid offer');
-    if (p.mana < offer.cost) return sendError(ws, 'Not enough Mana');
-    p.mana -= offer.cost;
-    const m = makeMonster(offer.id);
-    p.hand.push(m);
-    log(`🛒 ${p.name} bought ${m.name} during stalemate (−${m.cost}✦)`);
+    const RETREAT_COST = 8;
+    const paid = Math.min(p.mana, RETREAT_COST);
+    p.mana -= paid;
     G.stalemateData = null;
-    advanceTurn();
+    // Jump straight to shop (passive income already collected at turn start)
+    G.phase = 'shop';
+    log(`🚶 ${p.name} retreats from stalemate${paid > 0 ? ` — paid ${paid}✦` : ''}`);
+    broadcast();
   },
 
-  // Sell during stalemate — player sells one hand monster for mana, then turn ends
-  stalemate_sell(ws, conn, data) {
-    if (G.phase !== 'stalemate') return sendError(ws, 'Not stalemate phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
-    const p = G.players[G.currentPlayer];
-    const idx = p.hand.findIndex(m => m.iid === data.iid);
-    if (idx === -1) return sendError(ws, 'Monster not in hand');
-    const m = p.hand[idx];
-    const refund = Math.floor(m.cost * (m.hp / m.maxHp));
-    p.hand.splice(idx, 1);
-    p.mana += refund;
-    log(`💰 ${p.name} sold ${m.name} for ${refund}✦ during stalemate`);
-    G.stalemateData = null;
-    advanceTurn();
-  },
-
-  // Skip stalemate — player opts to do nothing, turn ends (no rolling)
-  stalemate_skip(ws, conn, data) {
-    if (G.phase !== 'stalemate') return sendError(ws, 'Not stalemate phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
-    G.stalemateData = null;
-    log(`${G.players[G.currentPlayer].name} skipped stalemate resolution`);
-    advanceTurn();
-  },
-
-  // Legacy alias — kept for backwards compat with older player.html clients
-  stalemate_move(ws, conn, data) {
-    return handlers.stalemate_skip(ws, conn, data);
-  },
+  // Legacy aliases — kept for old clients
+  stalemate_attack(ws, conn, data) { return handlers.stalemate_fight(ws, conn, data); },
+  stalemate_skip(ws, conn, data)   { return handlers.stalemate_continue(ws, conn, data); },
+  stalemate_move(ws, conn, data)   { return handlers.stalemate_continue(ws, conn, data); },
+  stalemate_buy(ws, conn, data)    { return handlers.stalemate_continue(ws, conn, data); },
+  stalemate_sell(ws, conn, data)   { return handlers.stalemate_continue(ws, conn, data); },
 
   // ── Roll ───────────────────────────────────────────────────────────────────
 

@@ -698,11 +698,21 @@ function render() {
 
   const isMyTurn = G.currentPlayer === myIdx;
 
+  // Debug: log every phase change to console
+  if (render._lastPhase !== G.phase || render._lastPlayer !== G.currentPlayer) {
+    console.log(`[SG] phase=${G.phase} currentPlayer=${G.currentPlayer} myIdx=${myIdx} isMyTurn=${isMyTurn}`);
+    render._lastPhase = G.phase;
+    render._lastPlayer = G.currentPlayer;
+  }
+
   switch (G.phase) {
     case 'lobby':     renderLobby(); break;
     case 'shop':      isMyTurn ? renderShop() : renderWaiting(); break;
     case 'roll':      isMyTurn ? renderRoll() : renderWaiting(); break;
-    case 'stalemate': isMyTurn ? renderStalemate() : renderWaiting(); break;
+    case 'stalemate':
+      console.log(`[SG] *** STALEMATE PHASE *** isMyTurn=${isMyTurn} stalemateData=`, G.stalemateData);
+      isMyTurn ? renderStalemate() : renderWaiting();
+      break;
     case 'resolve:claim':    isMyTurn ? renderClaim() : renderWaiting(); break;
     case 'resolve:battle':        isMyTurn ? renderBattle() : renderWaiting(); break;
     case 'resolve:battle_result': renderBattleResult(); break;
@@ -762,7 +772,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.3.4</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.3.6</div>
     </div>
 
     <div class="room-code-group">
@@ -833,7 +843,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.3.4</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.3.6</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -1045,115 +1055,62 @@ function doRoll() {
 
 // ─── STALEMATE ──────────────────────────────────────────────────────────────
 // stalemateTab: 'attack' | 'buy' | 'sell'
-let stalemateTab = 'attack';
-
 function renderStalemate() {
   const me = G.players[myIdx];
   updateStatusBar(true);
-  updateHandStrip(false); // hide hand strip — we show cards inline
+  updateHandStrip(false);
   document.getElementById('main-content').classList.add('no-hand');
 
-  const tile = G.board[G.stalemateData?.tilePos ?? me.position];
-  const defM = tile?.monster;
-  const defOwner = tile ? G.players[tile.ownerId] : null;
-  const canAfford = (m) => me.mana >= m.cost && myHand.length < 5;
+  const sd = G.stalemateData;
+  const tile = G.board[sd?.tilePos ?? me.position];
+  const defM = tile?.monster || tile?.monsterInstance;
+  const defOwner = (tile?.ownerId != null) ? G.players.find(p => p.idx === tile.ownerId) : null;
+  const elColor = TYPE_COLOR[tile?.element] || 'var(--accent)';
+  const hasHand = myHand.length > 0;
 
-  // ── Tab: Attack ──────────────────────────────────────
-  const attackPickerCards = myHand.map(m => renderCard(m, {
-    size:'full', selected: selectedIid === m.iid,
-    dim: !(m.canUse ?? true),
-    onclick: `selectCard(${m.iid})`
-  })).join('');
-
-  // ── Tab: Buy ─────────────────────────────────────────
-  const buyCards = (G.shopOffers || []).map(m => renderCard(m, {
-    size:'full', selected: selectedIid === m.iid, dim: !canAfford(m),
-    onclick: canAfford(m) ? `selectCard(${m.iid})` : ''
-  })).join('');
-
-  // ── Tab: Sell ────────────────────────────────────────
-  const sellCards = myHand.map(m => {
-    const sv = Math.round(m.cost * (m.hp / m.maxHp));
-    return `<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:3px">
-      ${renderCard(m, {size:'full', selected: selectedIid === m.iid, showCost:false, onclick:`selectCard(${m.iid})`})}
-      <div style="font-size:11px;color:var(--gold-glow);font-weight:600">+${sv} ✦</div>
-    </div>`;
-  }).join('');
-
-  const tabBtn = (id, label) =>
-    `<button onclick="setStalemateTab('${id}')" style="flex:1;padding:8px 0;border:none;border-radius:8px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.04em;transition:background .15s,color .15s;${stalemateTab===id?'background:var(--accent);color:#fff;':'background:var(--surface2);color:var(--text-mute);'}">${label}</button>`;
-
-  const selM = myHand.find(m => m.iid === selectedIid);
-  const selOffer = (G.shopOffers||[]).find(m => m.iid === selectedIid);
-
-  let tabContent = '';
-  if (stalemateTab === 'attack') {
-    tabContent = myHand.length
-      ? `<div class="picker-scroll" id="sm-picker">${attackPickerCards}</div>${scrollNavHTML('sm-picker','sm-dot',myHand.length)}`
-      : `<div style="padding:24px;text-align:center;color:var(--text-mute);font-size:13px">No monsters in hand</div>`;
-  } else if (stalemateTab === 'buy') {
-    tabContent = (G.shopOffers||[]).length
-      ? `<div class="picker-scroll" id="sm-picker">${buyCards}</div>${scrollNavHTML('sm-picker','sm-dot',(G.shopOffers||[]).length)}`
-      : `<div style="padding:24px;text-align:center;color:var(--text-mute);font-size:13px">No offers</div>`;
-  } else {
-    tabContent = myHand.length
-      ? `<div class="picker-scroll" id="sm-picker">${sellCards}</div>${scrollNavHTML('sm-picker','sm-dot',myHand.length)}`
-      : `<div style="padding:24px;text-align:center;color:var(--text-mute);font-size:13px">Nothing to sell</div>`;
-  }
+  const handCards = myHand.length
+    ? myHand.map(m => renderCard(m, { size:'full', showCost:false })).join('')
+    : `<div style="padding:16px 0;color:var(--text-mute);font-size:12px;">No monsters in hand</div>`;
 
   document.getElementById('main-content').innerHTML = `
     <div class="resolve-banner battle">
       <span class="resolve-icon">🤝</span>
       <div>
-        <div class="resolve-title">Stalemate</div>
-        <div class="resolve-sub">Both survived — choose your action, then turn ends.</div>
+        <div class="resolve-title">Stalemate!</div>
+        <div class="resolve-sub">Both monsters survived the last battle.</div>
       </div>
     </div>
-    ${defM && defOwner ? `<div class="battle-matchup" style="margin-bottom:10px">
-      <div class="battle-slot"><div class="battle-slot-label">Contested tile</div>${renderCard(defM,{size:'full',showCost:false})}</div>
-    </div>` : ''}
-    <div style="display:flex;gap:6px;padding:0 2px 10px">
-      ${tabBtn('attack','⚔️ Attack')}
-      ${tabBtn('buy','🛒 Buy')}
-      ${tabBtn('sell','💰 Sell')}
-    </div>
-    ${tabContent}`;
 
-  // attach scroll listener after DOM insert
-  requestAnimationFrame(() => {
-    const el = document.getElementById('sm-picker');
-    const count = stalemateTab==='buy' ? (G.shopOffers||[]).length : myHand.length;
-    if (el) attachShopScrollListener('sm-picker','sm-dot',count);
-  });
+    <div style="padding:0 16px 4px;">
+      <div style="font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;margin-bottom:10px;">Contested Tile</div>
+      <div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--surface);border-radius:12px;border:1px solid ${elColor}55;">
+        ${renderPlayerTileCard(tile)}
+        <div style="flex:1;min-width:0;">
+          ${defM ? renderCard(defM, { size:'full', showCost:false }) : `<div style="color:var(--text-mute);font-size:12px;">No monster</div>`}
+          ${defOwner ? `<div style="font-size:11px;color:${defOwner.color};font-weight:600;margin-top:5px;">${defOwner.name}'s monster</div>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:16px 16px 4px;">
+      <div style="font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;margin-bottom:10px;">Your Hand</div>
+      <div style="display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px;">
+        ${handCards}
+      </div>
+    </div>
+
+    <div style="padding:12px 16px 0;font-size:12px;color:var(--text-dim);line-height:1.5;">
+      ${hasHand
+        ? '⚔️ <strong style="color:var(--text)">Battle Again</strong> — fight fresh, this uses your turn.<br>🚶 <strong style="color:var(--text)">Continue On</strong> — retreat for <span style="color:var(--gold-glow)">8✦</span>, then shop as normal.'
+        : '🚶 You have no monsters in hand. You must <strong style="color:var(--text)">Continue On</strong> (costs <span style="color:var(--gold-glow)">8✦</span>).'}
+    </div>`;
 
   const ab = document.getElementById('action-bar');
   ab.classList.add('visible');
-
-  if (stalemateTab === 'attack') {
-    ab.innerHTML = selM
-      ? `<button class="action-btn secondary" onclick="send('stalemate_skip')">Skip Turn</button>
-         <button class="action-btn primary" onclick="doStalemateAttack()">Attack!</button>`
-      : `<button class="action-btn secondary" onclick="send('stalemate_skip')">Skip Turn</button>
-         <button class="action-btn primary" disabled style="opacity:.4">Pick Monster</button>`;
-  } else if (stalemateTab === 'buy') {
-    ab.innerHTML = selOffer && canAfford(selOffer)
-      ? `<button class="action-btn secondary" onclick="send('stalemate_skip')">Skip Turn</button>
-         <button class="action-btn primary" onclick="doStalemateBuy()">Buy (${selOffer.cost}✦)</button>`
-      : `<button class="action-btn secondary" onclick="send('stalemate_skip')">Skip Turn</button>
-         <button class="action-btn primary" disabled style="opacity:.4">Pick Monster</button>`;
-  } else {
-    ab.innerHTML = selM
-      ? `<button class="action-btn secondary" onclick="send('stalemate_skip')">Skip Turn</button>
-         <button class="action-btn primary" onclick="doStalemateSell()">Sell for ${Math.round(selM.cost*(selM.hp/selM.maxHp))}✦</button>`
-      : `<button class="action-btn secondary" onclick="send('stalemate_skip')">Skip Turn</button>
-         <button class="action-btn primary" disabled style="opacity:.4">Pick Monster</button>`;
-  }
-}
-
-function setStalemateTab(tab) {
-  stalemateTab = tab;
-  selectedIid = null;
-  renderStalemate();
+  ab.innerHTML = hasHand
+    ? `<button class="action-btn secondary" onclick="doStalemateContinue()">Continue (8✦)</button>
+       <button class="action-btn primary" onclick="doStalemateFight()">⚔️ Battle Again</button>`
+    : `<button class="action-btn primary" onclick="doStalemateContinue()">Continue On (8✦)</button>`;
 }
 
 // ─── CLAIM ──────────────────────────────────────────────────────────────────
@@ -1619,25 +1576,14 @@ function doAttack() {
   selectedIid = null;
 }
 
-function doStalemateAttack() {
-  if (!selectedIid) return;
-  SFX.attack();
-  send('stalemate_attack', { attackerIid: selectedIid });
-  selectedIid = null;
+function doStalemateFight() {
+  SFX.attack && SFX.attack();
+  send('stalemate_fight');
 }
 
-function doStalemateBuy() {
-  if (!selectedIid) return;
-  SFX.buy && SFX.buy();
-  send('stalemate_buy', { iid: selectedIid });
-  selectedIid = null;
-}
-
-function doStalemateSell() {
-  if (!selectedIid) return;
-  SFX.sell && SFX.sell();
-  send('stalemate_sell', { iid: selectedIid });
-  selectedIid = null;
+function doStalemateContinue() {
+  SFX.click && SFX.click();
+  send('stalemate_continue');
 }
 
 function doSwap() {
