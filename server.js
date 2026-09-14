@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.6';
+const SERVER_VERSION = 'v1.0.12';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -28,48 +28,77 @@ const TYPE_WEAK   = { Light:'Nature', Dark:'Light', Arcane:'Dark', Undead:'Arcan
 
 // Master monster roster
 const ROSTER = [
-  // Light
-  {id:'solar_knight',  type:'Light',  name:'Solar Knight',  arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
-  {id:'dawnguard',     type:'Light',  name:'Dawnguard',     arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
-  {id:'high_paladin',  type:'Light',  name:'High Paladin',  arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'ardent_saint',  type:'Light',  name:'Ardent Saint',  arch:'spec',  hp:65, maxHp:65, atk:15, def:15, cost:20, gen:5, isSpecial:true,
+  // ── Light ──
+  {id:'solar_knight',   type:'Light',  name:'Solar Knight',   arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'dawnguard',      type:'Light',  name:'Dawnguard',      arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
+  {id:'high_paladin',   type:'Light',  name:'High Paladin',   arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'ardent_saint',   type:'Light',  name:'Ardent Saint',   arch:'spec',  hp:65, maxHp:65, atk:15, def:15, cost:20, gen:5, isSpecial:true,
     special:'Aura of Renewal',  specialDesc:'Heal all friendly stationed monsters 5 HP/turn',
     condition:'healed4', conditionDesc:'Healed 4+ monsters this game'},
-  // Dark
-  {id:'nightshard',    type:'Dark',   name:'Nightshard',    arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
-  {id:'void_sentinel', type:'Dark',   name:'Void Sentinel', arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
-  {id:'shadow_paladin',type:'Dark',   name:'Shadow Paladin',arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'succubus',      type:'Dark',   name:'Succubus',      arch:'spec',  hp:45, maxHp:45, atk:32, def:10, cost:20, gen:5, isSpecial:true,
+  // Light — new
+  {id:'dawn_striker',   type:'Light',  name:'Dawn Striker',   arch:'glass', hp:25, maxHp:25, atk:36, def:6,  cost:8,  gen:2, isSpecial:false},
+  {id:'radiant_lancer', type:'Light',  name:'Radiant Lancer', arch:'bal',   hp:30, maxHp:30, atk:28, def:10, cost:10, gen:2, isSpecial:false},
+  {id:'sunfire_herald', type:'Light',  name:'Sunfire Herald', arch:'bal',   hp:40, maxHp:40, atk:22, def:11, cost:10, gen:2, isSpecial:false},
+
+  // ── Dark ──
+  {id:'nightshard',     type:'Dark',   name:'Nightshard',     arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'void_sentinel',  type:'Dark',   name:'Void Sentinel',  arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
+  {id:'shadow_paladin', type:'Dark',   name:'Shadow Paladin', arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'succubus',       type:'Dark',   name:'Succubus',       arch:'spec',  hp:45, maxHp:45, atk:32, def:10, cost:20, gen:5, isSpecial:true,
     special:'Mana Drain', specialDesc:'Win a battle → steal 10 Mana from loser\'s owner',
     condition:'moreManaThanAll', conditionDesc:'Have more Mana than every other player'},
-  // Arcane
-  {id:'sorcerer',      type:'Arcane', name:'Sorcerer',      arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
-  {id:'rune_priestess',type:'Arcane', name:'Rune Priestess',arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
-  {id:'arch_mage',     type:'Arcane', name:'Arch Mage',     arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'arcane_arbiter',type:'Arcane', name:'Arcane Arbiter',arch:'spec',  hp:40, maxHp:40, atk:27, def:15, cost:20, gen:5, isSpecial:true,
+  // Dark — new
+  {id:'void_reaper',    type:'Dark',   name:'Void Reaper',    arch:'glass', hp:18, maxHp:18, atk:42, def:4,  cost:8,  gen:2, isSpecial:false},
+  {id:'dusk_blade',     type:'Dark',   name:'Dusk Blade',     arch:'bal',   hp:30, maxHp:30, atk:29, def:8,  cost:10, gen:2, isSpecial:false},
+  {id:'umbral_stalker', type:'Dark',   name:'Umbral Stalker', arch:'bal',   hp:42, maxHp:42, atk:21, def:11, cost:10, gen:2, isSpecial:false},
+
+  // ── Arcane ──
+  {id:'sorcerer',       type:'Arcane', name:'Sorcerer',       arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'rune_priestess', type:'Arcane', name:'Rune Priestess', arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
+  {id:'arch_mage',      type:'Arcane', name:'Arch Mage',      arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'arcane_arbiter', type:'Arcane', name:'Arcane Arbiter', arch:'spec',  hp:40, maxHp:40, atk:27, def:15, cost:20, gen:5, isSpecial:true,
     special:'Nullify', specialDesc:'Cancel type modifier once per battle (forces 1× neutral)',
     condition:'changed3', conditionDesc:'Changed tile element 3+ times this game'},
-  // Undead
-  {id:'bone_wraith',   type:'Undead', name:'Bone Wraith',   arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
-  {id:'death_knight',  type:'Undead', name:'Death Knight',  arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
-  {id:'shade_walker',  type:'Undead', name:'Shade Walker',  arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'demon_lord',    type:'Undead', name:'Demon Lord',    arch:'spec',  hp:85, maxHp:85, atk:17, def:8,  cost:20, gen:5, isSpecial:true,
+  // Arcane — new
+  {id:'spell_wraith',   type:'Arcane', name:'Spell Wraith',   arch:'glass', hp:22, maxHp:22, atk:38, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'runic_duelist',  type:'Arcane', name:'Runic Duelist',  arch:'bal',   hp:32, maxHp:32, atk:27, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'mana_weaver',    type:'Arcane', name:'Mana Weaver',    arch:'bal',   hp:38, maxHp:38, atk:23, def:12, cost:10, gen:2, isSpecial:false},
+
+  // ── Undead ──
+  {id:'bone_wraith',    type:'Undead', name:'Bone Wraith',    arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'death_knight',   type:'Undead', name:'Death Knight',   arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
+  {id:'shade_walker',   type:'Undead', name:'Shade Walker',   arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'demon_lord',     type:'Undead', name:'Demon Lord',     arch:'spec',  hp:85, maxHp:85, atk:17, def:8,  cost:20, gen:5, isSpecial:true,
     special:'Last Rite', specialDesc:'When HP hits 0, survive at 15 HP instead (once per game)',
     condition:'lost4', conditionDesc:'Had 4+ monsters destroyed this game', lastRiteUsed:false},
-  // Beast
-  {id:'razorclaw',     type:'Beast',  name:'Razorclaw',     arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
-  {id:'iron_hide',     type:'Beast',  name:'Iron Hide',     arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
-  {id:'pack_hunter',   type:'Beast',  name:'Pack Hunter',   arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'red_dragon',    type:'Beast',  name:'Red Dragon',    arch:'spec',  hp:35, maxHp:35, atk:40, def:9,  cost:20, gen:5, isSpecial:true,
+  // Undead — new
+  {id:'grave_specter',  type:'Undead', name:'Grave Specter',  arch:'glass', hp:18, maxHp:18, atk:42, def:4,  cost:8,  gen:2, isSpecial:false},
+  {id:'cursed_revenant',type:'Undead', name:'Cursed Revenant',arch:'bal',   hp:33, maxHp:33, atk:26, def:10, cost:10, gen:2, isSpecial:false},
+  {id:'plague_herald',  type:'Undead', name:'Plague Herald',  arch:'bal',   hp:40, maxHp:40, atk:22, def:11, cost:10, gen:2, isSpecial:false},
+
+  // ── Beast ──
+  {id:'razorclaw',      type:'Beast',  name:'Razorclaw',      arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'iron_hide',      type:'Beast',  name:'Iron Hide',      arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
+  {id:'pack_hunter',    type:'Beast',  name:'Pack Hunter',    arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'red_dragon',     type:'Beast',  name:'Red Dragon',     arch:'spec',  hp:35, maxHp:35, atk:40, def:9,  cost:20, gen:5, isSpecial:true,
     special:'Intimidate', specialDesc:'When claiming a tile, adjacent owners pay 5 Mana each',
     condition:'mostMonsters', conditionDesc:'Have the most monsters stationed on board'},
-  // Nature
-  {id:'thornling',     type:'Nature', name:'Thornling',     arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
-  {id:'ancient_oak',   type:'Nature', name:'Ancient Oak',   arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
-  {id:'grove_warden',  type:'Nature', name:'Grove Warden',  arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'world_tree',    type:'Nature', name:'World Tree',    arch:'spec',  hp:55, maxHp:55, atk:22, def:13, cost:20, gen:5, isSpecial:true,
+  // Beast — new
+  {id:'feral_striker',  type:'Beast',  name:'Feral Striker',  arch:'glass', hp:22, maxHp:22, atk:38, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'blood_mane',     type:'Beast',  name:'Blood Mane',     arch:'bal',   hp:32, maxHp:32, atk:28, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'stoneback',      type:'Beast',  name:'Stoneback',      arch:'bal',   hp:42, maxHp:42, atk:20, def:12, cost:10, gen:2, isSpecial:false},
+
+  // ── Nature ──
+  {id:'thornling',      type:'Nature', name:'Thornling',      arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'ancient_oak',    type:'Nature', name:'Ancient Oak',    arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
+  {id:'grove_warden',   type:'Nature', name:'Grove Warden',   arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'world_tree',     type:'Nature', name:'World Tree',     arch:'spec',  hp:55, maxHp:55, atk:22, def:13, cost:20, gen:5, isSpecial:true,
     special:'Deep Roots', specialDesc:'+1 Mana Gen per Nature tile owner controls',
     condition:'own4Nature', conditionDesc:'Own 4+ Nature tiles currently'},
+  // Nature — new
+  {id:'briar_sprite',   type:'Nature', name:'Briar Sprite',   arch:'glass', hp:22, maxHp:22, atk:37, def:6,  cost:8,  gen:2, isSpecial:false},
+  {id:'vine_stalker',   type:'Nature', name:'Vine Stalker',   arch:'bal',   hp:33, maxHp:33, atk:26, def:10, cost:10, gen:2, isSpecial:false},
+  {id:'moss_golem',     type:'Nature', name:'Moss Golem',     arch:'bal',   hp:42, maxHp:42, atk:20, def:12, cost:10, gen:2, isSpecial:false},
 ];
 
 const SPECIALS = ROSTER.filter(m => m.isSpecial);
@@ -181,6 +210,10 @@ function freshGame() {
     pendingChest: null,      // chest reward data waiting on player action
     pendingTemple: null,     // temple offers
     shopOffers: [],
+    pausedFor: null,         // { idx, name, color } when a player disconnects mid-game
+    setupRound: 1,           // current setup round (1-3)
+    setupTurnIdx: 0,         // total setup turns taken (0 to 3*N-1)
+    setupTotalTurns: 0,      // = 3 * N, set when setup starts
   };
 }
 
@@ -190,6 +223,7 @@ function addPlayer(name, color, starterSet) {
   const sessionKey = crypto.randomBytes(8).toString('hex');
   return {
     idx, name, color, starterSet, sessionKey,
+    isConnected: true,
     mana: 40,
     hand,            // monster instances
     position: 0,
@@ -430,6 +464,10 @@ function publicState() {
     })),
     lastBattle: G.lastBattle || null,
     pendingAttackerMonster: G.pendingAttackerMonster || null,
+    pausedFor: G.pausedFor || null,
+    setupRound: G.setupRound || 1,
+    setupTurnIdx: G.setupTurnIdx || 0,
+    setupTotalTurns: G.setupTotalTurns || 0,
     serverVersion: SERVER_VERSION,
   };
 }
@@ -459,6 +497,38 @@ function startShopPhase() {
 
   G.phase = 'shop';
   log(`🛒 ${p.name}'s turn — shop open`);
+  broadcast();
+}
+
+function startSetupPhase() {
+  G.phase = 'setup';
+  G.setupRound = 1;
+  G.setupTurnIdx = 0;
+  G.setupTotalTurns = 3 * G.players.length;
+  G.currentPlayer = 0;
+  log(`🌟 Setup phase! ${G.players.length} players · ${G.setupTotalTurns} turns total.`);
+  broadcast();
+}
+
+function advanceSetupTurn() {
+  G.setupTurnIdx++;
+  if (G.setupTurnIdx >= G.setupTotalTurns) {
+    // Setup done — start normal game
+    log(`✅ Setup complete! Game begins.`);
+    G.currentPlayer = 0;
+    startShopPhase();
+    return;
+  }
+  G.currentPlayer = G.setupTurnIdx % G.players.length;
+  G.setupRound = Math.floor(G.setupTurnIdx / G.players.length) + 1;
+  const cp = G.players[G.currentPlayer];
+  // Auto-advance players who have no monsters left — nothing they can do but pass
+  if (cp && cp.hand.length === 0) {
+    log(`⏭ ${cp.name} has no monsters — auto-pass (round ${G.setupRound})`);
+    advanceSetupTurn();
+    return;
+  }
+  log(`🌟 Setup round ${G.setupRound} — ${cp ? cp.name : '?'}'s turn (turn ${G.setupTurnIdx + 1}/${G.setupTotalTurns})`);
   broadcast();
 }
 
@@ -594,11 +664,28 @@ const handlers = {
 
   join(ws, conn, data) {
     if (!G) G = freshGame();
-    if (G.phase !== 'lobby') return sendError(ws, 'Game already in progress');
-    if (G.players.length >= 6) return sendError(ws, 'Game full (max 6 players)');
     const code = String(data.roomCode || '').toUpperCase().trim();
-    if (code !== G.roomCode) return sendError(ws, 'Invalid room code');
     const name  = String(data.name  || 'Player').slice(0, 18);
+
+    // During active game: allow name-based manual rejoin for disconnected players
+    if (G.phase !== 'lobby') {
+      if (code !== G.roomCode) return sendError(ws, 'Invalid room code');
+      const disc = G.players.find(p => !p.isConnected && p.name.toLowerCase() === name.toLowerCase());
+      if (disc) {
+        conn.playerIdx = disc.idx;
+        conn.sessionKey = disc.sessionKey;
+        disc.isConnected = true;
+        if (G.pausedFor && G.pausedFor.idx === disc.idx) G.pausedFor = null;
+        log(`🔄 ${disc.name} manually rejoined`);
+        wsSend(ws, { type: 'session', sessionKey: disc.sessionKey });
+        broadcast();
+        return;
+      }
+      return sendError(ws, 'Game already in progress');
+    }
+
+    if (G.players.length >= 6) return sendError(ws, 'Game full (max 6 players)');
+    if (code !== G.roomCode) return sendError(ws, 'Invalid room code');
     const set   = ['A','B','C','D'].includes(data.starterSet) ? data.starterSet : 'C';
     const color = PLAYER_COLORS[G.players.length];
     const p = addPlayer(name, color, set);
@@ -606,7 +693,6 @@ const handlers = {
     conn.playerIdx = p.idx;
     conn.sessionKey = p.sessionKey;
     log(`👤 ${name} joined with set ${set}`);
-    // Send session key directly to this client so they can reconnect
     wsSend(ws, { type: 'session', sessionKey: p.sessionKey });
     broadcast();
   },
@@ -618,7 +704,13 @@ const handlers = {
     if (!p) return sendError(ws, 'Session expired — please rejoin');
     conn.playerIdx = p.idx;
     conn.sessionKey = p.sessionKey;
-    log(`🔄 ${p.name} reconnected`);
+    p.isConnected = true;
+    if (G.pausedFor && G.pausedFor.idx === p.idx) {
+      G.pausedFor = null;
+      log(`✅ ${p.name} reconnected — game resumed`);
+    } else {
+      log(`🔄 ${p.name} reconnected`);
+    }
     broadcast();
   },
 
@@ -638,7 +730,13 @@ const handlers = {
       G.roundLimit = Number(data.roundLimit);
     }
     log(`🎮 Game started! ${G.roundLimit} rounds per player`);
-    startShopPhase();
+    startSetupPhase();
+  },
+
+  end_game(ws, conn, data) {
+    log(`🔄 Game ended by host — returning to lobby`);
+    G = freshGame();
+    broadcast();
   },
 
   // ── Shop ───────────────────────────────────────────────────────────────────
@@ -727,6 +825,37 @@ const handlers = {
   stalemate_move(ws, conn, data)   { return handlers.stalemate_continue(ws, conn, data); },
   stalemate_buy(ws, conn, data)    { return handlers.stalemate_continue(ws, conn, data); },
   stalemate_sell(ws, conn, data)   { return handlers.stalemate_continue(ws, conn, data); },
+
+  // ── Setup phase ────────────────────────────────────────────────────────────
+
+  setup_claim(ws, conn, data) {
+    if (G.phase !== 'setup') return sendError(ws, 'Not setup phase');
+    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    const p = G.players[G.currentPlayer];
+    const tilePos = parseInt(data.tilePos, 10);
+    if (isNaN(tilePos) || tilePos < 0 || tilePos >= 28) return sendError(ws, 'Invalid tile number (0–27)');
+    const tile = G.board[tilePos];
+    if (!tile) return sendError(ws, 'Invalid tile');
+    if (tile.kind !== 'element') return sendError(ws, 'Can only claim elemental tiles during setup');
+    if (tile.ownerId !== null && tile.ownerId !== undefined) return sendError(ws, 'Tile already claimed');
+    const m = p.hand.find(h => h.iid === data.iid);
+    if (!m) return sendError(ws, 'Monster not in hand');
+    // Free claim — no mana cost
+    p.hand.splice(p.hand.indexOf(m), 1);
+    tile.ownerId = G.currentPlayer;
+    tile.monsterId = m.iid;
+    tile.monsterInstance = m;
+    _updatePeakTiles(G.currentPlayer);
+    log(`🌟 ${p.name} claimed tile ${tilePos} (${tile.element}) with ${m.name} [Setup]`);
+    advanceSetupTurn();
+  },
+
+  setup_pass(ws, conn, data) {
+    if (G.phase !== 'setup') return sendError(ws, 'Not setup phase');
+    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    log(`⏭ ${G.players[G.currentPlayer].name} passed setup turn`);
+    advanceSetupTurn();
+  },
 
   // ── Roll ───────────────────────────────────────────────────────────────────
 
@@ -1336,10 +1465,12 @@ server.on('upgrade', (req, socket, head) => {
   function handleDisconnect() {
     const conn = clients.get(socket);
     clients.delete(socket);
-    if (conn && G && G.phase === 'lobby' && conn.playerIdx !== null && conn.playerIdx !== undefined) {
+    if (!conn || !G) return;
+
+    if (G.phase === 'lobby' && conn.playerIdx !== null && conn.playerIdx !== undefined) {
+      // In lobby: remove the player slot entirely
       G.players = G.players.filter(p => p.idx !== conn.playerIdx);
       G.players.forEach((p, i) => { p.idx = i; p.color = PLAYER_COLORS[i]; });
-      // Update all active connections' playerIdx to match the reindexed players
       for (const [sock, c] of clients) {
         if (c.sessionKey) {
           const pl = G.players.find(p => p.sessionKey === c.sessionKey);
@@ -1347,6 +1478,17 @@ server.on('upgrade', (req, socket, head) => {
         }
       }
       broadcast();
+    } else if (G.phase !== 'lobby' && conn.playerIdx !== null && conn.playerIdx !== undefined) {
+      // In game: mark disconnected and pause
+      const p = G.players[conn.playerIdx];
+      if (p && p.isConnected) {
+        p.isConnected = false;
+        if (!G.pausedFor) {
+          G.pausedFor = { idx: p.idx, name: p.name, color: p.color };
+          log(`⚡ ${p.name} disconnected — game paused`);
+        }
+        broadcast();
+      }
     }
   }
   socket.on('close', handleDisconnect);

@@ -68,7 +68,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .tile.selected .tile-inner{box-shadow:0 0 0 2px var(--accent),0 0 22px rgba(145,132,217,.45);border-radius:6px;}
 .tile.active-tile .tile-inner{box-shadow:0 0 0 2px var(--gold-glow),0 0 18px rgba(201,160,90,.4);border-radius:6px;}
 .tile-inner{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:4px 3px 4px;position:relative;border-radius:6px;overflow:hidden;}
-.tile-badge{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:4px;pointer-events:none;z-index:2;}
+.tile-badge{position:absolute;top:62%;left:50%;transform:translateX(-50%);pointer-events:none;z-index:1;}
 .tile-idx{position:absolute;top:-17px;left:50%;transform:translateX(-50%);font-size:10px;color:rgba(255,255,255,.85);line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .tile-icon{font-size:17px;margin-top:2px;}
 .tile-name{font-size:10px;font-weight:500;letter-spacing:.03em;text-transform:uppercase;text-align:center;line-height:1.2;margin-top:3px;}
@@ -261,6 +261,50 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .tile-art-icon{display:flex;align-items:center;justify-content:center;width:100%;flex:1;min-height:0;font-size:20px;line-height:1;text-shadow:0 0 8px currentColor;}
 .tile-art-img{width:100%;height:100%;object-fit:contain;display:block;}
 .tile-art-special{display:flex;align-items:center;justify-content:center;font-size:22px;width:100%;flex:1;}
+/* Tile mini monster card */
+.tmc-wrap{width:54px;display:flex;flex-direction:column;align-items:center;gap:2px;}
+.tmc-card{width:54px;height:70px;border-radius:5px;border:2px solid;overflow:hidden;position:relative;flex-shrink:0;box-shadow:0 2px 10px rgba(0,0,0,.5);}
+.tmc-art{position:absolute;inset:0;}
+.tmc-art svg,.tmc-art img{display:block;width:100%;height:100%;object-fit:cover;}
+.tmc-art-img-overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.tmc-strip{position:absolute;bottom:0;left:0;right:0;height:5px;opacity:.9;}
+.tmc-hp-wrap{width:100%;display:flex;flex-direction:column;align-items:stretch;gap:1px;}
+.tmc-hp-bar{width:100%;height:4px;background:rgba(0,0,0,.45);border-radius:2px;overflow:hidden;}
+.tmc-hp-fill{height:100%;border-radius:2px;transition:width .35s;}
+.tmc-hp-num{font-size:7px;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:.03em;line-height:1.2;font-family:'Inter',sans-serif;}
+
+/* Disconnect / pause overlay */
+#disconnect-overlay{position:fixed;inset:0;z-index:8500;display:flex;align-items:center;justify-content:center;background:rgba(6,6,16,.78);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .3s;}
+#disconnect-overlay.visible{opacity:1;pointer-events:all;}
+.dco-box{background:var(--surface);border:1px solid rgba(255,160,60,.3);border-radius:16px;padding:40px 44px;text-align:center;max-width:420px;width:90%;box-shadow:0 8px 80px rgba(0,0,0,.8);}
+.dco-icon{font-size:40px;margin-bottom:14px;}
+.dco-title{font-family:'Cinzel',serif;font-size:22px;font-weight:700;letter-spacing:.08em;margin-bottom:6px;}
+.dco-sub{font-size:13px;color:var(--text-lo);margin-bottom:20px;}
+.dco-code-wrap{display:inline-flex;flex-direction:column;align-items:center;gap:4px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:10px;padding:12px 28px;margin-bottom:28px;}
+.dco-code-lbl{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;}
+.dco-code{font-family:'Cinzel',serif;font-size:32px;font-weight:700;letter-spacing:.22em;padding-right:.22em;color:var(--accent-lit);}
+.dco-wait{font-size:12px;color:var(--text-mute);display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:28px;}
+.dco-spinner{width:12px;height:12px;border:2px solid rgba(145,132,217,.3);border-top-color:#9184d9;border-radius:50%;animation:spin .9s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.dco-btns{display:flex;gap:12px;justify-content:center;}
+
+/* End Game confirmation modal */
+#end-game-modal{position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(6,6,16,.82);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .2s;}
+#end-game-modal.visible{opacity:1;pointer-events:all;}
+.egm-box{background:var(--surface);border:1px solid rgba(180,60,60,.38);border-radius:14px;padding:36px 40px;text-align:center;max-width:380px;width:90%;box-shadow:0 8px 60px rgba(0,0,0,.7);}
+.egm-icon{font-size:36px;margin-bottom:12px;}
+.egm-title{font-family:'Cinzel',serif;font-size:20px;font-weight:700;letter-spacing:.1em;color:#f08080;margin-bottom:8px;}
+.egm-body{font-size:13px;color:var(--text-lo);line-height:1.6;margin-bottom:28px;}
+.egm-btns{display:flex;gap:12px;justify-content:center;}
+.egm-btn{font-family:'Cinzel',serif;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;border:none;border-radius:8px;padding:12px 28px;cursor:pointer;transition:all .18s;}
+.egm-btn.cancel{background:rgba(255,255,255,.07);color:var(--text-lo);border:1px solid var(--border2);}
+.egm-btn.cancel:hover{background:rgba(255,255,255,.12);color:var(--text);}
+.egm-btn.confirm{background:linear-gradient(135deg,#b03030,#8a1f1f);color:#ffd0d0;}
+.egm-btn.confirm:hover{background:linear-gradient(135deg,#c83030,#a02020);box-shadow:0 0 20px rgba(180,50,50,.4);}
+/* End game topbar button */
+.tb-end-btn{font-family:'Cinzel',serif;font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;background:rgba(180,60,60,.15);border:1px solid rgba(180,60,60,.35);color:#f08080;border-radius:6px;padding:6px 14px;cursor:pointer;transition:all .18s;flex-shrink:0;}
+.tb-end-btn:hover{background:rgba(180,60,60,.28);border-color:rgba(180,60,60,.6);box-shadow:0 0 12px rgba(180,60,60,.25);}
+
 /* QR Code lobby */
 .lobby-qr-wrap{margin-top:18px;display:flex;flex-direction:column;align-items:center;gap:8px;}
 .lobby-qr-lbl{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;align-self:flex-start;}
@@ -404,7 +448,7 @@ const TILE_IMG = {
   mana:'/img/tiles/tile-well.png', 'mana well':'/img/tiles/tile-well.png'
 };
 const PHASE_LABELS = {
-  lobby:'Lobby',shop:'Shop Phase',roll:'Roll Phase',
+  lobby:'Lobby',setup:'Setup Phase',shop:'Shop Phase',roll:'Roll Phase',
   'resolve:claim':'Claim Tile',stalemate:'Stalemate',
   'resolve:battle':'Battle!','resolve:own':'Own Tile',
   'resolve:chest':'Chest Opened','resolve:temple':'Temple',
@@ -491,21 +535,26 @@ function playerSigilSVG(player, size=20){
   }
 }
 
-// ─── Mini monster badge (HP ring) ─────────────────────────────────────────────────────────────────
-function miniMonsterBadge(monster, ownerColor){
+// ─── Tile mini monster card ─────────────────────────────────────────────────────────────────────
+function tileMonsterCard(monster, ownerColor){
   const c = TYPE_COLOR[monster.type] || '#9397ab';
-  const pct = Math.max(0, monster.hp / monster.maxHp);
-  const ringR=14, circ=2*Math.PI*ringR, sz=36, cx=sz/2, cy=sz/2;
-  const dash = pct * circ, gap = circ - dash;
-  const trackColor = c + '44';
-  return `<svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}">
-    <g transform="rotate(-90 ${cx} ${cy})">
-      <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="${trackColor}" stroke-width="3.5"/>
-      <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="${c}" stroke-width="3.5"
-        stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}" stroke-linecap="round"/>
-    </g>
-    <circle cx="${cx}" cy="${cy}" r="4.5" fill="${ownerColor}" stroke="${ownerColor}" stroke-width="1"/>
-  </svg>`;
+  const pct = Math.max(0, Math.min(1, monster.hp / monster.maxHp));
+  const hpColor = pct < 0.35 ? '#c05050' : pct < 0.6 ? '#c09040' : c;
+  // Art: SVG base + try real monster image on top
+  const svgArt = artSVG(monster.type, 54, 70);
+  const imgLayer = monster.id
+    ? `<img src="/img/monsters/monster-${monster.id}-mini.png" class="tmc-art-img-overlay" onerror="this.remove()" alt="">`
+    : '';
+  return `<div class="tmc-wrap">
+    <div class="tmc-card" style="border-color:${ownerColor};">
+      <div class="tmc-art">${svgArt}${imgLayer}</div>
+      <div class="tmc-strip" style="background:${c};"></div>
+    </div>
+    <div class="tmc-hp-wrap">
+      <div class="tmc-hp-bar"><div class="tmc-hp-fill" style="width:${Math.round(pct*100)}%;background:${hpColor};"></div></div>
+      <div class="tmc-hp-num" style="color:${c}cc;">${monster.hp}/${monster.maxHp}</div>
+    </div>
+  </div>`;
 }
 
 // ─── Token hop animation ─────────────────────────────────────────────────────────────────
@@ -707,9 +756,21 @@ function connect(){
 function render(){
   const app = document.getElementById('app');
   app.innerHTML = '';
+  updateDisconnectOverlay();
   if (!G) { renderConnecting(app); return; }
   if (G.phase === 'lobby') { renderLobby(app); return; }
   renderGame(app);
+}
+
+function updateDisconnectOverlay(){
+  const ov = document.getElementById('disconnect-overlay');
+  if (!ov) return;
+  if (!G || !G.pausedFor) { ov.classList.remove('visible'); return; }
+  const pf = G.pausedFor;
+  ov.querySelector('.dco-title').innerHTML = `<span style="color:${pf.color}">${pf.name}</span> has left`;
+  ov.querySelector('.dco-code').textContent = G.roomCode;
+  ov.querySelector('.dco-wait span').textContent = `Waiting for ${pf.name} to rejoin…`;
+  ov.classList.add('visible');
 }
 
 function renderConnecting(app){
@@ -760,7 +821,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.1</div>`;
+    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.9</div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -892,7 +953,16 @@ function renderGame(app){
   root.id = 'scale-root';
 
   const curPlayer = G.players[G.currentPlayer];
-  const phaseLabel = PHASE_LABELS[G.phase] || G.phase;
+  const isSetup = G.phase === 'setup';
+  const setupTurnDisplay = G.setupTotalTurns > 0
+    ? ` · Turn ${(G.setupTurnIdx || 0) + 1}/${G.setupTotalTurns}`
+    : '';
+  const phaseLabel = isSetup
+    ? `Setup Phase — Round ${G.setupRound || 1} of 3${setupTurnDisplay}`
+    : (PHASE_LABELS[G.phase] || G.phase);
+  const roundLabel = isSetup
+    ? `Setup R${G.setupRound || 1}/3`
+    : `Round ${Math.floor(G.turnCount / G.players.length) + 1} of ${G.roundLimit || 30}`;
   const lastRoll = curPlayer ? curPlayer.lastDiceRoll : null;
 
   // ── Topbar
@@ -901,11 +971,11 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.1</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.9</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
-      <div class="turn-lbl">Round ${Math.floor(G.turnCount / G.players.length) + 1} of ${G.roundLimit || 30}</div>
+      <div class="turn-lbl">${roundLabel}</div>
       <div class="active-name" style="color:${curPlayer ? curPlayer.color : 'var(--text)'}">${curPlayer ? curPlayer.name : '—'}</div>
       <div class="phase-lbl">${phaseLabel}</div>
     </div>
@@ -914,6 +984,8 @@ function renderGame(app){
         <span class="roll-lbl">Last Roll</span>
         <span class="roll-val">${lastRoll != null ? lastRoll : '—'}</span>
       </div>
+      <div class="vdiv"></div>
+      <button class="tb-end-btn" onclick="showEndGameModal()">End Game</button>
     </div>`;
   root.appendChild(tb);
 
@@ -973,7 +1045,7 @@ function renderGame(app){
     if (tile.monster && tile.ownerId !== null && tile.ownerId !== undefined) {
       const owner = G.players.find(p => p.idx === tile.ownerId);
       if (owner) {
-        badgeHTML = `<div class="tile-badge">${miniMonsterBadge(tile.monster, owner.color)}</div>`;
+        badgeHTML = `<div class="tile-badge">${tileMonsterCard(tile.monster, owner.color)}</div>`;
       }
     } else if (tile.ownerId !== null && tile.ownerId !== undefined) {
       const owner = G.players.find(p => p.idx === tile.ownerId);
@@ -1001,11 +1073,12 @@ function renderGame(app){
     // Tile's own transform is ONLY radial positioning — scale is inside .tile-body
     div.style.cssText = `transform:rotate(${angleDeg}deg) translateY(-${R}px);`;
     div.innerHTML = `<span class="tile-idx">${i}</span>
+    ${badgeHTML}
     <div class="tile-body">
       <div class="tile-inner" style="background:${bg};border:${border};">
         ${artHTML}
         <span class="tile-name" style="color:${color};font-size:9px;">${label}</span>
-      </div>${badgeHTML}
+      </div>
     </div>`;
     div.onclick = () => {
       selectedTile = selectedTile === i ? null : i;
@@ -1328,8 +1401,56 @@ window.addEventListener('resize', () => {
   if (root) scaleRoot(root);
 });
 
+// ─── End Game modal ────────────────────────────────────────────────────────────────────────
+function showEndGameModal(){
+  document.getElementById('end-game-modal').classList.add('visible');
+}
+function hideEndGameModal(){
+  document.getElementById('end-game-modal').classList.remove('visible');
+}
+function doEndGame(){
+  hideEndGameModal();
+  if(ws && ws.readyState === WebSocket.OPEN){
+    ws.send(JSON.stringify({ action: 'end_game' }));
+  }
+}
+
 // ─── Boot ───────────────────────────────────────────────────────────────────────────────────
 connect();
 </script>
+
+<!-- Disconnect / pause overlay (outside scale-root) -->
+<div id="disconnect-overlay">
+  <div class="dco-box">
+    <div class="dco-icon">📡</div>
+    <div class="dco-title">Player has left</div>
+    <div class="dco-sub">The game is paused until they return.</div>
+    <div class="dco-code-wrap">
+      <span class="dco-code-lbl">Room Code</span>
+      <span class="dco-code">????</span>
+    </div>
+    <div class="dco-wait">
+      <div class="dco-spinner"></div>
+      <span>Waiting for player to rejoin…</span>
+    </div>
+    <div class="dco-btns">
+      <button class="egm-btn cancel" onclick="document.getElementById('disconnect-overlay').classList.remove('visible')">Dismiss</button>
+      <button class="egm-btn confirm" onclick="showEndGameModal()">End Game</button>
+    </div>
+  </div>
+</div>
+
+<!-- End Game confirmation modal (outside scale-root so it fills the real viewport) -->
+<div id="end-game-modal">
+  <div class="egm-box">
+    <div class="egm-icon">⚠️</div>
+    <div class="egm-title">End Current Game?</div>
+    <div class="egm-body">This will immediately return everyone to the lobby with a new room code. All current game progress will be lost.</div>
+    <div class="egm-btns">
+      <button class="egm-btn cancel" onclick="hideEndGameModal()">Cancel</button>
+      <button class="egm-btn confirm" onclick="doEndGame()">End Game</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.4.1</title>
+<title>Summoners Gambit — Player v0.4.5</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -118,6 +118,21 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .resolve-banner.temple { border: 1px solid rgba(145,132,217,.4); background: rgba(145,132,217,.1); }
 .resolve-banner.chest { border: 1px solid rgba(201,160,90,.4); background: rgba(201,160,90,.1); }
 .resolve-banner.healing { border: 1px solid rgba(95,179,164,.4); background: rgba(95,179,164,.1); }
+.setup-tile-row { padding: 12px 16px 4px; }
+.setup-tile-label { display: block; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--text-mute); font-family: 'Cinzel', serif; margin-bottom: 8px; }
+.setup-tile-input { width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface); color: var(--text); font-size: 18px; font-family: 'Cinzel', serif; letter-spacing: .1em; text-align: center; outline: none; transition: border-color 150ms; }
+.setup-tile-input:focus { border-color: var(--accent); }
+.setup-tile-msg { margin-top: 8px; font-size: 12px; padding: 8px 10px; border-radius: 7px; }
+.setup-tile-msg.ok { color: #5dc97d; background: rgba(93,201,125,.08); border: 1px solid rgba(93,201,125,.25); }
+.setup-tile-msg.error { color: #e05252; background: rgba(224,82,82,.08); border: 1px solid rgba(224,82,82,.2); }
+.setup-standings { margin: 12px 16px 0; background: var(--surface); border-radius: 10px; border: 1px solid var(--border2); overflow: hidden; }
+.setup-standings-title { padding: 10px 12px 8px; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--text-mute); font-family: 'Cinzel', serif; border-bottom: 1px solid var(--border2); }
+.setup-wait-row { display: grid; grid-template-columns: 48px 1fr 1fr 1fr; gap: 4px; align-items: center; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 12px; }
+.setup-wait-row:last-child { border-bottom: none; }
+.setup-wait-tile { color: var(--text-mute); font-size: 11px; }
+.setup-wait-elem { font-weight: 500; font-size: 11px; }
+.setup-wait-mon { color: var(--text-dim); }
+.setup-wait-owner { font-weight: 600; }
 .resolve-icon { font-size: 26px; flex-shrink: 0; }
 .resolve-title { font-size: 14px; font-weight: 600; line-height: 1.2; }
 .resolve-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; line-height: 1.4; }
@@ -519,15 +534,16 @@ let myIdx = null;     // my player index
 let myHand = [];      // my hand from server
 let selectedIid = null; // currently selected card iid
 let tradeIid = null;    // temple sacrifice iid
+let setupTileStr = '';  // typed tile number during setup phase
 
-// Join form values
-let joinCode = '';
-let joinName = 'Player';
+// Join form values (pre-fill code from last session if available)
+let joinCode = (() => { try { return localStorage.getItem('sg_last_code') || ''; } catch(e){ return ''; } })();
+let joinName = (() => { try { return localStorage.getItem('sg_last_name') || 'Player'; } catch(e){ return 'Player'; } })();
 let joinSet = 'C';
 let joinError = '';
 
-// Session key for reconnection
-let mySessionKey = null;
+// Session key for reconnection (persisted to localStorage so refresh auto-rejoins)
+let mySessionKey = (() => { try { return localStorage.getItem('sg_session_key') || null; } catch(e){ return null; } })();
 
 // Roll animation state
 let rollAnimating = false;
@@ -560,6 +576,7 @@ function connect() {
     const msg = JSON.parse(e.data);
     if (msg.type === 'session') {
       mySessionKey = msg.sessionKey;
+      try { localStorage.setItem('sg_session_key', mySessionKey); } catch(e){}
     } else if (msg.type === 'state') {
       if (rollAnimating) {
         const ng = msg.game, ni = msg.myIdx !== undefined ? msg.myIdx : myIdx, nh = msg.hand !== undefined ? msg.hand : myHand;
@@ -582,6 +599,7 @@ function connect() {
         renderJoin();
       } else if (msg.message === 'Session expired — please rejoin') {
         mySessionKey = null;
+        try { localStorage.removeItem('sg_session_key'); } catch(e){}
         myIdx = null;
         G = null;
         renderJoin();
@@ -989,6 +1007,7 @@ function render() {
 
   switch (G.phase) {
     case 'lobby':     renderLobby(); break;
+    case 'setup':     isMyTurn ? renderSetup() : renderSetupWaiting(); break;
     case 'shop':      isMyTurn ? renderShop() : renderWaiting(); break;
     case 'roll':      isMyTurn ? renderRoll() : renderWaiting(); break;
     case 'stalemate':
@@ -1054,7 +1073,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.1</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.5</div>
     </div>
 
     <div class="room-code-group">
@@ -1098,6 +1117,7 @@ function doJoin() {
     return;
   }
   joinName = joinName || 'Player';
+  try { localStorage.setItem('sg_last_code', joinCode); localStorage.setItem('sg_last_name', joinName); } catch(e){}
   send('join', { roomCode: joinCode, name: joinName, starterSet: joinSet });
 }
 
@@ -1125,7 +1145,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.1</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.5</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -1397,6 +1417,161 @@ function renderStalemate() {
 }
 
 // ─── CLAIM ──────────────────────────────────────────────────────────────────
+// ─── SETUP PHASE ─────────────────────────────────────────────────────────────
+
+function renderSetup() {
+  const me = G.players[myIdx];
+  updateStatusBar(true);
+  updateHandStrip(true);
+  document.getElementById('main-content').classList.remove('no-hand');
+  // Safety: clear stale selection if the selected monster is no longer in hand
+  if (selectedIid !== null && !myHand.find(m => m.iid === selectedIid)) {
+    selectedIid = null;
+    setupTileStr = '';
+  }
+
+  const pickerCards = myHand.map(m => renderCard(m, {
+    size: 'full', selected: selectedIid === m.iid,
+    onclick: `selectCard(${m.iid})`
+  })).join('');
+
+  const tileNum = parseInt(setupTileStr, 10);
+  const tileValid = !isNaN(tileNum) && tileNum >= 0 && tileNum <= 27;
+  const tile = tileValid ? G.board[tileNum] : null;
+  const tileIsElemental = tile && tile.kind === 'element';
+  const tileIsFree = tileIsElemental && (tile.ownerId === null || tile.ownerId === undefined);
+  const canClaim = selectedIid && tileIsFree;
+
+  let tilePreview = '';
+  if (tileValid && tile) {
+    if (!tileIsElemental) {
+      tilePreview = `<div class="setup-tile-msg error">⚠ Tile ${tileNum} is a special tile — pick an elemental tile (not chest, temple, heal, or start).</div>`;
+    } else if (!tileIsFree) {
+      const owner = G.players.find(p => p.idx === tile.ownerId);
+      tilePreview = `<div class="setup-tile-msg error">⚠ Tile ${tileNum} is already claimed${owner ? ' by ' + owner.name : ''}.</div>`;
+    } else {
+      tilePreview = `<div class="setup-tile-msg ok">✓ Tile ${tileNum} · <span style="color:${TYPE_COLOR[tile.element]||'var(--text)'}">${tile.element}</span></div>`;
+    }
+  }
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="resolve-banner claim">
+      <span class="resolve-icon">🌟</span>
+      <div>
+        <div class="resolve-title">Free Setup Claim</div>
+        <div class="resolve-sub">Round ${G.setupRound || 1} of 3${G.setupTotalTurns > 0 ? ` · Turn ${(G.setupTurnIdx||0)+1}/${G.setupTotalTurns}` : ''} — station a monster on any free elemental tile at no cost.</div>
+      </div>
+    </div>
+    <div class="picker-label">Choose a monster to station</div>
+    <div class="picker-scroll" id="setup-picker-scroll">${myHand.length > 0 ? pickerCards : '<div style="text-align:center;padding:24px 0;color:var(--text-mute);font-size:13px;">No monsters in hand — you must pass.</div>'}</div>
+    ${myHand.length > 0 ? scrollNavHTML('setup-picker-scroll','setup-dot',myHand.length) : ''}
+    <div class="setup-tile-row">
+      <label class="setup-tile-label">Tile number (0–27)</label>
+      <input id="setup-tile-input" class="setup-tile-input" type="number" min="0" max="27"
+        inputmode="numeric" placeholder="e.g. 14"
+        value="${setupTileStr}"
+        oninput="setupTileStr=this.value.trim();updateSetupTilePreview();"
+      />
+      <div id="setup-tile-preview">${tilePreview}</div>
+    </div>`;
+
+  if (myHand.length > 0) {
+    attachShopScrollListener('setup-picker-scroll','setup-dot',myHand.length);
+  }
+
+  const ab = document.getElementById('action-bar');
+  ab.classList.add('visible');
+  ab.innerHTML = `
+    <button class="action-btn secondary" onclick="doSetupPass()">Pass</button>
+    <button class="action-btn primary" onclick="doSetupClaim()" ${canClaim ? '' : 'disabled style="opacity:.4"'}>${canClaim ? 'Claim Free ✦0' : (!selectedIid ? 'Pick Monster' : !tileValid ? 'Enter Tile #' : !tileIsElemental ? 'Not Elemental' : 'Tile Taken')}</button>`;
+}
+
+function renderSetupWaiting() {
+  const cp = G.players[G.currentPlayer];
+  updateStatusBar(false);
+  updateHandStrip(false);
+  document.getElementById('main-content').classList.add('no-hand');
+  document.getElementById('action-bar').classList.remove('visible');
+
+  const tileRows = G.board
+    .filter(t => t.ownerId !== null && t.ownerId !== undefined && t.monster)
+    .map(t => {
+      const owner = G.players.find(p => p.idx === t.ownerId);
+      return `<div class="setup-wait-row">
+        <span class="setup-wait-tile">Tile ${t.pos}</span>
+        <span class="setup-wait-elem" style="color:${TYPE_COLOR[t.element]||'var(--text)'}">${t.element}</span>
+        <span class="setup-wait-mon">${t.monster.name}</span>
+        <span class="setup-wait-owner" style="color:${owner?.color||'var(--text-mute)'}">${owner?.name||'?'}</span>
+      </div>`;
+    }).join('') || '<div style="color:var(--text-mute);font-size:12px;text-align:center;padding:12px 0;">No tiles claimed yet</div>';
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="waiting-hero">
+      <div class="waiting-icon">🌟</div>
+      <div class="waiting-title">Setup Phase</div>
+      <div class="waiting-sub">Round ${G.setupRound || 1} of 3${G.setupTotalTurns > 0 ? ` · Turn ${(G.setupTurnIdx||0)+1}/${G.setupTotalTurns}` : ''}</div>
+    </div>
+    <div class="waiting-whose">
+      <span style="color:${cp?.color||'var(--text)'}">⚔ ${cp?.name||'?'}</span>
+      <span style="color:var(--text-mute)"> is choosing…</span>
+    </div>
+    <div class="setup-standings">
+      <div class="setup-standings-title">Claimed so far</div>
+      ${tileRows}
+    </div>`;
+}
+
+// Lightweight update for setup tile preview — avoids re-rendering the whole
+// screen (which would destroy the input and lose focus mid-keystroke).
+function updateSetupTilePreview() {
+  const tileNum = parseInt(setupTileStr, 10);
+  const tileValid = !isNaN(tileNum) && tileNum >= 0 && tileNum <= 27;
+  const tile = tileValid ? G.board[tileNum] : null;
+  const tileIsElemental = tile && tile.kind === 'element';
+  const tileIsFree = tileIsElemental && (tile.ownerId === null || tile.ownerId === undefined);
+  const canClaim = selectedIid && tileIsFree;
+
+  let html = '';
+  if (tileValid && tile) {
+    if (!tileIsElemental) {
+      html = `<div class="setup-tile-msg error">⚠ Tile ${tileNum} is a special tile — pick an elemental tile (not chest, temple, heal, or start).</div>`;
+    } else if (!tileIsFree) {
+      const owner = G.players.find(p => p.idx === tile.ownerId);
+      html = `<div class="setup-tile-msg error">⚠ Tile ${tileNum} is already claimed${owner ? ' by ' + owner.name : ''}.</div>`;
+    } else {
+      html = `<div class="setup-tile-msg ok">✓ Tile ${tileNum} · <span style="color:${TYPE_COLOR[tile.element]||'var(--text)'}">${tile.element}</span></div>`;
+    }
+  }
+
+  const previewEl = document.getElementById('setup-tile-preview');
+  if (previewEl) previewEl.innerHTML = html;
+
+  const ab = document.getElementById('action-bar');
+  if (ab && ab.classList.contains('visible')) {
+    ab.innerHTML = `
+      <button class="action-btn secondary" onclick="doSetupPass()">Pass</button>
+      <button class="action-btn primary" onclick="doSetupClaim()" ${canClaim ? '' : 'disabled style="opacity:.4"'}>${canClaim ? 'Claim Free ✦0' : (!selectedIid ? 'Pick Monster' : !tileValid ? 'Enter Tile #' : !tileIsElemental ? 'Not Elemental' : 'Tile Taken')}</button>`;
+  }
+}
+
+function doSetupClaim() {
+  if (!selectedIid) return;
+  // Read fresh from DOM in case oninput fired but setupTileStr is somehow stale
+  const inputEl = document.getElementById('setup-tile-input');
+  if (inputEl) setupTileStr = inputEl.value.trim();
+  const tileNum = parseInt(setupTileStr, 10);
+  if (isNaN(tileNum) || tileNum < 0 || tileNum > 27) return;
+  send('setup_claim', { iid: selectedIid, tilePos: tileNum });
+  selectedIid = null;
+  setupTileStr = '';
+}
+
+function doSetupPass() {
+  send('setup_pass');
+  selectedIid = null;
+  setupTileStr = '';
+}
+
 function renderClaim() {
   const me = G.players[myIdx];
   updateStatusBar(true);
