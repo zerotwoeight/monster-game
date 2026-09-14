@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.3.8</title>
+<title>Summoners Gambit — Player v0.4.1</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -25,7 +25,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .sb-sigil { width: 30px; height: 30px; flex-shrink: 0; }
 .sb-name { font-size: 14px; font-weight: 600; letter-spacing: .02em; line-height: 1; }
 .sb-turn-info { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
-.sb-mana { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.sb-mana { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
 .sb-mana-val { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .sb-mana-lbl { font-size: 9px; color: var(--text-mute); text-transform: uppercase; letter-spacing: .18em; font-family: 'Cinzel', serif; }
 .turn-badge { padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; font-family: 'Cinzel', serif; white-space: nowrap; }
@@ -246,6 +246,34 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .el-btn.selected { color: #fff; }
 .el-btn:hover:not(.selected) { background: rgba(255,255,255,.05); }
 @keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+/* ── Help button ── */
+.help-btn { margin-left:auto; width:30px; height:30px; border-radius:50%; border:1px solid var(--border2); background:rgba(145,132,217,.1); color:var(--accent-pale); font-family:'Cinzel',serif; font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .15s,border-color .15s; }
+.help-btn:hover { background:rgba(145,132,217,.22); border-color:var(--accent); }
+
+/* ── Help overlay ── */
+#help-overlay { position:absolute; inset:0; background:var(--bg); z-index:500; overflow-y:auto; -webkit-overflow-scrolling:touch; display:none; flex-direction:column; }
+#help-overlay.visible { display:flex; }
+.help-header { display:flex; align-items:center; padding:14px 16px 12px; border-bottom:1px solid var(--border); background:var(--bg-deep); flex-shrink:0; gap:10px; position:sticky; top:0; z-index:10; }
+.help-header-title { font-family:'Cinzel',serif; font-size:15px; font-weight:700; letter-spacing:.1em; color:var(--gold-glow); }
+.help-close-btn { margin-left:auto; width:32px; height:32px; border-radius:50%; border:1px solid var(--border2); background:transparent; color:var(--text-dim); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; transition:background .15s; }
+.help-close-btn:hover { background:rgba(255,255,255,.07); }
+.help-body { padding:0 0 40px; }
+.help-section { padding:20px 16px 8px; }
+.help-section + .help-section { border-top:1px solid var(--border); }
+.help-s-title { font-family:'Cinzel',serif; font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--gold-glow); margin-bottom:12px; }
+.help-wheel-wrap { display:flex; justify-content:center; margin-bottom:8px; }
+.help-wheel-caption { text-align:center; font-size:11px; color:var(--text-mute); margin-bottom:4px; line-height:1.5; }
+.help-p { font-size:12.5px; color:var(--text-dim); line-height:1.65; margin-bottom:8px; }
+.help-p:last-child { margin-bottom:0; }
+.help-row { display:flex; align-items:flex-start; gap:10px; margin-bottom:9px; font-size:12.5px; color:var(--text-dim); line-height:1.5; }
+.help-row:last-child { margin-bottom:0; }
+.help-icon { font-size:16px; flex-shrink:0; width:22px; text-align:center; }
+.help-tag { display:inline-block; font-family:'Cinzel',serif; font-size:9px; font-weight:700; letter-spacing:.08em; padding:1px 6px; border-radius:4px; border:1px solid; vertical-align:middle; margin-right:3px; }
+.help-type-row { display:flex; align-items:center; gap:6px; margin-bottom:7px; font-size:12px; }
+.help-type-chip { font-family:'Cinzel',serif; font-size:10px; font-weight:600; padding:3px 9px; border-radius:20px; border:1px solid; letter-spacing:.04em; }
+.help-arrow { color:var(--text-mute); font-size:12px; }
+.help-beats { color:var(--text-mute); font-size:11px; }
 </style>
 </head>
 <body>
@@ -262,6 +290,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
       <div class="sb-mana-val" id="sb-mana-val">0</div>
       <div class="sb-mana-lbl">Mana</div>
     </div>
+    <button class="help-btn" onclick="toggleHelp()" title="How to Play">?</button>
   </div>
   <div id="main-content" class="no-hand"></div>
   <div id="hand-area">
@@ -269,6 +298,87 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
     <div id="hand-scroll"></div>
   </div>
   <div id="action-bar"></div>
+
+  <!-- Help overlay -->
+  <div id="help-overlay">
+    <div class="help-header">
+      <span class="help-header-title">How to Play</span>
+      <button class="help-close-btn" onclick="toggleHelp()">✕</button>
+    </div>
+    <div class="help-body">
+
+      <!-- Element Wheel -->
+      <div class="help-section">
+        <div class="help-s-title">Element Wheel</div>
+        <div class="help-wheel-wrap" id="help-wheel"></div>
+        <div class="help-wheel-caption">Each element deals <strong style="color:#e8e4f4">2×</strong> damage to the next clockwise,<br>and <strong style="color:#e8e4f4">½×</strong> damage to the one before it.</div>
+      </div>
+
+      <!-- Overview -->
+      <div class="help-section">
+        <div class="help-s-title">Overview</div>
+        <div class="help-row"><span class="help-icon">✦</span><span>Collect <b style="color:var(--gold-glow)">Mana</b> at the start of every turn — 5 flat, plus your stationed monsters' generation.</span></div>
+        <div class="help-row"><span class="help-icon">🛒</span><span><b style="color:var(--text)">Shop</b> before rolling. Buy one monster, sell one from your hand, or skip.</span></div>
+        <div class="help-row"><span class="help-icon">🎲</span><span><b style="color:var(--text)">Roll</b> to move around the 28-tile board.</span></div>
+        <div class="help-row"><span class="help-icon">⚑</span><span><b style="color:var(--text)">Claim</b> empty tiles by deploying a monster from your hand — you pay that monster's Mana Cost.</span></div>
+        <div class="help-row"><span class="help-icon">⚔</span><span><b style="color:var(--text)">Battle</b> on enemy tiles. Win to claim them; lose and your monster is destroyed.</span></div>
+        <div class="help-row"><span class="help-icon">✋</span><span>Your <b style="color:var(--text)">Hand</b> holds up to 5 monsters. A monster leaves your hand the moment it's stationed.</span></div>
+      </div>
+
+      <!-- Win Condition -->
+      <div class="help-section">
+        <div class="help-s-title">Win Condition</div>
+        <div class="help-p">The game ends after the round limit (30, 40, or 60 rounds). The player with the <b style="color:var(--text)">most tiles</b> wins. If there's a tie, the player with more Mana takes it.</div>
+        <div class="help-p">Tiles compound your income — more tiles means more Mana Gen per turn, which lets you buy stronger monsters, which lets you take more tiles.</div>
+      </div>
+
+      <!-- Battle -->
+      <div class="help-section">
+        <div class="help-s-title">Battle</div>
+        <div class="help-row"><span class="help-icon">⚔</span><span>Damage = <b style="color:var(--text)">(ATK − DEF) × type modifier + small roll</b>. Minimum 1.</span></div>
+        <div class="help-row"><span class="help-icon">🏰</span><span>A monster defending on its <b style="color:var(--text)">own element</b> tile gets +15% ATK & DEF. An element that beats its type costs −15%.</span></div>
+        <div class="help-row"><span class="help-icon">🔄</span><span>If the defender survives, they <b style="color:var(--text)">counter-strike</b> immediately.</span></div>
+        <div class="help-row"><span class="help-icon">🏳</span><span><b style="color:var(--text)">Retreat</b> before attacking to avoid the fight — costs up to 20 Mana penalty. If you have no monsters in hand you retreat automatically.</span></div>
+        <div class="help-row"><span class="help-icon">🤝</span><span><b style="color:var(--text)">Stalemate</b> — both survive. Next turn you choose to attack again or move on.</span></div>
+      </div>
+
+      <!-- Special Tiles -->
+      <div class="help-section">
+        <div class="help-s-title">Special Tiles</div>
+        <div class="help-row"><span class="help-icon">💧</span><span><b style="color:var(--text)">Mana Well</b> — bonus Mana whenever you pass or land on it.</span></div>
+        <div class="help-row"><span class="help-icon">⛩</span><span><b style="color:var(--text)">Temple</b> — trade a normal monster for an Ascendant (see below).</span></div>
+        <div class="help-row"><span class="help-icon">❤</span><span><b style="color:var(--text)">Healing Tile</b> — spend Mana to heal any of your stationed monsters.</span></div>
+        <div class="help-row"><span class="help-icon">📦</span><span><b style="color:var(--text)">Treasure Chest</b> — random reward: heal potion (45%), battle charm (25%), warp (15%), or a free monster (15%).</span></div>
+      </div>
+
+      <!-- Temple Trades -->
+      <div class="help-section">
+        <div class="help-s-title">Temple Trades</div>
+        <div class="help-p">The Temple offers 3 Ascendant monsters. To trade:</div>
+        <div class="help-row"><span class="help-icon">1</span><span>You need a <b style="color:var(--text)">matching-element</b> monster in your hand to sacrifice.</span></div>
+        <div class="help-row"><span class="help-icon">2</span><span>Pay the Ascendant's <b style="color:var(--text)">Mana Cost</b> (always 20✦).</span></div>
+        <div class="help-row"><span class="help-icon">3</span><span>Your monster is surrendered and the Ascendant is added to your hand.</span></div>
+        <div class="help-p" style="margin-top:10px">Each Ascendant has a <b style="color:var(--gold-glow)">unique ability</b> and a usability condition that must be met before you can deploy it:</div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Light)">✦</span><span><b style="color:var(--el-Light)">Ardent Saint</b> — Aura of Renewal. Condition: healed 4+ monsters this game.</span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Dark)">✦</span><span><b style="color:var(--el-Dark)">Succubus</b> — Mana Drain (steal 10✦ on win). Condition: have more Mana than every opponent.</span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Arcane)">✦</span><span><b style="color:var(--el-Arcane)">Arcane Arbiter</b> — Nullify type modifier once per battle. Condition: changed a tile element 3+ times.</span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Undead)">✦</span><span><b style="color:var(--el-Undead)">Demon Lord</b> — Last Rite (survive at 15 HP once). Condition: had 4+ monsters destroyed.</span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Beast)">✦</span><span><b style="color:var(--el-Beast)">Red Dragon</b> — Intimidate (neighbors pay 5✦ on claims). Condition: most monsters stationed.</span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Nature)">✦</span><span><b style="color:var(--el-Nature)">World Tree</b> — Deep Roots (+1 Gen per Nature tile owned). Condition: own 4 Nature tiles.</span></div>
+      </div>
+
+      <!-- Tips -->
+      <div class="help-section">
+        <div class="help-s-title">Tips</div>
+        <div class="help-row"><span class="help-icon">💡</span><span>Type advantage is a <b style="color:var(--text)">massive swing</b> — a 2× hit can eliminate most monsters in one shot. Always check the element wheel before attacking.</span></div>
+        <div class="help-row"><span class="help-icon">💡</span><span>Landing on your <b style="color:var(--text)">own tile</b> lets you swap a stationed monster, heal it, or change the tile's element — use this to set up better matchups.</span></div>
+        <div class="help-row"><span class="help-icon">💡</span><span>A <b style="color:var(--text)">Battle Charm</b> from a Chest gives +25% damage for one fight — assign it to your strongest attacker or a monster about to face a tough defender.</span></div>
+        <div class="help-row"><span class="help-icon">💡</span><span>Sell monsters you can't afford to deploy back at the shop for partial Mana. A damaged monster is worth less, so sell before they take hits.</span></div>
+        <div class="help-row"><span class="help-icon">💡</span><span>Tanky monsters (Guardians) make great tile defenders. Glass cannons (Assailants) are cheap attackers that can swing battles on type advantage.</span></div>
+      </div>
+
+    </div>
+  </div>
 </div>
 
 <script>
@@ -698,6 +808,36 @@ const MONSTER_LORE = {
   'Ancient Oak':    { role:'Tank', lore:'Older than the kingdom it now defends, the Ancient Oak moves slowly and doesn\'t need to move quickly. Its roots stabilize in every tile it stands on, making it extraordinarily difficult to dislodge. It has simply outlasted everything that has ever challenged it.', ability:null },
   'Grove Warden':   { role:'Balanced', lore:'The Grove Warden tends the living battlefield with as much care as it fights on it. Neither the most aggressive nor the most defensive of the Nature roster, but adaptable — capable of holding tiles or applying pressure depending on what the board demands.', ability:null },
   'World Tree':     { role:'Special · Temple Only', lore:'The World Tree\'s roots run under every Nature tile on the board. The more Nature territory your team controls, the faster it grows — feeding Mana back into your reserves with every passing round through the network it maintains beneath the surface.', ability:'Deep Roots — generates +1 bonus Mana Gen for each Nature tile you currently own.' },
+
+  // ── LIGHT (new) ──
+  'Dawn Striker':   { role:'Glass Cannon', lore:'The Dawn Striker hits before the enemy even sees the light. Trained to attack the moment the sun breaks the horizon, this warrior combines celestial timing with brutal force — high attack, low armour, built for the decisive first blow.', ability:null },
+  'Radiant Lancer': { role:'Balanced', lore:'Carrying a spear infused with concentrated sunlight, the Radiant Lancer punches through shields and shadows alike. Steady and adaptable, it holds tiles reliably while threatening enemies who stray too close to its extended reach.', ability:null },
+  'Sunfire Herald': { role:'Balanced', lore:'The Sunfire Herald moves across the board like a slow burn — patient, inevitable. It prioritises endurance over aggression, trusting that the longer a battle drags on, the more its radiant resilience tips the scales in its favour.', ability:null },
+
+  // ── DARK (new) ──
+  'Void Reaper':    { role:'Glass Cannon', lore:'The Void Reaper tears through enemy lines with terrifying speed, leaving nothing but silence. Extremely fragile, but hits with an attack stat most monsters at double the cost cannot match. It exists to delete one thing, then disappear.', ability:null },
+  'Dusk Blade':     { role:'Balanced', lore:'Half shadow, half blade — the Dusk Blade occupies the space between an assassin and a soldier. It trades blows with most opponents on even footing while always looking for the moment to strike something decisive with its slightly elevated attack.', ability:null },
+  'Umbral Stalker': { role:'Balanced', lore:'The Umbral Stalker watches from the dark and waits for the right time. Tougher than most balanced units, it absorbs punishment while wearing opponents down — less about explosive damage and more about outlasting the thing standing in its way.', ability:null },
+
+  // ── ARCANE (new) ──
+  'Spell Wraith':   { role:'Glass Cannon', lore:'A barely-contained burst of arcane energy given a body just long enough to fight. The Spell Wraith collapses its own existence into a single devastating strike. Impressive attack, practically no armour, and a lifespan measured in battles rather than rounds.', ability:null },
+  'Runic Duelist':  { role:'Balanced', lore:'The Runic Duelist inscribes battle equations into the air mid-fight, calculating angles and energy output on the fly. It leans slightly toward aggression, finding combat solutions faster than opponents can adapt their defences.', ability:null },
+  'Mana Weaver':    { role:'Balanced', lore:'The Mana Weaver treats the battlefield like a loom, threading magical currents through everything it touches. A durable generalist with exceptional defensive depth, it holds positions long enough for the board to shift in your favour.', ability:null },
+
+  // ── UNDEAD (new) ──
+  'Grave Specter':  { role:'Glass Cannon', lore:'The Grave Specter phases through solid matter and hits from angles that shouldn\'t be possible. Its attack power is exceptional, its survivability almost nonexistent — a creature that decided dying was optional as long as it killed you first.', ability:null },
+  'Cursed Revenant':{ role:'Balanced', lore:'Bound to the battlefield by a curse it cannot lift, the Cursed Revenant fights with the weight of unfinished business behind every strike. Slightly attack-forward, it applies steady pressure and is difficult to ignore even when other threats demand attention.', ability:null },
+  'Plague Herald':  { role:'Balanced', lore:'The Plague Herald doesn\'t fight clean. It layers debilitating pressure over time, weathering damage while making the fight increasingly miserable for whoever stands against it. Among the more durable Undead balanced units.', ability:null },
+
+  // ── BEAST (new) ──
+  'Feral Striker':  { role:'Glass Cannon', lore:'Raw instinct weaponised. The Feral Striker doesn\'t strategise — it charges, claws, and hopes its ferocity lands before anything can hit back. Extremely high attack, a body that can barely absorb punishment, and zero regard for personal safety.', ability:null },
+  'Blood Mane':     { role:'Balanced', lore:'Earned its name in battles where the outcome was never certain. The Blood Mane is a reliable pressure unit — leaning into attack while maintaining enough endurance to hold tiles. Most enemies don\'t enjoy a sustained exchange with it.', ability:null },
+  'Stoneback':      { role:'Balanced', lore:'The Stoneback\'s hide has fossilised over decades of taking hits. Slower and tougher than most Beast units, it doesn\'t chase opponents — it stands in their way. Exceptional defensive stats for the archetype, trades raw damage for staying power.', ability:null },
+
+  // ── NATURE (new) ──
+  'Briar Sprite':   { role:'Glass Cannon', lore:'A knot of razor thorns compressed into something almost the size of a small animal. The Briar Sprite launches itself at opponents with unnerving speed, shredding at the point of impact before anything can react. It doesn\'t survive long, but it doesn\'t need to.', ability:null },
+  'Vine Stalker':   { role:'Balanced', lore:'The Vine Stalker moves through terrain like water through cracks, arriving exactly where it\'s least expected. Attack-forward for a Nature unit, it combines mobility with enough toughness to hold what it takes.', ability:null },
+  'Moss Golem':     { role:'Balanced', lore:'Built from centuries of accumulated forest material, the Moss Golem is slow but deeply difficult to remove from a tile it has claimed. Prioritises defensive durability above all — the kind of unit that is still standing long after the board around it has changed completely.', ability:null },
 };
 
 // ─── CARD DETAIL OVERLAY ────────────────────────────────────────────────────
@@ -914,7 +1054,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.3.6</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.1</div>
     </div>
 
     <div class="room-code-group">
@@ -985,7 +1125,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.3.6</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.1</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -1670,6 +1810,82 @@ function renderGameOver() {
     </div>`;
 }
 
+// ─── Help overlay ────────────────────────────────────────────────────────────
+function toggleHelp() {
+  const o = document.getElementById('help-overlay');
+  const visible = o.classList.toggle('visible');
+  if (visible) buildHelpWheel();
+}
+
+function buildHelpWheel() {
+  const wrap = document.getElementById('help-wheel');
+  if (!wrap || wrap._built) return;
+  wrap._built = true;
+
+  const W = 220, H = 220, cx = 110, cy = 112, R = 72, nr = 22;
+  const types = ['Light','Dark','Arcane','Undead','Beast','Nature'];
+  const strong = TYPE_STRONG;
+
+  // Hexagon positions: clockwise from top
+  const angles = [-90,-30,30,90,150,210].map(d => d*Math.PI/180);
+  const pos = types.map((t,i) => ({
+    x: cx + R*Math.cos(angles[i]),
+    y: cy + R*Math.sin(angles[i]),
+    t, c: TYPE_COLOR[t]
+  }));
+
+  // Arrow markers
+  const defs = types.map((t,i) =>
+    `<marker id="ha${i}" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto">
+       <polygon points="0 0,7 2.5,0 5" fill="${TYPE_COLOR[t]}" opacity=".75"/>
+     </marker>`
+  ).join('');
+
+  // Arrows: each node → the node it beats (next in cycle, clockwise)
+  const arrows = types.map((t,i) => {
+    const from = pos[i];
+    const toT  = strong[t];
+    const to   = pos[types.indexOf(toT)];
+    const dx = to.x-from.x, dy = to.y-from.y;
+    const len = Math.sqrt(dx*dx+dy*dy);
+    const nx = dx/len, ny = dy/len;
+    const sx = (from.x + nx*(nr+2)).toFixed(1);
+    const sy = (from.y + ny*(nr+2)).toFixed(1);
+    const ex = (to.x - nx*(nr+8)).toFixed(1);
+    const ey = (to.y - ny*(nr+8)).toFixed(1);
+    return `<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" stroke="${from.c}" stroke-width="1.8" opacity=".72" marker-end="url(#ha${i})"/>`;
+  }).join('');
+
+  // Nodes
+  const nodes = pos.map(p => {
+    const lx = p.x.toFixed(1), ly = (p.y+3.5).toFixed(1);
+    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${nr}" fill="${p.c}1a" stroke="${p.c}" stroke-width="1.5"/>
+            <text x="${lx}" y="${ly}" text-anchor="middle" font-family="Cinzel,serif" font-size="9" font-weight="700" fill="${p.c}">${p.t}</text>`;
+  }).join('');
+
+  wrap.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="200" height="200">
+    <defs>${defs}</defs>
+    ${arrows}
+    ${nodes}
+    <text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="8.5" fill="rgba(255,255,255,.22)" font-family="Inter,sans-serif">2× clockwise</text>
+  </svg>`;
+}
+
+// ─── Scroll position preservation ───────────────────────────────────────────
+function saveScrolls() {
+  const map = {};
+  document.querySelectorAll('[id]').forEach(el => {
+    if (el.scrollLeft > 0) map[el.id] = el.scrollLeft;
+  });
+  return map;
+}
+function restoreScrolls(map) {
+  for (const [id, left] of Object.entries(map)) {
+    const el = document.getElementById(id);
+    if (el) el.scrollLeft = left;
+  }
+}
+
 // ─── ACTIONS ────────────────────────────────────────────────────────────────
 function selectCard(iid) {
   selectedIid = (selectedIid === iid) ? null : iid;
@@ -1677,18 +1893,24 @@ function selectCard(iid) {
   if (G && G.phase === 'resolve:battle') {
     send('preview_attacker', { iid: selectedIid });
   }
+  const scrolls = saveScrolls();
   render();
+  restoreScrolls(scrolls);
 }
 
 function selectTempleSpecial(iid) {
   selectedIid = (selectedIid === iid) ? null : iid;
   tradeIid = null;
+  const scrolls = saveScrolls();
   render();
+  restoreScrolls(scrolls);
 }
 
 function selectTemplatSacrifice(iid) {
   tradeIid = (tradeIid === iid) ? null : iid;
+  const scrolls = saveScrolls();
   render();
+  restoreScrolls(scrolls);
 }
 
 function doBuy() {

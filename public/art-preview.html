@@ -98,6 +98,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 .mc-full .mc-stat-val{font-size:10px;font-weight:700;color:#e8e4f4;font-variant-numeric:tabular-nums;}
 .mc-full .mc-special{position:absolute;top:5px;left:5px;font-size:7px;background:rgba(145,132,217,.35);border:1px solid rgba(145,132,217,.55);border-radius:10px;padding:2px 5px;color:#c5bfee;font-family:'Cinzel',serif;z-index:2;}
 .mc-full .mc-arch{position:absolute;top:5px;right:5px;font-size:7px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:2px 5px;color:rgba(255,255,255,.55);font-family:'Cinzel',serif;z-index:2;}
+.mc-full .mc-new-badge{position:absolute;bottom:5px;right:5px;font-size:7px;background:rgba(201,160,90,.25);border:1px solid rgba(201,160,90,.6);border-radius:10px;padding:2px 5px;color:#c9a05a;font-family:'Cinzel',serif;z-index:2;letter-spacing:.04em;}
 
 /* ── Monster mini card (70×100) ── */
 .mc-mini{width:70px;height:100px;border-radius:7px;overflow:hidden;border:1.5px solid;position:relative;flex-shrink:0;background:#0d0e1c;}
@@ -121,7 +122,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 
 <header class="site-header">
   <span class="site-logo">Summoners' Gambit</span>
-  <span class="site-ver">Art Preview · v0.1.5</span>
+  <span class="site-ver">Art Preview · v0.1.6</span>
   <nav class="nav-pills">
     <a class="nav-pill active" href="#tiles">Tiles</a>
     <a class="nav-pill" href="#light">Light</a>
@@ -141,7 +142,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 
 <div class="summary-bar" id="summary-bar">
   <div class="sb-group"><span class="sb-label">Tiles PNG</span><span class="sb-count" id="sb-tiles" style="color:#7dd982">—/10</span></div>
-  <div class="sb-group"><span class="sb-label">Monster PNG</span><span class="sb-count" id="sb-monsters" style="color:#7dd982">—/24</span></div>
+  <div class="sb-group"><span class="sb-label">Monster PNG</span><span class="sb-count" id="sb-monsters" style="color:#7dd982">—/42</span></div>
   <div class="sb-group"><span class="sb-label">SVG Fallback</span><span class="sb-count" id="sb-svg" style="color:var(--accent-lit)">—</span></div>
   <div style="margin-left:auto;font-size:10px;color:var(--text-mute);">Click any path to open the file in a new tab</div>
 </div>
@@ -187,36 +188,60 @@ const TILES = [
 ];
 
 const MONSTERS = [
-  {id:'solar_knight',  name:'Solar Knight',  type:'Light',  arch:'Glass',    hp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
-  {id:'dawnguard',     name:'Dawnguard',     type:'Light',  arch:'Tanky',    hp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
-  {id:'high_paladin',  name:'High Paladin',  type:'Light',  arch:'Balanced', hp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'ardent_saint',  name:'Ardent Saint',  type:'Light',  arch:'Special',  hp:65, atk:15, def:15, cost:20, gen:5, isSpecial:true,
+  // ── Light (7) ──────────────────────────────────────────────────────────────
+  {id:'solar_knight',   name:'Solar Knight',   type:'Light',  arch:'Assailant', hp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
+  {id:'dawnguard',      name:'Dawnguard',      type:'Light',  arch:'Guardian',  hp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
+  {id:'high_paladin',   name:'High Paladin',   type:'Light',  arch:'Vanguard',  hp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'ardent_saint',   name:'Ardent Saint',   type:'Light',  arch:'Ascendant', hp:65, atk:15, def:15, cost:20, gen:5, isSpecial:true,
     ability:'Aura of Renewal — heals all friendly stationed monsters 5 HP/turn'},
-  {id:'nightshard',    name:'Nightshard',    type:'Dark',   arch:'Glass',    hp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
-  {id:'void_sentinel', name:'Void Sentinel', type:'Dark',   arch:'Tanky',    hp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
-  {id:'shadow_paladin',name:'Shadow Paladin',type:'Dark',   arch:'Balanced', hp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'succubus',      name:'Succubus',      type:'Dark',   arch:'Special',  hp:45, atk:32, def:10, cost:20, gen:5, isSpecial:true,
+  {id:'dawn_striker',   name:'Dawn Striker',   type:'Light',  arch:'Assailant', hp:25, atk:36, def:6,  cost:8,  gen:2, isSpecial:false, isNew:true},
+  {id:'radiant_lancer', name:'Radiant Lancer', type:'Light',  arch:'Vanguard',  hp:30, atk:28, def:10, cost:10, gen:2, isSpecial:false, isNew:true},
+  {id:'sunfire_herald', name:'Sunfire Herald', type:'Light',  arch:'Vanguard',  hp:40, atk:22, def:11, cost:10, gen:2, isSpecial:false, isNew:true},
+  // ── Dark (7) ───────────────────────────────────────────────────────────────
+  {id:'nightshard',     name:'Nightshard',     type:'Dark',   arch:'Assailant', hp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
+  {id:'void_sentinel',  name:'Void Sentinel',  type:'Dark',   arch:'Guardian',  hp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
+  {id:'shadow_paladin', name:'Shadow Paladin', type:'Dark',   arch:'Vanguard',  hp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'succubus',       name:'Succubus',       type:'Dark',   arch:'Ascendant', hp:45, atk:32, def:10, cost:20, gen:5, isSpecial:true,
     ability:'Mana Drain — win a battle → steal 10 Mana from loser'},
-  {id:'sorcerer',       name:'Sorcerer',       type:'Arcane', arch:'Glass',    hp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
-  {id:'rune_priestess', name:'Rune Priestess', type:'Arcane', arch:'Tanky',    hp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
-  {id:'arch_mage',      name:'Arch Mage',      type:'Arcane', arch:'Balanced', hp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'arcane_arbiter', name:'Arcane Arbiter', type:'Arcane', arch:'Special',  hp:40, atk:27, def:15, cost:20, gen:5, isSpecial:true,
+  {id:'void_reaper',    name:'Void Reaper',    type:'Dark',   arch:'Assailant', hp:18, atk:42, def:4,  cost:8,  gen:2, isSpecial:false, isNew:true},
+  {id:'dusk_blade',     name:'Dusk Blade',     type:'Dark',   arch:'Vanguard',  hp:30, atk:29, def:8,  cost:10, gen:2, isSpecial:false, isNew:true},
+  {id:'umbral_stalker', name:'Umbral Stalker', type:'Dark',   arch:'Vanguard',  hp:42, atk:21, def:11, cost:10, gen:2, isSpecial:false, isNew:true},
+  // ── Arcane (7) ─────────────────────────────────────────────────────────────
+  {id:'sorcerer',        name:'Sorcerer',        type:'Arcane', arch:'Assailant', hp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
+  {id:'rune_priestess',  name:'Rune Priestess',  type:'Arcane', arch:'Guardian',  hp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
+  {id:'arch_mage',       name:'Arch Mage',       type:'Arcane', arch:'Vanguard',  hp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'arcane_arbiter',  name:'Arcane Arbiter',  type:'Arcane', arch:'Ascendant', hp:40, atk:27, def:15, cost:20, gen:5, isSpecial:true,
     ability:'Nullify — cancel type modifier once per battle (forces 1× neutral)'},
-  {id:'bone_wraith',  name:'Bone Wraith',  type:'Undead', arch:'Glass',    hp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
-  {id:'death_knight', name:'Death Knight', type:'Undead', arch:'Tanky',    hp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
-  {id:'shade_walker', name:'Shade Walker', type:'Undead', arch:'Balanced', hp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'demon_lord',   name:'Demon Lord',   type:'Undead', arch:'Special',  hp:85, atk:17, def:8,  cost:20, gen:5, isSpecial:true,
+  {id:'spell_wraith',    name:'Spell Wraith',    type:'Arcane', arch:'Assailant', hp:22, atk:38, def:5,  cost:8,  gen:2, isSpecial:false, isNew:true},
+  {id:'runic_duelist',   name:'Runic Duelist',   type:'Arcane', arch:'Vanguard',  hp:32, atk:27, def:9,  cost:10, gen:2, isSpecial:false, isNew:true},
+  {id:'mana_weaver',     name:'Mana Weaver',     type:'Arcane', arch:'Vanguard',  hp:38, atk:23, def:12, cost:10, gen:2, isSpecial:false, isNew:true},
+  // ── Undead (7) ─────────────────────────────────────────────────────────────
+  {id:'bone_wraith',     name:'Bone Wraith',     type:'Undead', arch:'Assailant', hp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
+  {id:'death_knight',    name:'Death Knight',    type:'Undead', arch:'Guardian',  hp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
+  {id:'shade_walker',    name:'Shade Walker',    type:'Undead', arch:'Vanguard',  hp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'demon_lord',      name:'Demon Lord',      type:'Undead', arch:'Ascendant', hp:85, atk:17, def:8,  cost:20, gen:5, isSpecial:true,
     ability:'Last Rite — survives at 15 HP when HP hits 0 (once per game)'},
-  {id:'razorclaw',   name:'Razorclaw',   type:'Beast', arch:'Glass',    hp:20, atk:27, def:8, cost:8,  gen:2, isSpecial:false},
-  {id:'iron_hide',   name:'Iron Hide',   type:'Beast', arch:'Tanky',    hp:55, atk:10, def:8, cost:12, gen:3, isSpecial:false},
-  {id:'pack_hunter', name:'Pack Hunter', type:'Beast', arch:'Balanced', hp:35, atk:17, def:9, cost:10, gen:2, isSpecial:false},
-  {id:'red_dragon',  name:'Red Dragon',  type:'Beast', arch:'Special',  hp:35, atk:40, def:9, cost:20, gen:5, isSpecial:true,
+  {id:'grave_specter',   name:'Grave Specter',   type:'Undead', arch:'Assailant', hp:18, atk:42, def:4,  cost:8,  gen:2, isSpecial:false, isNew:true},
+  {id:'cursed_revenant', name:'Cursed Revenant', type:'Undead', arch:'Vanguard',  hp:33, atk:26, def:10, cost:10, gen:2, isSpecial:false, isNew:true},
+  {id:'plague_herald',   name:'Plague Herald',   type:'Undead', arch:'Vanguard',  hp:40, atk:22, def:11, cost:10, gen:2, isSpecial:false, isNew:true},
+  // ── Beast (7) ──────────────────────────────────────────────────────────────
+  {id:'razorclaw',      name:'Razorclaw',      type:'Beast', arch:'Assailant', hp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
+  {id:'iron_hide',      name:'Iron Hide',      type:'Beast', arch:'Guardian',  hp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
+  {id:'pack_hunter',    name:'Pack Hunter',    type:'Beast', arch:'Vanguard',  hp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'red_dragon',     name:'Red Dragon',     type:'Beast', arch:'Ascendant', hp:35, atk:40, def:9,  cost:20, gen:5, isSpecial:true,
     ability:'Intimidate — adjacent tile owners pay 5 Mana when their tile is claimed'},
-  {id:'thornling',   name:'Thornling',   type:'Nature', arch:'Glass',    hp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
-  {id:'ancient_oak', name:'Ancient Oak', type:'Nature', arch:'Tanky',    hp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
-  {id:'grove_warden',name:'Grove Warden',type:'Nature', arch:'Balanced', hp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'world_tree',  name:'World Tree',  type:'Nature', arch:'Special',  hp:55, atk:22, def:13, cost:20, gen:5, isSpecial:true,
+  {id:'feral_striker',  name:'Feral Striker',  type:'Beast', arch:'Assailant', hp:22, atk:38, def:5,  cost:8,  gen:2, isSpecial:false, isNew:true},
+  {id:'blood_mane',     name:'Blood Mane',     type:'Beast', arch:'Vanguard',  hp:32, atk:28, def:9,  cost:10, gen:2, isSpecial:false, isNew:true},
+  {id:'stoneback',      name:'Stoneback',      type:'Beast', arch:'Vanguard',  hp:42, atk:20, def:12, cost:10, gen:2, isSpecial:false, isNew:true},
+  // ── Nature (7) ─────────────────────────────────────────────────────────────
+  {id:'thornling',      name:'Thornling',      type:'Nature', arch:'Assailant', hp:20, atk:27, def:8,  cost:8,  gen:2, isSpecial:false},
+  {id:'ancient_oak',    name:'Ancient Oak',    type:'Nature', arch:'Guardian',  hp:55, atk:10, def:8,  cost:12, gen:3, isSpecial:false},
+  {id:'grove_warden',   name:'Grove Warden',   type:'Nature', arch:'Vanguard',  hp:35, atk:17, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'world_tree',     name:'World Tree',     type:'Nature', arch:'Ascendant', hp:55, atk:22, def:13, cost:20, gen:5, isSpecial:true,
     ability:'Deep Roots — +1 Mana Gen per Nature tile controlled'},
+  {id:'briar_sprite',   name:'Briar Sprite',   type:'Nature', arch:'Assailant', hp:22, atk:37, def:6,  cost:8,  gen:2, isSpecial:false, isNew:true},
+  {id:'vine_stalker',   name:'Vine Stalker',   type:'Nature', arch:'Vanguard',  hp:33, atk:26, def:10, cost:10, gen:2, isSpecial:false, isNew:true},
+  {id:'moss_golem',     name:'Moss Golem',     type:'Nature', arch:'Vanguard',  hp:42, atk:20, def:12, cost:10, gen:2, isSpecial:false, isNew:true},
 ];
 
 // ─── SVG art generators (verbatim from board.html) ────────────────────────────
@@ -234,7 +259,7 @@ function artSVG(type,w,h){const c=TYPE_COLOR[type]||'#9397ab';const fn=SVG_FNS[t
 let tilePng=0, monsterPng=0, svgFallback=0;
 function updateSummary(){
   document.getElementById('sb-tiles').textContent    = `${tilePng}/10`;
-  document.getElementById('sb-monsters').textContent = `${monsterPng}/24`;
+  document.getElementById('sb-monsters').textContent = `${monsterPng}/42`;
   document.getElementById('sb-svg').textContent      = `${svgFallback}`;
 }
 
@@ -419,9 +444,12 @@ function buildMonsters(type){
     fullCard.appendChild(overlay);
 
     if(m.isSpecial){
-      const b=document.createElement('div'); b.className='mc-special'; b.textContent='✦ Special'; fullCard.appendChild(b);
+      const b=document.createElement('div'); b.className='mc-special'; b.textContent='✦ Ascendant'; fullCard.appendChild(b);
     } else {
       const b=document.createElement('div'); b.className='mc-arch'; b.textContent=m.arch; fullCard.appendChild(b);
+    }
+    if(m.isNew){
+      const nb=document.createElement('div'); nb.className='mc-new-badge'; nb.textContent='★ new'; fullCard.appendChild(nb);
     }
 
     fullWrap.appendChild(fullCard);

@@ -261,7 +261,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .tile-art-icon{display:flex;align-items:center;justify-content:center;width:100%;flex:1;min-height:0;font-size:20px;line-height:1;text-shadow:0 0 8px currentColor;}
 .tile-art-img{width:100%;height:100%;object-fit:contain;display:block;}
 .tile-art-special{display:flex;align-items:center;justify-content:center;font-size:22px;width:100%;flex:1;}
+/* QR Code lobby */
+.lobby-qr-wrap{margin-top:18px;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.lobby-qr-lbl{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;align-self:flex-start;}
+.lobby-qr-box{background:#fff;border-radius:8px;padding:8px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(201,160,90,.2);}
+.lobby-qr-hint{font-size:10px;color:var(--text-mute);letter-spacing:.08em;text-align:center;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -754,7 +760,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.0</div>`;
+    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.1</div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -774,6 +780,11 @@ function renderLobby(app){
     <div style="margin-top:18px;">
       <div class="lobby-url-lbl">Player URL</div>
       <div class="lobby-url-box">${playerURL}</div>
+    </div>
+    <div class="lobby-qr-wrap">
+      <div class="lobby-qr-lbl">Scan to Join</div>
+      <div class="lobby-qr-box"><div id="lobby-qr-canvas"></div></div>
+      <div class="lobby-qr-hint">Point your phone camera at this code</div>
     </div>
     <div class="lobby-count-ring">
       <div class="lobby-count-num">${playerCount}<span style="font-size:20px;color:var(--text-dim);"> / 6</span></div>
@@ -859,6 +870,21 @@ function renderLobby(app){
   root.appendChild(splash);
 
   app.appendChild(root);
+
+  // Generate QR code after DOM is ready
+  const qrEl = document.getElementById('lobby-qr-canvas');
+  if(qrEl && typeof QRCode !== 'undefined'){
+    try{
+      new QRCode(qrEl, {
+        text: playerURL,
+        width: 140,
+        height: 140,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }catch(e){ qrEl.textContent = playerURL; }
+  }
 }
 
 function renderGame(app){
@@ -875,7 +901,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.0</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.1</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
