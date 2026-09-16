@@ -67,6 +67,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .tile:hover{filter:brightness(1.18);}
 .tile.selected .tile-inner{box-shadow:0 0 0 2px var(--accent),0 0 22px rgba(145,132,217,.45);border-radius:6px;}
 .tile.active-tile .tile-inner{box-shadow:0 0 0 2px var(--gold-glow),0 0 18px rgba(201,160,90,.4);border-radius:6px;}
+.tile.bonus-tile .tile-inner{box-shadow:0 0 0 2px #fff6,0 0 14px rgba(255,255,255,.22);border-radius:6px;animation:bonus-pulse 2.4s ease-in-out infinite;}
+@keyframes bonus-pulse{0%,100%{box-shadow:0 0 0 2px #fff5,0 0 10px rgba(255,255,255,.18);}50%{box-shadow:0 0 0 2px #fffc,0 0 22px rgba(255,255,255,.38);}}
+.tile-synergy-badge{position:absolute;top:2px;right:2px;font-size:8px;line-height:1;opacity:.9;pointer-events:none;z-index:3;text-shadow:0 0 4px #000;}
+.chip-mono-badge{display:inline-block;font-size:9px;margin-left:4px;opacity:.9;vertical-align:middle;}
+.chip-mono-label{font-size:8px;letter-spacing:.03em;opacity:.8;margin-left:2px;}
 .tile-inner{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:4px 3px 4px;position:relative;border-radius:6px;overflow:hidden;}
 .tile-badge{position:absolute;top:62%;left:50%;transform:translateX(-50%);pointer-events:none;z-index:1;}
 .tile-idx{position:absolute;top:-17px;left:50%;transform:translateX(-50%);font-size:10px;color:rgba(255,255,255,.85);line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap;}
@@ -484,14 +489,27 @@ function monsterImg(id,suffix=''){ return `<img src="/img/monsters/monster-${id}
 
 function renderBoardCard(m) {
   if (!m) return '';
-  const c = TYPE_COLOR[m.type] || '#9184d9';
+  const isRare = m.rarity === 'rare';
+  const c  = TYPE_COLOR[m.type]  || '#9184d9';
+  const c2 = m.type2 ? (TYPE_COLOR[m.type2] || '#9184d9') : null;
   const pct = Math.max(0, Math.min(1, m.hp / m.maxHp));
   const hpColor = pct < .35 ? '#b05050' : c;
-  const border = m.isSpecial ? `${c}cc` : `${c}88`;
-  const shadow = m.isSpecial ? `box-shadow:0 0 0 2.5px ${c}33,0 0 22px ${c}44` : `box-shadow:0 0 14px ${c}28`;
+  let border, shadow;
+  if (isRare) {
+    border = c;
+    shadow = `box-shadow:0 0 0 2px ${c}99,0 0 0 3.5px ${c2}66,0 0 22px ${c}44`;
+  } else if (m.isSpecial) {
+    border = `${c}cc`;
+    shadow = `box-shadow:0 0 0 2.5px ${c}33,0 0 22px ${c}44`;
+  } else {
+    border = `${c}88`;
+    shadow = `box-shadow:0 0 14px ${c}28`;
+  }
   const art = m.id ? monsterImg(m.id) : artSVG(m.type, 130, 186);
+  const typeLabel = m.type2 ? `<span style="color:${c}">${m.type}</span><span style="color:rgba(255,255,255,.4)">/</span><span style="color:${c2}">${m.type2}</span>` : `<span style="color:${c}">${m.type}</span>`;
   return `<div class="board-monster-card" style="border-color:${border};${shadow}">
-    ${m.isSpecial ? `<div class="bmc-special">✦ Special</div>` : ''}
+    ${m.isSpecial ? `<div class="bmc-special">✦ Ascendant</div>` : ''}
+    ${isRare ? `<div class="bmc-special" style="color:#c8aaff;border-color:rgba(200,170,255,.45);background:rgba(145,132,217,.18);">★ Rare</div>` : ''}
     ${m.charm ? `<div style="position:absolute;top:4px;right:4px;width:14px;height:14px;border-radius:50%;background:#c9a05a;box-shadow:0 0 8px #c9a05acc;z-index:3;display:flex;align-items:center;justify-content:center;font-size:8px;line-height:1;" title="Battle Charm">⚡</div>` : ''}
     <div class="bmc-art">${art}</div>
     <div class="bmc-overlay">
@@ -500,7 +518,7 @@ function renderBoardCard(m) {
       <div class="bmc-stats">
         <div class="bmc-stat"><span class="bmc-stat-lbl">ATK</span><span class="bmc-stat-val">${m.atk}</span></div>
         <div class="bmc-stat"><span class="bmc-stat-lbl">DEF</span><span class="bmc-stat-val">${m.def}</span></div>
-        <div class="bmc-stat"><span class="bmc-stat-lbl">TYPE</span><span class="bmc-stat-val" style="font-size:8px;color:${c}">${m.type}</span></div>
+        <div class="bmc-stat"><span class="bmc-stat-lbl">TYPE</span><span class="bmc-stat-val" style="font-size:7px;">${typeLabel}</span></div>
       </div>
     </div>
   </div>`;
@@ -676,10 +694,14 @@ function connect(){
     chip.className = 'ok';
     chip.textContent = '● Board View';
     clearTimeout(reconnectTimer);
+    // Claim or create a room — pass ?room=CODE from URL if present
+    const urlRoom = new URLSearchParams(location.search).get('room') || '';
+    ws.send(JSON.stringify({ action: 'board_connect', roomCode: urlRoom }));
   };
 
   ws.onmessage = e => {
     const msg = JSON.parse(e.data);
+    if (msg.type === 'ready') return; // server ready ping — board_connect was just sent
     if (msg.type === 'state') {
       if (boardRollAnimating) {
         boardPendingG = msg.game;
@@ -814,14 +836,14 @@ function renderLobby(app){
   const canStart = playerCount >= 2;
   const code = G.roomCode || '????';
   const playerURL = `${location.protocol}//${location.host}/player`;
-  const SET_NAMES = {A:'Aggressive',B:'Defensive',C:'Balanced',D:'Versatile'};
+  const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Watch',E:'Divine Guard',F:'Chaos Legion'};
 
   // ── Brand
   const brand = document.createElement('div');
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.9</div>`;
+    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.14</div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -971,7 +993,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.9</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.14</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -1021,8 +1043,12 @@ function renderGame(app){
   // Pre-compute effective position for every player (accounts for hop animation)
   const effPos = G.players.map((p, pi) => getEffectivePosition(pi));
 
+  // Build set of bonus tile positions for this render pass
+  const bonusTilePositions = new Set((G.bonusRuns || []).flatMap(r => r.tiles));
+
   G.board.forEach((tile, i) => {
     const angleDeg = (i / N) * 360;
+    const isBonus = bonusTilePositions.has(i);
 
     const isSpecial = tile.kind !== 'element';
     const color = isSpecial ? '#c0392b' : (TYPE_COLOR[tile.element] || '#9397ab');
@@ -1069,14 +1095,17 @@ function renderGame(app){
       + (selectedTile === i ? ' selected' : '')
       + (isActiveTile ? ' active-tile' : '')
       + (animHere ? ' is-visiting' : '')
-      + (settledHere ? ' is-settled' : '');
+      + (settledHere ? ' is-settled' : '')
+      + (isBonus ? ' bonus-tile' : '');
     // Tile's own transform is ONLY radial positioning — scale is inside .tile-body
     div.style.cssText = `transform:rotate(${angleDeg}deg) translateY(-${R}px);`;
+    const synergyBadge = isBonus ? `<span class="tile-synergy-badge">🔥</span>` : '';
     div.innerHTML = `<span class="tile-idx">${i}</span>
     ${badgeHTML}
     <div class="tile-body">
-      <div class="tile-inner" style="background:${bg};border:${border};">
+      <div class="tile-inner" style="background:${bg};border:${isBonus ? `2px solid ${color}` : border};">
         ${artHTML}
+        ${synergyBadge}
         <span class="tile-name" style="color:${color};font-size:9px;">${label}</span>
       </div>
     </div>`;
@@ -1262,6 +1291,16 @@ function renderGame(app){
         <div class="wt-head">Peak</div>
         <div class="wt-head">Earned</div>
         ${tableRows}
+      </div>
+      <div style="margin-top:28px;display:flex;gap:12px;position:relative;">
+        <button onclick="doNewGame()" style="
+          font-family:'Cinzel',serif;font-size:13px;letter-spacing:.12em;text-transform:uppercase;
+          background:linear-gradient(135deg,#3a2e5e,#2a1e4e);
+          color:#c4b5f4;border:1.5px solid #7060b8;border-radius:8px;
+          padding:12px 36px;cursor:pointer;
+          box-shadow:0 0 18px rgba(145,132,217,.25);transition:all .2s;">
+          ⚔ New Game
+        </button>
       </div>`;
     boardArea.appendChild(wo);
   }
@@ -1290,13 +1329,16 @@ function renderPaper(){
 
   const plist = document.createElement('div');
   plist.className = 'players-list';
+  const monoElementPlayers = new Map((G.monoElementBonus||[]).map(r=>[r.playerIdx, r.element]));
   G.players.forEach(p => {
     const isActive = p.idx === G.currentPlayer;
     const chip = document.createElement('div');
     chip.className = 'player-chip' + (isActive ? ' active' : '');
+    const monoEl = monoElementPlayers.get(p.idx);
+    const monoTag = monoEl ? `<span class="chip-mono-badge" title="Mono-Element Mastery: ${monoEl}">⭐</span><span class="chip-mono-label" style="color:${TYPE_COLOR[monoEl]||'#ffc840'}">${monoEl}</span>` : '';
     chip.innerHTML = `<div class="chip-dot">${playerSigilSVG(p, 18)}</div>
       <div class="chip-info">
-        <div class="chip-name" style="color:${p.idx===G.currentPlayer?p.color:'var(--parch-ink)'}">${p.name}${isActive ? ' ◄' : ''}</div>
+        <div class="chip-name" style="color:${p.idx===G.currentPlayer?p.color:'var(--parch-ink)'}">${p.name}${isActive ? ' ◄' : ''}${monoTag}</div>
         <div class="chip-sub">${p.tileCount} tiles · ${p.handSize}/5 hand · ${p.stationedCount} stationed</div>
       </div>
       <div class="chip-mana">
@@ -1412,6 +1454,12 @@ function doEndGame(){
   hideEndGameModal();
   if(ws && ws.readyState === WebSocket.OPEN){
     ws.send(JSON.stringify({ action: 'end_game' }));
+  }
+}
+
+function doNewGame(){
+  if(ws && ws.readyState === WebSocket.OPEN){
+    ws.send(JSON.stringify({ action: 'new_game' }));
   }
 }
 

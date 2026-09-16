@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.12';
+const SERVER_VERSION = 'v1.0.19';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -29,87 +29,108 @@ const TYPE_WEAK   = { Light:'Nature', Dark:'Light', Arcane:'Dark', Undead:'Arcan
 // Master monster roster
 const ROSTER = [
   // ── Light ──
-  {id:'solar_knight',   type:'Light',  name:'Solar Knight',   arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
-  {id:'dawnguard',      type:'Light',  name:'Dawnguard',      arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
-  {id:'high_paladin',   type:'Light',  name:'High Paladin',   arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'ardent_saint',   type:'Light',  name:'Ardent Saint',   arch:'spec',  hp:65, maxHp:65, atk:15, def:15, cost:20, gen:5, isSpecial:true,
+  {id:'solar_knight',   type:'Light',  name:'Solar Knight',   arch:'assailant', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'dawnguard',      type:'Light',  name:'Dawnguard',      arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
+  {id:'high_paladin',   type:'Light',  name:'High Paladin',   arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'ardent_saint',   type:'Light',  name:'Ardent Saint',   arch:'ascendant', hp:65, maxHp:65, atk:15, def:15, cost:20, gen:5, isSpecial:true,
     special:'Aura of Renewal',  specialDesc:'Heal all friendly stationed monsters 5 HP/turn',
     condition:'healed4', conditionDesc:'Healed 4+ monsters this game'},
   // Light — new
-  {id:'dawn_striker',   type:'Light',  name:'Dawn Striker',   arch:'glass', hp:25, maxHp:25, atk:36, def:6,  cost:8,  gen:2, isSpecial:false},
-  {id:'radiant_lancer', type:'Light',  name:'Radiant Lancer', arch:'bal',   hp:30, maxHp:30, atk:28, def:10, cost:10, gen:2, isSpecial:false},
-  {id:'sunfire_herald', type:'Light',  name:'Sunfire Herald', arch:'bal',   hp:40, maxHp:40, atk:22, def:11, cost:10, gen:2, isSpecial:false},
+  {id:'dawn_striker',   type:'Light',  name:'Dawn Striker',   arch:'assailant', hp:25, maxHp:25, atk:36, def:6,  cost:8,  gen:2, isSpecial:false},
+  {id:'radiant_lancer', type:'Light',  name:'Radiant Lancer', arch:'vanguard',  hp:30, maxHp:30, atk:28, def:10, cost:10, gen:2, isSpecial:false},
+  {id:'sunfire_herald', type:'Light',  name:'Sunfire Herald', arch:'vanguard',  hp:40, maxHp:40, atk:22, def:11, cost:10, gen:2, isSpecial:false},
 
   // ── Dark ──
-  {id:'nightshard',     type:'Dark',   name:'Nightshard',     arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
-  {id:'void_sentinel',  type:'Dark',   name:'Void Sentinel',  arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
-  {id:'shadow_paladin', type:'Dark',   name:'Shadow Paladin', arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'succubus',       type:'Dark',   name:'Succubus',       arch:'spec',  hp:45, maxHp:45, atk:32, def:10, cost:20, gen:5, isSpecial:true,
+  {id:'nightshard',     type:'Dark',   name:'Nightshard',     arch:'assailant', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'void_sentinel',  type:'Dark',   name:'Void Sentinel',  arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
+  {id:'shadow_paladin', type:'Dark',   name:'Shadow Paladin', arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'succubus',       type:'Dark',   name:'Succubus',       arch:'ascendant', hp:45, maxHp:45, atk:32, def:10, cost:20, gen:5, isSpecial:true,
     special:'Mana Drain', specialDesc:'Win a battle → steal 10 Mana from loser\'s owner',
     condition:'moreManaThanAll', conditionDesc:'Have more Mana than every other player'},
   // Dark — new
-  {id:'void_reaper',    type:'Dark',   name:'Void Reaper',    arch:'glass', hp:18, maxHp:18, atk:42, def:4,  cost:8,  gen:2, isSpecial:false},
-  {id:'dusk_blade',     type:'Dark',   name:'Dusk Blade',     arch:'bal',   hp:30, maxHp:30, atk:29, def:8,  cost:10, gen:2, isSpecial:false},
-  {id:'umbral_stalker', type:'Dark',   name:'Umbral Stalker', arch:'bal',   hp:42, maxHp:42, atk:21, def:11, cost:10, gen:2, isSpecial:false},
+  {id:'void_reaper',    type:'Dark',   name:'Void Reaper',    arch:'assailant', hp:18, maxHp:18, atk:42, def:4,  cost:8,  gen:2, isSpecial:false},
+  {id:'dusk_blade',     type:'Dark',   name:'Dusk Blade',     arch:'vanguard',  hp:30, maxHp:30, atk:29, def:8,  cost:10, gen:2, isSpecial:false},
+  {id:'umbral_stalker', type:'Dark',   name:'Umbral Stalker', arch:'vanguard',  hp:42, maxHp:42, atk:21, def:11, cost:10, gen:2, isSpecial:false},
 
   // ── Arcane ──
-  {id:'sorcerer',       type:'Arcane', name:'Sorcerer',       arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
-  {id:'rune_priestess', type:'Arcane', name:'Rune Priestess', arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
-  {id:'arch_mage',      type:'Arcane', name:'Arch Mage',      arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'arcane_arbiter', type:'Arcane', name:'Arcane Arbiter', arch:'spec',  hp:40, maxHp:40, atk:27, def:15, cost:20, gen:5, isSpecial:true,
+  {id:'sorcerer',       type:'Arcane', name:'Sorcerer',       arch:'assailant', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'rune_priestess', type:'Arcane', name:'Rune Priestess', arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
+  {id:'arch_mage',      type:'Arcane', name:'Arch Mage',      arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'arcane_arbiter', type:'Arcane', name:'Arcane Arbiter', arch:'ascendant', hp:40, maxHp:40, atk:27, def:15, cost:20, gen:5, isSpecial:true,
     special:'Nullify', specialDesc:'Cancel type modifier once per battle (forces 1× neutral)',
     condition:'changed3', conditionDesc:'Changed tile element 3+ times this game'},
   // Arcane — new
-  {id:'spell_wraith',   type:'Arcane', name:'Spell Wraith',   arch:'glass', hp:22, maxHp:22, atk:38, def:5,  cost:8,  gen:2, isSpecial:false},
-  {id:'runic_duelist',  type:'Arcane', name:'Runic Duelist',  arch:'bal',   hp:32, maxHp:32, atk:27, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'mana_weaver',    type:'Arcane', name:'Mana Weaver',    arch:'bal',   hp:38, maxHp:38, atk:23, def:12, cost:10, gen:2, isSpecial:false},
+  {id:'spell_wraith',   type:'Arcane', name:'Spell Wraith',   arch:'assailant', hp:22, maxHp:22, atk:38, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'runic_duelist',  type:'Arcane', name:'Runic Duelist',  arch:'vanguard',  hp:32, maxHp:32, atk:27, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'mana_weaver',    type:'Arcane', name:'Mana Weaver',    arch:'vanguard',  hp:38, maxHp:38, atk:23, def:12, cost:10, gen:2, isSpecial:false},
 
   // ── Undead ──
-  {id:'bone_wraith',    type:'Undead', name:'Bone Wraith',    arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
-  {id:'death_knight',   type:'Undead', name:'Death Knight',   arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
-  {id:'shade_walker',   type:'Undead', name:'Shade Walker',   arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'demon_lord',     type:'Undead', name:'Demon Lord',     arch:'spec',  hp:85, maxHp:85, atk:17, def:8,  cost:20, gen:5, isSpecial:true,
+  {id:'bone_wraith',    type:'Undead', name:'Bone Wraith',    arch:'assailant', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'death_knight',   type:'Undead', name:'Death Knight',   arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
+  {id:'shade_walker',   type:'Undead', name:'Shade Walker',   arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'demon_lord',     type:'Undead', name:'Demon Lord',     arch:'ascendant', hp:85, maxHp:85, atk:17, def:8,  cost:20, gen:5, isSpecial:true,
     special:'Last Rite', specialDesc:'When HP hits 0, survive at 15 HP instead (once per game)',
     condition:'lost4', conditionDesc:'Had 4+ monsters destroyed this game', lastRiteUsed:false},
   // Undead — new
-  {id:'grave_specter',  type:'Undead', name:'Grave Specter',  arch:'glass', hp:18, maxHp:18, atk:42, def:4,  cost:8,  gen:2, isSpecial:false},
-  {id:'cursed_revenant',type:'Undead', name:'Cursed Revenant',arch:'bal',   hp:33, maxHp:33, atk:26, def:10, cost:10, gen:2, isSpecial:false},
-  {id:'plague_herald',  type:'Undead', name:'Plague Herald',  arch:'bal',   hp:40, maxHp:40, atk:22, def:11, cost:10, gen:2, isSpecial:false},
+  {id:'grave_specter',  type:'Undead', name:'Grave Specter',  arch:'assailant', hp:18, maxHp:18, atk:42, def:4,  cost:8,  gen:2, isSpecial:false},
+  {id:'cursed_revenant',type:'Undead', name:'Cursed Revenant',arch:'vanguard',  hp:33, maxHp:33, atk:26, def:10, cost:10, gen:2, isSpecial:false},
+  {id:'plague_herald',  type:'Undead', name:'Plague Herald',  arch:'vanguard',  hp:40, maxHp:40, atk:22, def:11, cost:10, gen:2, isSpecial:false},
 
   // ── Beast ──
-  {id:'razorclaw',      type:'Beast',  name:'Razorclaw',      arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
-  {id:'iron_hide',      type:'Beast',  name:'Iron Hide',      arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
-  {id:'pack_hunter',    type:'Beast',  name:'Pack Hunter',    arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'red_dragon',     type:'Beast',  name:'Red Dragon',     arch:'spec',  hp:35, maxHp:35, atk:40, def:9,  cost:20, gen:5, isSpecial:true,
+  {id:'razorclaw',      type:'Beast',  name:'Razorclaw',      arch:'assailant', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'iron_hide',      type:'Beast',  name:'Iron Hide',      arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
+  {id:'pack_hunter',    type:'Beast',  name:'Pack Hunter',    arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'red_dragon',     type:'Beast',  name:'Red Dragon',     arch:'ascendant', hp:35, maxHp:35, atk:40, def:9,  cost:20, gen:5, isSpecial:true,
     special:'Intimidate', specialDesc:'When claiming a tile, adjacent owners pay 5 Mana each',
     condition:'mostMonsters', conditionDesc:'Have the most monsters stationed on board'},
   // Beast — new
-  {id:'feral_striker',  type:'Beast',  name:'Feral Striker',  arch:'glass', hp:22, maxHp:22, atk:38, def:5,  cost:8,  gen:2, isSpecial:false},
-  {id:'blood_mane',     type:'Beast',  name:'Blood Mane',     arch:'bal',   hp:32, maxHp:32, atk:28, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'stoneback',      type:'Beast',  name:'Stoneback',      arch:'bal',   hp:42, maxHp:42, atk:20, def:12, cost:10, gen:2, isSpecial:false},
+  {id:'feral_striker',  type:'Beast',  name:'Feral Striker',  arch:'assailant', hp:22, maxHp:22, atk:38, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'blood_mane',     type:'Beast',  name:'Blood Mane',     arch:'vanguard',  hp:32, maxHp:32, atk:28, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'stoneback',      type:'Beast',  name:'Stoneback',      arch:'vanguard',  hp:42, maxHp:42, atk:20, def:12, cost:10, gen:2, isSpecial:false},
 
   // ── Nature ──
-  {id:'thornling',      type:'Nature', name:'Thornling',      arch:'glass', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
-  {id:'ancient_oak',    type:'Nature', name:'Ancient Oak',    arch:'tanky', hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
-  {id:'grove_warden',   type:'Nature', name:'Grove Warden',   arch:'bal',   hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'world_tree',     type:'Nature', name:'World Tree',     arch:'spec',  hp:55, maxHp:55, atk:22, def:13, cost:20, gen:5, isSpecial:true,
+  {id:'thornling',      type:'Nature', name:'Thornling',      arch:'assailant', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
+  {id:'ancient_oak',    type:'Nature', name:'Ancient Oak',    arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
+  {id:'grove_warden',   type:'Nature', name:'Grove Warden',   arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'world_tree',     type:'Nature', name:'World Tree',     arch:'ascendant', hp:55, maxHp:55, atk:22, def:13, cost:20, gen:5, isSpecial:true,
     special:'Deep Roots', specialDesc:'+1 Mana Gen per Nature tile owner controls',
     condition:'own4Nature', conditionDesc:'Own 4+ Nature tiles currently'},
   // Nature — new
-  {id:'briar_sprite',   type:'Nature', name:'Briar Sprite',   arch:'glass', hp:22, maxHp:22, atk:37, def:6,  cost:8,  gen:2, isSpecial:false},
-  {id:'vine_stalker',   type:'Nature', name:'Vine Stalker',   arch:'bal',   hp:33, maxHp:33, atk:26, def:10, cost:10, gen:2, isSpecial:false},
-  {id:'moss_golem',     type:'Nature', name:'Moss Golem',     arch:'bal',   hp:42, maxHp:42, atk:20, def:12, cost:10, gen:2, isSpecial:false},
+  {id:'briar_sprite',   type:'Nature', name:'Briar Sprite',   arch:'assailant', hp:22, maxHp:22, atk:37, def:6,  cost:8,  gen:2, isSpecial:false},
+  {id:'vine_stalker',   type:'Nature', name:'Vine Stalker',   arch:'vanguard',  hp:33, maxHp:33, atk:26, def:10, cost:10, gen:2, isSpecial:false},
+  {id:'moss_golem',     type:'Nature', name:'Moss Golem',     arch:'vanguard',  hp:42, maxHp:42, atk:20, def:12, cost:10, gen:2, isSpecial:false},
+
+  // ── Dual-Element Rares ──
+  // Gets BOTH elements' advantages: max(mod1, mod2). Mutual weaknesses cancel → no weak sides.
+  {id:'seraphim',         type:'Light',  type2:'Arcane', name:'Luminar Operative', arch:'rare', rarity:'rare',
+   hp:35, maxHp:35, atk:22, def:12, cost:26, gen:4, isSpecial:false,
+   rareDesc:'2× vs Dark & Undead · No weaknesses'},
+  {id:'hex_stalker',      type:'Undead', type2:'Beast',  name:'Hex Stalker',      arch:'rare', rarity:'rare',
+   hp:42, maxHp:42, atk:20, def:11, cost:25, gen:3, isSpecial:false,
+   rareDesc:'2× vs Beast & Nature · No weaknesses'},
+  {id:'verdant_sorcerer', type:'Arcane', type2:'Nature', name:'Verdant Sorcerer', arch:'rare', rarity:'rare',
+   hp:30, maxHp:30, atk:24, def:12, cost:27, gen:4, isSpecial:false,
+   rareDesc:'2× vs Light & Undead · No weaknesses'},
 ];
 
 const SPECIALS = ROSTER.filter(m => m.isSpecial);
-const NORMALS  = ROSTER.filter(m => !m.isSpecial);
+const RARES    = ROSTER.filter(m => m.rarity === 'rare');
+const NORMALS  = ROSTER.filter(m => !m.isSpecial && !m.rarity);
 
-// Starter sets (indices into NORMALS by id)
+// Starter sets — 6 sets × 5 cards each (no Mana cost during setup phase)
 const STARTER_SETS = {
-  A: { name:'Aggressive', theme:'Dark',   desc:'2× Dark Glass-cannon + 1× Dark Balanced',      monsters:['nightshard','nightshard','shadow_paladin'] },
-  B: { name:'Defensive',  theme:'Light',  desc:'2× Light Tanky + 1× Light Balanced',           monsters:['dawnguard','dawnguard','high_paladin'] },
-  C: { name:'Balanced',   theme:'Arcane', desc:'3× Arcane Balanced — easiest for new players',  monsters:['arch_mage','arch_mage','arch_mage'] },
-  D: { name:'Versatile',  theme:'Mixed',  desc:'1× Undead Tanky + 1× Beast Glass + 1× Nature Bal', monsters:['death_knight','razorclaw','grove_warden'] },
+  A: { name:'The Cabal',        theme:'Dark / Undead / Arcane',  desc:'2 Assailants + 2 Guardians + 1 Vanguard — shadow magic trinity',
+       monsters:['nightshard','grave_specter','void_sentinel','rune_priestess','mana_weaver'] },
+  B: { name:'The Warpack',      theme:'Dark / Beast / Undead',   desc:'2 Assailants + 2 Guardians + 1 Vanguard — primal hunter force',
+       monsters:['void_reaper','feral_striker','iron_hide','death_knight','cursed_revenant'] },
+  C: { name:'The Order',        theme:'Light / Arcane / Nature', desc:'2 Assailants + 2 Guardians + 1 Vanguard — holy nature alliance',
+       monsters:['dawn_striker','spell_wraith','dawnguard','ancient_oak','vine_stalker'] },
+  D: { name:'The Arcane Watch', theme:'Arcane',                  desc:'1 Assailant + 1 Guardian + 3 Vanguards — versatile arcane mastery',
+       monsters:['spell_wraith','rune_priestess','arch_mage','runic_duelist','mana_weaver'] },
+  E: { name:'Divine Guard',     theme:'Light',                   desc:'2 Guardians + 1 Assailant + 2 Vanguards — impenetrable light fortress',
+       monsters:['dawnguard','dawnguard','dawn_striker','radiant_lancer','sunfire_herald'] },
+  F: { name:'Chaos Legion',     theme:'Dark',                    desc:'3 Assailants + 2 Vanguards — pure dark aggression',
+       monsters:['nightshard','nightshard','void_reaper','dusk_blade','umbral_stalker'] },
 };
 
 const PLAYER_COLORS = ['#e05252','#5ca8e0','#5dc97d','#e0b050','#c07fd8','#60cdc0'];
@@ -148,7 +169,13 @@ function shuffle(arr) {
 function pickShopOffers() {
   const pool = [...NORMALS];
   shuffle(pool);
-  return pool.slice(0, 5).map(m => ({ ...m, iid: ++_iid }));
+  const offers = pool.slice(0, 5).map(m => ({ ...m, iid: ++_iid }));
+  // ~10% chance: replace one slot with a rare dual-element monster
+  if (RARES.length > 0 && Math.random() < 0.10) {
+    const rare = RARES[rand(0, RARES.length - 1)];
+    offers[rand(0, 4)] = { ...rare, iid: ++_iid };
+  }
+  return offers;
 }
 
 function buildBoard() {
@@ -193,12 +220,15 @@ function getLocalIp() {
 
 // ─── GAME STATE ──────────────────────────────────────────────────────────────
 
-let G = freshGame(); // start in lobby immediately so players see the Join screen
+// ─── ROOM REGISTRY ───────────────────────────────────────────────────────────
+// Multi-room support: each room is an independent game state.
+const rooms = new Map(); // roomCode → game state
+let G = null;            // current room context — set at start of each handler call
 
-function freshGame() {
+function freshGame(roomCode) {
   return {
     phase: 'lobby',          // lobby | shop | stalemate | roll | resolve:* | game_over
-    roomCode: generateRoomCode(),
+    roomCode: roomCode || generateRoomCode(),
     players: [],             // see addPlayer()
     board: buildBoard(),
     currentPlayer: 0,        // index
@@ -215,6 +245,14 @@ function freshGame() {
     setupTurnIdx: 0,         // total setup turns taken (0 to 3*N-1)
     setupTotalTurns: 0,      // = 3 * N, set when setup starts
   };
+}
+
+// Defer a room-scoped action — safe across async gaps (setTimeout loses G closure)
+function scheduleRoomAction(roomCode, fn, ms) {
+  setTimeout(() => {
+    G = rooms.get(roomCode);
+    if (G) fn();
+  }, ms);
 }
 
 function addPlayer(name, color, starterSet) {
@@ -240,6 +278,7 @@ function addPlayer(name, color, starterSet) {
 }
 
 function log(text) {
+  if (!G) return;
   G.events.unshift({ text, ts: Date.now() });
   if (G.events.length > 40) G.events.pop();
 }
@@ -275,19 +314,34 @@ function canUseSpecial(playerIdx, monster) {
 
 function tileEffectOnDefender(tile, defender) {
   if (!tile.element || !defender) return 1;
-  if (tile.element === defender.type) return 1.15;
-  if (TYPE_STRONG[tile.element] === defender.type) return 0.85; // tile's type beats defender
+  const defTypes = [defender.type, ...(defender.type2 ? [defender.type2] : [])];
+  // Bonus: tile element matches any of the defender's types
+  if (defTypes.includes(tile.element)) return 1.15;
+  // Debuff: only for single-element monsters where tile beats the one type
+  if (!defender.type2 && TYPE_STRONG[tile.element] === defender.type) return 0.85;
+  // Dual-element: mutual weakness coverage means no debuff
+  return 1;
+}
+
+function _singleTypeMod(atkType, defType) {
+  if (TYPE_STRONG[atkType] === defType) return 2;
+  if (TYPE_WEAK[atkType]   === defType) return 0.5;
   return 1;
 }
 
 function typeMultiplier(attacker, defender, nullify = false) {
   if (nullify) return 1;
-  if (TYPE_STRONG[attacker.type] === defender.type) return 2;
-  if (TYPE_WEAK[attacker.type]   === defender.type) return 0.5;
-  return 1;
+  // Dual-element attacker: take the best modifier from either element
+  if (attacker.type2) {
+    return Math.max(
+      _singleTypeMod(attacker.type,  defender.type),
+      _singleTypeMod(attacker.type2, defender.type)
+    );
+  }
+  return _singleTypeMod(attacker.type, defender.type);
 }
 
-function doStrike(attacker, defender, tile, nullify = false) {
+function doStrike(attacker, defender, tile, nullify = false, bonusRun = false, monoBuff = false) {
   const tileEffect = tileEffectOnDefender(tile, defender);
   const defStat = Math.round(defender.def * tileEffect);
   const baseDmg = Math.max(1, attacker.atk - defStat);
@@ -298,6 +352,14 @@ function doStrike(attacker, defender, tile, nullify = false) {
     dmg = Math.round(dmg * 1.25);
     attacker.charm = false;
     log(`⚡ Battle Charm activated on ${attacker.name}! +25% damage`);
+  }
+  if (bonusRun) {
+    dmg = Math.round(dmg * 1.20);
+    log(`🔥 Tile Synergy! ${attacker.name} strikes for +20% damage`);
+  }
+  if (monoBuff) {
+    dmg = Math.round(dmg * 1.20);
+    log(`⭐ Mono-Element Mastery! ${attacker.name} strikes for +20% damage`);
   }
   return Math.max(1, dmg);
 }
@@ -320,7 +382,9 @@ function resolveBattle(attackerM, defenderM, tile) {
 
   let defDmg = 0;
   if (defenderM.hp > 0) {
-    defDmg = doStrike(defenderM, attackerM, tile, nullify);
+    const defBonus = bonusTileSet().has(tile.pos);
+    const defMonoBuff = monoElementPlayerSet().has(tile.ownerId);
+    defDmg = doStrike(defenderM, attackerM, tile, nullify, defBonus, defMonoBuff);
     attackerM.hp -= defDmg;
     if (attackerM.hp <= 0 && attackerM.id === 'demon_lord' && !attackerM.lastRiteUsed) {
       attackerM.hp = 15;
@@ -336,6 +400,81 @@ function resolveBattle(attackerM, defenderM, tile) {
   else outcome = 'stalemate';
 
   return { atkDmg, defDmg, outcome };
+}
+
+// ─── CONSECUTIVE TILE BONUS ───────────────────────────────────────────────────
+// Returns all qualifying runs of 3 consecutive same-element tiles (circular board)
+// owned by the same player, each having a stationed monster whose type matches the element.
+function getBonusRuns() {
+  if (!G || !G.board) return [];
+  const n = G.board.length;
+  const runs = [];
+  const seen = new Set();
+  for (let i = 0; i < n; i++) {
+    const t0 = G.board[i];
+    const t1 = G.board[(i + 1) % n];
+    const t2 = G.board[(i + 2) % n];
+    if (t0.kind !== 'element' || t1.kind !== 'element' || t2.kind !== 'element') continue;
+    if (t0.ownerId == null) continue;
+    if (t0.ownerId !== t1.ownerId || t0.ownerId !== t2.ownerId) continue;
+    if (t0.element !== t1.element || t0.element !== t2.element) continue;
+    if (!t0.monsterInstance || t0.monsterInstance.type !== t0.element) continue;
+    if (!t1.monsterInstance || t1.monsterInstance.type !== t1.element) continue;
+    if (!t2.monsterInstance || t2.monsterInstance.type !== t2.element) continue;
+    const key = [i, (i + 1) % n, (i + 2) % n].sort((a, b) => a - b).join(',');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    runs.push({ playerIdx: t0.ownerId, element: t0.element, tiles: [i, (i + 1) % n, (i + 2) % n] });
+  }
+  return runs;
+}
+
+// Set of tile positions currently inside any bonus run
+function bonusTileSet() {
+  const s = new Set();
+  for (const r of getBonusRuns()) r.tiles.forEach(t => s.add(t));
+  return s;
+}
+
+// ─── MONO-ELEMENT MASTERY ─────────────────────────────────────────────────────
+// A player qualifies if ALL of the following share exactly one element:
+//   • every monster in their hand (dual-type rares disqualify)
+//   • every monster stationed on the board by them (dual-type rares disqualify)
+//   • every elemental tile they own
+// Must own at least 1 elemental tile AND have at least 1 monster (hand or stationed).
+function getMonoElementBonus() {
+  if (!G || !G.board || !G.players) return [];
+  const result = [];
+  for (const p of G.players) {
+    // Gather element tags; null = dual-type (instant disqualify)
+    const tags = [];
+    for (const m of p.hand) {
+      tags.push(m.type2 ? null : m.type);
+    }
+    for (const t of G.board) {
+      if (t.ownerId !== p.idx || !t.monsterInstance) continue;
+      const mi = t.monsterInstance;
+      tags.push(mi.type2 ? null : mi.type);
+    }
+    const ownedElemTiles = G.board.filter(t => t.ownerId === p.idx && t.kind === 'element');
+    // Must have at least 1 elemental tile AND at least 1 monster
+    if (ownedElemTiles.length === 0 || tags.length === 0) continue;
+    // Dual-type disqualifies
+    if (tags.includes(null)) continue;
+    // All tile elements must match
+    for (const t of ownedElemTiles) tags.push(t.element);
+    const unique = new Set(tags);
+    if (unique.size !== 1) continue;
+    result.push({ playerIdx: p.idx, element: [...unique][0] });
+  }
+  return result;
+}
+
+// Set of playerIdx values currently holding Mono-Element Mastery
+function monoElementPlayerSet() {
+  const s = new Set();
+  for (const r of getMonoElementBonus()) s.add(r.playerIdx);
+  return s;
 }
 
 // ─── PASSIVE INCOME / SPECIALS ────────────────────────────────────────────────
@@ -374,7 +513,46 @@ function collectPassiveIncome(playerIdx) {
     }
   }
 
+  // Consecutive tile bonus — heal +1 HP to each monster in a qualifying run
+  const bonusRuns = getBonusRuns();
+  const healedThisTurn = new Set();
+  for (const run of bonusRuns) {
+    if (run.playerIdx !== playerIdx) continue;
+    for (const tPos of run.tiles) {
+      if (healedThisTurn.has(tPos)) continue;
+      healedThisTurn.add(tPos);
+      const bt = G.board[tPos];
+      if (bt && bt.monsterInstance) {
+        bt.monsterInstance.hp = Math.min(bt.monsterInstance.maxHp, bt.monsterInstance.hp + 1);
+      }
+    }
+  }
+  if (healedThisTurn.size > 0) {
+    log(`🔥 ${p.name}'s Tile Synergy heals ${healedThisTurn.size} monster${healedThisTurn.size > 1 ? 's' : ''} +1 HP`);
+  }
+
+  // Mono-Element Mastery — heal all stationed monsters +1 HP if player qualifies
+  const monoBonus = getMonoElementBonus().find(r => r.playerIdx === playerIdx);
+  if (monoBonus) {
+    let monoHealCount = 0;
+    for (const t of G.board) {
+      if (t.ownerId !== playerIdx || !t.monsterInstance) continue;
+      t.monsterInstance.hp = Math.min(t.monsterInstance.maxHp, t.monsterInstance.hp + 1);
+      monoHealCount++;
+    }
+    if (monoHealCount > 0) {
+      log(`⭐ ${p.name}'s Mono-Element Mastery (${monoBonus.element}) heals ${monoHealCount} monster${monoHealCount > 1 ? 's' : ''} +1 HP`);
+    }
+  }
+
+  const MANA_SOFT_CAP = 150;
+  if (p.mana >= MANA_SOFT_CAP) {
+    earned = Math.max(5, Math.floor(earned * 0.5)); // still earn baseline but halved above cap
+  }
   p.mana += earned;
+  if (p.mana > MANA_SOFT_CAP && p.mana - earned < MANA_SOFT_CAP) {
+    log(`⚠️ ${p.name} is over the ${MANA_SOFT_CAP}✦ soft cap — income reduced`);
+  }
   log(`✦ ${p.name} earns ${earned} Mana (now ${p.mana})`);
 }
 
@@ -468,6 +646,8 @@ function publicState() {
     setupRound: G.setupRound || 1,
     setupTurnIdx: G.setupTurnIdx || 0,
     setupTotalTurns: G.setupTotalTurns || 0,
+    bonusRuns: getBonusRuns(),
+    monoElementBonus: getMonoElementBonus(),
     serverVersion: SERVER_VERSION,
   };
 }
@@ -482,7 +662,13 @@ function startShopPhase() {
   p.lastDiceRoll = null;  // reset so stale roll values don't trigger false animations
   G.lastBattle = null;    // clear battle result so it doesn't persist across turns
   G.pendingAttackerMonster = null; // clear attacker preview
-  collectPassiveIncome(G.currentPlayer);
+  // Round 1 grace period — monsters placed during setup shouldn't immediately earn;
+  // mana generation starts from round 2 onward (turnCount >= playerCount)
+  if (G.turnCount >= G.players.length) {
+    collectPassiveIncome(G.currentPlayer);
+  } else {
+    log(`⏳ ${G.players[G.currentPlayer].name} — income starts Round 2`);
+  }
   G.shopOffers = pickShopOffers(); // always generate offers (needed for stalemate buy option too)
 
   // Stalemate check — if this player has a pending stalemate, skip normal shop/roll
@@ -598,7 +784,7 @@ function resolveRoll(playerIdx) {
     log(`✦ ${p.name} landed on Mana Well: +10 Mana`);
     G.phase = 'roll';
     broadcast();
-    setTimeout(advanceTurn, 1500);
+    scheduleRoomAction(G.roomCode, advanceTurn, 1500);
     return;
   }
 
@@ -662,14 +848,38 @@ const handlers = {
 
   // ── Lobby ──────────────────────────────────────────────────────────────────
 
+  // Board opens and claims (or creates) a room
+  board_connect(ws, conn, data) {
+    const code = String(data.roomCode || '').toUpperCase().trim();
+    let room;
+    if (code && rooms.has(code)) {
+      room = rooms.get(code);
+    } else {
+      room = freshGame(code || undefined);
+      rooms.set(room.roomCode, room);
+    }
+    conn.roomCode = room.roomCode;
+    conn.isBoard = true;
+    G = room;
+    broadcast();
+  },
+
   join(ws, conn, data) {
-    if (!G) G = freshGame();
     const code = String(data.roomCode || '').toUpperCase().trim();
     const name  = String(data.name  || 'Player').slice(0, 18);
 
+    // Look up room by code; fall back to first lobby room if only one exists
+    let room = rooms.get(code);
+    if (!room && !code && rooms.size === 1) {
+      room = [...rooms.values()][0];
+    }
+    if (!room) return sendError(ws, 'Room not found — ask the host for the room code');
+
+    G = room;
+    conn.roomCode = room.roomCode;
+
     // During active game: allow name-based manual rejoin for disconnected players
     if (G.phase !== 'lobby') {
-      if (code !== G.roomCode) return sendError(ws, 'Invalid room code');
       const disc = G.players.find(p => !p.isConnected && p.name.toLowerCase() === name.toLowerCase());
       if (disc) {
         conn.playerIdx = disc.idx;
@@ -685,8 +895,7 @@ const handlers = {
     }
 
     if (G.players.length >= 6) return sendError(ws, 'Game full (max 6 players)');
-    if (code !== G.roomCode) return sendError(ws, 'Invalid room code');
-    const set   = ['A','B','C','D'].includes(data.starterSet) ? data.starterSet : 'C';
+    const set   = ['A','B','C','D','E','F'].includes(data.starterSet) ? data.starterSet : 'C';
     const color = PLAYER_COLORS[G.players.length];
     const p = addPlayer(name, color, set);
     G.players.push(p);
@@ -698,18 +907,24 @@ const handlers = {
   },
 
   rejoin(ws, conn, data) {
-    if (!G) return sendError(ws, 'No game in progress');
     const key = String(data.sessionKey || '');
-    const p = G.players.find(pl => pl.sessionKey === key);
-    if (!p) return sendError(ws, 'Session expired — please rejoin');
-    conn.playerIdx = p.idx;
-    conn.sessionKey = p.sessionKey;
-    p.isConnected = true;
-    if (G.pausedFor && G.pausedFor.idx === p.idx) {
+    // Search all rooms for this session key
+    let foundRoom = null, foundPlayer = null;
+    for (const [, room] of rooms) {
+      const pl = room.players.find(p => p.sessionKey === key);
+      if (pl) { foundRoom = room; foundPlayer = pl; break; }
+    }
+    if (!foundRoom || !foundPlayer) return sendError(ws, 'Session expired — please rejoin');
+    G = foundRoom;
+    conn.roomCode = foundRoom.roomCode;
+    conn.playerIdx = foundPlayer.idx;
+    conn.sessionKey = foundPlayer.sessionKey;
+    foundPlayer.isConnected = true;
+    if (G.pausedFor && G.pausedFor.idx === foundPlayer.idx) {
       G.pausedFor = null;
-      log(`✅ ${p.name} reconnected — game resumed`);
+      log(`✅ ${foundPlayer.name} reconnected — game resumed`);
     } else {
-      log(`🔄 ${p.name} reconnected`);
+      log(`🔄 ${foundPlayer.name} reconnected`);
     }
     broadcast();
   },
@@ -734,8 +949,27 @@ const handlers = {
   },
 
   end_game(ws, conn, data) {
+    if (!G) return;
+    const code = G.roomCode;
     log(`🔄 Game ended by host — returning to lobby`);
-    G = freshGame();
+    G = freshGame(code);
+    rooms.set(code, G);
+    broadcast();
+  },
+
+  new_game(ws, conn, data) {
+    if (!G) return;
+    const code = G.roomCode;
+    log(`🔄 New game — returning to lobby`);
+    G = freshGame(code);
+    rooms.set(code, G);
+    // Update all room-member connections to the new G
+    for (const [, c] of clients) {
+      if (c.roomCode === code) {
+        c.playerIdx = null;
+        c.sessionKey = null;
+      }
+    }
     broadcast();
   },
 
@@ -941,7 +1175,7 @@ const handlers = {
     }
     G.phase = 'resolve:battle_result';
     broadcast();
-    setTimeout(advanceTurn, 7000);
+    scheduleRoomAction(G.roomCode, advanceTurn, 3500);
   },
 
   // Preview which attacker the player is hovering — broadcasts to board in real-time
@@ -1104,7 +1338,7 @@ const handlers = {
     log(`💚 ${p.name} healed ${m.name} for ${amount} HP at Healing tile (−${cost}✦)`);
     G.phase = 'resolve:heal_tile'; // stays for UI, cleared on skip
     broadcast();
-    setTimeout(advanceTurn, 800);
+    scheduleRoomAction(G.roomCode, advanceTurn, 800);
   },
 
   heal_tile_skip(ws, conn, data) {
@@ -1355,8 +1589,8 @@ function serveStatic(req, res) {
     res.end(JSON.stringify({
       status: 'ok',
       version: SERVER_VERSION,
-      phase: G ? G.phase : 'unknown',
-      players: G ? G.players.length : 0,
+      rooms: rooms.size,
+      roomList: [...rooms.entries()].map(([code, r]) => ({ code, phase: r.phase, players: r.players.length })),
     }));
     return;
   }
@@ -1391,11 +1625,14 @@ function sendError(socket, msg) {
   wsSend(socket, { type:'error', message: msg });
 }
 
-// Redefine broadcast to work with raw sockets
+// Redefine broadcast to work with raw sockets — only sends to clients in the current room
 function broadcast(extra = {}) {
+  if (!G) return;
+  const roomCode = G.roomCode;
   const gs = publicState();
   for (const [socket, conn] of clients) {
     if (socket.destroyed) continue;
+    if (conn.roomCode !== roomCode) continue;
     const msg = { type:'state', game: gs, ...extra };
     if (conn.playerIdx !== null && conn.playerIdx !== undefined) {
       const p = G && G.players[conn.playerIdx];
@@ -1422,12 +1659,11 @@ server.on('upgrade', (req, socket, head) => {
   if (req.headers['upgrade'] !== 'websocket') { socket.destroy(); return; }
   if (!wsHandshake(socket, req)) return;
 
-  const conn = { playerIdx: null, buf: Buffer.alloc(0) };
+  const conn = { playerIdx: null, sessionKey: null, roomCode: null, isBoard: false, buf: Buffer.alloc(0) };
   clients.set(socket, conn);
 
-  // Send current state on connect
-  const initMsg = { type:'state', game: G ? publicState() : null };
-  wsSend(socket, initMsg);
+  // Send a ready ping — client sends board_connect or join to get room state
+  wsSend(socket, { type: 'ready', rooms: [...rooms.keys()] });
 
   socket.on('data', (chunk) => {
     conn.buf = Buffer.concat([conn.buf, chunk]);
@@ -1453,6 +1689,10 @@ server.on('upgrade', (req, socket, head) => {
       const handler = handlers[action];
       if (!handler) { sendError(socket, 'Unknown action: ' + action); continue; }
 
+      // Set G context for this request from the connection's room
+      if (conn.roomCode) G = rooms.get(conn.roomCode) || null;
+      else G = null;
+
       try {
         handler(socket, conn, data);
       } catch (err) {
@@ -1465,7 +1705,9 @@ server.on('upgrade', (req, socket, head) => {
   function handleDisconnect() {
     const conn = clients.get(socket);
     clients.delete(socket);
-    if (!conn || !G) return;
+    if (!conn || !conn.roomCode) return;
+    G = rooms.get(conn.roomCode);
+    if (!G) return;
 
     if (G.phase === 'lobby' && conn.playerIdx !== null && conn.playerIdx !== undefined) {
       // In lobby: remove the player slot entirely
