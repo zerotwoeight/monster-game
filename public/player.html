@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.4.16</title>
+<title>Summoners Gambit — Player v0.4.17</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -1187,7 +1187,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.16</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.17</div>
     </div>
 
     <div class="room-code-group">
@@ -1259,7 +1259,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.16</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.17</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -2214,7 +2214,8 @@ function renderWildCardPick() {
   for (const card of cards) {
     const ts = TIER_STYLE[card.tier];
     const canAfford = me.mana >= card.cost;
-    const art = WILD_CARD_ART[card.id] || '';
+    const svgFallback = WILD_CARD_ART[card.id] || '';
+    const art = `<div style="position:relative;width:54px;height:54px">${svgFallback}<img src="/img/wildcards/wc-${card.id}.png" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'"></div>`;
     cardsHtml += `<div class="wc-card${canAfford ? '' : ' wc-disabled'}"
       style="border-color:${ts.color};box-shadow:${canAfford ? `0 0 12px ${ts.glow}` : 'none'}"
       onclick="${canAfford ? `doWildCardSelect('${card.tier}','${card.id}')` : ''}">
