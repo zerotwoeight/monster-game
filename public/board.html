@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Monster Board — Game View</title>
+<title>Summon Board — Game View</title>
 <meta name="viewport" content="width=1440">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -77,14 +77,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .tile-idx{position:absolute;top:-17px;left:50%;transform:translateX(-50%);font-size:10px;color:rgba(255,255,255,.85);line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .tile-icon{font-size:17px;margin-top:2px;}
 .tile-name{font-size:10px;font-weight:500;letter-spacing:.03em;text-transform:uppercase;text-align:center;line-height:1.2;margin-top:3px;}
-.tile-monster-row{display:flex;align-items:center;justify-content:center;margin-top:4px;}
+.tile-summon-row{display:flex;align-items:center;justify-content:center;margin-top:4px;}
 .tile-target{position:relative;width:32px;height:32px;flex-shrink:0;}
 .tile-target svg{position:absolute;inset:0;}
 
 /* Player token */
 .player-token{position:absolute;width:36px;height:36px;border-radius:50%;background:rgba(13,14,28,.9);border:2.5px solid;box-shadow:0 0 12px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;top:50%;left:50%;margin-left:-18px;margin-top:-18px;pointer-events:none;z-index:10;}
 /* Token hop: lands with a bounce pop */
-@keyframes tokenHopIn{0%{opacity:.55;transform:var(--tok-pos) scale(1.4);}65%{opacity:1;transform:var(--tok-pos) scale(.94);}100%{transform:var(--tok-pos) scale(1);}}
+@keyframes tokenHopIn{0%{opacity:.55;transform:var(--tok-pos) scale(1.15);}65%{opacity:1;transform:var(--tok-pos) scale(.94);}100%{transform:var(--tok-pos) scale(1);}}
 .player-token.hopping{animation:tokenHopIn 190ms cubic-bezier(.34,1.56,.64,1);}
 
 /* Tile body — wrapper, allows independent transform from tile's radial position */
@@ -92,7 +92,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 /* Tile being visited mid-hop: card springs up 80ms after the token, springy easing */
 .tile.is-visiting{z-index:5!important;}
 .tile.is-visiting .tile-body{animation:tilePop 320ms cubic-bezier(0.68,-0.55,0.27,1.55) 80ms both;}
-@keyframes tilePop{from{transform:scale(1);}to{transform:scale(1.5);}}
+@keyframes tilePop{from{transform:scale(1);}to{transform:scale(1.25);}}
 /* Settled destination tile: static outward shift only (no animation — avoids re-firing on every render) */
 .tile.is-settled{z-index:6!important;}
 .tile.is-settled .tile-body{transform:translateY(-25px);}
@@ -146,8 +146,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .clash-dmg{position:absolute;top:28px;left:50%;transform:translateX(-50%);font-size:17px;font-weight:900;font-family:'Cinzel',serif;color:#e84040;animation:clashDmg 2.5s 1.7s ease both;pointer-events:none;text-shadow:0 0 10px #e8404088;white-space:nowrap;}
 .clash-dmg.zero{color:#888;font-size:13px;}
 
-/* Monster card (board battle view) */
-.board-monster-card{width:130px;height:186px;border-radius:10px;position:relative;overflow:hidden;border:2px solid;flex-shrink:0;}
+/* Summon card (board battle view) */
+.board-summon-card{width:130px;height:186px;border-radius:10px;position:relative;overflow:hidden;border:2px solid;flex-shrink:0;}
 .bmc-art{position:absolute;top:0;left:0;width:100%;height:100%;}
 .bmc-overlay{position:absolute;bottom:0;left:0;right:0;padding:6px 7px 7px;background:linear-gradient(to top,rgba(10,8,25,.97) 0%,rgba(10,8,25,.65) 55%,transparent 100%);}
 .bmc-name{font-size:10px;font-weight:700;font-family:'Cinzel',serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -198,7 +198,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .inspector-tile-num{font-size:10px;color:var(--parch-dim);margin-bottom:2px;}
 .inspector-tile-name{font-size:16px;font-weight:600;margin-bottom:4px;}
 .inspector-tile-desc{font-size:11px;color:var(--parch-sub);line-height:1.4;margin-bottom:8px;}
-.inspector-monster-hdr{font-size:10px;color:var(--parch-sub);margin-bottom:4px;}
+.inspector-summon-hdr{font-size:10px;color:var(--parch-sub);margin-bottom:4px;}
 .inspector-back{font-size:11px;color:var(--parch-sub);background:none;border:none;cursor:pointer;padding:0 0 6px 0;font-family:'Inter',sans-serif;text-decoration:underline;}
 .inspector-back:hover{color:var(--parch-ink);}
 .mini-card-insp{width:100%;height:140px;border-radius:8px;overflow:hidden;position:relative;}
@@ -266,7 +266,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .tile-art-icon{display:flex;align-items:center;justify-content:center;width:100%;flex:1;min-height:0;font-size:20px;line-height:1;text-shadow:0 0 8px currentColor;}
 .tile-art-img{width:100%;height:100%;object-fit:contain;display:block;}
 .tile-art-special{display:flex;align-items:center;justify-content:center;font-size:22px;width:100%;flex:1;}
-/* Tile mini monster card */
+/* Tile mini summon card */
 .tmc-wrap{width:54px;display:flex;flex-direction:column;align-items:center;gap:2px;}
 .tmc-card{width:54px;height:70px;border-radius:5px;border:2px solid;overflow:hidden;position:relative;flex-shrink:0;box-shadow:0 2px 10px rgba(0,0,0,.5);}
 .tmc-art{position:absolute;inset:0;}
@@ -457,7 +457,12 @@ const PHASE_LABELS = {
   'resolve:claim':'Claim Tile',stalemate:'Stalemate',
   'resolve:battle':'Battle!','resolve:own':'Own Tile',
   'resolve:chest':'Chest Opened','resolve:temple':'Temple',
-  'resolve:heal_tile':'Healing Tile',game_over:'Game Over'
+  'resolve:heal_tile':'Healing Tile',game_over:'Game Over',
+  'resolve:wildcard_cards':'🃏 Wild Card',
+  'resolve:wildcard_target':'🃏 Wild Card',
+  'resolve:wildcard_coup_tile':'🃏 Coup — Pick Tile',
+  'resolve:wildcard_coup_summon':'🃏 Coup — Deploy',
+  'resolve:wildcard_shatter':'🃏 Shatter'
 };
 
 // ─── State ────────────────────────────────────────────────────────────────────────────────
@@ -485,7 +490,7 @@ function svgNature(c,w,h){const id=uid(),cx=w/2;const branches=[[cx,h*.52,cx-.18
 
 const SVG_FNS = {Light:svgLight,Dark:svgDark,Arcane:svgArcane,Undead:svgUndead,Beast:svgBeast,Nature:svgNature};
 function artSVG(type,w,h){ const c=TYPE_COLOR[type]||'#9397ab'; const fn=SVG_FNS[type]; return fn?fn(c,w,h):''; }
-function monsterImg(id,suffix=''){ return `<img src="/img/monsters/monster-${id}${suffix}.png" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none'" alt="">`; }
+function summonImg(id,suffix=''){ return `<img src="/img/monsters/monster-${id}${suffix}.png" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none'" alt="">`; }
 
 function renderBoardCard(m) {
   if (!m) return '';
@@ -505,9 +510,9 @@ function renderBoardCard(m) {
     border = `${c}88`;
     shadow = `box-shadow:0 0 14px ${c}28`;
   }
-  const art = m.id ? monsterImg(m.id) : artSVG(m.type, 130, 186);
+  const art = m.id ? summonImg(m.id) : artSVG(m.type, 130, 186);
   const typeLabel = m.type2 ? `<span style="color:${c}">${m.type}</span><span style="color:rgba(255,255,255,.4)">/</span><span style="color:${c2}">${m.type2}</span>` : `<span style="color:${c}">${m.type}</span>`;
-  return `<div class="board-monster-card" style="border-color:${border};${shadow}">
+  return `<div class="board-summon-card" style="border-color:${border};${shadow}">
     ${m.isSpecial ? `<div class="bmc-special">✦ Ascendant</div>` : ''}
     ${isRare ? `<div class="bmc-special" style="color:#c8aaff;border-color:rgba(200,170,255,.45);background:rgba(145,132,217,.18);">★ Rare</div>` : ''}
     ${m.charm ? `<div style="position:absolute;top:4px;right:4px;width:14px;height:14px;border-radius:50%;background:#c9a05a;box-shadow:0 0 8px #c9a05acc;z-index:3;display:flex;align-items:center;justify-content:center;font-size:8px;line-height:1;" title="Battle Charm">⚡</div>` : ''}
@@ -553,15 +558,15 @@ function playerSigilSVG(player, size=20){
   }
 }
 
-// ─── Tile mini monster card ─────────────────────────────────────────────────────────────────────
-function tileMonsterCard(monster, ownerColor){
-  const c = TYPE_COLOR[monster.type] || '#9397ab';
-  const pct = Math.max(0, Math.min(1, monster.hp / monster.maxHp));
+// ─── Tile mini summon card ─────────────────────────────────────────────────────────────────────
+function tileSummonCard(summon, ownerColor){
+  const c = TYPE_COLOR[summon.type] || '#9397ab';
+  const pct = Math.max(0, Math.min(1, summon.hp / summon.maxHp));
   const hpColor = pct < 0.35 ? '#c05050' : pct < 0.6 ? '#c09040' : c;
-  // Art: SVG base + try real monster image on top
-  const svgArt = artSVG(monster.type, 54, 70);
-  const imgLayer = monster.id
-    ? `<img src="/img/monsters/monster-${monster.id}-mini.png" class="tmc-art-img-overlay" onerror="this.remove()" alt="">`
+  // Art: SVG base + try real summon image on top
+  const svgArt = artSVG(summon.type, 54, 70);
+  const imgLayer = summon.id
+    ? `<img src="/img/monsters/monster-${summon.id}-mini.png" class="tmc-art-img-overlay" onerror="this.remove()" alt="">`
     : '';
   return `<div class="tmc-wrap">
     <div class="tmc-card" style="border-color:${ownerColor};">
@@ -570,7 +575,7 @@ function tileMonsterCard(monster, ownerColor){
     </div>
     <div class="tmc-hp-wrap">
       <div class="tmc-hp-bar"><div class="tmc-hp-fill" style="width:${Math.round(pct*100)}%;background:${hpColor};"></div></div>
-      <div class="tmc-hp-num" style="color:${c}cc;">${monster.hp}/${monster.maxHp}</div>
+      <div class="tmc-hp-num" style="color:${c}cc;">${summon.hp}/${summon.maxHp}</div>
     </div>
   </div>`;
 }
@@ -774,6 +779,150 @@ function connect(){
   };
 }
 
+// ─── 5-beat battle animation ────────────────────────────────────────────────────────────────
+async function runBattleAnimation(lb, attPlayer, defPlayer, overlay) {
+  const hasCounter = lb.outcome === 'defender_wins' || lb.outcome === 'stalemate';
+  const attCrumbles = lb.outcome === 'defender_wins' || lb.outcome === 'mutual';
+  const defCrumbles = lb.outcome === 'attacker_wins' || lb.outcome === 'mutual';
+  const isStalemate = lb.outcome === 'stalemate';
+  const outcomeLabel = {attacker_wins:'Victory!',defender_wins:'Defeated!',mutual:'Mutual Destruction!',stalemate:'Stalemate!'}[lb.outcome] || lb.outcome;
+  const outcomeColor = {attacker_wins:'#5dc97d',defender_wins:'#e05252',mutual:'#e0b050',stalemate:'#9184d9'}[lb.outcome] || 'var(--accent-lit)';
+  const effLabel = lb.attM && lb.defM ? (TYPE_STRONG[lb.attM.type]===lb.defM.type ? '2× Strong!' : TYPE_WEAK[lb.attM.type]===lb.defM.type ? '½× Weak' : '') : '';
+
+  overlay.innerHTML = `
+    <div style="font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:var(--accent-pale);font-family:'Cinzel',serif;margin-bottom:18px;">⚔ Battle</div>
+    <div id="baArena" style="display:flex;align-items:center;gap:36px;position:relative;">
+      <div id="baAttSide" style="display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;">
+        <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-family:'Cinzel',serif;color:${attPlayer?.color||'var(--accent-lit)'};">${attPlayer?.name||'Attacker'}</div>
+        <div id="baAttCard" style="display:inline-block;position:relative;">${renderBoardCard(lb.attM)}</div>
+        <div id="baAttDmg" style="position:absolute;top:14px;left:50%;font-size:22px;font-weight:900;font-family:'Cinzel',serif;color:#e84040;pointer-events:none;text-shadow:0 0 12px #e8404088;white-space:nowrap;opacity:0;transform:translateX(-50%);">-${lb.defDmg}</div>
+      </div>
+      <div id="baMid" style="display:flex;flex-direction:column;align-items:center;gap:10px;min-width:54px;">
+        ${effLabel ? `<div style="font-size:11px;color:var(--text-lo);font-family:'Cinzel',serif;letter-spacing:.06em;text-align:center;">${effLabel}</div>` : ''}
+      </div>
+      <div id="baDefSide" style="display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;">
+        <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-family:'Cinzel',serif;color:${defPlayer?.color||'var(--text-dim)'};">${defPlayer?.name||'Defender'}</div>
+        <div id="baDefCard" style="display:inline-block;position:relative;">${renderBoardCard(lb.defM)}</div>
+        <div id="baDefDmg" style="position:absolute;top:14px;left:50%;font-size:22px;font-weight:900;font-family:'Cinzel',serif;color:#e84040;pointer-events:none;text-shadow:0 0 12px #e8404088;white-space:nowrap;opacity:0;transform:translateX(-50%);">-${lb.atkDmg}</div>
+      </div>
+    </div>
+    <div id="baOutcome" style="opacity:0;font-family:'Cinzel',serif;font-size:38px;font-weight:900;color:${outcomeColor};text-shadow:0 0 28px ${outcomeColor}66;letter-spacing:.05em;margin-top:22px;">${outcomeLabel}</div>
+    <div style="font-size:9px;color:var(--text-mute);margin-top:10px;letter-spacing:.1em;">tap to skip</div>`;
+
+  const attCard = overlay.querySelector('#baAttCard');
+  const defCard = overlay.querySelector('#baDefCard');
+  const attDmg  = overlay.querySelector('#baAttDmg');
+  const defDmg  = overlay.querySelector('#baDefDmg');
+  const outcomeEl = overlay.querySelector('#baOutcome');
+  const attSide = overlay.querySelector('#baAttSide');
+  const defSide = overlay.querySelector('#baDefSide');
+  const arena   = overlay.querySelector('#baArena');
+
+  let skipped = false;
+  function showFinal() {
+    skipped = true;
+    if (attCrumbles) attCard.style.opacity = '0';
+    if (defCrumbles) defCard.style.opacity = '0';
+    if (isStalemate) {
+      [attCard,defCard].forEach(c=>{ c.style.boxShadow='0 0 0 3px #c9922a88'; c.style.borderRadius='10px'; });
+    }
+    attDmg.style.opacity = '0';
+    defDmg.style.opacity = '0';
+    outcomeEl.style.opacity = '1';
+  }
+  overlay.addEventListener('click', showFinal);
+
+  function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+  function shock(color) {
+    const el = document.createElement('div');
+    el.style.cssText = `position:absolute;top:50%;left:50%;width:110px;height:110px;border-radius:50%;border:5px solid ${color};pointer-events:none;`;
+    arena.appendChild(el);
+    el.animate([
+      {transform:'translate(-50%,-50%) scale(.1)',opacity:.85,borderWidth:'6px'},
+      {transform:'translate(-50%,-50%) scale(3.4)',opacity:0,borderWidth:'1px'}
+    ],{duration:500,easing:'ease-out',fill:'forwards'}).finished.then(()=>el.remove());
+  }
+  function shake(el, dir=1) {
+    el.animate([
+      {transform:'translateX(0)'},
+      {transform:`translateX(${-9*dir}px) rotate(${-2.5*dir}deg)`},
+      {transform:`translateX(${7*dir}px) rotate(${1.5*dir}deg)`},
+      {transform:`translateX(${-5*dir}px)`},
+      {transform:`translateX(${3*dir}px)`},
+      {transform:'translateX(0)'}
+    ],{duration:430,easing:'ease'});
+  }
+  function floatDmg(el) {
+    el.style.opacity = '1';
+    el.animate([
+      {opacity:0,transform:'translateX(-50%) translateY(0) scale(.6)'},
+      {opacity:1,transform:'translateX(-50%) translateY(-10px) scale(1.2)',offset:.15},
+      {opacity:1,transform:'translateX(-50%) translateY(-34px) scale(1)',offset:.72},
+      {opacity:0,transform:'translateX(-50%) translateY(-48px) scale(.85)'}
+    ],{duration:920,easing:'ease',fill:'forwards'}).finished.then(()=>{ el.style.opacity='0'; });
+  }
+
+  // Beat 1 — slide in
+  attSide.animate([{transform:'translateX(-60px)',opacity:0},{transform:'translateX(0)',opacity:1}],{duration:340,easing:'ease',fill:'both'});
+  defSide.animate([{transform:'translateX(60px)',opacity:0},{transform:'translateX(0)',opacity:1}],{duration:340,easing:'ease',fill:'both'});
+
+  await wait(380); if (skipped) return;
+
+  // Beat 2 — attacker strikes
+  attCard.animate([
+    {transform:'translateX(0) scale(1)'},
+    {transform:'translateX(44px) scale(1.07)',offset:.38},
+    {transform:'translateX(0) scale(1)'}
+  ],{duration:330,easing:'ease'});
+  shock('rgba(255,180,60,.75)');
+  setTimeout(()=>{ if (!skipped){ shake(defCard,-1); floatDmg(defDmg); } },130);
+
+  await wait(hasCounter ? 390 : 330); if (skipped) return;
+
+  // Beat 3 — counter-strike (if defender survived)
+  if (hasCounter) {
+    defCard.animate([
+      {transform:'translateX(0) scale(1)'},
+      {transform:'translateX(-44px) scale(1.07)',offset:.38},
+      {transform:'translateX(0) scale(1)'}
+    ],{duration:330,easing:'ease'});
+    shock('rgba(100,140,255,.75)');
+    setTimeout(()=>{ if (!skipped){ shake(attCard,1); floatDmg(attDmg); } },130);
+    await wait(390); if (skipped) return;
+  }
+
+  // Beat 4 — crumble or gold pulse
+  const crumbleKf = [
+    {transform:'scale(1) rotate(0deg)',opacity:1,filter:'saturate(1)'},
+    {transform:'scale(1.04) rotate(-3deg)',opacity:1,filter:'saturate(.25)',offset:.22},
+    {transform:'scale(.82) rotate(9deg) translateY(14px)',opacity:.55,filter:'saturate(0) brightness(.55)',offset:.62},
+    {transform:'scale(.38) rotate(20deg) translateY(32px)',opacity:0,filter:'saturate(0) brightness(.2)'}
+  ];
+  if (isStalemate) {
+    [attCard,defCard].forEach(c=>c.animate([
+      {boxShadow:'0 0 0 0 rgba(201,146,42,0)',borderRadius:'10px'},
+      {boxShadow:'0 0 0 9px rgba(201,146,42,.55)',borderRadius:'10px'},
+      {boxShadow:'0 0 0 5px rgba(201,146,42,.22)',borderRadius:'10px'},
+      {boxShadow:'0 0 0 7px rgba(201,146,42,.38)',borderRadius:'10px'},
+      {boxShadow:'0 0 0 3px rgba(201,146,42,.18)',borderRadius:'10px'}
+    ],{duration:620,easing:'ease',fill:'forwards'}));
+  } else {
+    if (attCrumbles) attCard.animate(crumbleKf,{duration:560,easing:'ease',fill:'forwards'});
+    if (defCrumbles) defCard.animate(crumbleKf,{duration:560,easing:'ease',fill:'forwards'});
+  }
+
+  await wait(510); if (skipped) return;
+
+  // Beat 5 — outcome text
+  outcomeEl.style.opacity = '1';
+  outcomeEl.animate([
+    {opacity:0,transform:'scale(.48)'},
+    {opacity:1,transform:'scale(1.14)',offset:.58},
+    {opacity:1,transform:'scale(.95)',offset:.82},
+    {opacity:1,transform:'scale(1)'}
+  ],{duration:460,easing:'ease',fill:'both'});
+}
+
 // ─── Render entry ───────────────────────────────────────────────────────────────────────────
 function render(){
   const app = document.getElementById('app');
@@ -798,7 +947,7 @@ function updateDisconnectOverlay(){
 function renderConnecting(app){
   const d = document.createElement('div');
   d.style.cssText = 'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
-  d.innerHTML = `<div style="font-family:'Cinzel',serif;font-size:32px;font-weight:700;letter-spacing:.12em;color:#b5abfc;">Monster Board</div>
+  d.innerHTML = `<div style="font-family:'Cinzel',serif;font-size:32px;font-weight:700;letter-spacing:.12em;color:#b5abfc;">Summon Board</div>
     <div style="font-size:13px;color:#9397ab;">Waiting for server connection…</div>
     <div style="display:flex;gap:8px;margin-top:4px;">
       <div style="width:8px;height:8px;border-radius:50%;background:#9184d9;animation:bounce 1.2s ease-in-out infinite;"></div>
@@ -843,7 +992,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.14</div>`;
+    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.19</div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -993,7 +1142,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.14</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.19</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -1066,12 +1215,12 @@ function renderGame(app){
         ? `<div class="tile-art-special" style="color:${color};">${SPECIAL_ICONS[tile.kind] || '❖'}</div>`
         : `<div class="tile-art-icon" style="color:#fff;">${TYPE_ICON[tile.element] || '✦'}</div>`;
 
-    // HP ring badge if a monster is stationed
+    // HP ring badge if a summon is stationed
     let badgeHTML = '';
-    if (tile.monster && tile.ownerId !== null && tile.ownerId !== undefined) {
+    if (tile.summon && tile.ownerId !== null && tile.ownerId !== undefined) {
       const owner = G.players.find(p => p.idx === tile.ownerId);
       if (owner) {
-        badgeHTML = `<div class="tile-badge">${tileMonsterCard(tile.monster, owner.color)}</div>`;
+        badgeHTML = `<div class="tile-badge">${tileSummonCard(tile.summon, owner.color)}</div>`;
       }
     } else if (tile.ownerId !== null && tile.ownerId !== undefined) {
       const owner = G.players.find(p => p.idx === tile.ownerId);
@@ -1154,8 +1303,8 @@ function renderGame(app){
   } else if (G.phase === 'resolve:battle' && !boardShowIdleDie) {
     const tile = G.board[curPlayer ? curPlayer.position : 0];
     const defOwner = tile && tile.ownerId != null ? G.players.find(p => p.idx === tile.ownerId) : null;
-    const defM = tile ? (tile.monster || tile.monsterInstance) : null;
-    const attM = G.pendingAttackerMonster || null;
+    const defM = tile ? tile.summon : null;
+    const attM = G.pendingAttackerSummon || null;
     const attSlot = attM
       ? `${renderBoardCard(attM)}`
       : `<div style="width:90px;height:128px;border-radius:8px;border:2px dashed var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:10px;color:var(--text-mute);">
@@ -1197,39 +1346,26 @@ function renderGame(app){
 
   boardArea.appendChild(wheel);
 
-  // ── Battle result full overlay (rectangular, sits above wheel) ──
+  // ── Battle result full overlay — 5-beat sequential animation ──
   if (G.phase === 'resolve:battle_result' && G.lastBattle) {
     const lb = G.lastBattle;
     const attPlayer = G.players[lb.attackerIdx];
     const defPlayer = lb.defOwnerIdx != null ? G.players.find(p => p.idx === lb.defOwnerIdx) : null;
-    const outcomeLabel = {attacker_wins:'Victory!',defender_wins:'Defeated',mutual:'Mutual!',stalemate:'Stalemate'}[lb.outcome] || lb.outcome;
-    const outcomeColor = {attacker_wins:'#5dc97d',defender_wins:'#e05252',mutual:'#e0b050',stalemate:'#9184d9'}[lb.outcome] || 'var(--accent-lit)';
-    const effLabel = lb.attM && lb.defM ? (TYPE_STRONG[lb.attM.type]===lb.defM.type ? '2× Strong!' : TYPE_WEAK[lb.attM.type]===lb.defM.type ? '½× Weak' : '') : '';
-
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:absolute;inset:0;z-index:15;background:rgba(8,8,20,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;';
-    overlay.innerHTML = `
-      <div style="font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:var(--accent-pale);font-family:'Cinzel',serif;">⚔ Battle Result</div>
-      <div class="clash-arena">
-        <div class="clash-side left">
-          <div class="clash-eyebrow" style="color:${attPlayer?.color||'var(--accent-lit)'}">${attPlayer?.name||'Attacker'}</div>
-          <div class="clash-hit">${renderBoardCard(lb.attM)}</div>
-          ${lb.defDmg > 0 ? `<div class="clash-dmg">-${lb.defDmg}</div>` : `<div class="clash-dmg zero">—</div>`}
-        </div>
-        <div class="clash-mid">
-          <div class="clash-proj atk">⚔ ${lb.atkDmg}</div>
-          <div class="clash-vs">VS</div>
-          <div class="clash-proj def-proj">🛡 ${lb.defDmg}</div>
-          ${effLabel ? `<div class="battle-note" style="margin-top:4px;text-align:center;font-size:11px;color:var(--text-lo)">${effLabel}</div>` : ''}
-          <div class="clash-outcome-label" style="color:${outcomeColor};font-size:18px;">${outcomeLabel}</div>
-        </div>
-        <div class="clash-side right">
-          <div class="clash-eyebrow" style="color:${defPlayer?.color||'var(--text-dim)'}">${defPlayer?.name||'Defender'}</div>
-          <div class="clash-hit">${renderBoardCard(lb.defM)}</div>
-          ${lb.atkDmg > 0 ? `<div class="clash-dmg">-${lb.atkDmg}</div>` : `<div class="clash-dmg zero">—</div>`}
-        </div>
-      </div>`;
+    overlay.style.cssText = 'position:absolute;inset:0;z-index:15;background:rgba(8,8,20,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;';
     boardArea.appendChild(overlay);
+    runBattleAnimation(lb, attPlayer, defPlayer, overlay);
+  }
+
+  // ── Wild Card banner overlay ──
+  if (G.phase && G.phase.startsWith('resolve:wildcard')) {
+    const wcBanner = document.createElement('div');
+    wcBanner.style.cssText = 'position:absolute;top:16px;left:50%;transform:translateX(-50%);z-index:20;background:rgba(20,15,40,.92);border:1.5px solid rgba(201,146,42,.6);border-radius:12px;padding:12px 28px;display:flex;align-items:center;gap:12px;box-shadow:0 0 24px rgba(201,146,42,.25);';
+    const wcP = G.players[G.currentPlayer];
+    const wcPhaseText = { 'resolve:wildcard_cards':'choosing a Wild Card', 'resolve:wildcard_target':'targeting...', 'resolve:wildcard_coup_tile':'selecting a tile to seize', 'resolve:wildcard_coup_summon':'deploying a summon', 'resolve:wildcard_shatter':'selecting summons to shatter' };
+    const wcMsg = wcPhaseText[G.phase] || 'Wild Card';
+    wcBanner.innerHTML = `<span style="font-size:22px">🃏</span><div><div style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.12em;color:#c9922a;">WILD CARD</div><div style="font-size:11px;color:var(--text-lo);margin-top:2px;"><span style="color:${wcP?.color||'#c9a05a'};font-weight:600">${wcP?.name||'?'}</span> is ${wcMsg}</div></div>`;
+    boardArea.appendChild(wcBanner);
   }
 
   // ── Winners screen (full overlay)
@@ -1376,15 +1512,15 @@ function renderPaper(){
     }
 
     let monsterHTML = '';
-    if (tile.monster) {
-      const m = tile.monster;
+    if (tile.summon) {
+      const m = tile.summon;
       const mc = TYPE_COLOR[m.type] || '#9397ab';
       const pct = Math.max(0, m.hp / m.maxHp * 100).toFixed(0);
       monsterHTML = `
         <div style="margin-top:8px;border-top:1px solid rgba(103,69,30,.2);padding-top:8px;">
-          <div class="inspector-monster-hdr">Stationed Monster</div>
+          <div class="inspector-summon-hdr">Stationed Summon</div>
           <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
-            <div style="width:32px;height:32px;border-radius:6px;overflow:hidden;flex-shrink:0;">${m.id ? monsterImg(m.id,'-mini') : artSVG(m.type,32,32)}</div>
+            <div style="width:32px;height:32px;border-radius:6px;overflow:hidden;flex-shrink:0;">${m.id ? summonImg(m.id,'-mini') : artSVG(m.type,32,32)}</div>
             <div style="flex:1;">
               <div style="font-size:12px;font-weight:600;color:${mc};">${m.name}</div>
               <div style="font-size:10px;color:var(--parch-dim);">HP ${m.hp}/${m.maxHp} · ATK ${m.atk} · DEF ${m.def}</div>

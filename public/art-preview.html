@@ -88,7 +88,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 .tc-player .tc-el-bar{position:absolute;bottom:0;left:0;right:0;padding:7px 10px 9px;background:linear-gradient(to top,rgba(0,0,0,.88) 0%,transparent 100%);}
 .tc-player .tc-el-lbl{font-family:'Cinzel',serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;}
 
-/* ── Monster full card (130×186) ── */
+/* ── Summon full card (130×186) ── */
 .mc-full{width:130px;height:186px;border-radius:10px;overflow:hidden;border:2px solid;position:relative;flex-shrink:0;background:#0d0e1c;}
 .mc-full .mc-art{position:absolute;inset:0;width:100%;height:100%;}
 .mc-full .mc-art img{width:100%;height:100%;object-fit:cover;display:block;}
@@ -108,7 +108,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 .mc-full .mc-arch{position:absolute;top:5px;right:5px;font-size:7px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:2px 5px;color:rgba(255,255,255,.55);font-family:'Cinzel',serif;z-index:2;}
 .mc-full .mc-new-badge{position:absolute;bottom:5px;right:5px;font-size:7px;background:rgba(201,160,90,.25);border:1px solid rgba(201,160,90,.6);border-radius:10px;padding:2px 5px;color:#c9a05a;font-family:'Cinzel',serif;z-index:2;letter-spacing:.04em;}
 
-/* ── Monster mini card (70×100) ── */
+/* ── Summon mini card (70×100) ── */
 .mc-mini{width:70px;height:100px;border-radius:7px;overflow:hidden;border:1.5px solid;position:relative;flex-shrink:0;background:#0d0e1c;}
 .mc-mini .mc-art{position:absolute;inset:0;width:100%;height:100%;}
 .mc-mini .mc-art img{width:100%;height:100%;object-fit:cover;display:block;}
@@ -117,8 +117,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 
 /* Info column */
 .info-col{display:flex;flex-direction:column;gap:8px;align-self:center;}
-.monster-name{font-family:'Cinzel',serif;font-size:13px;font-weight:700;letter-spacing:.06em;}
-.monster-arch{font-size:10px;color:var(--text-mute);letter-spacing:.04em;margin-top:1px;}
+.summon-name{font-family:'Cinzel',serif;font-size:13px;font-weight:700;letter-spacing:.06em;}
+.summon-arch{font-size:10px;color:var(--text-mute);letter-spacing:.04em;margin-top:1px;}
 .stats-pill{display:flex;gap:8px;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;font-variant-numeric:tabular-nums;}
 .sp-item{display:flex;flex-direction:column;align-items:center;gap:1px;}
 .sp-lbl{font-size:7px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.07em;}
@@ -141,6 +141,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
     <a class="nav-pill" href="#beast">Beast</a>
     <a class="nav-pill" href="#nature">Nature</a>
     <a class="nav-pill rare" href="#rare">★ Rare</a>
+    <a class="nav-pill" href="#wildcards" style="border-color:rgba(201,146,42,.5);color:#c9922a;">🃏 Wild Cards</a>
   </nav>
 </header>
 
@@ -152,7 +153,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 
 <div class="summary-bar" id="summary-bar">
   <div class="sb-group"><span class="sb-label">Tiles PNG</span><span class="sb-count" id="sb-tiles" style="color:#7dd982">—/10</span></div>
-  <div class="sb-group"><span class="sb-label">Monster PNG</span><span class="sb-count" id="sb-monsters" style="color:#7dd982">—/45</span></div>
+  <div class="sb-group"><span class="sb-label">Summon PNG</span><span class="sb-count" id="sb-summons" style="color:#7dd982">—/45</span></div>
   <div class="sb-group"><span class="sb-label">SVG Fallback</span><span class="sb-count" id="sb-svg" style="color:var(--accent-lit)">—</span></div>
   <div style="margin-left:auto;font-size:10px;color:var(--text-mute);">Click any path to open the file in a new tab</div>
 </div>
@@ -177,12 +178,41 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 <div class="section-divider"></div>
 <div id="nature" class="section"><div class="section-title" style="color:var(--el-Nature)">Nature</div><div class="section-sub">public/img/monsters/monster-[id].png &amp; monster-[id]-mini.png</div><div id="nature-grid" class="card-row"></div></div>
 <div class="section-divider"></div>
+<div id="wildcards" class="section">
+  <div class="section-title" style="color:#c9922a">Wild Cards</div>
+  <div class="section-sub">Triggered when a player passes the Mana Well (position 0). One card drawn per tier — player picks or skips.</div>
+
+  <!-- Tier Mask / Card Back art -->
+  <div style="margin-bottom:32px;">
+    <div style="font-family:'Cinzel',serif;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-mute);margin-bottom:6px;padding:6px 0;border-bottom:1px solid var(--border);">
+      State 1 — Tier Masks <span style="font-size:10px;font-weight:400;color:var(--text-mute);letter-spacing:.06em;">(card-back shown before player picks)</span>
+    </div>
+    <div style="font-size:11px;color:var(--text-dim);margin:10px 0 16px;line-height:1.5;">
+      When the Wild Card event triggers, the player sees 3 face-down cards — one per tier. The card back reveals the tier (Iron / Arcane / Gilded) and cost, but hides the card name and effect until selected. Each tier needs one mask/back-face image.
+    </div>
+    <div id="wildcard-mask-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:480px;"></div>
+  </div>
+
+  <!-- Individual card art -->
+  <div>
+    <div style="font-family:'Cinzel',serif;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-mute);margin-bottom:6px;padding:6px 0;border-bottom:1px solid var(--border);">
+      State 2 — Card Art <span style="font-size:10px;font-weight:400;color:var(--text-mute);letter-spacing:.06em;">(revealed art for each individual card)</span>
+    </div>
+    <div style="font-size:11px;color:var(--text-dim);margin:10px 0 16px;line-height:1.5;">
+      After a player selects a card (or during the effect description), the full card art is shown. Each of the 12 cards needs unique art. File naming: <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:10px;color:var(--accent-lit);">public/img/wildcards/wc-[id].png</code>
+    </div>
+    <div id="wildcard-grid"></div>
+  </div>
+</div>
+
+<div class="section-divider"></div>
+
 <div id="rare" class="section">
   <div class="rare-header">
     <div class="section-title" style="color:var(--gold-glow)">Rare</div>
     <span class="rare-badge-header">★ Dual-Element</span>
   </div>
-  <div class="rare-desc">Dual-type monsters — strong against two types, no elemental weakness. Obtained via Warp or special events. Never in the shop.</div>
+  <div class="rare-desc">Dual-type summons — strong against two types, no elemental weakness. Obtained via Warp or special events. Never in the shop.</div>
   <div class="section-sub">public/img/monsters/monster-[id].png &amp; monster-[id]-mini.png</div>
   <div id="rare-grid" class="card-row"></div>
 </div>
@@ -214,7 +244,7 @@ const MONSTERS = [
   {id:'dawnguard',      name:'Dawnguard',      type:'Light',  arch:'Guardian',  hp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
   {id:'high_paladin',   name:'High Paladin',   type:'Light',  arch:'Vanguard',  hp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
   {id:'ardent_saint',   name:'Ardent Saint',   type:'Light',  arch:'Ascendant', hp:65, atk:15, def:15, cost:20, gen:5, isSpecial:true,
-    ability:'Aura of Renewal — heals all friendly stationed monsters 5 HP/turn'},
+    ability:'Aura of Renewal — heals all friendly stationed summons 5 HP/turn'},
   {id:'dawn_striker',   name:'Dawn Striker',   type:'Light',  arch:'Assailant', hp:25, atk:36, def:6,  cost:8,  gen:2, isSpecial:false, isNew:true},
   {id:'radiant_lancer', name:'Radiant Lancer', type:'Light',  arch:'Vanguard',  hp:30, atk:28, def:10, cost:10, gen:2, isSpecial:false, isNew:true},
   {id:'sunfire_herald', name:'Sunfire Herald', type:'Light',  arch:'Vanguard',  hp:40, atk:22, def:11, cost:10, gen:2, isSpecial:false, isNew:true},
@@ -252,7 +282,7 @@ const MONSTERS = [
   {id:'red_dragon',     name:'Red Dragon',     type:'Beast', arch:'Ascendant', hp:35, atk:40, def:9,  cost:20, gen:5, isSpecial:true,
     ability:'Intimidate — adjacent tile owners pay 5 Mana when their tile is claimed'},
   {id:'feral_striker',  name:'Feral Striker',  type:'Beast', arch:'Assailant', hp:22, atk:38, def:5,  cost:8,  gen:2, isSpecial:false, isNew:true},
-  {id:'blood_mane',     name:'Blood Mane',     type:'Beast', arch:'Vanguard',  hp:32, atk:28, def:9,  cost:10, gen:2, isSpecial:false, isNew:true},
+  {id:'stormtalon',     name:'Stormtalon',     type:'Beast', arch:'Vanguard',  hp:32, atk:28, def:9,  cost:10, gen:2, isSpecial:false, isNew:true},
   {id:'stoneback',      name:'Stoneback',      type:'Beast', arch:'Vanguard',  hp:42, atk:20, def:12, cost:10, gen:2, isSpecial:false, isNew:true},
   // ── Nature (7) ─────────────────────────────────────────────────────────────
   {id:'thornling',      name:'Thornling',      type:'Nature', arch:'Assailant', hp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
@@ -310,10 +340,10 @@ function artSVGDual(type1,type2,w,h){
 }
 
 // ─── Summary counters ─────────────────────────────────────────────────────────
-let tilePng=0, monsterPng=0, svgFallback=0;
+let tilePng=0, summonPng=0, svgFallback=0;
 function updateSummary(){
   document.getElementById('sb-tiles').textContent    = `${tilePng}/10`;
-  document.getElementById('sb-monsters').textContent = `${monsterPng}/45`;
+  document.getElementById('sb-summons').textContent = `${summonPng}/45`;
   document.getElementById('sb-svg').textContent      = `${svgFallback}`;
 }
 
@@ -429,8 +459,8 @@ function buildTiles(){
   }
 }
 
-// ─── Build Monster card ───────────────────────────────────────────────────────
-function buildMonsterCard(m, grid, svgOverrideFn){
+// ─── Build Summon card ───────────────────────────────────────────────────────
+function buildSummonCard(m, grid, svgOverrideFn){
   const c = TYPE_COLOR[m.type];
   const fullSrc = `/img/monsters/monster-${m.id}.png`;
   const miniSrc = `/img/monsters/monster-${m.id}-mini.png`;
@@ -464,7 +494,7 @@ function buildMonsterCard(m, grid, svgOverrideFn){
   fullImg.alt = m.name;
   fullImg.onload = ()=>{
     fullBadge.textContent='✓ PNG'; fullBadge.className='png-badge ok';
-    monsterPng++; updateSummary();
+    summonPng++; updateSummary();
   };
   fullImg.onerror = ()=>{
     artLayer.innerHTML='';
@@ -575,7 +605,7 @@ function buildMonsterCard(m, grid, svgOverrideFn){
 
   let archLine = m.isSpecial ? '✦ Ascendant' : isRare ? '★ Rare (Dual-type)' : m.arch;
   const nameEl = document.createElement('div');
-  nameEl.innerHTML=`<div class="monster-name" style="color:${c}">${m.name}</div><div class="monster-arch">${archLine}</div>`;
+  nameEl.innerHTML=`<div class="summon-name" style="color:${c}">${m.name}</div><div class="summon-arch">${archLine}</div>`;
   infoCol.appendChild(nameEl);
 
   // Rare: show dual type tags
@@ -612,11 +642,11 @@ function buildMonsterCard(m, grid, svgOverrideFn){
   grid.appendChild(outer);
 }
 
-// ─── Build Monster section (by type) ─────────────────────────────────────────
-function buildMonsters(type){
+// ─── Build Summon section (by type) ─────────────────────────────────────────
+function buildSummons(type){
   const grid = document.getElementById(`${type.toLowerCase()}-grid`);
   const list = MONSTERS.filter(m=>m.type===type);
-  for(const m of list) buildMonsterCard(m, grid, null);
+  for(const m of list) buildSummonCard(m, grid, null);
 }
 
 // ─── Build Rare section ───────────────────────────────────────────────────────
@@ -625,13 +655,134 @@ function buildRares(){
   for(const m of RARES){
     const mExt = {...m, isRare:true};
     const svgFn = (w,h)=>artSVGDual(m.type, m.type2, w, h);
-    buildMonsterCard(mExt, grid, svgFn);
+    buildSummonCard(mExt, grid, svgFn);
+  }
+}
+
+// ─── Wild Cards ──────────────────────────────────────────────────────────────
+const WILD_CARD_DATA = [
+  { id:'mend',    name:'Mend',    cost:15, tier:'low',  tierLabel:'Iron',   tierColor:'#7a8fa6', desc:'Heal one of your stationed summons for 20 HP' },
+  { id:'stumble', name:'Stumble', cost:15, tier:'low',  tierLabel:'Iron',   tierColor:'#7a8fa6', desc:'Force a target player to re-roll their dice next turn; they must use the new result' },
+  { id:'delay',   name:'Delay',   cost:15, tier:'low',  tierLabel:'Iron',   tierColor:'#7a8fa6', desc:'Force a target player to skip their shop phase next turn' },
+  { id:'jinx',    name:'Jinx',    cost:15, tier:'low',  tierLabel:'Iron',   tierColor:'#7a8fa6', desc:"Target player's passive mana income next turn is halved" },
+  { id:'ambush',  name:'Ambush',  cost:30, tier:'mid',  tierLabel:'Arcane', tierColor:'#9b6fd4', desc:'Your next attacker deals +40% damage' },
+  { id:'fortify', name:'Fortify', cost:30, tier:'mid',  tierLabel:'Arcane', tierColor:'#9b6fd4', desc:'Your next defender takes −40% damage' },
+  { id:'rattle',  name:'Rattle',  cost:30, tier:'mid',  tierLabel:'Arcane', tierColor:'#9b6fd4', desc:"Target player's next battle, their summon fights at half ATK" },
+  { id:'poach',   name:'Poach',   cost:30, tier:'mid',  tierLabel:'Arcane', tierColor:'#9b6fd4', desc:"Steal a random summon from a target player's hand" },
+  { id:'coup',    name:'Coup',    cost:60, tier:'high', tierLabel:'Gilded', tierColor:'#c9922a', desc:'Take any enemy-owned tile; deploy a summon from your hand (free). Their summon returns to hand — if full, forfeit.' },
+  { id:'plague',  name:'Plague',  cost:60, tier:'high', tierLabel:'Gilded', tierColor:'#c9922a', desc:"All of a target player's stationed summons lose 15 HP" },
+  { id:'windfall',name:'Windfall',cost:60, tier:'high', tierLabel:'Gilded', tierColor:'#c9922a', desc:'Your passive mana income next turn is tripled' },
+  { id:'shatter', name:'Shatter', cost:60, tier:'high', tierLabel:'Gilded', tierColor:'#c9922a', desc:'Destroy any 2 stationed summons on the board; both tiles go neutral' },
+];
+
+function buildWildCardMasks() {
+  const container = document.getElementById('wildcard-mask-grid');
+  const tiers = [
+    { tier:'low',  label:'Iron',   color:'#7a8fa6', cost:15, icon:'🔩',
+      note:'Iron Tier card back — lowest cost (✦15). Art should feel gritty, metallic, low-rarity.' },
+    { tier:'mid',  label:'Arcane', color:'#9b6fd4', cost:30, icon:'🔮',
+      note:'Arcane Tier card back — mid cost (✦30). Art should feel magical, glowing, mid-rarity.' },
+    { tier:'high', label:'Gilded', color:'#c9922a', cost:60, icon:'👑',
+      note:'Gilded Tier card back — highest cost (✦60). Art should feel legendary, ornate, premium.' },
+  ];
+
+  for (const t of tiers) {
+    const c = t.color;
+    const card = document.createElement('div');
+    card.style.cssText = `background:var(--surface);border:2px solid ${c};border-radius:12px;overflow:hidden;`;
+
+    // Header band
+    const header = document.createElement('div');
+    header.style.cssText = `display:flex;justify-content:space-between;align-items:center;padding:7px 12px;background:${c}22;border-bottom:1px solid ${c}44;`;
+    header.innerHTML = `<span style="font-family:'Cinzel',serif;font-size:10px;font-weight:700;letter-spacing:.1em;color:${c}">${t.label}</span><span style="font-size:12px;font-weight:700;color:${c}">✦${t.cost}</span>`;
+
+    // Art placeholder
+    const art = document.createElement('div');
+    art.style.cssText = `border-radius:8px;margin:12px;height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;overflow:hidden;position:relative;`;
+    const maskImg = document.createElement('img');
+    maskImg.src = `/img/wildcards/wc-mask-${t.tier}.png`;
+    maskImg.style.cssText = 'width:100%;height:100%;object-fit:contain;';
+    maskImg.onerror = function() {
+      this.style.display = 'none';
+      art.style.cssText += `border:2px dashed ${c}55;background:${c}08;`;
+      art.insertAdjacentHTML('beforeend', `<div style="font-size:26px;opacity:.5">${t.icon}</div><div style="font-size:9px;color:${c}99;font-style:italic;text-align:center;line-height:1.3">Mask Art TBD</div><div style="font-size:8px;color:var(--text-mute);font-family:monospace">wc-mask-${t.tier}.png</div>`);
+    };
+    art.appendChild(maskImg);
+
+    // Description
+    const desc = document.createElement('div');
+    desc.style.cssText = 'font-size:9px;color:var(--text-mute);text-align:center;padding:0 10px 12px;line-height:1.4;';
+    desc.textContent = t.note;
+
+    card.appendChild(header);
+    card.appendChild(art);
+    card.appendChild(desc);
+    container.appendChild(card);
+  }
+}
+
+function buildWildCards() {
+  const container = document.getElementById('wildcard-grid');
+  const tiers = ['low','mid','high'];
+  const tierNames = { low:'Iron', mid:'Arcane', high:'Gilded' };
+  const tierColors = { low:'#7a8fa6', mid:'#9b6fd4', high:'#c9922a' };
+
+  for (const tier of tiers) {
+    const c = tierColors[tier];
+    const row = document.createElement('div');
+    row.style.cssText = 'margin-bottom:28px;';
+
+    const tierLabel = document.createElement('div');
+    tierLabel.style.cssText = `font-family:'Cinzel',serif;font-size:13px;font-weight:700;letter-spacing:.12em;color:${c};margin-bottom:12px;padding:6px 0;border-bottom:1px solid ${c}44;`;
+    tierLabel.textContent = tierNames[tier] + ' Tier';
+    row.appendChild(tierLabel);
+
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:12px;';
+
+    const cards = WILD_CARD_DATA.filter(wc => wc.tier === tier);
+    for (const wc of cards) {
+      const card = document.createElement('div');
+      card.style.cssText = `background:var(--surface);border:1.5px solid ${c};border-radius:10px;overflow:hidden;`;
+
+      const header = document.createElement('div');
+      header.style.cssText = `display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:${c}18;border-bottom:1px solid ${c}33;`;
+      header.innerHTML = `<span style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:.1em;color:${c}">${wc.tierLabel}</span><span style="font-size:11px;font-weight:700;color:${c}">✦${wc.cost}</span>`;
+
+      const art = document.createElement('div');
+      art.style.cssText = `border-radius:6px;margin:10px;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;overflow:hidden;`;
+      const cardImg = document.createElement('img');
+      cardImg.src = `/img/wildcards/wc-${wc.id}.png`;
+      cardImg.style.cssText = 'width:100%;height:100%;object-fit:contain;';
+      cardImg.onerror = function() {
+        this.style.display = 'none';
+        art.style.cssText += `border:2px dashed ${c}55;background:${c}08;`;
+        art.insertAdjacentHTML('beforeend', `<div style="font-size:10px;color:${c}88;font-style:italic;text-align:center;line-height:1.3">Art TBD</div><div style="font-size:9px;color:var(--text-mute);font-family:monospace;text-align:center">${wc.id}</div>`);
+      };
+      art.appendChild(cardImg);
+
+      const name = document.createElement('div');
+      name.style.cssText = `font-family:'Cinzel',serif;font-size:12px;font-weight:700;text-align:center;padding:4px 8px;color:${c};`;
+      name.textContent = wc.name;
+
+      const desc = document.createElement('div');
+      desc.style.cssText = 'font-size:10px;color:var(--text-mute);text-align:center;padding:4px 10px 12px;line-height:1.4;';
+      desc.textContent = wc.desc;
+
+      card.appendChild(header);
+      card.appendChild(art);
+      card.appendChild(name);
+      card.appendChild(desc);
+      grid.appendChild(card);
+    }
+    row.appendChild(grid);
+    container.appendChild(row);
   }
 }
 
 // ─── Nav scroll highlight ─────────────────────────────────────────────────────
 function updateNav(){
-  const ids=['tiles','light','dark','arcane','undead','beast','nature','rare'];
+  const ids=['tiles','light','dark','arcane','undead','beast','nature','rare','wildcards'];
   let active=ids[0];
   for(const id of ids){const el=document.getElementById(id);if(el&&el.getBoundingClientRect().top<=110)active=id;}
   document.querySelectorAll('.nav-pill').forEach(p=>p.classList.toggle('active',p.getAttribute('href')==='#'+active));
@@ -640,8 +791,10 @@ window.addEventListener('scroll',updateNav,{passive:true});
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 buildTiles();
-['Light','Dark','Arcane','Undead','Beast','Nature'].forEach(buildMonsters);
+['Light','Dark','Arcane','Undead','Beast','Nature'].forEach(buildSummons);
 buildRares();
+buildWildCardMasks();
+buildWildCards();
 updateSummary();
 </script>
 </body>

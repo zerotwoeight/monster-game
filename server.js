@@ -1,4 +1,4 @@
-// ─── Monster Board Game — Local Multiplayer Server ────────────────────────────
+// ─── Summon Board Game — Local Multiplayer Server ────────────────────────────
 // Run: node server.js
 // Players connect to http://<your-ip>:3000/player
 // Board view:  http://<your-ip>:3000/board
@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.19';
+const SERVER_VERSION = 'v1.0.24';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -26,15 +26,15 @@ const TYPE_COLOR = {
 const TYPE_STRONG = { Light:'Dark', Dark:'Arcane', Arcane:'Undead', Undead:'Beast', Beast:'Nature', Nature:'Light' };
 const TYPE_WEAK   = { Light:'Nature', Dark:'Light', Arcane:'Dark', Undead:'Arcane', Beast:'Undead', Nature:'Beast' };
 
-// Master monster roster
+// Master summon roster
 const ROSTER = [
   // ── Light ──
   {id:'solar_knight',   type:'Light',  name:'Solar Knight',   arch:'assailant', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
   {id:'dawnguard',      type:'Light',  name:'Dawnguard',      arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
   {id:'high_paladin',   type:'Light',  name:'High Paladin',   arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
   {id:'ardent_saint',   type:'Light',  name:'Ardent Saint',   arch:'ascendant', hp:65, maxHp:65, atk:15, def:15, cost:20, gen:5, isSpecial:true,
-    special:'Aura of Renewal',  specialDesc:'Heal all friendly stationed monsters 5 HP/turn',
-    condition:'healed4', conditionDesc:'Healed 4+ monsters this game'},
+    special:'Aura of Renewal',  specialDesc:'Heal all friendly stationed summons 5 HP/turn',
+    condition:'healed4', conditionDesc:'Healed 4+ summons this game'},
   // Light — new
   {id:'dawn_striker',   type:'Light',  name:'Dawn Striker',   arch:'assailant', hp:25, maxHp:25, atk:36, def:6,  cost:8,  gen:2, isSpecial:false},
   {id:'radiant_lancer', type:'Light',  name:'Radiant Lancer', arch:'vanguard',  hp:30, maxHp:30, atk:28, def:10, cost:10, gen:2, isSpecial:false},
@@ -70,7 +70,7 @@ const ROSTER = [
   {id:'shade_walker',   type:'Undead', name:'Shade Walker',   arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
   {id:'demon_lord',     type:'Undead', name:'Demon Lord',     arch:'ascendant', hp:85, maxHp:85, atk:17, def:8,  cost:20, gen:5, isSpecial:true,
     special:'Last Rite', specialDesc:'When HP hits 0, survive at 15 HP instead (once per game)',
-    condition:'lost4', conditionDesc:'Had 4+ monsters destroyed this game', lastRiteUsed:false},
+    condition:'lost4', conditionDesc:'Had 4+ summons destroyed this game', lastRiteUsed:false},
   // Undead — new
   {id:'grave_specter',  type:'Undead', name:'Grave Specter',  arch:'assailant', hp:18, maxHp:18, atk:42, def:4,  cost:8,  gen:2, isSpecial:false},
   {id:'cursed_revenant',type:'Undead', name:'Cursed Revenant',arch:'vanguard',  hp:33, maxHp:33, atk:26, def:10, cost:10, gen:2, isSpecial:false},
@@ -82,10 +82,10 @@ const ROSTER = [
   {id:'pack_hunter',    type:'Beast',  name:'Pack Hunter',    arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
   {id:'red_dragon',     type:'Beast',  name:'Red Dragon',     arch:'ascendant', hp:35, maxHp:35, atk:40, def:9,  cost:20, gen:5, isSpecial:true,
     special:'Intimidate', specialDesc:'When claiming a tile, adjacent owners pay 5 Mana each',
-    condition:'mostMonsters', conditionDesc:'Have the most monsters stationed on board'},
+    condition:'mostSummons', conditionDesc:'Have the most summons stationed on board'},
   // Beast — new
   {id:'feral_striker',  type:'Beast',  name:'Feral Striker',  arch:'assailant', hp:22, maxHp:22, atk:38, def:5,  cost:8,  gen:2, isSpecial:false},
-  {id:'blood_mane',     type:'Beast',  name:'Blood Mane',     arch:'vanguard',  hp:32, maxHp:32, atk:28, def:9,  cost:10, gen:2, isSpecial:false},
+  {id:'stormtalon',     type:'Beast',  name:'Stormtalon',     arch:'vanguard',  hp:32, maxHp:32, atk:28, def:9,  cost:10, gen:2, isSpecial:false},
   {id:'stoneback',      type:'Beast',  name:'Stoneback',      arch:'vanguard',  hp:42, maxHp:42, atk:20, def:12, cost:10, gen:2, isSpecial:false},
 
   // ── Nature ──
@@ -117,20 +117,42 @@ const SPECIALS = ROSTER.filter(m => m.isSpecial);
 const RARES    = ROSTER.filter(m => m.rarity === 'rare');
 const NORMALS  = ROSTER.filter(m => !m.isSpecial && !m.rarity);
 
+// ─── WILD CARD POOLS ─────────────────────────────────────────────────────────
+const WILD_CARD_POOLS = {
+  low: [
+    { id:'mend',    name:'Mend',    cost:15, tier:'low',  target:'own_station', desc:'Heal one of your stationed summons for 20 HP' },
+    { id:'stumble', name:'Stumble', cost:15, tier:'low',  target:'player',      desc:'Force a target player to re-roll their dice next turn; they must use the new result' },
+    { id:'delay',   name:'Delay',   cost:15, tier:'low',  target:'player',      desc:'Force a target player to skip their shop phase next turn' },
+    { id:'jinx',    name:'Jinx',    cost:15, tier:'low',  target:'player',      desc:"Target player's passive mana income next turn is halved" },
+  ],
+  mid: [
+    { id:'ambush',  name:'Ambush',  cost:30, tier:'mid',  target:'self',        desc:'Your next attacker deals +40% damage' },
+    { id:'fortify', name:'Fortify', cost:30, tier:'mid',  target:'self',        desc:'Your next defender takes −40% damage' },
+    { id:'rattle',  name:'Rattle',  cost:30, tier:'mid',  target:'player',      desc:"Target player's next battle, their summon fights at half ATK" },
+    { id:'poach',   name:'Poach',   cost:30, tier:'mid',  target:'player',      desc:"Steal a random summon from a target player's hand" },
+  ],
+  high: [
+    { id:'coup',     name:'Coup',     cost:60, tier:'high', target:'coup',    desc:'Take any enemy-owned tile; deploy a summon from your hand (free). Their summon returns to hand — if full, forfeit.' },
+    { id:'plague',   name:'Plague',   cost:60, tier:'high', target:'player',  desc:"All of a target player's stationed summons lose 15 HP" },
+    { id:'windfall', name:'Windfall', cost:60, tier:'high', target:'self',    desc:'Your passive mana income next turn is tripled' },
+    { id:'shatter',  name:'Shatter',  cost:60, tier:'high', target:'shatter', desc:'Destroy any 2 stationed summons on the board; both tiles go neutral' },
+  ]
+};
+
 // Starter sets — 6 sets × 5 cards each (no Mana cost during setup phase)
 const STARTER_SETS = {
   A: { name:'The Cabal',        theme:'Dark / Undead / Arcane',  desc:'2 Assailants + 2 Guardians + 1 Vanguard — shadow magic trinity',
-       monsters:['nightshard','grave_specter','void_sentinel','rune_priestess','mana_weaver'] },
+       summons:['nightshard','grave_specter','void_sentinel','rune_priestess','mana_weaver'] },
   B: { name:'The Warpack',      theme:'Dark / Beast / Undead',   desc:'2 Assailants + 2 Guardians + 1 Vanguard — primal hunter force',
-       monsters:['void_reaper','feral_striker','iron_hide','death_knight','cursed_revenant'] },
+       summons:['void_reaper','feral_striker','iron_hide','death_knight','cursed_revenant'] },
   C: { name:'The Order',        theme:'Light / Arcane / Nature', desc:'2 Assailants + 2 Guardians + 1 Vanguard — holy nature alliance',
-       monsters:['dawn_striker','spell_wraith','dawnguard','ancient_oak','vine_stalker'] },
+       summons:['dawn_striker','spell_wraith','dawnguard','ancient_oak','vine_stalker'] },
   D: { name:'The Arcane Watch', theme:'Arcane',                  desc:'1 Assailant + 1 Guardian + 3 Vanguards — versatile arcane mastery',
-       monsters:['spell_wraith','rune_priestess','arch_mage','runic_duelist','mana_weaver'] },
+       summons:['spell_wraith','rune_priestess','arch_mage','runic_duelist','mana_weaver'] },
   E: { name:'Divine Guard',     theme:'Light',                   desc:'2 Guardians + 1 Assailant + 2 Vanguards — impenetrable light fortress',
-       monsters:['dawnguard','dawnguard','dawn_striker','radiant_lancer','sunfire_herald'] },
+       summons:['dawnguard','dawnguard','dawn_striker','radiant_lancer','sunfire_herald'] },
   F: { name:'Chaos Legion',     theme:'Dark',                    desc:'3 Assailants + 2 Vanguards — pure dark aggression',
-       monsters:['nightshard','nightshard','void_reaper','dusk_blade','umbral_stalker'] },
+       summons:['nightshard','nightshard','void_reaper','dusk_blade','umbral_stalker'] },
 };
 
 const PLAYER_COLORS = ['#e05252','#5ca8e0','#5dc97d','#e0b050','#c07fd8','#60cdc0'];
@@ -150,9 +172,9 @@ function generateRoomCode() {
   return code;
 }
 
-function makeMonster(templateId) {
+function makeSummon(templateId) {
   const t = ROSTER.find(r => r.id === templateId);
-  if (!t) throw new Error('unknown monster: ' + templateId);
+  if (!t) throw new Error('unknown summon: ' + templateId);
   return { ...t, iid: ++_iid, charm: false, lastRiteUsed: false };
 }
 
@@ -198,11 +220,11 @@ function buildBoard() {
     const sp = specials.find(s => s.pos === i);
     if (sp) {
       tiles.push({ pos:i, kind:sp.kind, label:sp.label, icon:sp.icon,
-                   element:null, ownerId:null, monsterId:null });
+                   element:null, ownerId:null, summonId:null });
     } else {
       const el = types[typeIdx++];
       tiles.push({ pos:i, kind:'element', label:el, icon:'', element:el,
-                   ownerId:null, monsterId:null });
+                   ownerId:null, summonId:null });
     }
   }
   return tiles;
@@ -244,6 +266,9 @@ function freshGame(roomCode) {
     setupRound: 1,           // current setup round (1-3)
     setupTurnIdx: 0,         // total setup turns taken (0 to 3*N-1)
     setupTotalTurns: 0,      // = 3 * N, set when setup starts
+    pendingWildCard: false,  // set true when player passes position 0
+    wildCardDrawn: null,     // { low: card, mid: card, high: card }
+    wildCardPending: null,   // { cardId, step } for multi-step cards (coup/shatter)
   };
 }
 
@@ -257,13 +282,13 @@ function scheduleRoomAction(roomCode, fn, ms) {
 
 function addPlayer(name, color, starterSet) {
   const idx = G.players.length;
-  const hand = STARTER_SETS[starterSet].monsters.map(id => makeMonster(id));
+  const hand = STARTER_SETS[starterSet].summons.map(id => makeSummon(id));
   const sessionKey = crypto.randomBytes(8).toString('hex');
   return {
     idx, name, color, starterSet, sessionKey,
     isConnected: true,
     mana: 40,
-    hand,            // monster instances
+    hand,            // summon instances
     position: 0,
     healCount: 0,
     destroyedCount: 0,
@@ -274,6 +299,7 @@ function addPlayer(name, color, starterSet) {
     battlesLost: 0,
     peakTiles: 0,
     totalManaEarned: 40, // starts with initial 40
+    wcEffects: { stumble:false, delay:false, jinx:false, ambush:false, fortify:false, rattle:false, windfall:false },
   };
 }
 
@@ -285,10 +311,10 @@ function log(text) {
 
 // ─── SPECIAL CONDITION CHECKS ─────────────────────────────────────────────────
 
-function canUseSpecial(playerIdx, monster) {
-  if (!monster.isSpecial) return true;
+function canUseSpecial(playerIdx, summon) {
+  if (!summon.isSpecial) return true;
   const p = G.players[playerIdx];
-  switch (monster.condition) {
+  switch (summon.condition) {
     case 'healed4':       return p.healCount >= 4;
     case 'moreManaThanAll': {
       const others = G.players.filter((_,i) => i !== playerIdx);
@@ -296,9 +322,9 @@ function canUseSpecial(playerIdx, monster) {
     }
     case 'changed3':      return p.elementChangeCount >= 3;
     case 'lost4':         return p.destroyedCount >= 4;
-    case 'mostMonsters': {
+    case 'mostSummons': {
       const counts = G.players.map(pl =>
-        G.board.filter(t => t.ownerId === pl.idx && t.monsterId).length
+        G.board.filter(t => t.ownerId === pl.idx && t.summonId).length
       );
       return counts[playerIdx] > 0 && counts[playerIdx] === Math.max(...counts);
     }
@@ -353,6 +379,7 @@ function doStrike(attacker, defender, tile, nullify = false, bonusRun = false, m
     attacker.charm = false;
     log(`⚡ Battle Charm activated on ${attacker.name}! +25% damage`);
   }
+  if (attacker._ambush) { dmg = Math.round(dmg * 1.40); attacker._ambush = false; log(`🃏 Ambush! +40% damage`); }
   if (bonusRun) {
     dmg = Math.round(dmg * 1.20);
     log(`🔥 Tile Synergy! ${attacker.name} strikes for +20% damage`);
@@ -366,7 +393,7 @@ function doStrike(attacker, defender, tile, nullify = false, bonusRun = false, m
 
 // Returns { attackerHp, defenderHp, atkDmg, defDmg, outcome }
 // outcome: 'attacker_wins' | 'defender_wins' | 'mutual' | 'stalemate'
-function resolveBattle(attackerM, defenderM, tile) {
+function resolveBattle(attackerM, defenderM, tile, rattled = false) {
   const nullify = (attackerM.isSpecial && attackerM.id === 'arcane_arbiter')
                || (defenderM.isSpecial  && defenderM.id  === 'arcane_arbiter');
 
@@ -384,7 +411,17 @@ function resolveBattle(attackerM, defenderM, tile) {
   if (defenderM.hp > 0) {
     const defBonus = bonusTileSet().has(tile.pos);
     const defMonoBuff = monoElementPlayerSet().has(tile.ownerId);
-    defDmg = doStrike(defenderM, attackerM, tile, nullify, defBonus, defMonoBuff);
+    if (rattled) {
+      const savedAtk = defenderM.atk;
+      defenderM.atk = Math.floor(defenderM.atk * 0.5);
+      defDmg = doStrike(defenderM, attackerM, tile, nullify, defBonus, defMonoBuff);
+      defenderM.atk = savedAtk;
+      log(`🃏 Rattle! ${defenderM.name} fights at half ATK`);
+    } else {
+      defDmg = doStrike(defenderM, attackerM, tile, nullify, defBonus, defMonoBuff);
+    }
+    // Fortify: reduce damage dealt to the attacker
+    if (attackerM._fortify) { defDmg = Math.round(defDmg * 0.60); attackerM._fortify = false; log(`🃏 Fortify! damage reduced 40%`); }
     attackerM.hp -= defDmg;
     if (attackerM.hp <= 0 && attackerM.id === 'demon_lord' && !attackerM.lastRiteUsed) {
       attackerM.hp = 15;
@@ -418,9 +455,9 @@ function getBonusRuns() {
     if (t0.ownerId == null) continue;
     if (t0.ownerId !== t1.ownerId || t0.ownerId !== t2.ownerId) continue;
     if (t0.element !== t1.element || t0.element !== t2.element) continue;
-    if (!t0.monsterInstance || t0.monsterInstance.type !== t0.element) continue;
-    if (!t1.monsterInstance || t1.monsterInstance.type !== t1.element) continue;
-    if (!t2.monsterInstance || t2.monsterInstance.type !== t2.element) continue;
+    if (!t0.summonInstance || t0.summonInstance.type !== t0.element) continue;
+    if (!t1.summonInstance || t1.summonInstance.type !== t1.element) continue;
+    if (!t2.summonInstance || t2.summonInstance.type !== t2.element) continue;
     const key = [i, (i + 1) % n, (i + 2) % n].sort((a, b) => a - b).join(',');
     if (seen.has(key)) continue;
     seen.add(key);
@@ -452,8 +489,8 @@ function getMonoElementBonus() {
       tags.push(m.type2 ? null : m.type);
     }
     for (const t of G.board) {
-      if (t.ownerId !== p.idx || !t.monsterInstance) continue;
-      const mi = t.monsterInstance;
+      if (t.ownerId !== p.idx || !t.summonInstance) continue;
+      const mi = t.summonInstance;
       tags.push(mi.type2 ? null : mi.type);
     }
     const ownedElemTiles = G.board.filter(t => t.ownerId === p.idx && t.kind === 'element');
@@ -484,12 +521,12 @@ function collectPassiveIncome(playerIdx) {
   let earned = 5; // baseline
 
   for (const tile of G.board) {
-    if (tile.ownerId !== playerIdx || !tile.monsterId) continue;
-    const m = p.hand.find(h => h.iid === tile.monsterId)
-           || G.board.reduce((acc, t) => acc, null); // stationed monster is on the board, not in hand
+    if (tile.ownerId !== playerIdx || !tile.summonId) continue;
+    const m = p.hand.find(h => h.iid === tile.summonId)
+           || G.board.reduce((acc, t) => acc, null); // stationed summon is on the board, not in hand
 
-    // stationed monsters are stored separately in tile.monsterInstance
-    const mi = tile.monsterInstance;
+    // stationed summons are stored separately in tile.summonInstance
+    const mi = tile.summonInstance;
     if (!mi) continue;
     let gen = mi.gen;
     // World Tree special
@@ -500,20 +537,20 @@ function collectPassiveIncome(playerIdx) {
     earned += gen;
   }
 
-  // Ardent Saint passive — heal all friendly stationed monsters 5 HP/turn
+  // Ardent Saint passive — heal all friendly stationed summons 5 HP/turn
   for (const tile of G.board) {
     if (tile.ownerId !== playerIdx) continue;
-    const mi = tile.monsterInstance;
+    const mi = tile.summonInstance;
     if (mi && mi.id === 'ardent_saint') {
       for (const t2 of G.board) {
-        if (t2.ownerId === playerIdx && t2.monsterInstance && t2 !== tile) {
-          t2.monsterInstance.hp = Math.min(t2.monsterInstance.maxHp, t2.monsterInstance.hp + 5);
+        if (t2.ownerId === playerIdx && t2.summonInstance && t2 !== tile) {
+          t2.summonInstance.hp = Math.min(t2.summonInstance.maxHp, t2.summonInstance.hp + 5);
         }
       }
     }
   }
 
-  // Consecutive tile bonus — heal +1 HP to each monster in a qualifying run
+  // Consecutive tile bonus — heal +1 HP to each summon in a qualifying run
   const bonusRuns = getBonusRuns();
   const healedThisTurn = new Set();
   for (const run of bonusRuns) {
@@ -522,28 +559,41 @@ function collectPassiveIncome(playerIdx) {
       if (healedThisTurn.has(tPos)) continue;
       healedThisTurn.add(tPos);
       const bt = G.board[tPos];
-      if (bt && bt.monsterInstance) {
-        bt.monsterInstance.hp = Math.min(bt.monsterInstance.maxHp, bt.monsterInstance.hp + 1);
+      if (bt && bt.summonInstance) {
+        bt.summonInstance.hp = Math.min(bt.summonInstance.maxHp, bt.summonInstance.hp + 1);
       }
     }
   }
   if (healedThisTurn.size > 0) {
-    log(`🔥 ${p.name}'s Tile Synergy heals ${healedThisTurn.size} monster${healedThisTurn.size > 1 ? 's' : ''} +1 HP`);
+    log(`🔥 ${p.name}'s Tile Synergy heals ${healedThisTurn.size} summon${healedThisTurn.size > 1 ? 's' : ''} +1 HP`);
   }
 
-  // Mono-Element Mastery — heal all stationed monsters +1 HP if player qualifies
+  // Mono-Element Mastery — heal all stationed summons +1 HP if player qualifies
   const monoBonus = getMonoElementBonus().find(r => r.playerIdx === playerIdx);
   if (monoBonus) {
     let monoHealCount = 0;
     for (const t of G.board) {
-      if (t.ownerId !== playerIdx || !t.monsterInstance) continue;
-      t.monsterInstance.hp = Math.min(t.monsterInstance.maxHp, t.monsterInstance.hp + 1);
+      if (t.ownerId !== playerIdx || !t.summonInstance) continue;
+      t.summonInstance.hp = Math.min(t.summonInstance.maxHp, t.summonInstance.hp + 1);
       monoHealCount++;
     }
     if (monoHealCount > 0) {
-      log(`⭐ ${p.name}'s Mono-Element Mastery (${monoBonus.element}) heals ${monoHealCount} monster${monoHealCount > 1 ? 's' : ''} +1 HP`);
+      log(`⭐ ${p.name}'s Mono-Element Mastery (${monoBonus.element}) heals ${monoHealCount} summon${monoHealCount > 1 ? 's' : ''} +1 HP`);
     }
   }
+
+  // Tile upkeep — 1 Mana per owned tile (applies from round 2 onward)
+  const ownedTileCount = G.board.filter(t => t.ownerId === playerIdx).length;
+  let upkeep = 0;
+  if (ownedTileCount > 0) {
+    upkeep = ownedTileCount;
+    p.mana = Math.max(0, p.mana - upkeep);
+    log(`🏗️ ${p.name} pays ${upkeep}✦ upkeep for ${ownedTileCount} tile${ownedTileCount > 1 ? 's' : ''}`);
+  }
+
+  // Wild card effects on income
+  if (p.wcEffects.windfall) { earned = earned * 3; p.wcEffects.windfall = false; log(`🃏 Windfall! ${p.name}'s income tripled`); }
+  if (p.wcEffects.jinx)    { earned = Math.floor(earned * 0.5); p.wcEffects.jinx = false; log(`🃏 Jinx! ${p.name}'s income halved`); }
 
   const MANA_SOFT_CAP = 150;
   if (p.mana >= MANA_SOFT_CAP) {
@@ -556,8 +606,8 @@ function collectPassiveIncome(playerIdx) {
   log(`✦ ${p.name} earns ${earned} Mana (now ${p.mana})`);
 }
 
-function countStationedMonsters(playerIdx) {
-  return G.board.filter(t => t.ownerId === playerIdx && t.monsterInstance).length;
+function countStationedSummons(playerIdx) {
+  return G.board.filter(t => t.ownerId === playerIdx && t.summonInstance).length;
 }
 
 // ─── CHEST DRAWS ─────────────────────────────────────────────────────────────
@@ -584,18 +634,18 @@ function drawChestReward() {
 // ─── STATE BROADCASTING ───────────────────────────────────────────────────────
 
 function publicState() {
-  // Safe copy of board (monsterInstance as summary)
+  // Safe copy of board (summonInstance as summary)
   const board = G.board.map(t => {
     const ti = { ...t };
-    if (t.monsterInstance) {
-      const m = t.monsterInstance;
-      ti.monster = { iid:m.iid, id:m.id, name:m.name, type:m.type,
+    if (t.summonInstance) {
+      const m = t.summonInstance;
+      ti.summon = { iid:m.iid, id:m.id, name:m.name, type:m.type,
                      hp:m.hp, maxHp:m.maxHp, atk:m.atk, def:m.def,
                      cost:m.cost, gen:m.gen, isSpecial:m.isSpecial, charm:m.charm };
     } else {
-      ti.monster = null;
+      ti.summon = null;
     }
-    delete ti.monsterInstance;
+    delete ti.summonInstance;
     return ti;
   });
 
@@ -604,7 +654,7 @@ function publicState() {
     mana: p.mana, position: p.position,
     handSize: p.hand.length,
     tileCount: G.board.filter(t => t.ownerId === p.idx).length,
-    stationedCount: countStationedMonsters(p.idx),
+    stationedCount: countStationedSummons(p.idx),
     healCount: p.healCount,
     destroyedCount: p.destroyedCount,
     elementChangeCount: p.elementChangeCount,
@@ -613,6 +663,7 @@ function publicState() {
     battlesLost: p.battlesLost,
     peakTiles: p.peakTiles,
     totalManaEarned: p.totalManaEarned,
+    wcEffects: p.wcEffects || {},
   }));
 
   return {
@@ -641,7 +692,9 @@ function publicState() {
       cost:m.cost, gen:m.gen, isSpecial:false, charm:false
     })),
     lastBattle: G.lastBattle || null,
-    pendingAttackerMonster: G.pendingAttackerMonster || null,
+    pendingAttackerSummon: G.pendingAttackerSummon || null,
+    wildCardDrawn: G.wildCardDrawn || null,
+    wildCardPending: G.wildCardPending || null,
     pausedFor: G.pausedFor || null,
     setupRound: G.setupRound || 1,
     setupTurnIdx: G.setupTurnIdx || 0,
@@ -661,8 +714,8 @@ function startShopPhase() {
   const p = G.players[G.currentPlayer];
   p.lastDiceRoll = null;  // reset so stale roll values don't trigger false animations
   G.lastBattle = null;    // clear battle result so it doesn't persist across turns
-  G.pendingAttackerMonster = null; // clear attacker preview
-  // Round 1 grace period — monsters placed during setup shouldn't immediately earn;
+  G.pendingAttackerSummon = null; // clear attacker preview
+  // Round 1 grace period — summons placed during setup shouldn't immediately earn;
   // mana generation starts from round 2 onward (turnCount >= playerCount)
   if (G.turnCount >= G.players.length) {
     collectPassiveIncome(G.currentPlayer);
@@ -677,6 +730,15 @@ function startShopPhase() {
     G.phase = 'stalemate';
     console.log(`[SG] *** STALEMATE PHASE for player ${G.currentPlayer} (${p.name}) on tile ${G.stalemateData.tilePos} ***`);
     log(`⚔️ ${p.name} must resolve the stalemate on tile ${G.stalemateData.tilePos}`);
+    broadcast();
+    return;
+  }
+
+  // Wild card: Delay — skip shop phase
+  if (p.wcEffects.delay) {
+    p.wcEffects.delay = false;
+    G.phase = 'roll';
+    log(`🃏 Delay! ${p.name}'s shop phase is skipped`);
     broadcast();
     return;
   }
@@ -708,9 +770,9 @@ function advanceSetupTurn() {
   G.currentPlayer = G.setupTurnIdx % G.players.length;
   G.setupRound = Math.floor(G.setupTurnIdx / G.players.length) + 1;
   const cp = G.players[G.currentPlayer];
-  // Auto-advance players who have no monsters left — nothing they can do but pass
+  // Auto-advance players who have no summons left — nothing they can do but pass
   if (cp && cp.hand.length === 0) {
-    log(`⏭ ${cp.name} has no monsters — auto-pass (round ${G.setupRound})`);
+    log(`⏭ ${cp.name} has no summons — auto-pass (round ${G.setupRound})`);
     advanceSetupTurn();
     return;
   }
@@ -719,6 +781,26 @@ function advanceSetupTurn() {
 }
 
 function advanceTurn() {
+  // Wild card intercept — fires ONCE after turn resolves if player passed position 0
+  if (G.pendingWildCard && G.wildCardDrawn === null) {
+    G.pendingWildCard = false;
+    // Draw one card randomly from each tier pool
+    const drawFrom = pool => pool[rand(0, pool.length - 1)];
+    G.wildCardDrawn = {
+      low:  drawFrom(WILD_CARD_POOLS.low),
+      mid:  drawFrom(WILD_CARD_POOLS.mid),
+      high: drawFrom(WILD_CARD_POOLS.high),
+    };
+    G.phase = 'resolve:wildcard_cards';
+    log(`🃏 ${G.players[G.currentPlayer].name} passed the Mana Well — Wild Card event!`);
+    broadcast();
+    return; // don't advance turn yet
+  }
+  // Clear any lingering wildcard state
+  G.pendingWildCard = false;
+  G.wildCardDrawn = null;
+  G.wildCardPending = null;
+
   G.turnCount++;
   if (G.turnCount >= G.roundLimit * G.players.length) {
     endGame();
@@ -755,7 +837,7 @@ function endGame() {
     battlesLost: p.battlesLost,
     peakTiles: p.peakTiles,
     totalManaEarned: p.totalManaEarned,
-    monstersLost: p.destroyedCount,
+    summonsLost: p.destroyedCount,
     handSize: p.hand.length,
   }));
   broadcast();
@@ -763,16 +845,28 @@ function endGame() {
 
 function resolveRoll(playerIdx) {
   const p = G.players[playerIdx];
-  const roll = rand(1, 6) + rand(1, 6);
+  let roll = rand(1, 6) + rand(1, 6);
+
+  // Stumble effect — re-roll, take worse result
+  if (p.wcEffects.stumble) {
+    p.wcEffects.stumble = false;
+    const r2 = rand(1, 6) + rand(1, 6);
+    if (r2 < roll) {
+      log(`🃏 Stumble! ${p.name} re-rolls ${roll} → forced to ${r2}`);
+      roll = r2;
+    } else {
+      log(`🃏 Stumble! ${p.name} re-rolls — original ${roll} kept (new ${r2} was worse)`);
+    }
+  }
+
   p.lastDiceRoll = roll;
   const oldPos = p.position;
   const newPos = (oldPos + roll) % 28;
   p.position = newPos;
 
-  // Check for Mana Well passes (but not landing — landing is handled separately)
+  // Detect passing the Mana Well (position 0) — but not landing on it
   if (newPos !== 0 && oldPos + roll >= 28) {
-    p.mana += 10;
-    log(`✦ ${p.name} passed Mana Well: +10 Mana`);
+    G.pendingWildCard = true;
   }
 
   log(`🎲 ${p.name} rolled ${roll} → tile ${newPos}`);
@@ -807,15 +901,15 @@ function resolveRoll(playerIdx) {
   if (tile.kind === 'chest') {
     const reward = drawChestReward();
     G.pendingChest = { ...reward, tilePos: newPos };
-    // Immediately add the free monster to hand (if room); snapshot it for display
+    // Immediately add the free summon to hand (if room); snapshot it for display
     if (reward.kind === 'free_monster') {
       if (p.hand.length < 5) {
-        const freeM = makeMonster(NORMALS[rand(0, NORMALS.length - 1)].id);
+        const freeM = makeSummon(NORMALS[rand(0, NORMALS.length - 1)].id);
         p.hand.push(freeM);
-        G.pendingChest.monster = { iid:freeM.iid, id:freeM.id, name:freeM.name, type:freeM.type,
+        G.pendingChest.summon = { iid:freeM.iid, id:freeM.id, name:freeM.name, type:freeM.type,
           hp:freeM.hp, maxHp:freeM.maxHp, atk:freeM.atk, def:freeM.def,
           cost:freeM.cost, gen:freeM.gen, isSpecial:freeM.isSpecial||false, charm:freeM.charm||false };
-        log(`🎁 ${p.name} got free monster: ${freeM.name}`);
+        log(`🎁 ${p.name} got free summon: ${freeM.name}`);
       } else {
         log(`🎁 ${p.name} drew free_monster but hand is full — reward lost`);
       }
@@ -828,7 +922,7 @@ function resolveRoll(playerIdx) {
 
   // Elemental tile
   if (!tile.ownerId && tile.ownerId !== 0) {
-    // Empty — player can claim if they have a monster
+    // Empty — player can claim if they have a summon
     G.phase = 'resolve:claim';
     broadcast();
   } else if (tile.ownerId === playerIdx) {
@@ -984,7 +1078,7 @@ const handlers = {
     if (!offer) return sendError(ws, 'Invalid offer');
     if (p.mana < offer.cost) return sendError(ws, 'Not enough Mana');
     p.mana -= offer.cost;
-    const m = makeMonster(offer.id);
+    const m = makeSummon(offer.id);
     p.hand.push(m);
     G.shopOffers = G.shopOffers.filter(o => o.iid !== offer.iid);
     log(`🛒 ${p.name} bought ${m.name} (−${m.cost}✦)`);
@@ -997,7 +1091,7 @@ const handlers = {
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
     const p = G.players[G.currentPlayer];
     const idx = p.hand.findIndex(m => m.iid === data.iid);
-    if (idx === -1) return sendError(ws, 'Monster not in hand');
+    if (idx === -1) return sendError(ws, 'Summon not in hand');
     const m = p.hand[idx];
     const refund = Math.floor(m.cost * (m.hp / m.maxHp));
     p.hand.splice(idx, 1);
@@ -1021,18 +1115,18 @@ const handlers = {
     if (G.phase !== 'stalemate') return sendError(ws, 'Not stalemate phase');
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
     const p = G.players[G.currentPlayer];
-    if (!p.hand || p.hand.length === 0) return sendError(ws, 'No monsters in hand');
+    if (!p.hand || p.hand.length === 0) return sendError(ws, 'No summons in hand');
     const sd = G.stalemateData;
-    // Verify the tile is still contested (defender's monster still there)
+    // Verify the tile is still contested (defender's summon still there)
     const tile = G.board[sd.tilePos];
-    if (!tile || !tile.monsterInstance) {
+    if (!tile || !tile.summonInstance) {
       // Defender monster gone somehow — just clear and advance
       G.stalemateData = null;
       advanceTurn();
       return;
     }
     G.stalemateData = null;
-    G.pendingAttackerMonster = null;
+    G.pendingAttackerSummon = null;
     G.phase = 'resolve:battle';
     log(`⚔️ ${p.name} chooses to battle again on tile ${sd.tilePos}!`);
     broadcast();
@@ -1073,12 +1167,12 @@ const handlers = {
     if (tile.kind !== 'element') return sendError(ws, 'Can only claim elemental tiles during setup');
     if (tile.ownerId !== null && tile.ownerId !== undefined) return sendError(ws, 'Tile already claimed');
     const m = p.hand.find(h => h.iid === data.iid);
-    if (!m) return sendError(ws, 'Monster not in hand');
+    if (!m) return sendError(ws, 'Summon not in hand');
     // Free claim — no mana cost
     p.hand.splice(p.hand.indexOf(m), 1);
     tile.ownerId = G.currentPlayer;
-    tile.monsterId = m.iid;
-    tile.monsterInstance = m;
+    tile.summonId = m.iid;
+    tile.summonInstance = m;
     _updatePeakTiles(G.currentPlayer);
     log(`🌟 ${p.name} claimed tile ${tilePos} (${tile.element}) with ${m.name} [Setup]`);
     advanceSetupTurn();
@@ -1107,15 +1201,15 @@ const handlers = {
     const p = G.players[G.currentPlayer];
     const tile = G.board[p.position];
     const m = p.hand.find(h => h.iid === data.iid);
-    if (!m) return sendError(ws, 'Monster not in hand');
+    if (!m) return sendError(ws, 'Summon not in hand');
     if (!canUseSpecial(G.currentPlayer, m)) return sendError(ws, 'Special condition not met');
     if (p.mana < m.cost) return sendError(ws, 'Not enough Mana');
     p.mana -= m.cost;
     const mIdx = p.hand.indexOf(m);
     p.hand.splice(mIdx, 1);
     tile.ownerId = G.currentPlayer;
-    tile.monsterId = m.iid;
-    tile.monsterInstance = m;
+    tile.summonId = m.iid;
+    tile.summonInstance = m;
     log(`🚩 ${p.name} claimed tile ${p.position} with ${m.name}`);
 
     // Red Dragon Intimidate
@@ -1149,13 +1243,20 @@ const handlers = {
     const p = G.players[G.currentPlayer];
     const tile = G.board[p.position];
     const defOwner = G.players[tile.ownerId];
-    const defM = tile.monsterInstance;
+    const defM = tile.summonInstance;
     if (!defM) return sendError(ws, 'No defender on tile');
     const attM = p.hand.find(m => m.iid === data.iid);
-    if (!attM) return sendError(ws, 'Monster not in hand');
+    if (!attM) return sendError(ws, 'Summon not in hand');
     if (!canUseSpecial(G.currentPlayer, attM)) return sendError(ws, 'Special condition not met');
 
-    const { atkDmg, defDmg, outcome } = resolveBattle(attM, defM, tile);
+    // Wild card effects before battle
+    if (p.wcEffects.ambush) { p.wcEffects.ambush = false; attM._ambush = true; }
+    if (p.wcEffects.fortify) { p.wcEffects.fortify = false; attM._fortify = true; }
+    const defOwnerP = G.players[tile.ownerId];
+    const rattled = !!(defOwnerP && defOwnerP.wcEffects && defOwnerP.wcEffects.rattle);
+    if (rattled) { defOwnerP.wcEffects.rattle = false; }
+
+    const { atkDmg, defDmg, outcome } = resolveBattle(attM, defM, tile, rattled);
     log(`⚔️ ${p.name}(${attM.name}) attacks ${defOwner.name}(${defM.name}) on tile ${p.position}`);
     log(`   ATK dealt ${atkDmg}, DEF struck back ${defDmg} — ${outcome}`);
 
@@ -1163,12 +1264,12 @@ const handlers = {
     G.lastBattle = {
       attackerIdx: G.currentPlayer,
       defOwnerIdx: tile.ownerId,
-      attM: { name:attM.name, type:attM.type, atk:attM.atk, def:attM.def, id:attM.id, isSpecial:attM.isSpecial||false, hp:attM.hp, maxHp:attM.maxHp },
-      defM: { name:defM.name, type:defM.type, atk:defM.atk, def:defM.def, id:defM.id, isSpecial:defM.isSpecial||false, hp:defM.hp, maxHp:defM.maxHp },
+      attM: { name:attM.name, type:attM.type, atk:attM.atk, def:attM.def, id:attM.id, isSpecial:attM.isSpecial||false, hp:attM.hp, maxHp:attM.maxHp, cost:attM.cost, gen:attM.gen },
+      defM: { name:defM.name, type:defM.type, atk:defM.atk, def:defM.def, id:defM.id, isSpecial:defM.isSpecial||false, hp:defM.hp, maxHp:defM.maxHp, cost:defM.cost, gen:defM.gen },
       atkDmg, defDmg, outcome
     };
     _applyBattleOutcome(outcome, p, attM, defOwner, defM, tile, p.position);
-    G.pendingAttackerMonster = null;
+    G.pendingAttackerSummon = null;
     // Track stalemate — resolved on this player's next turn
     if (outcome === 'stalemate') {
       G.stalemateData = { attackerIdx: G.currentPlayer, tilePos: p.position };
@@ -1184,10 +1285,10 @@ const handlers = {
     if (conn.playerIdx !== G.currentPlayer) return;
     const p = G.players[G.currentPlayer];
     if (data.iid == null) {
-      G.pendingAttackerMonster = null;
+      G.pendingAttackerSummon = null;
     } else {
       const m = p.hand.find(m => m.iid === data.iid);
-      if (m) G.pendingAttackerMonster = { iid:m.iid, id:m.id, name:m.name, type:m.type,
+      if (m) G.pendingAttackerSummon = { iid:m.iid, id:m.id, name:m.name, type:m.type,
         hp:m.hp, maxHp:m.maxHp, atk:m.atk, def:m.def, cost:m.cost, gen:m.gen,
         isSpecial:m.isSpecial||false, charm:m.charm||false };
     }
@@ -1201,7 +1302,7 @@ const handlers = {
     const penalty = Math.min(p.mana, MANA_PENALTY);
     p.mana -= penalty;
     log(`🏃 ${p.name} retreated — paid ${penalty}✦ penalty`);
-    G.pendingAttackerMonster = null;
+    G.pendingAttackerSummon = null;
     advanceTurn();
   },
 
@@ -1213,18 +1314,18 @@ const handlers = {
     const p = G.players[G.currentPlayer];
     if (p.hand.length >= 5) return sendError(ws, 'Hand full — cannot swap');
     const tile = G.board[p.position];
-    const oldM = tile.monsterInstance;
-    const newM = p.hand.find(m => m.iid === data.newMonsterIid);
-    if (!newM) return sendError(ws, 'Monster not in hand');
+    const oldM = tile.summonInstance;
+    const newM = p.hand.find(m => m.iid === data.newSummonIid);
+    if (!newM) return sendError(ws, 'Summon not in hand');
     if (!canUseSpecial(G.currentPlayer, newM)) return sendError(ws, 'Special condition not met');
-    // Cost to deploy new monster
+    // Cost to deploy new summon
     if (p.mana < newM.cost) return sendError(ws, 'Not enough Mana');
     p.mana -= newM.cost;
     const idx = p.hand.indexOf(newM);
     p.hand.splice(idx, 1);
     if (oldM) p.hand.push(oldM);
-    tile.monsterInstance = newM;
-    tile.monsterId = newM.iid;
+    tile.summonInstance = newM;
+    tile.summonId = newM.iid;
     log(`🔄 ${p.name} swapped ${oldM ? oldM.name : 'empty'} → ${newM.name} on tile ${p.position}`);
     advanceTurn();
   },
@@ -1234,8 +1335,8 @@ const handlers = {
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
     const p = G.players[G.currentPlayer];
     const tile = G.board[p.position];
-    const m = tile.monsterInstance;
-    if (!m) return sendError(ws, 'No monster to heal');
+    const m = tile.summonInstance;
+    if (!m) return sendError(ws, 'No summon to heal');
     const missing = m.maxHp - m.hp;
     if (missing <= 0) return sendError(ws, 'Already at full HP');
     const cost = Math.ceil(HEAL_COST_PER_HP * missing);
@@ -1252,8 +1353,8 @@ const handlers = {
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
     const p = G.players[G.currentPlayer];
     const tile = G.board[p.position];
-    const m = tile.monsterInstance;
-    if (!m) return sendError(ws, 'No monster to heal');
+    const m = tile.summonInstance;
+    if (!m) return sendError(ws, 'No summon to heal');
     const amount = Math.min(Math.max(0, parseInt(data.amount) || 0), m.maxHp - m.hp);
     const cost = Math.ceil(HEAL_COST_PER_HP * amount);
     if (p.mana < cost) return sendError(ws, 'Not enough Mana');
@@ -1301,7 +1402,7 @@ const handlers = {
     p.mana -= special.cost;
     const sIdx = p.hand.indexOf(sacrifice);
     p.hand.splice(sIdx, 1);
-    const gained = makeMonster(special.id);
+    const gained = makeSummon(special.id);
     p.hand.push(gained);
     log(`🏛 ${p.name} traded ${sacrifice.name} for ${gained.name}!`);
     G.pendingTemple = null;
@@ -1325,8 +1426,8 @@ const handlers = {
     // data.tilePos = tile where the stationed monster is
     const tile = G.board[data.tilePos];
     if (!tile || tile.ownerId !== G.currentPlayer) return sendError(ws, 'Not your tile');
-    const m = tile.monsterInstance;
-    if (!m) return sendError(ws, 'No monster on that tile');
+    const m = tile.summonInstance;
+    if (!m) return sendError(ws, 'No summon on that tile');
     const missing = m.maxHp - m.hp;
     if (missing <= 0) return sendError(ws, 'Already at full HP');
     const maxAfford = Math.floor(p.mana / HEAL_COST_PER_HP);
@@ -1356,8 +1457,8 @@ const handlers = {
     const p = G.players[G.currentPlayer];
     const tile = G.board[data.tilePos];
     if (!tile || tile.ownerId !== G.currentPlayer) return sendError(ws, 'Not your tile');
-    const m = tile.monsterInstance;
-    if (!m) return sendError(ws, 'No monster there');
+    const m = tile.summonInstance;
+    if (!m) return sendError(ws, 'No summon there');
     const chest = G.pendingChest;
     let healed = 0;
     const missing = m.maxHp - m.hp;
@@ -1380,9 +1481,9 @@ const handlers = {
     let m = p.hand.find(h => h.iid === data.iid);
     if (!m && data.tilePos !== undefined) {
       const tile = G.board[data.tilePos];
-      if (tile && tile.ownerId === G.currentPlayer) m = tile.monsterInstance;
+      if (tile && tile.ownerId === G.currentPlayer) m = tile.summonInstance;
     }
-    if (!m) return sendError(ws, 'No monster selected');
+    if (!m) return sendError(ws, 'No summon selected');
     if (m.charm) return sendError(ws, 'Already has a charm');
     m.charm = true;
     log(`⚡ Battle Charm assigned to ${m.name}`);
@@ -1419,6 +1520,177 @@ const handlers = {
     advanceTurn();
   },
 
+  // ── Wild Card ──────────────────────────────────────────────────────────────
+
+  wildcard_skip(ws, conn, data) {
+    if (G.phase !== 'resolve:wildcard_cards') return sendError(ws, 'Wrong phase');
+    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    G.wildCardDrawn = null;
+    log(`🃏 ${G.players[G.currentPlayer].name} skipped the Wild Card`);
+    advanceTurn();
+  },
+
+  wildcard_select(ws, conn, data) {
+    if (G.phase !== 'resolve:wildcard_cards') return sendError(ws, 'Wrong phase');
+    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    const p = G.players[G.currentPlayer];
+    const { tier, cardId } = data;
+    const drawn = G.wildCardDrawn;
+    if (!drawn) return sendError(ws, 'No wild cards drawn');
+    const card = drawn[tier];
+    if (!card || card.id !== cardId) return sendError(ws, 'Invalid card selection');
+    if (p.mana < card.cost) return sendError(ws, 'Not enough Mana');
+    p.mana -= card.cost;
+    G.wildCardDrawn = null;
+    log(`🃏 ${p.name} played ${card.name} (−${card.cost}✦)`);
+
+    if (card.target === 'self') {
+      if (card.id === 'ambush')   p.wcEffects.ambush   = true;
+      if (card.id === 'fortify')  p.wcEffects.fortify  = true;
+      if (card.id === 'windfall') p.wcEffects.windfall = true;
+      log(`🃏 ${card.name} — effect active for ${p.name}`);
+      advanceTurn();
+    } else if (card.target === 'own_station') {
+      G.wildCardPending = { cardId: card.id };
+      G.phase = 'resolve:wildcard_target';
+      broadcast();
+    } else if (card.target === 'player') {
+      G.wildCardPending = { cardId: card.id };
+      G.phase = 'resolve:wildcard_target';
+      broadcast();
+    } else if (card.target === 'coup') {
+      G.wildCardPending = { cardId: 'coup', step: 'tile' };
+      G.phase = 'resolve:wildcard_coup_tile';
+      broadcast();
+    } else if (card.target === 'shatter') {
+      G.wildCardPending = { cardId: 'shatter', step: 'pick', picks: [] };
+      G.phase = 'resolve:wildcard_shatter';
+      broadcast();
+    }
+  },
+
+  wildcard_target(ws, conn, data) {
+    if (G.phase !== 'resolve:wildcard_target') return sendError(ws, 'Wrong phase');
+    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    const p = G.players[G.currentPlayer];
+    const pending = G.wildCardPending;
+    if (!pending) return sendError(ws, 'No pending wild card');
+
+    if (pending.cardId === 'mend') {
+      const tile = G.board[data.tilePos];
+      if (!tile || tile.ownerId !== G.currentPlayer || !tile.summonInstance) return sendError(ws, 'Invalid tile');
+      const m = tile.summonInstance;
+      const healed = Math.min(20, m.maxHp - m.hp);
+      m.hp += healed;
+      log(`🃏 Mend healed ${m.name} for ${healed} HP`);
+      G.wildCardPending = null;
+      advanceTurn();
+    } else {
+      const targetIdx = data.targetIdx;
+      if (targetIdx === undefined || targetIdx === G.currentPlayer) return sendError(ws, 'Invalid target');
+      const target = G.players[targetIdx];
+      if (!target) return sendError(ws, 'Target not found');
+
+      if (pending.cardId === 'stumble') { target.wcEffects.stumble = true; log(`🃏 Stumble — ${target.name} must re-roll next turn`); }
+      if (pending.cardId === 'delay')   { target.wcEffects.delay   = true; log(`🃏 Delay — ${target.name}'s next shop is skipped`); }
+      if (pending.cardId === 'jinx')    { target.wcEffects.jinx    = true; log(`🃏 Jinx — ${target.name}'s next income is halved`); }
+      if (pending.cardId === 'rattle')  { target.wcEffects.rattle  = true; log(`🃏 Rattle — ${target.name}'s next battle at half ATK`); }
+      if (pending.cardId === 'plague') {
+        let hit = 0;
+        for (const t of G.board) {
+          if (t.ownerId === targetIdx && t.summonInstance) {
+            t.summonInstance.hp = Math.max(1, t.summonInstance.hp - 15);
+            hit++;
+          }
+        }
+        log(`🃏 Plague — ${target.name}'s ${hit} summon${hit!==1?'s':''} each lose 15 HP`);
+      }
+      if (pending.cardId === 'poach') {
+        if (target.hand.length === 0) { log(`🃏 Poach fizzled — ${target.name} has no summons in hand`); }
+        else if (p.hand.length >= 5)  { log(`🃏 Poach failed — your hand is full`); }
+        else {
+          const idx = rand(0, target.hand.length - 1);
+          const stolen = target.hand.splice(idx, 1)[0];
+          p.hand.push(stolen);
+          log(`🃏 Poach — ${p.name} stole ${stolen.name} from ${target.name}`);
+        }
+      }
+      G.wildCardPending = null;
+      advanceTurn();
+    }
+  },
+
+  wildcard_coup_tile(ws, conn, data) {
+    if (G.phase !== 'resolve:wildcard_coup_tile') return sendError(ws, 'Wrong phase');
+    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    const tilePos = parseInt(data.tilePos, 10);
+    if (isNaN(tilePos)) return sendError(ws, 'Invalid tile');
+    const tile = G.board[tilePos];
+    if (!tile || tile.ownerId === null || tile.ownerId === G.currentPlayer) return sendError(ws, 'Must pick an enemy-owned tile');
+    G.wildCardPending.tilePos = tilePos;
+    G.wildCardPending.step = 'summon';
+    G.phase = 'resolve:wildcard_coup_summon';
+    broadcast();
+  },
+
+  wildcard_coup_summon(ws, conn, data) {
+    if (G.phase !== 'resolve:wildcard_coup_summon') return sendError(ws, 'Wrong phase');
+    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    const p = G.players[G.currentPlayer];
+    const m = p.hand.find(h => h.iid === data.iid);
+    if (!m) return sendError(ws, 'Summon not in hand');
+    const tilePos = G.wildCardPending.tilePos;
+    const tile = G.board[tilePos];
+    const prevOwner = G.players[tile.ownerId];
+    if (tile.summonInstance) {
+      if (prevOwner.hand.length < 5) {
+        prevOwner.hand.push(tile.summonInstance);
+        log(`🃏 Coup — ${tile.summonInstance.name} returned to ${prevOwner.name}`);
+      } else {
+        log(`🃏 Coup — ${tile.summonInstance.name} forfeit (${prevOwner.name}'s hand full)`);
+      }
+    }
+    const mIdx = p.hand.indexOf(m);
+    p.hand.splice(mIdx, 1);
+    tile.ownerId = G.currentPlayer;
+    tile.summonInstance = m;
+    tile.summonId = m.iid;
+    log(`🃏 Coup — ${p.name} seized tile ${tilePos} from ${prevOwner.name} with ${m.name}`);
+    _updatePeakTiles(G.currentPlayer);
+    G.wildCardPending = null;
+    advanceTurn();
+  },
+
+  wildcard_shatter(ws, conn, data) {
+    if (G.phase !== 'resolve:wildcard_shatter') return sendError(ws, 'Wrong phase');
+    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    const picks = G.wildCardPending.picks || [];
+    const tilePos = parseInt(data.tilePos, 10);
+    if (isNaN(tilePos)) return sendError(ws, 'Invalid tile');
+    const tile = G.board[tilePos];
+    if (!tile || !tile.summonInstance) return sendError(ws, 'No summon on that tile');
+    if (picks.includes(tilePos)) return sendError(ws, 'Already selected');
+    picks.push(tilePos);
+    G.wildCardPending.picks = picks;
+    if (picks.length < 2) {
+      broadcast();
+      return;
+    }
+    for (const pos of picks) {
+      const t = G.board[pos];
+      if (t.summonInstance) {
+        const owner = G.players[t.ownerId];
+        log(`🃏 Shatter — ${t.summonInstance.name} destroyed on tile ${pos}`);
+        if (owner) owner.destroyedCount++;
+        t.summonInstance = null;
+        t.summonId = null;
+        t.ownerId = null;
+      }
+    }
+    G.wildCardPending = null;
+    advanceTurn();
+  },
+
 };
 
 // ─── SHARED HELPERS ───────────────────────────────────────────────────────────
@@ -1435,8 +1707,8 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     // Remove attacker from hand, place on tile
     attPlayer.hand = attPlayer.hand.filter(m => m.iid !== attM.iid);
     tile.ownerId = attPlayer.idx;
-    tile.monsterId = attM.iid;
-    tile.monsterInstance = attM;
+    tile.summonId = attM.iid;
+    tile.summonInstance = attM;
     // Stats
     attPlayer.battlesWon++;
     defPlayer.battlesLost++;
@@ -1476,8 +1748,8 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     attPlayer.destroyedCount++;
     defPlayer.destroyedCount++;
     tile.ownerId = null;
-    tile.monsterId = null;
-    tile.monsterInstance = null;
+    tile.summonId = null;
+    tile.summonInstance = null;
     log(`💥 Mutual destruction! Tile ${tilePos} unclaimed`);
   } else if (outcome === 'stalemate') {
     log(`🤝 Stalemate! Both survive`);
@@ -1741,7 +2013,7 @@ server.listen(PORT, '0.0.0.0', () => {
   const ip = getLocalIp();
   console.log('');
   console.log('  ╔════════════════════════════════════════╗');
-  console.log('  ║      Monster Board Game — Server       ║');
+  console.log('  ║      Summon Board Game — Server        ║');
   console.log('  ╠════════════════════════════════════════╣');
   console.log(`  ║  Board view  →  http://${ip}:${PORT}/board  `);
   console.log(`  ║  Player view →  http://${ip}:${PORT}/player `);

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.4.13</title>
+<title>Summoners Gambit — Player v0.4.16</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -107,7 +107,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .shop-cards-wrap { position: relative; }
 .shop-cards-scroll { display: flex; gap: 10px; padding: 0 16px 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; scroll-snap-type: x mandatory; }
 .shop-cards-scroll::-webkit-scrollbar { display: none; }
-.shop-cards-scroll .monster-card { scroll-snap-align: start; }
+.shop-cards-scroll .summon-card { scroll-snap-align: start; }
 .shop-scroll-nav { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 0 4px; }
 .shop-arrow { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border2); background: var(--surface2); color: var(--text-lo); font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; flex-shrink: 0; transition: background 100ms; }
 .shop-arrow:active { background: var(--border2); color: var(--text); }
@@ -226,12 +226,12 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .roll-result.visible { display: block; }
 .roll-result-num { font-size: 36px; font-weight: 700; font-family: 'Cinzel', serif; color: var(--accent-pale); }
 .roll-result-dest { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
-/* Monster cards */
-.monster-card { border-radius: 10px; border: 2px solid; cursor: pointer; transition: all 120ms; overflow: hidden; position: relative; flex-shrink: 0; user-select: none; }
-.monster-card:hover { filter: brightness(1.12); }
-.monster-card.selected { box-shadow: 0 0 0 2px white, 0 0 16px var(--accent-glow) !important; filter: brightness(1.15); }
-.monster-card.unaffordable { opacity: .45; cursor: default; }
-.monster-card.full { width: 130px; height: 186px; }
+/* Summon cards */
+.summon-card { border-radius: 10px; border: 2px solid; cursor: pointer; transition: all 120ms; overflow: hidden; position: relative; flex-shrink: 0; user-select: none; }
+.summon-card:hover { filter: brightness(1.12); }
+.summon-card.selected { box-shadow: 0 0 0 2px white, 0 0 16px var(--accent-glow) !important; filter: brightness(1.15); }
+.summon-card.unaffordable { opacity: .45; cursor: default; }
+.summon-card.full { width: 130px; height: 186px; }
 .mc-art { position: absolute; inset: 0; width: 100%; height: 100%; }
 .mc-art svg { display: block; width: 100%; height: 100%; }
 .mc-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 5px 6px 4px; background: linear-gradient(to top, rgba(6,5,20,.97) 0%, rgba(6,5,20,.82) 58%, transparent 100%); z-index: 1; }
@@ -254,9 +254,9 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .special-lock-text { font-size: 9px; font-family: 'Cinzel', serif; color: #b8a070; text-align: center; line-height: 1.4; letter-spacing: .04em; }
 .rare-badge { position: absolute; top: 5px; left: 6px; font-size: 7px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-family: 'Cinzel', serif; color: #c8aaff; background: rgba(145,132,217,.22); border: 1px solid rgba(145,132,217,.5); border-radius: 4px; padding: 1px 4px; line-height: 1.4; z-index: 1; }
 .dual-type-dots { display: flex; align-items: center; gap: 3px; }
-.monster-card.mini { width: 70px; height: 100px; }
-.monster-card.mini .mc-overlay { display: none; }
-.monster-card.mini .mc-cost-strip { display: none; }
+.summon-card.mini { width: 70px; height: 100px; }
+.summon-card.mini .mc-overlay { display: none; }
+.summon-card.mini .mc-cost-strip { display: none; }
 .mc-mini-strip { position: absolute; bottom: 0; left: 0; right: 0; height: 6px; z-index: 1; }
 .charm-dot { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--gold-glow); box-shadow: 0 0 6px var(--gold-glow); }
 .divider { height: 1px; background: var(--border); margin: 16px 0; }
@@ -300,6 +300,25 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .help-type-chip { font-family:'Cinzel',serif; font-size:10px; font-weight:600; padding:3px 9px; border-radius:20px; border:1px solid; letter-spacing:.04em; }
 .help-arrow { color:var(--text-mute); font-size:12px; }
 .help-beats { color:var(--text-mute); font-size:11px; }
+/* Wild Card styles */
+.wc-header { font-family: 'Cinzel', serif; font-size: 18px; color: var(--accent); text-align: center; padding: 16px 16px 4px; }
+.wc-sub { font-size: 12px; color: var(--text-mute); text-align: center; padding: 0 16px 12px; }
+.wc-cards { display: flex; gap: 10px; padding: 0 12px; }
+.wc-card { flex: 1; border: 1.5px solid; border-radius: 10px; overflow: hidden; cursor: pointer; transition: transform 0.15s; background: var(--surface); }
+.wc-card:active { transform: scale(0.97); }
+.wc-disabled { opacity: 0.4; cursor: default; }
+.wc-card-header { display: flex; justify-content: space-between; padding: 6px 8px; }
+.wc-tier-label { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 0.1em; }
+.wc-cost { font-size: 11px; font-weight: 700; }
+.wc-card-art { padding: 10px; height: 70px; display: flex; align-items: center; justify-content: center; }
+.wc-card-art svg { width: 54px; height: 54px; }
+.wc-card-name { font-family: 'Cinzel', serif; font-size: 11px; text-align: center; padding: 0 6px 4px; font-weight: 600; }
+.wc-card-desc { font-size: 9px; color: var(--text-mute); text-align: center; padding: 0 6px 10px; line-height: 1.4; }
+.wc-cant-afford { font-size: 9px; color: #e05252; text-align: center; padding: 0 6px 8px; }
+.wc-target-list { padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
+.wc-target-row { background: var(--surface); border-radius: 8px; padding: 12px 14px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.wc-target-row:active { opacity: 0.7; }
+.wc-picked { opacity: 0.85; }
 </style>
 </head>
 <body>
@@ -343,28 +362,28 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
       <!-- Overview -->
       <div class="help-section">
         <div class="help-s-title">Overview</div>
-        <div class="help-row"><span class="help-icon">✦</span><span>Collect <b style="color:var(--gold-glow)">Mana</b> at the start of every turn — 5 flat, plus your stationed monsters' generation.</span></div>
-        <div class="help-row"><span class="help-icon">🛒</span><span><b style="color:var(--text)">Shop</b> before rolling. Buy one monster, sell one from your hand, or skip.</span></div>
+        <div class="help-row"><span class="help-icon">✦</span><span>Collect <b style="color:var(--gold-glow)">Mana</b> at the start of every turn — 5 flat, plus your stationed summons' generation.</span></div>
+        <div class="help-row"><span class="help-icon">🛒</span><span><b style="color:var(--text)">Shop</b> before rolling. Buy one summon, sell one from your hand, or skip.</span></div>
         <div class="help-row"><span class="help-icon">🎲</span><span><b style="color:var(--text)">Roll</b> to move around the 28-tile board.</span></div>
-        <div class="help-row"><span class="help-icon">⚑</span><span><b style="color:var(--text)">Claim</b> empty tiles by deploying a monster from your hand — you pay that monster's Mana Cost.</span></div>
-        <div class="help-row"><span class="help-icon">⚔</span><span><b style="color:var(--text)">Battle</b> on enemy tiles. Win to claim them; lose and your monster is destroyed.</span></div>
-        <div class="help-row"><span class="help-icon">✋</span><span>Your <b style="color:var(--text)">Hand</b> holds up to 5 monsters. A monster leaves your hand the moment it's stationed.</span></div>
+        <div class="help-row"><span class="help-icon">⚑</span><span><b style="color:var(--text)">Claim</b> empty tiles by deploying a summon from your hand — you pay that summon's Mana Cost.</span></div>
+        <div class="help-row"><span class="help-icon">⚔</span><span><b style="color:var(--text)">Battle</b> on enemy tiles. Win to claim them; lose and your summon is destroyed.</span></div>
+        <div class="help-row"><span class="help-icon">✋</span><span>Your <b style="color:var(--text)">Hand</b> holds up to 5 summons. A summon leaves your hand the moment it's stationed.</span></div>
       </div>
 
       <!-- Win Condition -->
       <div class="help-section">
         <div class="help-s-title">Win Condition</div>
         <div class="help-p">The game ends after the round limit (30, 40, or 60 rounds). The player with the <b style="color:var(--text)">most tiles</b> wins. If there's a tie, the player with more Mana takes it.</div>
-        <div class="help-p">Tiles compound your income — more tiles means more Mana Gen per turn, which lets you buy stronger monsters, which lets you take more tiles.</div>
+        <div class="help-p">Tiles compound your income — more tiles means more Mana Gen per turn, which lets you buy stronger summons, which lets you take more tiles.</div>
       </div>
 
       <!-- Battle -->
       <div class="help-section">
         <div class="help-s-title">Battle</div>
         <div class="help-row"><span class="help-icon">⚔</span><span>Damage = <b style="color:var(--text)">(ATK − DEF) × type modifier + small roll</b>. Minimum 1.</span></div>
-        <div class="help-row"><span class="help-icon">🏰</span><span>A monster defending on its <b style="color:var(--text)">own element</b> tile gets +15% ATK & DEF. An element that beats its type costs −15%.</span></div>
+        <div class="help-row"><span class="help-icon">🏰</span><span>A summon defending on its <b style="color:var(--text)">own element</b> tile gets +15% ATK & DEF. An element that beats its type costs −15%.</span></div>
         <div class="help-row"><span class="help-icon">🔄</span><span>If the defender survives, they <b style="color:var(--text)">counter-strike</b> immediately.</span></div>
-        <div class="help-row"><span class="help-icon">🏳</span><span><b style="color:var(--text)">Retreat</b> before attacking to avoid the fight — costs up to 20 Mana penalty. If you have no monsters in hand you retreat automatically.</span></div>
+        <div class="help-row"><span class="help-icon">🏳</span><span><b style="color:var(--text)">Retreat</b> before attacking to avoid the fight — costs up to 20 Mana penalty. If you have no summons in hand you retreat automatically.</span></div>
         <div class="help-row"><span class="help-icon">🤝</span><span><b style="color:var(--text)">Stalemate</b> — both survive. Next turn you choose to attack again or move on.</span></div>
       </div>
 
@@ -372,34 +391,34 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
       <div class="help-section">
         <div class="help-s-title">Special Tiles</div>
         <div class="help-row"><span class="help-icon">💧</span><span><b style="color:var(--text)">Mana Well</b> — bonus Mana whenever you pass or land on it.</span></div>
-        <div class="help-row"><span class="help-icon">⛩</span><span><b style="color:var(--text)">Temple</b> — trade a normal monster for an Ascendant (see below).</span></div>
-        <div class="help-row"><span class="help-icon">❤</span><span><b style="color:var(--text)">Healing Tile</b> — spend Mana to heal any of your stationed monsters.</span></div>
-        <div class="help-row"><span class="help-icon">📦</span><span><b style="color:var(--text)">Treasure Chest</b> — random reward: heal potion (45%), battle charm (25%), warp (15%), or a free monster (15%).</span></div>
+        <div class="help-row"><span class="help-icon">⛩</span><span><b style="color:var(--text)">Temple</b> — trade a normal summon for an Ascendant (see below).</span></div>
+        <div class="help-row"><span class="help-icon">❤</span><span><b style="color:var(--text)">Healing Tile</b> — spend Mana to heal any of your stationed summons.</span></div>
+        <div class="help-row"><span class="help-icon">📦</span><span><b style="color:var(--text)">Treasure Chest</b> — random reward: heal potion (45%), battle charm (25%), warp (15%), or a free summon (15%).</span></div>
       </div>
 
       <!-- Temple Trades -->
       <div class="help-section">
         <div class="help-s-title">Temple Trades</div>
-        <div class="help-p">The Temple offers 3 Ascendant monsters. To trade:</div>
-        <div class="help-row"><span class="help-icon">1</span><span>You need a <b style="color:var(--text)">matching-element</b> monster in your hand to sacrifice.</span></div>
+        <div class="help-p">The Temple offers 3 Ascendant summons. To trade:</div>
+        <div class="help-row"><span class="help-icon">1</span><span>You need a <b style="color:var(--text)">matching-element</b> summon in your hand to sacrifice.</span></div>
         <div class="help-row"><span class="help-icon">2</span><span>Pay the Ascendant's <b style="color:var(--text)">Mana Cost</b> (always 20✦).</span></div>
-        <div class="help-row"><span class="help-icon">3</span><span>Your monster is surrendered and the Ascendant is added to your hand.</span></div>
+        <div class="help-row"><span class="help-icon">3</span><span>Your summon is surrendered and the Ascendant is added to your hand.</span></div>
         <div class="help-p" style="margin-top:10px">Each Ascendant has a <b style="color:var(--gold-glow)">unique ability</b> and a usability condition that must be met before you can deploy it:</div>
-        <div class="help-row"><span class="help-icon" style="color:var(--el-Light)">✦</span><span><b style="color:var(--el-Light)">Ardent Saint</b> — Aura of Renewal. Condition: healed 4+ monsters this game.</span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Light)">✦</span><span><b style="color:var(--el-Light)">Ardent Saint</b> — Aura of Renewal. Condition: healed 4+ summons this game.</span></div>
         <div class="help-row"><span class="help-icon" style="color:var(--el-Dark)">✦</span><span><b style="color:var(--el-Dark)">Succubus</b> — Mana Drain (steal 10✦ on win). Condition: have more Mana than every opponent.</span></div>
         <div class="help-row"><span class="help-icon" style="color:var(--el-Arcane)">✦</span><span><b style="color:var(--el-Arcane)">Arcane Arbiter</b> — Nullify type modifier once per battle. Condition: changed a tile element 3+ times.</span></div>
-        <div class="help-row"><span class="help-icon" style="color:var(--el-Undead)">✦</span><span><b style="color:var(--el-Undead)">Demon Lord</b> — Last Rite (survive at 15 HP once). Condition: had 4+ monsters destroyed.</span></div>
-        <div class="help-row"><span class="help-icon" style="color:var(--el-Beast)">✦</span><span><b style="color:var(--el-Beast)">Red Dragon</b> — Intimidate (neighbors pay 5✦ on claims). Condition: most monsters stationed.</span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Undead)">✦</span><span><b style="color:var(--el-Undead)">Demon Lord</b> — Last Rite (survive at 15 HP once). Condition: had 4+ summons destroyed.</span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Beast)">✦</span><span><b style="color:var(--el-Beast)">Red Dragon</b> — Intimidate (neighbors pay 5✦ on claims). Condition: most summons stationed.</span></div>
         <div class="help-row"><span class="help-icon" style="color:var(--el-Nature)">✦</span><span><b style="color:var(--el-Nature)">World Tree</b> — Deep Roots (+1 Gen per Nature tile owned). Condition: own 4 Nature tiles.</span></div>
       </div>
 
       <!-- Tips -->
       <div class="help-section">
         <div class="help-s-title">Tips</div>
-        <div class="help-row"><span class="help-icon">💡</span><span>Type advantage is a <b style="color:var(--text)">massive swing</b> — a 2× hit can eliminate most monsters in one shot. Always check the element wheel before attacking.</span></div>
-        <div class="help-row"><span class="help-icon">💡</span><span>Landing on your <b style="color:var(--text)">own tile</b> lets you swap a stationed monster, heal it, or change the tile's element — use this to set up better matchups.</span></div>
-        <div class="help-row"><span class="help-icon">💡</span><span>A <b style="color:var(--text)">Battle Charm</b> from a Chest gives +25% damage for one fight — assign it to your strongest attacker or a monster about to face a tough defender.</span></div>
-        <div class="help-row"><span class="help-icon">💡</span><span>Sell monsters you can't afford to deploy back at the shop for partial Mana. A damaged monster is worth less, so sell before they take hits.</span></div>
+        <div class="help-row"><span class="help-icon">💡</span><span>Type advantage is a <b style="color:var(--text)">massive swing</b> — a 2× hit can eliminate most summons in one shot. Always check the element wheel before attacking.</span></div>
+        <div class="help-row"><span class="help-icon">💡</span><span>Landing on your <b style="color:var(--text)">own tile</b> lets you swap a stationed summon, heal it, or change the tile's element — use this to set up better matchups.</span></div>
+        <div class="help-row"><span class="help-icon">💡</span><span>A <b style="color:var(--text)">Battle Charm</b> from a Chest gives +25% damage for one fight — assign it to your strongest attacker or a summon about to face a tough defender.</span></div>
+        <div class="help-row"><span class="help-icon">💡</span><span>Sell summons you can't afford to deploy back at the shop for partial Mana. A damaged summon is worth less, so sell before they take hits.</span></div>
         <div class="help-row"><span class="help-icon">💡</span><span>Guardians make great tile defenders. Assailants are cheap attackers that can swing battles on type advantage.</span></div>
       </div>
 
@@ -651,7 +670,7 @@ function artSVG(type, w, h) {
   return (fns[type] || svgLight)(c, w, h);
 }
 
-function monsterImg(id, suffix='') {
+function summonImg(id, suffix='') {
   return `<img src="/img/monsters/monster-${id}${suffix}.png" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none'" alt="">`;
 }
 
@@ -674,8 +693,8 @@ function renderCard(m, {size='full', selected=false, showCost=true, dim=false, o
     borderColor = `${c}88`;
     glowShadow = `box-shadow:0 0 14px ${c}28`;
   }
-  const classes = `monster-card ${size}${selected?' selected':''}${dim?' unaffordable':''}${m.isSpecial?' special-card':''}${isRare?' rare-card':''}`;
-  const art = m.id ? monsterImg(m.id, size === 'mini' ? '-mini' : '') : artSVG(m.type, size==='mini'?70:130, size==='mini'?100:186);
+  const classes = `summon-card ${size}${selected?' selected':''}${dim?' unaffordable':''}${m.isSpecial?' special-card':''}${isRare?' rare-card':''}`;
+  const art = m.id ? summonImg(m.id, size === 'mini' ? '-mini' : '') : artSVG(m.type, size==='mini'?70:130, size==='mini'?100:186);
   const clickAttr = onclick ? ` onclick="${onclick}"` : '';
   // Dual-element type dots
   const typeDots = isRare && c2
@@ -866,10 +885,10 @@ const MONSTER_LORE = {
   'Solar Knight':   { role:'Assailant',lore:'A warrior wreathed in living sunfire, the Solar Knight charges into battle with reckless brilliance. Their armor blazes so brightly that enemies are blinded before the blade even lands — but the intensity that makes them lethal also burns through their endurance fast.', ability:null },
   'Dawnguard':      { role:'Guardian',lore:'The Dawnguard were founded to hold the line at the world\'s edge, and they have done so for a thousand years. Slow but unyielding, a Dawnguard unit doesn\'t retreat. Ever. Their shields are blessed to turn aside blows that would fell lesser warriors, and their patience outlasts nearly any assault.', ability:null },
   'High Paladin':   { role:'Vanguard',lore:'Chosen from among the bravest and most disciplined of the Light orders, the High Paladin combines martial skill with divine judgment. They are neither the fastest nor the most powerful, but their balance of offense and defense makes them reliable in almost any engagement.', ability:null },
-  'Ardent Saint':   { role:'Ascendant · Temple Only',lore:'Legends say the Ardent Saint ascended to the Light after taking a wound that should have been fatal — and stood back up anyway. Now she radiates a gentle healing aura that sustains all friendly monsters on the field, turning attrition into advantage over a long game.', ability:'Aura of Renewal — heals all your stationed monsters 5 HP each turn.' },
+  'Ardent Saint':   { role:'Ascendant · Temple Only',lore:'Legends say the Ardent Saint ascended to the Light after taking a wound that should have been fatal — and stood back up anyway. Now she radiates a gentle healing aura that sustains all friendly summons on the field, turning attrition into advantage over a long game.', ability:'Aura of Renewal — heals all your stationed summons 5 HP each turn.' },
 
   // ── DARK ──
-  'Nightshard':     { role:'Assailant',lore:'Crystallized shadow given lethal purpose, the Nightshard moves like a rumor and hits like a verdict. What they lack in durability they make up for in aggression — a monster that lives or dies in the opening exchange.', ability:null },
+  'Nightshard':     { role:'Assailant',lore:'Crystallized shadow given lethal purpose, the Nightshard moves like a rumor and hits like a verdict. What they lack in durability they make up for in aggression — a summon that lives or dies in the opening exchange.', ability:null },
   'Void Sentinel':  { role:'Guardian',lore:'The Void Sentinel was carved from the space between stars and set to guard a gateway that no longer exists. It protects tiles with the same impassive resolve regardless of what crosses its path, drawing on an endless reservoir of shadow to endure.', ability:null },
   'Shadow Paladin': { role:'Vanguard',lore:'Where Light Paladins serve order, Shadow Paladins serve inevitability. They have studied every fighting style and countered every tactic, making them adaptable soldiers who can hold ground or push forward depending on what the moment demands.', ability:null },
   'Succubus':       { role:'Ascendant · Temple Only',lore:'Beautiful, ruthless, and economically devastating. The Succubus doesn\'t just win battles — she taxes them. Every victory drains the loser\'s treasury, turning combat into a Mana siphon that compounds with every fight.', ability:'Mana Drain — steal 10 Mana from the opposing player each time you win a battle.' },
@@ -904,7 +923,7 @@ const MONSTER_LORE = {
   'Sunfire Herald': { role:'Vanguard',lore:'The Sunfire Herald moves across the board like a slow burn — patient, inevitable. It prioritises endurance over aggression, trusting that the longer a battle drags on, the more its radiant resilience tips the scales in its favour.', ability:null },
 
   // ── DARK (new) ──
-  'Void Reaper':    { role:'Assailant',lore:'The Void Reaper tears through enemy lines with terrifying speed, leaving nothing but silence. Extremely fragile, but hits with an attack stat most monsters at double the cost cannot match. It exists to delete one thing, then disappear.', ability:null },
+  'Void Reaper':    { role:'Assailant',lore:'The Void Reaper tears through enemy lines with terrifying speed, leaving nothing but silence. Extremely fragile, but hits with an attack stat most summons at double the cost cannot match. It exists to delete one thing, then disappear.', ability:null },
   'Dusk Blade':     { role:'Vanguard',lore:'Half shadow, half blade — the Dusk Blade occupies the space between an assassin and a soldier. It trades blows with most opponents on even footing while always looking for the moment to strike something decisive with its slightly elevated attack.', ability:null },
   'Umbral Stalker': { role:'Vanguard',lore:'The Umbral Stalker watches from the dark and waits for the right time. Tougher than most balanced units, it absorbs punishment while wearing opponents down — less about explosive damage and more about outlasting the thing standing in its way.', ability:null },
 
@@ -920,7 +939,7 @@ const MONSTER_LORE = {
 
   // ── BEAST (new) ──
   'Feral Striker':  { role:'Assailant',lore:'Raw instinct weaponised. The Feral Striker doesn\'t strategise — it charges, claws, and hopes its ferocity lands before anything can hit back. Extremely high attack, a body that can barely absorb punishment, and zero regard for personal safety.', ability:null },
-  'Blood Mane':     { role:'Vanguard',lore:'Earned its name in battles where the outcome was never certain. The Blood Mane is a reliable pressure unit — leaning into attack while maintaining enough endurance to hold tiles. Most enemies don\'t enjoy a sustained exchange with it.', ability:null },
+  'Stormtalon':     { role:'Vanguard',lore:'Part eagle, part lion — built to strike from height and shred what it lands on. The Stormtalon dives hard and fast, trading finesse for raw aggression. Defenders rarely get a second pass to adjust.', ability:null },
   'Stoneback':      { role:'Vanguard',lore:'The Stoneback\'s hide has fossilised over decades of taking hits. Slower and tougher than most Beast units, it doesn\'t chase opponents — it stands in their way. Exceptional defensive stats for the archetype, trades raw damage for staying power.', ability:null },
 
   // ── NATURE (new) ──
@@ -1109,6 +1128,11 @@ function render() {
     case 'resolve:chest':    isMyTurn ? renderChest() : renderWaiting(); break;
     case 'resolve:temple':   isMyTurn ? renderTemple() : renderWaiting(); break;
     case 'resolve:heal_tile':isMyTurn ? renderHealTile() : renderWaiting(); break;
+    case 'resolve:wildcard_cards':    isMyTurn ? renderWildCardPick() : renderWaiting(); break;
+    case 'resolve:wildcard_target':   isMyTurn ? renderWildCardTarget() : renderWaiting(); break;
+    case 'resolve:wildcard_coup_tile':isMyTurn ? renderWildCardCoupTile() : renderWaiting(); break;
+    case 'resolve:wildcard_coup_summon':isMyTurn ? renderWildCardCoupSummon() : renderWaiting(); break;
+    case 'resolve:wildcard_shatter':  isMyTurn ? renderWildCardShatter() : renderWaiting(); break;
     case 'game_over': renderGameOver(); break;
     default: renderWaiting();
   }
@@ -1163,7 +1187,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.13</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.16</div>
     </div>
 
     <div class="room-code-group">
@@ -1235,14 +1259,14 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.13</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.16</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
       <div style="background:rgba(145,132,217,.07);border:1px solid rgba(145,132,217,.18);border-radius:10px;padding:16px">
         <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:10px">Objective</div>
         <div style="font-size:12px;line-height:1.7;color:var(--text-mute)">
-          Summon monsters and battle for control of the board. Roll the dice to move, claim tiles by playing cards from your hand, and outmanoeuvre your rivals. The summoner who commands the most tiles when the board is full claims victory.
+          Summon and battle for control of the board. Roll the dice to move, claim tiles by playing cards from your hand, and outmanoeuvre your rivals. The summoner who commands the most tiles when the board is full claims victory.
         </div>
       </div>
     </div>`;
@@ -1314,7 +1338,7 @@ function renderShop() {
     </div>
     <div class="shop-one-action-note">One action only — buy <em>or</em> sell, then roll. Or skip.</div>
     <div class="shop-section-hdr">Buy${myHand.length >= 5 ? ' <span style="color:#e05555;font-size:11px;font-weight:700;margin-left:6px">✕ HAND FULL (5/5)</span>' : ` <span style="color:var(--text-mute);font-size:11px;margin-left:6px">(${myHand.length}/5)</span>`}</div>
-    ${myHand.length >= 5 ? `<div style="background:#3a1515;border:1px solid #e05555;border-radius:8px;padding:8px 12px;font-size:12px;color:#e08888;margin:0 0 8px">Sell a monster first to make room</div>` : ''}
+    ${myHand.length >= 5 ? `<div style="background:#3a1515;border:1px solid #e05555;border-radius:8px;padding:8px 12px;font-size:12px;color:#e08888;margin:0 0 8px">Sell a summon first to make room</div>` : ''}
     <div class="shop-cards-wrap">
       <div class="shop-cards-scroll" id="shop-buy-scroll">${buyCards}</div>
       ${scrollNavHTML('shop-buy-scroll','shop-buy-dot',G.shopOffers.length)}
@@ -1458,21 +1482,21 @@ function renderStalemate() {
 
   const sd = G.stalemateData;
   const tile = G.board[sd?.tilePos ?? me.position];
-  const defM = tile?.monster || tile?.monsterInstance;
+  const defM = tile?.summon;
   const defOwner = (tile?.ownerId != null) ? G.players.find(p => p.idx === tile.ownerId) : null;
   const elColor = TYPE_COLOR[tile?.element] || 'var(--accent)';
   const hasHand = myHand.length > 0;
 
   const handCards = myHand.length
     ? myHand.map(m => renderCard(m, { size:'full', showCost:false })).join('')
-    : `<div style="padding:16px 0;color:var(--text-mute);font-size:12px;">No monsters in hand</div>`;
+    : `<div style="padding:16px 0;color:var(--text-mute);font-size:12px;">No summons in hand</div>`;
 
   document.getElementById('main-content').innerHTML = `
     <div class="resolve-banner battle">
       <span class="resolve-icon">🤝</span>
       <div>
         <div class="resolve-title">Stalemate!</div>
-        <div class="resolve-sub">Both monsters survived the last battle.</div>
+        <div class="resolve-sub">Both summons survived the last battle.</div>
       </div>
     </div>
 
@@ -1481,8 +1505,8 @@ function renderStalemate() {
       <div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--surface);border-radius:12px;border:1px solid ${elColor}55;">
         ${renderPlayerTileCard(tile)}
         <div style="flex:1;min-width:0;">
-          ${defM ? renderCard(defM, { size:'full', showCost:false }) : `<div style="color:var(--text-mute);font-size:12px;">No monster</div>`}
-          ${defOwner ? `<div style="font-size:11px;color:${defOwner.color};font-weight:600;margin-top:5px;">${defOwner.name}'s monster</div>` : ''}
+          ${defM ? renderCard(defM, { size:'full', showCost:false }) : `<div style="color:var(--text-mute);font-size:12px;">No summon</div>`}
+          ${defOwner ? `<div style="font-size:11px;color:${defOwner.color};font-weight:600;margin-top:5px;">${defOwner.name}'s summon</div>` : ''}
         </div>
       </div>
     </div>
@@ -1496,7 +1520,7 @@ function renderStalemate() {
     <div style="padding:12px 16px 0;font-size:12px;color:var(--text-dim);line-height:1.5;">
       ${hasHand
         ? '⚔️ <strong style="color:var(--text)">Battle Again</strong> — fight fresh, this uses your turn.<br>🚶 <strong style="color:var(--text)">Continue On</strong> — retreat for <span style="color:var(--gold-glow)">8✦</span>, then shop as normal.'
-        : '🚶 You have no monsters in hand. You must <strong style="color:var(--text)">Continue On</strong> (costs <span style="color:var(--gold-glow)">8✦</span>).'}
+        : '🚶 You have no summons in hand. You must <strong style="color:var(--text)">Continue On</strong> (costs <span style="color:var(--gold-glow)">8✦</span>).'}
     </div>`;
 
   attachShopScrollListener('stalemate-hand-scroll','stalemate-hand-dot',myHand.length);
@@ -1517,7 +1541,7 @@ function renderSetup() {
   updateStatusBar(true);
   updateHandStrip(true);
   document.getElementById('main-content').classList.remove('no-hand');
-  // Safety: clear stale selection if the selected monster is no longer in hand
+  // Safety: clear stale selection if the selected summon is no longer in hand
   if (selectedIid !== null && !myHand.find(m => m.iid === selectedIid)) {
     selectedIid = null;
     setupTileStr = '';
@@ -1552,11 +1576,11 @@ function renderSetup() {
       <span class="resolve-icon">🌟</span>
       <div>
         <div class="resolve-title">Free Setup Claim</div>
-        <div class="resolve-sub">Round ${G.setupRound || 1} of 3${G.setupTotalTurns > 0 ? ` · Turn ${(G.setupTurnIdx||0)+1}/${G.setupTotalTurns}` : ''} — station a monster on any free elemental tile at no cost.</div>
+        <div class="resolve-sub">Round ${G.setupRound || 1} of 3${G.setupTotalTurns > 0 ? ` · Turn ${(G.setupTurnIdx||0)+1}/${G.setupTotalTurns}` : ''} — station a summon on any free elemental tile at no cost.</div>
       </div>
     </div>
-    <div class="picker-label">Choose a monster to station</div>
-    <div class="picker-scroll" id="setup-picker-scroll">${myHand.length > 0 ? pickerCards : '<div style="text-align:center;padding:24px 0;color:var(--text-mute);font-size:13px;">No monsters in hand — you must pass.</div>'}</div>
+    <div class="picker-label">Choose a summon to station</div>
+    <div class="picker-scroll" id="setup-picker-scroll">${myHand.length > 0 ? pickerCards : '<div style="text-align:center;padding:24px 0;color:var(--text-mute);font-size:13px;">No summons in hand — you must pass.</div>'}</div>
     ${myHand.length > 0 ? scrollNavHTML('setup-picker-scroll','setup-dot',myHand.length) : ''}
     <div class="setup-tile-row">
       <label class="setup-tile-label">Tile number (0–27)</label>
@@ -1574,7 +1598,7 @@ function renderSetup() {
 
   const ab = document.getElementById('action-bar');
   ab.classList.add('visible');
-  const setupHint = !canClaim ? `<div class="action-hint">${!selectedIid ? '↑ Pick a monster above first' : !tileValid ? '↑ Enter a tile number (0–27)' : !tileIsElemental ? 'That tile is special — pick an elemental tile' : 'That tile is already claimed'}</div>` : '';
+  const setupHint = !canClaim ? `<div class="action-hint">${!selectedIid ? '↑ Pick a summon above first' : !tileValid ? '↑ Enter a tile number (0–27)' : !tileIsElemental ? 'That tile is special — pick an elemental tile' : 'That tile is already claimed'}</div>` : '';
   ab.innerHTML = `${setupHint}
     <button class="action-btn secondary" onclick="doSetupPass()">Pass</button>
     <button class="action-btn primary" onclick="doSetupClaim()" ${canClaim ? '' : 'disabled style="opacity:.4"'}>Claim Free ✦0</button>`;
@@ -1588,13 +1612,13 @@ function renderSetupWaiting() {
   document.getElementById('action-bar').classList.remove('visible');
 
   const tileRows = G.board
-    .filter(t => t.ownerId !== null && t.ownerId !== undefined && t.monster)
+    .filter(t => t.ownerId !== null && t.ownerId !== undefined && t.summon)
     .map(t => {
       const owner = G.players.find(p => p.idx === t.ownerId);
       return `<div class="setup-wait-row">
         <span class="setup-wait-tile">Tile ${t.pos}</span>
         <span class="setup-wait-elem" style="color:${TYPE_COLOR[t.element]||'var(--text)'}">${t.element}</span>
-        <span class="setup-wait-mon">${t.monster.name}</span>
+        <span class="setup-wait-mon">${t.summon.name}</span>
         <span class="setup-wait-owner" style="color:${owner?.color||'var(--text-mute)'}">${owner?.name||'?'}</span>
       </div>`;
     }).join('') || '<div style="color:var(--text-mute);font-size:12px;text-align:center;padding:12px 0;">No tiles claimed yet</div>';
@@ -1642,7 +1666,7 @@ function updateSetupTilePreview() {
 
   const ab = document.getElementById('action-bar');
   if (ab && ab.classList.contains('visible')) {
-    const setupHint2 = !canClaim ? `<div class="action-hint">${!selectedIid ? '↑ Pick a monster above first' : !tileValid ? '↑ Enter a tile number (0–27)' : !tileIsElemental ? 'That tile is special — pick an elemental tile' : 'That tile is already claimed'}</div>` : '';
+    const setupHint2 = !canClaim ? `<div class="action-hint">${!selectedIid ? '↑ Pick a summon above first' : !tileValid ? '↑ Enter a tile number (0–27)' : !tileIsElemental ? 'That tile is special — pick an elemental tile' : 'That tile is already claimed'}</div>` : '';
     ab.innerHTML = `${setupHint2}
       <button class="action-btn secondary" onclick="doSetupPass()">Pass</button>
       <button class="action-btn primary" onclick="doSetupClaim()" ${canClaim ? '' : 'disabled style="opacity:.4"'}>Claim Free ✦0</button>`;
@@ -1685,10 +1709,10 @@ function renderClaim() {
       <span class="resolve-icon">🚩</span>
       <div>
         <div class="resolve-title">Empty Tile — Claim It?</div>
-        <div class="resolve-sub">Tile ${me.position} · <span style="color:${TYPE_COLOR[tile.element]}">${tile.element}</span> — station a monster to claim.</div>
+        <div class="resolve-sub">Tile ${me.position} · <span style="color:${TYPE_COLOR[tile.element]}">${tile.element}</span> — station a summon to claim.</div>
       </div>
     </div>
-    <div class="picker-label">Choose a monster to station</div>
+    <div class="picker-label">Choose a summon to station</div>
     <div class="picker-scroll" id="claim-picker-scroll">${pickerCards}</div>
     ${scrollNavHTML('claim-picker-scroll','claim-dot',myHand.length)}
     <div style="display:flex;justify-content:center;padding:20px 16px 8px;">
@@ -1705,7 +1729,7 @@ function renderClaim() {
       <button class="action-btn primary" onclick="doClaim()">Claim · ${selM.cost} ✦</button>`;
   } else {
     ab.innerHTML = `<button class="action-btn secondary" onclick="send('skip_claim')">Skip</button>
-      <button class="action-btn primary" disabled style="opacity:.4">${selM?'Not enough Mana':'Pick Monster'}</button>`;
+      <button class="action-btn primary" disabled style="opacity:.4">${selM?'Not enough Mana':'Pick Summon'}</button>`;
   }
 }
 
@@ -1760,7 +1784,7 @@ function renderBattle() {
   document.getElementById('main-content').classList.remove('no-hand');
 
   const tile = G.board[me.position];
-  const defM = tile?.monster;
+  const defM = tile?.summon;
   const defOwner = tile ? G.players[tile.ownerId] : null;
   const selM = myHand.find(m => m.iid === selectedIid);
 
@@ -1806,7 +1830,7 @@ function renderBattle() {
         : `<button class="action-btn primary" onclick="doAttack()">Attack!</button>`}`;
   } else {
     ab.innerHTML = `<button class="action-btn danger-btn" onclick="send('retreat')">Retreat (−20 ✦)</button>
-      <button class="action-btn primary" disabled style="opacity:.4">Pick Monster</button>`;
+      <button class="action-btn primary" disabled style="opacity:.4">Pick Summon</button>`;
   }
 }
 
@@ -1818,7 +1842,7 @@ function renderOwn() {
   document.getElementById('main-content').classList.remove('no-hand');
 
   const tile = G.board[me.position];
-  const stationed = tile?.monster;
+  const stationed = tile?.summon;
   const missing = stationed ? stationed.maxHp - stationed.hp : 0;
   const healCost = stationed ? Math.ceil(1.5 * missing) : 0;
   const canSwap = myHand.length < 5;
@@ -1844,7 +1868,7 @@ function renderOwn() {
     </div>
     ${stationed ? `
     <div class="own-tile-options">
-      ${canSwap ? '' : '<div style="font-size:11px;color:var(--text-mute);padding:0 0 8px">Hand full — sell a monster to swap</div>'}
+      ${canSwap ? '' : '<div style="font-size:11px;color:var(--text-mute);padding:0 0 8px">Hand full — sell a summon to swap</div>'}
       <div class="own-tile-opt${missing===0?' unaffordable':''}" onclick="${missing>0&&me.mana>=healCost?'doHeal()':''}">
         <span class="own-tile-opt-icon">💚</span>
         <div class="own-tile-opt-text">
@@ -1854,7 +1878,7 @@ function renderOwn() {
         <span class="own-tile-opt-cost">${healCost} ✦</span>
       </div>
     </div>
-    ${canSwap ? `<div class="picker-label">Swap stationed monster</div><div class="picker-scroll">${swapCards}</div>` : ''}` : ''}
+    ${canSwap ? `<div class="picker-label">Swap stationed summon</div><div class="picker-scroll">${swapCards}</div>` : ''}` : ''}
     <div style="padding:12px 16px 4px"><div class="picker-label" style="padding:0;margin-bottom:8px">Change tile element (${CHANGE_COST} ✦)</div>
     <div class="element-pick">${elBtns}</div></div>`;
 
@@ -1889,28 +1913,28 @@ function renderChest() {
   document.getElementById('main-content').classList.remove('no-hand');
 
   const rarityColor = {Common:'#4f9153',Uncommon:'#9184d9',Rare:'#a97b40'}[chest.rarity] || '#888';
-  const titles = {potion:'Healing Potion',charm:'Battle Charm',warp:'Warp Portal','free_monster':'Free Monster'};
+  const titles = {potion:'Healing Potion',charm:'Battle Charm',warp:'Warp Portal','free_monster':'Free Summon'};
   const descs = {
     potion: `${chest.tier} Potion — ${chest.tier==='Minor'?'heal 15 HP flat':chest.tier==='Major'?'heal 50% of missing HP':'full heal!'}`,
-    charm: 'Assign to any monster — +25% damage on their next battle.',
+    charm: 'Assign to any summon — +25% damage on their next battle.',
     warp: 'Warp to a random tile, or discard and stay put.',
-    free_monster: myHand.length >= 5 ? 'Hand full — reward lost!' : 'A free monster was added to your hand!',
+    free_monster: myHand.length >= 5 ? 'Hand full — reward lost!' : 'A free summon was added to your hand!',
   };
 
-  // Picker for stationed monsters (all tiles you own)
-  const stationedTiles = G.board.filter(t => t.ownerId === myIdx && t.monster);
+  // Picker for stationed summons (all tiles you own)
+  const stationedTiles = G.board.filter(t => t.ownerId === myIdx && t.summon);
 
   let pickerHtml = '';
   if (chest.kind === 'potion') {
     const cards = stationedTiles.map(t =>
-      renderCard(t.monster, {size:'full', selected: selectedIid===t.pos, showCost:false, onclick:`selectCard(${t.pos})`})
+      renderCard(t.summon, {size:'full', selected: selectedIid===t.pos, showCost:false, onclick:`selectCard(${t.pos})`})
     ).join('');
-    if (cards) pickerHtml = `<div class="picker-label">Apply potion to a stationed monster</div><div class="picker-scroll">${cards}</div>`;
-    else pickerHtml = `<div style="padding:12px 16px;font-size:12px;color:var(--text-mute)">No stationed monsters to heal.</div>`;
+    if (cards) pickerHtml = `<div class="picker-label">Apply potion to a stationed summon</div><div class="picker-scroll">${cards}</div>`;
+    else pickerHtml = `<div style="padding:12px 16px;font-size:12px;color:var(--text-mute)">No stationed summons to heal.</div>`;
   } else if (chest.kind === 'charm') {
     const handCards = myHand.map(m => renderCard(m, {size:'full', selected: selectedIid===m.iid, showCost:false, onclick:`selectCard(${m.iid})`})).join('');
-    const stCards = stationedTiles.map(t => renderCard(t.monster, {size:'full', selected: selectedIid===t.pos, showCost:false, onclick:`selectCard(${t.pos})`})).join('');
-    pickerHtml = `<div class="picker-label">Assign charm to a monster</div><div class="picker-scroll">${handCards}${stCards}</div>`;
+    const stCards = stationedTiles.map(t => renderCard(t.summon, {size:'full', selected: selectedIid===t.pos, showCost:false, onclick:`selectCard(${t.pos})`})).join('');
+    pickerHtml = `<div class="picker-label">Assign charm to a summon</div><div class="picker-scroll">${handCards}${stCards}</div>`;
   }
 
   document.getElementById('main-content').innerHTML = `
@@ -1923,9 +1947,9 @@ function renderChest() {
       <div style="font-size:11px;font-weight:600;color:${rarityColor};text-transform:uppercase;letter-spacing:.12em;font-family:'Cinzel',serif;margin-bottom:8px">${chest.rarity}</div>
       <div class="chest-reward-title">${titles[chest.kind]||chest.kind}</div>
       <div class="chest-reward-desc">${descs[chest.kind]||''}</div>
-      ${chest.kind === 'free_monster' && chest.monster ? `
+      ${chest.kind === 'free_monster' && chest.summon ? `
         <div style="display:flex;justify-content:center;padding-top:16px;">
-          ${renderCard(chest.monster, {size:'full', showCost:false})}
+          ${renderCard(chest.summon, {size:'full', showCost:false})}
         </div>` : ''}
     </div>
     ${pickerHtml}`;
@@ -1938,7 +1962,7 @@ function renderChest() {
         <button class="action-btn primary" onclick="doApplyPotion()">Apply Potion</button>`;
     } else {
       ab.innerHTML = `<button class="action-btn secondary" onclick="send('chest_skip')">Skip</button>
-        <button class="action-btn primary" disabled style="opacity:.4">Select Monster</button>`;
+        <button class="action-btn primary" disabled style="opacity:.4">Select Summon</button>`;
     }
   } else if (chest.kind === 'charm') {
     if (selectedIid !== null) {
@@ -1946,7 +1970,7 @@ function renderChest() {
         <button class="action-btn primary" onclick="doAssignCharm()">Assign Charm</button>`;
     } else {
       ab.innerHTML = `<button class="action-btn secondary" onclick="send('chest_skip')">Skip</button>
-        <button class="action-btn primary" disabled style="opacity:.4">Select Monster</button>`;
+        <button class="action-btn primary" disabled style="opacity:.4">Select Summon</button>`;
     }
   } else if (chest.kind === 'warp') {
     ab.innerHTML = `<button class="action-btn secondary" onclick="send('chest_discard')">Discard</button>
@@ -1988,14 +2012,14 @@ function renderTemple() {
       <span class="resolve-icon">🏛</span>
       <div>
         <div class="resolve-title">Temple of Ascendants</div>
-        <div class="resolve-sub">Trade a matching monster for an Ascendant. You can only use it if the condition is met.</div>
+        <div class="resolve-sub">Trade a matching summon for an Ascendant. You can only use it if the condition is met.</div>
       </div>
     </div>
     <div class="picker-label">Ascendant offers (3)</div>
     <div class="picker-scroll" id="temple-special-scroll">${specialCards}</div>
     ${scrollNavHTML('temple-special-scroll','temple-sp-dot',G.pendingTemple.offers.length)}
     <div style="height:12px"></div>
-    ${selSpecial ? `<div class="picker-label">Sacrifice a ${selSpecial.type} monster (${selSpecial.cost} ✦)</div><div class="picker-scroll" id="temple-sac-scroll">${sacrificeCards}</div>${scrollNavHTML('temple-sac-scroll','temple-sac-dot',sacrificeable.length)}` : `<div style="padding:0 16px 16px;font-size:12px;color:var(--text-mute)">Select a Special above to see matching sacrifices.</div>`}`;
+    ${selSpecial ? `<div class="picker-label">Sacrifice a ${selSpecial.type} summon (${selSpecial.cost} ✦)</div><div class="picker-scroll" id="temple-sac-scroll">${sacrificeCards}</div>${scrollNavHTML('temple-sac-scroll','temple-sac-dot',sacrificeable.length)}` : `<div style="padding:0 16px 16px;font-size:12px;color:var(--text-mute)">Select a Special above to see matching sacrifices.</div>`}`;
 
   attachShopScrollListener('temple-special-scroll','temple-sp-dot',G.pendingTemple.offers.length);
   if (selSpecial) attachShopScrollListener('temple-sac-scroll','temple-sac-dot',sacrificeable.length);
@@ -2018,10 +2042,10 @@ function renderHealTile() {
   updateHandStrip(false);
   document.getElementById('main-content').classList.add('no-hand');
 
-  const stationedTiles = G.board.filter(t => t.ownerId === myIdx && t.monster);
+  const stationedTiles = G.board.filter(t => t.ownerId === myIdx && t.summon);
 
   const stCards = stationedTiles.map(t =>
-    renderCard(t.monster, {size:'full', selected: selectedIid===t.pos, showCost:false, onclick:`selectCard(${t.pos})`})
+    renderCard(t.summon, {size:'full', selected: selectedIid===t.pos, showCost:false, onclick:`selectCard(${t.pos})`})
   ).join('');
 
   document.getElementById('main-content').innerHTML = `
@@ -2029,24 +2053,24 @@ function renderHealTile() {
       <span class="resolve-icon">💚</span>
       <div>
         <div class="resolve-title">Healing Tile</div>
-        <div class="resolve-sub">Spend Mana to heal any stationed monster. (${me.mana} ✦ available)</div>
+        <div class="resolve-sub">Spend Mana to heal any stationed summon. (${me.mana} ✦ available)</div>
       </div>
     </div>
-    <div class="picker-label">Choose a monster to heal</div>
-    <div class="picker-scroll">${stCards || `<div style="color:var(--text-mute);font-size:12px;padding:16px">No stationed monsters.</div>`}</div>`;
+    <div class="picker-label">Choose a summon to heal</div>
+    <div class="picker-scroll">${stCards || `<div style="color:var(--text-mute);font-size:12px;padding:16px">No stationed summons.</div>`}</div>`;
 
   const ab = document.getElementById('action-bar');
   ab.classList.add('visible');
   if (selectedIid !== null) {
     const t = G.board.find(t => t.pos === selectedIid);
-    const m = t?.monster;
+    const m = t?.summon;
     const cost = m ? Math.ceil(1.5 * (m.maxHp - m.hp)) : 0;
     const canHeal = m && m.hp < m.maxHp && me.mana >= cost;
     ab.innerHTML = `<button class="action-btn secondary" onclick="send('heal_tile_skip')">Skip</button>
-      <button class="action-btn primary"${canHeal?'':' disabled style="opacity:.4"'} onclick="${canHeal?'doHealTile()':''}">${m?`Heal · ${cost} ✦`:'Select Monster'}</button>`;
+      <button class="action-btn primary"${canHeal?'':' disabled style="opacity:.4"'} onclick="${canHeal?'doHealTile()':''}">${m?`Heal · ${cost} ✦`:'Select Summon'}</button>`;
   } else {
     ab.innerHTML = `<button class="action-btn secondary" onclick="send('heal_tile_skip')">Skip</button>
-      <button class="action-btn primary" disabled style="opacity:.4">Select Monster</button>`;
+      <button class="action-btn primary" disabled style="opacity:.4">Select Summon</button>`;
   }
 }
 
@@ -2153,6 +2177,200 @@ function buildHelpWheel() {
   </svg>`;
 }
 
+// ─── WILD CARD SYSTEM ────────────────────────────────────────────────────────
+
+const TIER_STYLE = {
+  low:  { color:'#7a8fa6', label:'Iron',   glow:'rgba(122,143,166,0.3)' },
+  mid:  { color:'#9b6fd4', label:'Arcane', glow:'rgba(155,111,212,0.3)' },
+  high: { color:'#c9922a', label:'Gilded', glow:'rgba(201,146,42,0.3)'  },
+};
+
+const WILD_CARD_ART = {
+  mend:    `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="28" r="12" fill="none" stroke="#7a8fa6" stroke-width="2"/><path d="M30 18v20M20 28h20" stroke="#7a8fa6" stroke-width="2.5" stroke-linecap="round"/><path d="M22 42c4-3 12-3 16 0" stroke="#7a8fa6" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  stumble: `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 44 L28 24 L38 34 L50 18" stroke="#7a8fa6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M44 18 L50 18 L50 24" stroke="#7a8fa6" stroke-width="2" stroke-linecap="round"/><path d="M15 50 L50 50" stroke="#7a8fa6" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="3 3"/></svg>`,
+  delay:   `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="14" y="12" width="32" height="38" rx="3" stroke="#7a8fa6" stroke-width="2"/><path d="M22 12 L22 8 M38 12 L38 8" stroke="#7a8fa6" stroke-width="2" stroke-linecap="round"/><path d="M20 28 L32 28" stroke="#7a8fa6" stroke-width="2" stroke-linecap="round"/><path d="M20 36 L28 36" stroke="#7a8fa6" stroke-width="2" stroke-linecap="round"/><path d="M36 32 L44 32 M40 28 L40 36" stroke="#7a8fa6" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+  jinx:    `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="30" r="14" stroke="#7a8fa6" stroke-width="2"/><path d="M24 24 L36 36 M36 24 L24 36" stroke="#7a8fa6" stroke-width="2.5" stroke-linecap="round"/><circle cx="30" cy="30" r="3" fill="#7a8fa6"/></svg>`,
+  ambush:  `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 42 L30 12 L42 42" stroke="#9b6fd4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 34 L39 34" stroke="#9b6fd4" stroke-width="2" stroke-linecap="round"/><circle cx="30" cy="12" r="3" fill="#9b6fd4"/></svg>`,
+  fortify: `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 20 L30 12 L45 20 L45 36 C45 44 30 50 30 50 C30 50 15 44 15 36 Z" stroke="#9b6fd4" stroke-width="2" fill="none"/><path d="M30 22 L30 38 M22 30 L38 30" stroke="#9b6fd4" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+  rattle:  `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="26" r="13" stroke="#9b6fd4" stroke-width="2"/><circle cx="24" cy="23" r="2.5" fill="#9b6fd4"/><circle cx="36" cy="23" r="2.5" fill="#9b6fd4"/><path d="M24 34 Q30 38 36 34" stroke="#9b6fd4" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M26 39 L24 46 M34 39 L36 46" stroke="#9b6fd4" stroke-width="2" stroke-linecap="round"/><path d="M20 46 L40 46" stroke="#9b6fd4" stroke-width="2" stroke-linecap="round"/></svg>`,
+  poach:   `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 40 C20 28 18 22 30 18 C42 22 40 28 40 40 Z" stroke="#9b6fd4" stroke-width="2" fill="none"/><path d="M26 30 L34 24" stroke="#9b6fd4" stroke-width="2.5" stroke-linecap="round"/><path d="M30 18 L30 10" stroke="#9b6fd4" stroke-width="2" stroke-linecap="round"/><circle cx="30" cy="8" r="3" fill="#9b6fd4"/></svg>`,
+  coup:    `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 42 L46 42" stroke="#c9922a" stroke-width="2" stroke-linecap="round"/><path d="M18 42 L18 30 L30 22 L42 30 L42 42" stroke="#c9922a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 14 L30 10 L38 14 L36 22 L24 22 Z" fill="none" stroke="#c9922a" stroke-width="2" stroke-linejoin="round"/><circle cx="30" cy="10" r="2.5" fill="#c9922a"/></svg>`,
+  plague:  `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="30" cy="20" rx="14" ry="10" fill="none" stroke="#c9922a" stroke-width="2"/><path d="M18 24 C14 32 18 44 30 46 C42 44 46 32 42 24" stroke="#c9922a" stroke-width="2" fill="none"/><circle cx="22" cy="36" r="3" fill="none" stroke="#c9922a" stroke-width="1.5"/><circle cx="30" cy="42" r="3" fill="none" stroke="#c9922a" stroke-width="1.5"/><circle cx="38" cy="36" r="3" fill="none" stroke="#c9922a" stroke-width="1.5"/></svg>`,
+  windfall:`<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M30 48 L30 16" stroke="#c9922a" stroke-width="2" stroke-linecap="round"/><path d="M30 16 L20 26" stroke="#c9922a" stroke-width="2" stroke-linecap="round"/><path d="M30 16 L40 26" stroke="#c9922a" stroke-width="2" stroke-linecap="round"/><circle cx="22" cy="38" r="4" fill="none" stroke="#c9922a" stroke-width="1.5"/><circle cx="38" cy="32" r="4" fill="none" stroke="#c9922a" stroke-width="1.5"/><circle cx="30" cy="44" r="3" fill="none" stroke="#c9922a" stroke-width="1.5"/></svg>`,
+  shatter: `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="30" r="4" fill="#c9922a"/><path d="M30 26 L24 12 M30 26 L38 14" stroke="#c9922a" stroke-width="2" stroke-linecap="round"/><path d="M34 30 L48 26 M34 30 L46 36" stroke="#c9922a" stroke-width="2" stroke-linecap="round"/><path d="M30 34 L34 48 M30 34 L22 46" stroke="#c9922a" stroke-width="2" stroke-linecap="round"/><path d="M26 30 L12 34 M26 30 L14 24" stroke="#c9922a" stroke-width="2" stroke-linecap="round"/></svg>`,
+};
+
+function renderWildCardPick() {
+  const drawn = G.wildCardDrawn;
+  if (!drawn) { renderWaiting(); return; }
+  const me = G.players[myIdx];
+  updateStatusBar(true);
+  updateHandStrip(false);
+  document.getElementById('main-content').classList.add('no-hand');
+  document.getElementById('action-bar').classList.remove('visible');
+
+  const cards = ['low','mid','high'].map(tier => drawn[tier]);
+  let cardsHtml = '';
+  for (const card of cards) {
+    const ts = TIER_STYLE[card.tier];
+    const canAfford = me.mana >= card.cost;
+    const art = WILD_CARD_ART[card.id] || '';
+    cardsHtml += `<div class="wc-card${canAfford ? '' : ' wc-disabled'}"
+      style="border-color:${ts.color};box-shadow:${canAfford ? `0 0 12px ${ts.glow}` : 'none'}"
+      onclick="${canAfford ? `doWildCardSelect('${card.tier}','${card.id}')` : ''}">
+      <div class="wc-card-header" style="background:${ts.color}22;border-bottom:1px solid ${ts.color}44">
+        <span class="wc-tier-label" style="color:${ts.color}">${ts.label}</span>
+        <span class="wc-cost" style="color:${ts.color}">✦${card.cost}</span>
+      </div>
+      <div class="wc-card-art">${art}</div>
+      <div class="wc-card-name" style="color:${ts.color}">${card.name}</div>
+      <div class="wc-card-desc">${card.desc}</div>
+      ${!canAfford ? '<div class="wc-cant-afford">Can\'t afford</div>' : ''}
+    </div>`;
+  }
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="wc-header">🃏 Wild Card Event</div>
+    <div class="wc-sub">You passed the Mana Well — choose a card or skip</div>
+    <div class="wc-cards">${cardsHtml}</div>
+    <button class="action-btn secondary" onclick="doWildCardSkip()" style="margin:16px auto;display:block;min-width:160px">Skip</button>`;
+}
+
+function renderWildCardTarget() {
+  const pending = G.wildCardPending;
+  if (!pending) { renderWaiting(); return; }
+  updateStatusBar(true);
+  updateHandStrip(false);
+  document.getElementById('main-content').classList.add('no-hand');
+  document.getElementById('action-bar').classList.remove('visible');
+
+  const cardName = pending.cardId.charAt(0).toUpperCase() + pending.cardId.slice(1);
+  let html = `<div class="wc-header">🃏 ${cardName}</div>`;
+
+  if (pending.cardId === 'mend') {
+    html += `<div class="wc-sub">Pick a stationed summon to heal +20 HP</div><div class="wc-target-list">`;
+    const myTiles = G.board.filter(t => t.ownerId === myIdx && t.summon);
+    if (myTiles.length === 0) {
+      html += `<div style="color:var(--text-mute);font-size:12px;padding:20px 16px;text-align:center">No stationed summons to heal.</div>`;
+    }
+    for (const t of myTiles) {
+      const m = t.summon;
+      const missing = m.maxHp - m.hp;
+      const gain = Math.min(20, missing);
+      html += `<div class="wc-target-row" onclick="doWildCardTargetTile(${t.pos})">
+        Tile ${t.pos} — <strong>${m.name}</strong> (${m.hp}/${m.maxHp} HP) · +${gain} HP
+      </div>`;
+    }
+    html += `</div>`;
+  } else {
+    html += `<div class="wc-sub">Pick a target player</div><div class="wc-target-list">`;
+    for (const pl of G.players) {
+      if (pl.idx === myIdx) continue;
+      html += `<div class="wc-target-row" style="border-left:3px solid ${pl.color}" onclick="doWildCardTargetPlayer(${pl.idx})">
+        <svg width="18" height="18" viewBox="0 0 24 24" style="flex-shrink:0">${sigilShape(pl.idx,12,12,6,pl.color)}</svg>
+        <span style="color:${pl.color};font-weight:600">${pl.name}</span>
+        <span style="font-size:11px;color:var(--text-mute);margin-left:auto">${pl.mana}✦ · ${pl.tileCount} tiles</span>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+  document.getElementById('main-content').innerHTML = html;
+}
+
+function renderWildCardCoupTile() {
+  updateStatusBar(true);
+  updateHandStrip(false);
+  document.getElementById('main-content').classList.add('no-hand');
+  document.getElementById('action-bar').classList.remove('visible');
+
+  const enemyTiles = G.board.filter(t => t.ownerId !== null && t.ownerId !== myIdx);
+  let html = `<div class="wc-header">🃏 Coup</div><div class="wc-sub">Choose an enemy-owned tile to seize</div><div class="wc-target-list">`;
+  if (enemyTiles.length === 0) {
+    html += `<div style="color:var(--text-mute);font-size:12px;padding:20px 16px;text-align:center">No enemy tiles.</div>`;
+  }
+  for (const t of enemyTiles) {
+    const owner = G.players[t.ownerId];
+    const elem = t.element || t.label || '?';
+    html += `<div class="wc-target-row" style="border-left:3px solid ${owner?.color||'#aaa'}" onclick="doWildCardCoupTile(${t.pos})">
+      <span style="font-size:11px;color:var(--text-mute)">Tile ${t.pos} · ${elem}</span>
+      <span style="margin-left:6px;font-weight:600;color:${owner?.color||'#aaa'}">${owner?.name||'?'}</span>
+      ${t.summon ? `<span style="font-size:10px;color:var(--text-mute);margin-left:auto">${t.summon.name} · ${t.summon.hp}HP</span>` : ''}
+    </div>`;
+  }
+  html += `</div>`;
+  document.getElementById('main-content').innerHTML = html;
+}
+
+function renderWildCardCoupSummon() {
+  updateStatusBar(true);
+  updateHandStrip(false);
+  document.getElementById('main-content').classList.add('no-hand');
+  document.getElementById('action-bar').classList.remove('visible');
+
+  const tilePos = G.wildCardPending?.tilePos;
+  const tile = tilePos !== undefined ? G.board[tilePos] : null;
+  const tileInfo = tile ? `Tile ${tilePos} (${tile.element || tile.label || '?'})` : '?';
+
+  let html = `<div class="wc-header">🃏 Coup — Deploy</div><div class="wc-sub">Choose a summon from your hand to station on ${tileInfo}</div>`;
+  if (!myHand || myHand.length === 0) {
+    html += `<div style="color:var(--text-mute);font-size:12px;padding:20px 16px;text-align:center">No summons in hand.</div>`;
+  } else {
+    html += `<div class="picker-scroll" style="padding:12px 16px">`;
+    for (const m of myHand) {
+      html += `<div onclick="doWildCardCoupSummon(${m.iid})">${renderCard(m, {size:'full', showCost:false, onclick:`doWildCardCoupSummon(${m.iid})`})}</div>`;
+    }
+    html += `</div>`;
+  }
+  document.getElementById('main-content').innerHTML = html;
+}
+
+let wcShatterPicks = [];
+function renderWildCardShatter() {
+  updateStatusBar(true);
+  updateHandStrip(false);
+  document.getElementById('main-content').classList.add('no-hand');
+  const picks = G.wildCardPending?.picks || [];
+
+  let html = `<div class="wc-header">🃏 Shatter</div><div class="wc-sub">Choose 2 stationed summons to destroy (${picks.length}/2 selected)</div><div class="wc-target-list">`;
+  const stationedTiles = G.board.filter(t => t.summon);
+  if (stationedTiles.length === 0) {
+    html += `<div style="color:var(--text-mute);font-size:12px;padding:20px 16px;text-align:center">No stationed summons.</div>`;
+  }
+  for (const t of stationedTiles) {
+    const owner = G.players[t.ownerId];
+    const isPicked = picks.includes(t.pos);
+    html += `<div class="wc-target-row${isPicked ? ' wc-picked' : ''}" style="border-left:3px solid ${owner?.color||'#aaa'};${isPicked ? 'background:rgba(201,146,42,.12);border-color:#c9922a;' : ''}" onclick="${isPicked ? '' : `doWildCardShatter(${t.pos})`}">
+      <span style="color:${owner?.color||'#aaa'};font-weight:600">${owner?.name||'?'}</span>
+      <span style="margin-left:6px;font-size:11px;color:var(--text-mute)">Tile ${t.pos} · ${t.summon.name} · ${t.summon.hp}HP</span>
+      ${isPicked ? '<span style="margin-left:auto;font-size:11px;color:#c9922a">✓ Selected</span>' : ''}
+    </div>`;
+  }
+  html += `</div>`;
+
+  document.getElementById('main-content').innerHTML = html;
+  const ab = document.getElementById('action-bar');
+  if (picks.length === 2) {
+    ab.classList.add('visible');
+    ab.innerHTML = `<button class="action-btn gold-btn" style="width:100%" onclick="doWildCardShatterConfirm()">Confirm Shatter</button>`;
+  } else {
+    ab.classList.remove('visible');
+  }
+}
+
+function doWildCardSkip() { send('wildcard_skip'); }
+function doWildCardSelect(tier, cardId) { send('wildcard_select', { tier, cardId }); }
+function doWildCardTargetPlayer(idx) { send('wildcard_target', { targetIdx: idx }); }
+function doWildCardTargetTile(pos) { send('wildcard_target', { tilePos: pos }); }
+function doWildCardCoupTile(pos) { send('wildcard_coup_tile', { tilePos: pos }); }
+function doWildCardCoupSummon(iid) { send('wildcard_coup_summon', { iid }); }
+function doWildCardShatter(pos) { send('wildcard_shatter', { tilePos: pos }); }
+function doWildCardShatterConfirm() {
+  const picks = G.wildCardPending?.picks || [];
+  if (picks.length < 2) return;
+  // Already sent two picks to server — server confirms on second pick
+  // This button is cosmetic; the last send already triggered completion
+}
+
 // ─── Scroll position preservation ───────────────────────────────────────────
 function saveScrolls() {
   const map = {};
@@ -2236,7 +2454,7 @@ function doStalemateContinue() {
 function doSwap() {
   if (!selectedIid) return;
   SFX.claim();
-  send('swap', { newMonsterIid: selectedIid });
+  send('swap', { newSummonIid: selectedIid });
   selectedIid = null;
 }
 
@@ -2255,7 +2473,7 @@ function doChangeElement(el) {
 function doApplyPotion() {
   if (selectedIid === null) return;
   SFX.potion();
-  // selectedIid is the tile.pos for stationed monsters
+  // selectedIid is the tile.pos for stationed summons
   send('chest_apply_potion', { tilePos: selectedIid });
   selectedIid = null;
 }
