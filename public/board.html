@@ -477,6 +477,9 @@ let boardTokenAnim = null;           // {playerIdx, path:[tileIdxs], step} — h
 let reconnectTimer = null;
 let selectedTile = null;
 let selectedRoundLimit = 30;
+// Tile element cache — keeps img/GIF elements alive across renders
+// so token moves don't cause image flicker or GIF restarts
+const tileElCache = new Map(); // tileIdx → { el: HTMLElement, contentKey: string }
 let _uid = 0;
 function uid(){ return 'b'+(++_uid); }
 
@@ -995,7 +998,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.20</div>`;
+    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.21</div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -1145,7 +1148,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.20</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.21</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -1210,61 +1213,65 @@ function renderGame(app){
       : `linear-gradient(160deg,color-mix(in srgb,${color} 62%,#10111e 38%),color-mix(in srgb,${color} 40%,#0c0d1a 60%))`;
     const border = `1px solid ${color}cc`;
 
-    // Art: image if available, else glyph fallback
-    const imgSrc = isSpecial ? TILE_IMG[tile.kind] : TILE_IMG[tile.element];
-    const artHTML = imgSrc
-      ? `<div class="tile-art-icon"><img src="${imgSrc}" class="tile-art-img" alt=""></div>`
-      : isSpecial
-        ? `<div class="tile-art-special" style="color:${color};">${SPECIAL_ICONS[tile.kind] || '❖'}</div>`
-        : `<div class="tile-art-icon" style="color:#fff;">${TYPE_ICON[tile.element] || '✦'}</div>`;
-
-    // HP ring badge if a summon is stationed
-    let badgeHTML = '';
-    if (tile.summon && tile.ownerId !== null && tile.ownerId !== undefined) {
-      const owner = G.players.find(p => p.idx === tile.ownerId);
-      if (owner) {
-        badgeHTML = `<div class="tile-badge">${tileSummonCard(tile.summon, owner.color)}</div>`;
-      }
-    } else if (tile.ownerId !== null && tile.ownerId !== undefined) {
-      const owner = G.players.find(p => p.idx === tile.ownerId);
-      if (owner) {
-        badgeHTML = `<div class="tile-badge"><svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="${owner.color}55" stroke="${owner.color}" stroke-width="1.5"/></svg></div>`;
-      }
-    }
-
-    // Classify tile state for animation:
-    // is-visiting: the animating token's current hop step is here
-    // is-settled:  a player is resting here (no active hop animation for that player)
+    // Classify tile state for animation (changes every move)
     const animHere = boardTokenAnim && boardTokenAnim.path[boardTokenAnim.step] === i;
     const settledHere = G.players.some((p, pi) =>
       effPos[pi] === i && !(boardTokenAnim && boardTokenAnim.playerIdx === pi)
     );
-    // Active-tile glow follows the current player's effective position
     const isActiveTile = effPos[G.currentPlayer] === i;
 
-    const div = document.createElement('div');
+    // Content key — only changes when tile ownership/summon/HP actually changes.
+    // Token moves and animation flags are NOT included so they don't trigger rebuilds.
+    const contentKey = `${tile.element}|${tile.kind}|${tile.ownerId}|${tile.summon?.id}|${tile.summon?.hp}|${isBonus}`;
+
+    const cached = tileElCache.get(i);
+    let div;
+
+    if (cached && cached.contentKey === contentKey) {
+      // Reuse existing element — img/GIF elements survive, no flicker
+      div = cached.el;
+    } else {
+      // Content changed (or first render) — rebuild this tile
+      const imgSrc = isSpecial ? TILE_IMG[tile.kind] : TILE_IMG[tile.element];
+      const artHTML = imgSrc
+        ? `<div class="tile-art-icon"><img src="${imgSrc}" class="tile-art-img" alt=""></div>`
+        : isSpecial
+          ? `<div class="tile-art-special" style="color:${color};">${SPECIAL_ICONS[tile.kind] || '❖'}</div>`
+          : `<div class="tile-art-icon" style="color:#fff;">${TYPE_ICON[tile.element] || '✦'}</div>`;
+
+      let badgeHTML = '';
+      if (tile.summon && tile.ownerId !== null && tile.ownerId !== undefined) {
+        const owner = G.players.find(p => p.idx === tile.ownerId);
+        if (owner) badgeHTML = `<div class="tile-badge">${tileSummonCard(tile.summon, owner.color)}</div>`;
+      } else if (tile.ownerId !== null && tile.ownerId !== undefined) {
+        const owner = G.players.find(p => p.idx === tile.ownerId);
+        if (owner) badgeHTML = `<div class="tile-badge"><svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="${owner.color}55" stroke="${owner.color}" stroke-width="1.5"/></svg></div>`;
+      }
+
+      div = document.createElement('div');
+      div.style.cssText = `transform:rotate(${angleDeg}deg) translateY(-${R}px);`;
+      const synergyBadge = isBonus ? `<span class="tile-synergy-badge">🔥</span>` : '';
+      div.innerHTML = `<span class="tile-idx">${i}</span>
+      ${badgeHTML}
+      <div class="tile-body">
+        <div class="tile-inner" style="background:${bg};border:${isBonus ? `2px solid ${color}` : border};">
+          ${artHTML}
+          ${synergyBadge}
+          <span class="tile-name" style="color:${color};font-size:9px;">${label}</span>
+        </div>
+      </div>`;
+      div.onclick = () => { selectedTile = selectedTile === i ? null : i; render(); };
+      tileElCache.set(i, { el: div, contentKey });
+    }
+
+    // Always update classes — these change with every token move
     div.className = 'tile'
       + (selectedTile === i ? ' selected' : '')
       + (isActiveTile ? ' active-tile' : '')
       + (animHere ? ' is-visiting' : '')
       + (settledHere ? ' is-settled' : '')
       + (isBonus ? ' bonus-tile' : '');
-    // Tile's own transform is ONLY radial positioning — scale is inside .tile-body
-    div.style.cssText = `transform:rotate(${angleDeg}deg) translateY(-${R}px);`;
-    const synergyBadge = isBonus ? `<span class="tile-synergy-badge">🔥</span>` : '';
-    div.innerHTML = `<span class="tile-idx">${i}</span>
-    ${badgeHTML}
-    <div class="tile-body">
-      <div class="tile-inner" style="background:${bg};border:${isBonus ? `2px solid ${color}` : border};">
-        ${artHTML}
-        ${synergyBadge}
-        <span class="tile-name" style="color:${color};font-size:9px;">${label}</span>
-      </div>
-    </div>`;
-    div.onclick = () => {
-      selectedTile = selectedTile === i ? null : i;
-      render();
-    };
+
     wheel.appendChild(div);
   });
 

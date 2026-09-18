@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.4.18</title>
+<title>Summoners Gambit — Player v0.4.20</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -303,18 +303,34 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 /* Wild Card styles */
 .wc-header { font-family: 'Cinzel', serif; font-size: 18px; color: var(--accent); text-align: center; padding: 16px 16px 4px; }
 .wc-sub { font-size: 12px; color: var(--text-mute); text-align: center; padding: 0 16px 12px; }
-.wc-cards { display: flex; gap: 10px; padding: 0 12px; }
-.wc-card { flex: 1; border: 1.5px solid; border-radius: 10px; overflow: hidden; cursor: pointer; transition: transform 0.15s; background: var(--surface); }
-.wc-card:active { transform: scale(0.97); }
-.wc-disabled { opacity: 0.4; cursor: default; }
-.wc-card-header { display: flex; justify-content: space-between; padding: 6px 8px; }
+/* Select screen — three mask cards */
+.wc-cards { display: flex; gap: 8px; padding: 0 12px; justify-content: center; }
+.wc-mask-card { width: 130px; height: 186px; border-radius: 10px; overflow: hidden; position: relative; border: 2px solid; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; flex-shrink: 0; }
+.wc-mask-card:active { transform: scale(0.96); }
+.wc-mask-card.wc-disabled { opacity: 0.38; cursor: default; filter: grayscale(0.4); }
+.wc-mask-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.wc-mask-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.wc-mask-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 28px 8px 9px; background: linear-gradient(transparent, rgba(0,0,0,0.82)); display: flex; justify-content: space-between; align-items: flex-end; }
 .wc-tier-label { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 0.1em; }
 .wc-cost { font-size: 11px; font-weight: 700; }
-.wc-card-art { padding: 10px; height: 70px; display: flex; align-items: center; justify-content: center; }
-.wc-card-art svg { width: 54px; height: 54px; }
-.wc-card-name { font-family: 'Cinzel', serif; font-size: 11px; text-align: center; padding: 0 6px 4px; font-weight: 600; }
-.wc-card-desc { font-size: 9px; color: var(--text-mute); text-align: center; padding: 0 6px 10px; line-height: 1.4; }
-.wc-cant-afford { font-size: 9px; color: #e05252; text-align: center; padding: 0 6px 8px; }
+.wc-cant-afford { position: absolute; top: 8px; right: 8px; font-size: 8px; color: #e05252; background: rgba(0,0,0,0.7); padding: 2px 5px; border-radius: 4px; }
+/* Reveal screen — flip card */
+.wc-reveal-wrap { display: flex; flex-direction: column; align-items: center; padding: 8px 16px 0; gap: 0; }
+.wc-scene { width: 130px; height: 186px; perspective: 700px; }
+.wc-flipper { width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.65s cubic-bezier(0.4,0,0.2,1); position: relative; cursor: pointer; }
+.wc-flipper.flipped { transform: rotateY(180deg); }
+.wc-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 10px; overflow: hidden; border: 2px solid; }
+.wc-face-back { transform: rotateY(180deg); }
+/* Full-bleed art inside reveal card faces */
+.wc-face img, .wc-face-svg-wrap { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.wc-face-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 28px 8px 9px; background: linear-gradient(transparent, rgba(0,0,0,0.85)); }
+.wc-face-name { font-family: 'Cinzel', serif; font-size: 10px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+.wc-face-meta { display: flex; justify-content: space-between; font-size: 9px; }
+.wc-tap-hint { font-size: 11px; color: var(--text-mute); margin-top: 10px; letter-spacing: 0.05em; animation: wc-pulse 1.8s ease-in-out infinite; }
+@keyframes wc-pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
+.wc-desc-block { margin-top: 14px; background: var(--surface); border-radius: 10px; padding: 12px 14px; font-size: 12px; color: var(--text-mute); line-height: 1.5; text-align: center; max-width: 280px; opacity: 0; transition: opacity 0.4s 0.1s; }
+.wc-desc-block.visible { opacity: 1; }
+/* Target / effect screens */
 .wc-target-list { padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
 .wc-target-row { background: var(--surface); border-radius: 8px; padding: 12px 14px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
 .wc-target-row:active { opacity: 0.7; }
@@ -1188,7 +1204,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.18</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.20</div>
     </div>
 
     <div class="room-code-group">
@@ -1260,7 +1276,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.18</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.20</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -2201,7 +2217,10 @@ const WILD_CARD_ART = {
   shatter: `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="30" r="4" fill="#c9922a"/><path d="M30 26 L24 12 M30 26 L38 14" stroke="#c9922a" stroke-width="2" stroke-linecap="round"/><path d="M34 30 L48 26 M34 30 L46 36" stroke="#c9922a" stroke-width="2" stroke-linecap="round"/><path d="M30 34 L34 48 M30 34 L22 46" stroke="#c9922a" stroke-width="2" stroke-linecap="round"/><path d="M26 30 L12 34 M26 30 L14 24" stroke="#c9922a" stroke-width="2" stroke-linecap="round"/></svg>`,
 };
 
+let wcRevealCard = null; // holds chosen card during reveal phase
+
 function renderWildCardPick() {
+  wcRevealCard = null;
   const drawn = G.wildCardDrawn;
   if (!drawn) { renderWaiting(); return; }
   const me = G.players[myIdx];
@@ -2215,27 +2234,116 @@ function renderWildCardPick() {
   for (const card of cards) {
     const ts = TIER_STYLE[card.tier];
     const canAfford = me.mana >= card.cost;
-    const svgFallback = WILD_CARD_ART[card.id] || '';
-    const art = `<div style="position:relative;width:54px;height:54px">${svgFallback}<img src="/img/wildcards/wc-${card.id}.png" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'"></div>`;
-    cardsHtml += `<div class="wc-card${canAfford ? '' : ' wc-disabled'}"
-      style="border-color:${ts.color};box-shadow:${canAfford ? `0 0 12px ${ts.glow}` : 'none'}"
-      onclick="${canAfford ? `doWildCardSelect('${card.tier}','${card.id}')` : ''}">
-      <div class="wc-card-header" style="background:${ts.color}22;border-bottom:1px solid ${ts.color}44">
+    // Mask card: full-bleed wc-mask-{tier}.png, GIF→PNG→SVG fallback
+    const maskPng = `/img/wildcards/wc-mask-${card.tier}.png`;
+    const maskGif = `/img/wildcards/wc-mask-${card.tier}.gif`;
+    const maskSvg = `<div class="wc-mask-svg" style="background:linear-gradient(160deg,${ts.color}33,${ts.color}11);display:flex;align-items:center;justify-content:center;">
+      <span style="font-size:36px;opacity:0.35">🃏</span></div>`;
+    cardsHtml += `
+    <div class="wc-mask-card${canAfford ? '' : ' wc-disabled'}"
+      style="border-color:${ts.color};box-shadow:${canAfford ? `0 0 14px ${ts.glow}` : 'none'}"
+      onclick="${canAfford ? `wcPickCard('${card.tier}')` : ''}">
+      ${maskSvg}
+      <img class="wc-mask-art" src="${maskGif}"
+        onerror="this.src='${maskPng}';this.onerror=function(){this.style.display='none'}" alt="">
+      <div class="wc-mask-overlay">
         <span class="wc-tier-label" style="color:${ts.color}">${ts.label}</span>
         <span class="wc-cost" style="color:${ts.color}">✦${card.cost}</span>
       </div>
-      <div class="wc-card-art">${art}</div>
-      <div class="wc-card-name" style="color:${ts.color}">${card.name}</div>
-      <div class="wc-card-desc">${card.desc}</div>
-      ${!canAfford ? '<div class="wc-cant-afford">Can\'t afford</div>' : ''}
+      ${!canAfford ? `<div class="wc-cant-afford">Can't afford</div>` : ''}
     </div>`;
   }
 
   document.getElementById('main-content').innerHTML = `
     <div class="wc-header">🃏 Wild Card Event</div>
-    <div class="wc-sub">You passed the Mana Well — choose a card or skip</div>
+    <div class="wc-sub">Choose a card or skip</div>
     <div class="wc-cards">${cardsHtml}</div>
     <button class="action-btn secondary" onclick="doWildCardSkip()" style="margin:16px auto;display:block;min-width:160px">Skip</button>`;
+}
+
+function wcPickCard(tier) {
+  wcRevealCard = G.wildCardDrawn[tier];
+  renderWildCardReveal();
+}
+
+function renderWildCardReveal() {
+  const card = wcRevealCard;
+  if (!card) { renderWildCardPick(); return; }
+  const ts = TIER_STYLE[card.tier];
+  updateStatusBar(true);
+  updateHandStrip(false);
+  document.getElementById('main-content').classList.add('no-hand');
+  document.getElementById('action-bar').classList.remove('visible');
+
+  // Mask face art
+  const maskPng = `/img/wildcards/wc-mask-${card.tier}.png`;
+  const maskGif = `/img/wildcards/wc-mask-${card.tier}.gif`;
+  const maskSvgFill = `background:linear-gradient(160deg,${ts.color}33,${ts.color}11)`;
+
+  // Wildcard face art — SVG fallback behind PNG
+  const wcSvg = WILD_CARD_ART[card.id] || '';
+  const wcPng = `/img/wildcards/wc-${card.id}.png`;
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="wc-header">🃏 Wild Card</div>
+    <div class="wc-sub">Tap the card to reveal</div>
+    <div class="wc-reveal-wrap">
+      <div class="wc-scene">
+        <div class="wc-flipper" id="wc-flipper" onclick="wcDoFlip()">
+
+          <!-- Front face: mask -->
+          <div class="wc-face wc-face-front" style="border-color:${ts.color}">
+            <div style="position:absolute;inset:0;${maskSvgFill};display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:48px;opacity:0.3">🃏</span>
+            </div>
+            <img style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;"
+              src="${maskGif}"
+              onerror="this.src='${maskPng}';this.onerror=function(){this.style.display='none'}" alt="">
+            <div class="wc-face-overlay">
+              <div class="wc-face-meta">
+                <span class="wc-tier-label" style="color:${ts.color}">${ts.label}</span>
+                <span class="wc-cost" style="color:${ts.color}">✦${card.cost}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Back face: wildcard -->
+          <div class="wc-face wc-face-back" style="border-color:${ts.color}">
+            <div style="position:absolute;inset:0;">${wcSvg ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">${wcSvg}</div>` : ''}</div>
+            <img style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;"
+              src="${wcPng}" onerror="this.style.display='none'" alt="">
+            <div class="wc-face-overlay">
+              <div class="wc-face-name" style="color:${ts.color}">${card.name}</div>
+              <div class="wc-face-meta">
+                <span class="wc-tier-label" style="color:${ts.color}">${ts.label}</span>
+                <span class="wc-cost" style="color:${ts.color}">✦${card.cost}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wc-tap-hint" id="wc-tap-hint">Tap to reveal</div>
+      <div class="wc-desc-block" id="wc-desc">${card.desc}</div>
+      <button class="action-btn" id="wc-use-btn"
+        style="display:none;margin-top:14px;min-width:180px"
+        onclick="doWildCardSelect('${card.tier}','${card.id}')">Use</button>
+    </div>`;
+}
+
+function wcDoFlip() {
+  const flipper = document.getElementById('wc-flipper');
+  if (!flipper || flipper.classList.contains('flipped')) return;
+  flipper.classList.add('flipped');
+  // after flip settles, reveal description + Use button
+  flipper.addEventListener('transitionend', () => {
+    const hint = document.getElementById('wc-tap-hint');
+    const desc = document.getElementById('wc-desc');
+    const btn  = document.getElementById('wc-use-btn');
+    if (hint) hint.style.display = 'none';
+    if (desc) desc.classList.add('visible');
+    if (btn)  btn.style.display = 'block';
+  }, { once: true });
 }
 
 function renderWildCardTarget() {
