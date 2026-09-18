@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.24';
+const SERVER_VERSION = 'v1.0.25';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -201,20 +201,46 @@ function pickShopOffers() {
 }
 
 function buildBoard() {
-  // 28 tiles. Position 0=Start, 7=Temple, 14=Chest, 21=Heal
+  // 28 tiles. Position 0=Start, 7=Chest, 14=Heal, 21=Temple
   const specials = [
-    { pos:0,  kind:'start',   label:'Mana Well', icon:'✦' },
-    { pos:7,  kind:'chest',   label:'Chest',     icon:'📦' },
-    { pos:14, kind:'heal',    label:'Healing',   icon:'💚' },
-    { pos:21, kind:'temple',  label:'Temple',    icon:'🏛' },
+    { pos:0,  kind:'start',  label:'Mana Well', icon:'✦' },
+    { pos:7,  kind:'chest',  label:'Chest',     icon:'📦' },
+    { pos:14, kind:'heal',   label:'Healing',   icon:'💚' },
+    { pos:21, kind:'temple', label:'Temple',    icon:'🏛' },
   ];
   const specialPos = new Set(specials.map(s => s.pos));
 
-  const types = [];
-  for (let i = 0; i < 24; i++) types.push(TYPES[i % 6]);
-  shuffle(types);
+  // Collect all 24 elemental positions
+  const elPositions = [];
+  for (let i = 0; i < 28; i++) { if (!specialPos.has(i)) elPositions.push(i); }
 
-  let typeIdx = 0;
+  // Find valid 3-consecutive-elemental run start positions (wraps around board)
+  const validRunStarts = [];
+  for (let i = 0; i < 28; i++) {
+    const p1 = (i + 1) % 28, p2 = (i + 2) % 28;
+    if (!specialPos.has(i) && !specialPos.has(p1) && !specialPos.has(p2)) {
+      validRunStarts.push(i);
+    }
+  }
+
+  // Pick a guaranteed 3-tile run: random element + random valid start position
+  const featuredEl = TYPES[Math.floor(Math.random() * TYPES.length)];
+  const runStart   = validRunStarts[Math.floor(Math.random() * validRunStarts.length)];
+  const runPos     = new Set([runStart, (runStart + 1) % 28, (runStart + 2) % 28]);
+
+  // Build remaining pool: 1 more of featuredEl (4 total − 3 in run) + 4 each of others
+  const pool = [featuredEl];
+  for (const t of TYPES) { if (t !== featuredEl) for (let i = 0; i < 4; i++) pool.push(t); }
+  shuffle(pool);
+
+  // Assign elements — run positions get featuredEl, rest draw from pool
+  const elementAt = new Map();
+  let pi = 0;
+  for (const pos of elPositions) {
+    elementAt.set(pos, runPos.has(pos) ? featuredEl : pool[pi++]);
+  }
+
+  // Build tiles array
   const tiles = [];
   for (let i = 0; i < 28; i++) {
     const sp = specials.find(s => s.pos === i);
@@ -222,7 +248,7 @@ function buildBoard() {
       tiles.push({ pos:i, kind:sp.kind, label:sp.label, icon:sp.icon,
                    element:null, ownerId:null, summonId:null });
     } else {
-      const el = types[typeIdx++];
+      const el = elementAt.get(i);
       tiles.push({ pos:i, kind:'element', label:el, icon:'', element:el,
                    ownerId:null, summonId:null });
     }
