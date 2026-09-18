@@ -490,7 +490,10 @@ function svgNature(c,w,h){const id=uid(),cx=w/2;const branches=[[cx,h*.52,cx-.18
 
 const SVG_FNS = {Light:svgLight,Dark:svgDark,Arcane:svgArcane,Undead:svgUndead,Beast:svgBeast,Nature:svgNature};
 function artSVG(type,w,h){ const c=TYPE_COLOR[type]||'#9397ab'; const fn=SVG_FNS[type]; return fn?fn(c,w,h):''; }
-function summonImg(id,suffix=''){ return `<img src="/img/monsters/monster-${id}${suffix}.png" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none'" alt="">`; }
+function summonImg(id,suffix=''){
+  const png=`/img/monsters/monster-${id}${suffix}.png`;
+  return `<img src="/img/monsters/monster-${id}${suffix}.gif" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.src='${png}';this.onerror=function(){this.style.display='none'}" alt="">`;
+}
 
 function renderBoardCard(m) {
   if (!m) return '';
@@ -566,7 +569,7 @@ function tileSummonCard(summon, ownerColor){
   // Art: SVG base + try real summon image on top
   const svgArt = artSVG(summon.type, 54, 70);
   const imgLayer = summon.id
-    ? `<img src="/img/monsters/monster-${summon.id}-mini.png" class="tmc-art-img-overlay" onerror="this.remove()" alt="">`
+    ? `<img src="/img/monsters/monster-${summon.id}-mini.gif" class="tmc-art-img-overlay" onerror="this.src='/img/monsters/monster-${summon.id}-mini.png';this.onerror=function(){this.remove()}" alt="">`
     : '';
   return `<div class="tmc-wrap">
     <div class="tmc-card" style="border-color:${ownerColor};">
@@ -992,7 +995,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.19</div>`;
+    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.20</div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -1142,7 +1145,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.19</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.20</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">

@@ -131,7 +131,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 
 <header class="site-header">
   <span class="site-logo">Summoners' Gambit</span>
-  <span class="site-ver">Art Preview · v0.1.7</span>
+  <span class="site-ver">Art Preview · v0.1.8</span>
   <nav class="nav-pills">
     <a class="nav-pill active" href="#tiles">Tiles</a>
     <a class="nav-pill" href="#light">Light</a>
@@ -462,6 +462,8 @@ function buildTiles(){
 // ─── Build Summon card ───────────────────────────────────────────────────────
 function buildSummonCard(m, grid, svgOverrideFn){
   const c = TYPE_COLOR[m.type];
+  const gifSrc  = `/img/monsters/monster-${m.id}.gif`;
+  const miniGifSrc = `/img/monsters/monster-${m.id}-mini.gif`;
   const fullSrc = `/img/monsters/monster-${m.id}.png`;
   const miniSrc = `/img/monsters/monster-${m.id}-mini.png`;
   const svgFull = svgOverrideFn ? svgOverrideFn(130,186) : artSVG(m.type,130,186);
@@ -492,19 +494,28 @@ function buildSummonCard(m, grid, svgOverrideFn){
 
   const fullImg = document.createElement('img');
   fullImg.alt = m.name;
+  fullImg.style.cssText='width:100%;height:100%;object-fit:cover;display:block;';
   fullImg.onload = ()=>{
-    fullBadge.textContent='✓ PNG'; fullBadge.className='png-badge ok';
+    const isGif = fullImg.src.endsWith('.gif');
+    fullBadge.textContent = isGif ? '✓ GIF' : '✓ PNG';
+    fullBadge.className='png-badge ok';
     summonPng++; updateSummary();
   };
   fullImg.onerror = ()=>{
-    artLayer.innerHTML='';
-    const svgEl=document.createElement('div'); svgEl.className='mc-svg';
-    svgEl.innerHTML=svgFull; artLayer.appendChild(svgEl);
-    fullBadge.textContent='SVG fallback'; fullBadge.className='png-badge svg';
-    svgFallback++; updateSummary();
+    if(fullImg.src.endsWith('.gif')){
+      // GIF failed → try PNG
+      fullBadge.textContent='trying PNG…'; fullBadge.className='png-badge loading';
+      fullImg.src = fullSrc;
+    } else {
+      // PNG also failed → SVG
+      artLayer.innerHTML='';
+      const svgEl=document.createElement('div'); svgEl.className='mc-svg';
+      svgEl.innerHTML=svgFull; artLayer.appendChild(svgEl);
+      fullBadge.textContent='SVG fallback'; fullBadge.className='png-badge svg';
+      svgFallback++; updateSummary();
+    }
   };
-  fullImg.style.cssText='width:100%;height:100%;object-fit:cover;display:block;';
-  fullImg.src = fullSrc;
+  fullImg.src = gifSrc;
   artLayer.appendChild(fullImg);
   fullCard.appendChild(artLayer);
 
@@ -537,8 +548,8 @@ function buildSummonCard(m, grid, svgOverrideFn){
   fullWrap.appendChild(fst);
   fullWrap.appendChild(fullBadge);
   const fpth=document.createElement('a'); fpth.className='path-link';
-  fpth.href=fullSrc; fpth.target='_blank'; fpth.rel='noopener';
-  fpth.textContent=`monster-${m.id}.png`;
+  fpth.href=gifSrc; fpth.target='_blank'; fpth.rel='noopener';
+  fpth.textContent=`monster-${m.id}.gif / .png`;
   fullWrap.appendChild(fpth);
 
   // ── Mini card (70×100) ──
@@ -557,23 +568,29 @@ function buildSummonCard(m, grid, svgOverrideFn){
   const miniImg = document.createElement('img');
   miniImg.alt = m.name;
   miniImg.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
-  miniImg.onload = ()=>{ miniBadge.textContent='✓ mini PNG'; miniBadge.className='png-badge ok'; };
+  miniImg.onload = ()=>{
+    const isGif = miniImg.src.endsWith('.gif');
+    miniBadge.textContent = isGif ? '✓ mini GIF' : miniImg.src===miniSrc ? '✓ mini PNG' : '✓ full PNG';
+    miniBadge.className='png-badge ok';
+  };
   miniImg.onerror = ()=>{
-    const fallbackImg = document.createElement('img');
-    fallbackImg.alt = m.name;
-    fallbackImg.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
-    fallbackImg.onload = ()=>{ miniBadge.textContent='full PNG'; miniBadge.className='png-badge ph'; };
-    fallbackImg.onerror = ()=>{
+    if(miniImg.src.endsWith('.gif')){
+      // mini GIF failed → try mini PNG
+      miniBadge.textContent='trying mini PNG…'; miniBadge.className='png-badge loading';
+      miniImg.src = miniSrc;
+    } else if(miniImg.src === miniSrc){
+      // mini PNG failed → try full PNG
+      miniBadge.textContent='trying full PNG…'; miniBadge.className='png-badge loading';
+      miniImg.src = fullSrc;
+    } else {
+      // full PNG also failed → SVG
       miniArtLayer.innerHTML='';
       const svgEl=document.createElement('div'); svgEl.className='mc-svg';
       svgEl.innerHTML=svgMini; miniArtLayer.appendChild(svgEl);
       miniBadge.textContent='SVG fallback'; miniBadge.className='png-badge svg';
-    };
-    fallbackImg.src = fullSrc;
-    miniArtLayer.innerHTML='';
-    miniArtLayer.appendChild(fallbackImg);
+    }
   };
-  miniImg.src = miniSrc;
+  miniImg.src = miniGifSrc;
   miniArtLayer.appendChild(miniImg);
   miniCard.appendChild(miniArtLayer);
 
@@ -592,8 +609,8 @@ function buildSummonCard(m, grid, svgOverrideFn){
   miniWrap.appendChild(mst);
   miniWrap.appendChild(miniBadge);
   const mpth=document.createElement('a'); mpth.className='path-link';
-  mpth.href=miniSrc; mpth.target='_blank'; mpth.rel='noopener';
-  mpth.textContent=`monster-${m.id}-mini.png`;
+  mpth.href=miniGifSrc; mpth.target='_blank'; mpth.rel='noopener';
+  mpth.textContent=`monster-${m.id}-mini.gif / .png`;
   miniWrap.appendChild(mpth);
 
   sizesRow.appendChild(fullWrap);
