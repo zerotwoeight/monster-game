@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.25';
+const SERVER_VERSION = 'v1.0.28';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -326,6 +326,7 @@ function addPlayer(name, color, starterSet) {
     peakTiles: 0,
     totalManaEarned: 40, // starts with initial 40
     wcEffects: { stumble:false, delay:false, jinx:false, ambush:false, fortify:false, rattle:false, windfall:false },
+    notification: null,  // { cardId, cardName, cardDesc, castByName, castByColor, tier }
   };
 }
 
@@ -690,6 +691,7 @@ function publicState() {
     peakTiles: p.peakTiles,
     totalManaEarned: p.totalManaEarned,
     wcEffects: p.wcEffects || {},
+    notification: p.notification || null,
   }));
 
   return {
@@ -984,6 +986,18 @@ const handlers = {
     broadcast();
   },
 
+  // Spectator connects to an existing room (read-only, no actions)
+  spectate_connect(ws, conn, data) {
+    const code = String(data.roomCode || '').toUpperCase().trim();
+    const room = rooms.get(code);
+    if (!room) return sendError(ws, 'Room not found — check the room code');
+    conn.roomCode = room.roomCode;
+    conn.isSpectator = true;
+    G = room;
+    // Send current state directly to this spectator
+    wsSend(ws, { type: 'state', game: publicState() });
+  },
+
   join(ws, conn, data) {
     const code = String(data.roomCode || '').toUpperCase().trim();
     const name  = String(data.name  || 'Player').slice(0, 18);
@@ -1052,7 +1066,7 @@ const handlers = {
   set_round_limit(ws, conn, data) {
     if (!G || G.phase !== 'lobby') return sendError(ws, 'Not in lobby');
     const limit = Number(data.limit);
-    if (![30, 40, 60].includes(limit)) return sendError(ws, 'Invalid round limit');
+    if (![20, 30, 40].includes(limit)) return sendError(ws, 'Invalid round limit');
     G.roundLimit = limit;
     log(`⏱ Round limit set to ${limit} rounds per player`);
     broadcast();
@@ -1061,7 +1075,7 @@ const handlers = {
   start_game(ws, conn, data) {
     if (!G || G.phase !== 'lobby') return sendError(ws, 'Not in lobby');
     if (G.players.length < 2) return sendError(ws, 'Need at least 2 players');
-    if (data && data.roundLimit && [30,40,60].includes(Number(data.roundLimit))) {
+    if (data && data.roundLimit && [20,30,40].includes(Number(data.roundLimit))) {
       G.roundLimit = Number(data.roundLimit);
     }
     log(`🎮 Game started! ${G.roundLimit} rounds per player`);
@@ -1273,7 +1287,7 @@ const handlers = {
     if (!defM) return sendError(ws, 'No defender on tile');
     const attM = p.hand.find(m => m.iid === data.iid);
     if (!attM) return sendError(ws, 'Summon not in hand');
-    if (!canUseSpecial(G.currentPlayer, attM)) return sendError(ws, 'Special condition not met');
+    // Note: Ascendants can always be used in battle — condition only gates tile claiming
 
     // Wild card effects before battle
     if (p.wcEffects.ambush) { p.wcEffects.ambush = false; attM._ambush = true; }
@@ -1617,10 +1631,34 @@ const handlers = {
       const target = G.players[targetIdx];
       if (!target) return sendError(ws, 'Target not found');
 
-      if (pending.cardId === 'stumble') { target.wcEffects.stumble = true; log(`🃏 Stumble — ${target.name} must re-roll next turn`); }
-      if (pending.cardId === 'delay')   { target.wcEffects.delay   = true; log(`🃏 Delay — ${target.name}'s next shop is skipped`); }
-      if (pending.cardId === 'jinx')    { target.wcEffects.jinx    = true; log(`🃏 Jinx — ${target.name}'s next income is halved`); }
-      if (pending.cardId === 'rattle')  { target.wcEffects.rattle  = true; log(`🃏 Rattle — ${target.name}'s next battle at half ATK`); }
+      // Helper: set a notification on the targeted player
+      function notifyTarget(cardId, cardName, desc, tier) {
+        target.notification = {
+          cardId, cardName, cardDesc: desc,
+          castByName: p.name, castByColor: p.color, tier
+        };
+      }
+
+      if (pending.cardId === 'stumble') {
+        target.wcEffects.stumble = true;
+        notifyTarget('stumble', 'Stumble', 'Your dice will be re-rolled next turn — you must use the worse result.', 'low');
+        log(`🃏 Stumble — ${target.name} must re-roll next turn`);
+      }
+      if (pending.cardId === 'delay') {
+        target.wcEffects.delay = true;
+        notifyTarget('delay', 'Delay', 'Your shop phase is skipped next turn.', 'low');
+        log(`🃏 Delay — ${target.name}'s next shop is skipped`);
+      }
+      if (pending.cardId === 'jinx') {
+        target.wcEffects.jinx = true;
+        notifyTarget('jinx', 'Jinx', 'Your passive Mana income next turn is halved.', 'low');
+        log(`🃏 Jinx — ${target.name}'s next income is halved`);
+      }
+      if (pending.cardId === 'rattle') {
+        target.wcEffects.rattle = true;
+        notifyTarget('rattle', 'Rattle', 'Your next battle summon fights at half ATK.', 'mid');
+        log(`🃏 Rattle — ${target.name}'s next battle at half ATK`);
+      }
       if (pending.cardId === 'plague') {
         let hit = 0;
         for (const t of G.board) {
@@ -1629,6 +1667,7 @@ const handlers = {
             hit++;
           }
         }
+        if (hit > 0) notifyTarget('plague', 'Plague', `All ${hit} of your stationed summon${hit!==1?'s':''} each lost 15 HP.`, 'high');
         log(`🃏 Plague — ${target.name}'s ${hit} summon${hit!==1?'s':''} each lose 15 HP`);
       }
       if (pending.cardId === 'poach') {
@@ -1638,6 +1677,7 @@ const handlers = {
           const idx = rand(0, target.hand.length - 1);
           const stolen = target.hand.splice(idx, 1)[0];
           p.hand.push(stolen);
+          notifyTarget('poach', 'Poach', `${p.name} stole ${stolen.name} from your hand!`, 'mid');
           log(`🃏 Poach — ${p.name} stole ${stolen.name} from ${target.name}`);
         }
       }
@@ -1668,14 +1708,24 @@ const handlers = {
     const tilePos = G.wildCardPending.tilePos;
     const tile = G.board[tilePos];
     const prevOwner = G.players[tile.ownerId];
+    let coupDesc = `${p.name} seized your tile! `;
     if (tile.summonInstance) {
       if (prevOwner.hand.length < 5) {
         prevOwner.hand.push(tile.summonInstance);
+        coupDesc += `${tile.summonInstance.name} was returned to your hand.`;
         log(`🃏 Coup — ${tile.summonInstance.name} returned to ${prevOwner.name}`);
       } else {
+        coupDesc += `${tile.summonInstance.name} was forfeited (hand full).`;
         log(`🃏 Coup — ${tile.summonInstance.name} forfeit (${prevOwner.name}'s hand full)`);
       }
+    } else {
+      coupDesc += 'The tile had no stationed summon.';
     }
+    prevOwner.notification = {
+      cardId: 'coup', cardName: 'Coup',
+      cardDesc: coupDesc,
+      castByName: p.name, castByColor: p.color, tier: 'high'
+    };
     const mIdx = p.hand.indexOf(m);
     p.hand.splice(mIdx, 1);
     tile.ownerId = G.currentPlayer;
@@ -1707,7 +1757,14 @@ const handlers = {
       if (t.summonInstance) {
         const owner = G.players[t.ownerId];
         log(`🃏 Shatter — ${t.summonInstance.name} destroyed on tile ${pos}`);
-        if (owner) owner.destroyedCount++;
+        if (owner) {
+          owner.destroyedCount++;
+          owner.notification = {
+            cardId: 'shatter', cardName: 'Shatter',
+            cardDesc: `${p.name} shattered your ${t.summonInstance.name} on tile ${pos}!`,
+            castByName: p.name, castByColor: p.color, tier: 'high'
+          };
+        }
         t.summonInstance = null;
         t.summonId = null;
         t.ownerId = null;
@@ -1715,6 +1772,14 @@ const handlers = {
     }
     G.wildCardPending = null;
     advanceTurn();
+  },
+
+  dismiss_notification(ws, conn, data) {
+    if (!G || conn.playerIdx === null) return;
+    const p = G.players[conn.playerIdx];
+    if (!p) return;
+    p.notification = null;
+    broadcast();
   },
 
 };
@@ -1894,8 +1959,9 @@ function serveStatic(req, res) {
   }
 
   if (urlPath === '/' || urlPath === '') urlPath = '/board.html';
-  if (urlPath === '/board')  urlPath = '/board.html';
-  if (urlPath === '/player') urlPath = '/player.html';
+  if (urlPath === '/board')    urlPath = '/board.html';
+  if (urlPath === '/player')   urlPath = '/player.html';
+  if (urlPath === '/spectate') urlPath = '/board.html'; // spectator uses same board view
 
   const filePath = path.join(PUBLIC, urlPath);
   // Security: ensure we stay within public/
@@ -1957,7 +2023,7 @@ server.on('upgrade', (req, socket, head) => {
   if (req.headers['upgrade'] !== 'websocket') { socket.destroy(); return; }
   if (!wsHandshake(socket, req)) return;
 
-  const conn = { playerIdx: null, sessionKey: null, roomCode: null, isBoard: false, buf: Buffer.alloc(0) };
+  const conn = { playerIdx: null, sessionKey: null, roomCode: null, isBoard: false, isSpectator: false, buf: Buffer.alloc(0) };
   clients.set(socket, conn);
 
   // Send a ready ping — client sends board_connect or join to get room state
@@ -1986,6 +2052,11 @@ server.on('upgrade', (req, socket, head) => {
       if (!action || typeof action !== 'string') continue;
       const handler = handlers[action];
       if (!handler) { sendError(socket, 'Unknown action: ' + action); continue; }
+
+      // Spectators can only send spectate_connect — block everything else
+      if (conn.isSpectator && action !== 'spectate_connect') {
+        sendError(socket, 'Spectators cannot perform game actions'); continue;
+      }
 
       // Set G context for this request from the connection's room
       if (conn.roomCode) G = rooms.get(conn.roomCode) || null;

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.4.20</title>
+<title>Summoners Gambit — Player v0.4.27</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -1122,6 +1122,12 @@ function render() {
 
   const isMyTurn = G.currentPlayer === myIdx;
 
+  // Notification intercept — show before any other screen
+  if (me.notification) { renderNotification(me.notification); return; }
+
+  // Hold battle result screen until player explicitly dismisses it
+  if (_battleResultPending) return;
+
   // Debug: log every phase change to console
   if (render._lastPhase !== G.phase || render._lastPlayer !== G.currentPlayer) {
     console.log(`[SG] phase=${G.phase} currentPlayer=${G.currentPlayer} myIdx=${myIdx} isMyTurn=${isMyTurn}`);
@@ -1204,7 +1210,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.20</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.27</div>
     </div>
 
     <div class="room-code-group">
@@ -1276,7 +1282,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.20</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.27</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -1750,7 +1756,55 @@ function renderClaim() {
   }
 }
 
+// ─── NOTIFICATION OVERLAY ────────────────────────────────────────────────────
+function renderNotification(notif) {
+  updateStatusBar(false);
+  updateHandStrip(false);
+  document.getElementById('main-content').classList.add('no-hand');
+  document.getElementById('action-bar').classList.remove('visible');
+
+  const ts = TIER_STYLE[notif.tier] || TIER_STYLE.low;
+  const wcSvg = WILD_CARD_ART[notif.cardId] || '';
+  const wcPng = `/img/wildcards/wc-${notif.cardId}.png`;
+
+  document.getElementById('main-content').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;padding:22px 20px 28px;gap:16px;text-align:center">
+      <div style="font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif">🃏 Wild Card</div>
+      <div style="font-size:13px;color:var(--text-mute)">
+        Targeted by <span style="color:${notif.castByColor||ts.color};font-weight:700">${notif.castByName}</span>
+      </div>
+
+      <div onclick="send('dismiss_notification')"
+        style="position:relative;width:160px;height:224px;border-radius:12px;border:2px solid ${ts.color};
+               background:linear-gradient(160deg,${ts.color}28,${ts.color}08);
+               overflow:hidden;cursor:pointer;box-shadow:0 0 28px ${ts.glow},0 4px 24px rgba(0,0,0,.5);
+               flex-shrink:0;-webkit-tap-highlight-color:transparent">
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;opacity:.85">${wcSvg}</div>
+        <img src="${wcPng}" onerror="this.style.display='none'"
+          style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block">
+        <div style="position:absolute;bottom:0;left:0;right:0;
+                    background:linear-gradient(to top,rgba(8,8,18,.96) 55%,transparent);
+                    padding:10px 10px 12px;text-align:center">
+          <div style="font-size:13px;font-family:'Cinzel',serif;font-weight:700;color:${ts.color};margin-bottom:3px">${notif.cardName}</div>
+          <div style="font-size:9px;letter-spacing:.14em;color:${ts.color};opacity:.65;text-transform:uppercase">${ts.label}</div>
+        </div>
+        <div style="position:absolute;top:8px;right:9px;font-size:8px;letter-spacing:.1em;color:${ts.color};opacity:.55;text-transform:uppercase;font-family:'Cinzel',serif">Tap</div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid ${ts.color}44;border-radius:10px;
+                  padding:13px 18px;max-width:280px;width:100%;font-size:13px;color:var(--text);line-height:1.65;text-align:center">
+        ${notif.cardDesc}
+      </div>
+      <div style="font-size:11px;color:var(--text-mute)">Tap the card to dismiss</div>
+    </div>`;
+}
+
 // ─── BATTLE RESULT CLASH ─────────────────────────────────────────────────────
+let _battleResultTimer     = null;
+let _battleResultLbId      = null;
+let _battleResultDismissed = false;
+let _battleResultPending   = false; // true = personal result is showing; hold render() until dismissed
+
 function renderBattleResult() {
   updateStatusBar(false);
   updateHandStrip(false);
@@ -1760,12 +1814,22 @@ function renderBattleResult() {
   const lb = G.lastBattle;
   if (!lb) { render(); return; }
 
+  // Guard: don't reset the animation if the same battle is already playing or dismissed
+  const lbId = `${lb.attackerIdx}-${lb.defOwnerIdx}-${lb.outcome}-${lb.atkDmg}-${lb.defDmg}`;
+  if (_battleResultLbId === lbId && (_battleResultDismissed || _battleResultTimer !== null)) return;
+  if (_battleResultLbId !== lbId) { _battleResultDismissed = false; _battleResultPending = false; }
+  _battleResultLbId = lbId;
+  if (_battleResultTimer) { clearTimeout(_battleResultTimer); _battleResultTimer = null; }
+
   const attPlayer = G.players[lb.attackerIdx];
   const defPlayer = lb.defOwnerIdx != null ? G.players.find(p => p.idx === lb.defOwnerIdx) : null;
-  const outcomeLabel = { attacker_wins:'Victory!', defender_wins:'Defeated!', mutual:'Mutual!', stalemate:'Stalemate' }[lb.outcome] || lb.outcome;
-  const outcomeColor = { attacker_wins:'#5dc97d', defender_wins:'#e05252', mutual:'#e0b050', stalemate:'#9184d9' }[lb.outcome] || 'var(--gold-glow)';
   const eff = lb.attM && lb.defM ? typeEff(lb.attM.type, lb.defM.type) : null;
+  const isAttacker = myIdx === lb.attackerIdx;
+  const isDefender = myIdx === lb.defOwnerIdx;
 
+  // Phase 1: always show the clash animation for everyone
+  const outcomeLabel = { attacker_wins:'Victory!', defender_wins:'Defender wins!', mutual:'Mutual!', stalemate:'Stalemate' }[lb.outcome] || lb.outcome;
+  const outcomeColor = { attacker_wins:'#5dc97d', defender_wins:'#7f92e8', mutual:'#e0b050', stalemate:'#9184d9' }[lb.outcome] || 'var(--gold-glow)';
   document.getElementById('main-content').innerHTML = `
     <div class="p-clash-wrap">
       <div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;">⚔ Battle Result</div>
@@ -1791,6 +1855,93 @@ function renderBattleResult() {
         </div>
       </div>
     </div>`;
+
+  // Phase 2: attacker/defender get a personal result screen after the animation peaks
+  if (isAttacker || isDefender) {
+    _battleResultTimer = setTimeout(() => {
+      _battleResultTimer = null;
+      _renderPersonalBattleResult(lb, isAttacker);
+    }, 2400);
+  }
+}
+
+function _renderPersonalBattleResult(lb, isAttacker) {
+  const mc = document.getElementById('main-content');
+  if (!mc || G.phase !== 'resolve:battle_result') return; // phase already moved on
+
+  const attPlayer = G.players[lb.attackerIdx];
+  const defPlayer = lb.defOwnerIdx != null ? G.players.find(p => p.idx === lb.defOwnerIdx) : null;
+  const eff       = lb.attM && lb.defM ? typeEff(lb.attM.type, lb.defM.type) : null;
+  const myMonster    = isAttacker ? lb.attM : lb.defM;
+  const theirMonster = isAttacker ? lb.defM : lb.attM;
+  const opponent     = isAttacker ? defPlayer : attPlayer;
+  const myDmgTaken   = isAttacker ? lb.defDmg : lb.atkDmg;
+  const theirDmgTaken= isAttacker ? lb.atkDmg : lb.defDmg;
+
+  let personalOutcome;
+  if      (lb.outcome === 'stalemate')     personalOutcome = 'stalemate';
+  else if (lb.outcome === 'mutual')        personalOutcome = 'mutual';
+  else if (lb.outcome === 'attacker_wins') personalOutcome = isAttacker ? 'win' : 'loss';
+  else                                     personalOutcome = isAttacker ? 'loss' : 'win';
+
+  const cfg = {
+    win:       { icon:'🏆', headline:'Victory!',  accent:'#5dc97d', glow:'rgba(93,201,125,0.15)',  sub:'You won the battle!' },
+    loss:      { icon:'💀', headline:'Defeated!', accent:'#e05252', glow:'rgba(224,82,82,0.15)',   sub:'Your summon was destroyed.' },
+    stalemate: { icon:'⚔️', headline:'Stalemate', accent:'#9184d9', glow:'rgba(145,132,217,0.15)', sub:'Both summons survived. Resolve next turn.' },
+    mutual:    { icon:'💥', headline:'Mutual!',   accent:'#e0b050', glow:'rgba(224,176,80,0.15)',  sub:'Both summons were destroyed.' },
+  }[personalOutcome];
+
+  // Fade out, swap content, fade in
+  mc.style.transition = 'opacity .28s ease';
+  mc.style.opacity = '0';
+  setTimeout(() => {
+    if (G.phase !== 'resolve:battle_result') return;
+    _battleResultPending = true;
+    mc.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;padding:18px 16px;gap:14px;text-align:center">
+        <div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;">⚔ Battle Result</div>
+        <div style="background:${cfg.glow};border:2px solid ${cfg.accent};border-radius:14px;padding:14px 24px;
+                    width:100%;max-width:320px;display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="font-size:32px">${cfg.icon}</div>
+          <div style="font-size:24px;font-family:'Cinzel',serif;font-weight:700;color:${cfg.accent}">${cfg.headline}</div>
+          <div style="font-size:12px;color:var(--text-mute)">${cfg.sub}</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;justify-content:center;width:100%">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+            <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-mute)">You</div>
+            ${myMonster ? renderCard(myMonster,{size:'full',showCost:false}) : ''}
+            ${myDmgTaken > 0 ? `<div style="font-size:13px;color:#e05252;font-weight:700">-${myDmgTaken} HP</div>` : `<div style="font-size:11px;color:var(--text-mute)">No damage</div>`}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding-top:55px;gap:5px">
+            <div style="font-size:16px;color:var(--text-dim)">VS</div>
+            ${eff ? `<div class="type-eff-badge ${eff.cls}" style="font-size:9px">${eff.label}</div>` : ''}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+            <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:${opponent?.color||'var(--text-mute)'}">${opponent?.name||'Opponent'}</div>
+            ${theirMonster ? renderCard(theirMonster,{size:'full',showCost:false}) : ''}
+            ${theirDmgTaken > 0 ? `<div style="font-size:13px;color:#e05252;font-weight:700">-${theirDmgTaken} HP</div>` : `<div style="font-size:11px;color:var(--text-mute)">No damage</div>`}
+          </div>
+        </div>
+        <button class="action-btn primary" style="min-width:180px;margin-top:4px"
+          onclick="dismissBattleResult()">Got it</button>
+      </div>`;
+    mc.style.opacity = '1';
+  }, 280);
+}
+
+function dismissBattleResult() {
+  _battleResultDismissed = true;
+  _battleResultPending   = false;
+  if (_battleResultTimer) { clearTimeout(_battleResultTimer); _battleResultTimer = null; }
+  // Fade out, then let render() route to whatever phase the server is already in
+  const mc = document.getElementById('main-content');
+  if (mc) {
+    mc.style.transition = 'opacity .2s ease';
+    mc.style.opacity = '0';
+    setTimeout(() => { mc.style.opacity = ''; mc.style.transition = ''; render(); }, 200);
+  } else {
+    render();
+  }
 }
 
 // ─── BATTLE ──────────────────────────────────────────────────────────────────
@@ -1813,7 +1964,7 @@ function renderBattle() {
 
   const pickerCards = myHand.map(m => renderCard(m, {
     size:'full', selected: selectedIid===m.iid,
-    dim: !(m.canUse ?? true),
+    dim: false,  // Ascendants always usable in battle; condition only gates tile claiming
     onclick: `selectCard(${m.iid})`
   })).join('');
 
@@ -1840,11 +1991,9 @@ function renderBattle() {
   const ab = document.getElementById('action-bar');
   ab.classList.add('visible');
   if (selM) {
-    const locked = selM.isSpecial && selM.canUse === false;
+    // Ascendants are always usable in battle — condition only gates tile claiming
     ab.innerHTML = `<button class="action-btn danger-btn" onclick="send('retreat')">Retreat (−20 ✦)</button>
-      ${locked
-        ? `<button class="action-btn primary" disabled style="opacity:.4" title="${selM.conditionDesc||''}">🔒 Locked</button><div style="font-size:11px;color:var(--text-mute);text-align:center;padding:4px 0">${selM.conditionDesc||'Condition not met'}</div>`
-        : `<button class="action-btn primary" onclick="doAttack()">Attack!</button>`}`;
+      <button class="action-btn primary" onclick="doAttack()">Attack!</button>`;
   } else {
     ab.innerHTML = `<button class="action-btn danger-btn" onclick="send('retreat')">Retreat (−20 ✦)</button>
       <button class="action-btn primary" disabled style="opacity:.4">Pick Summon</button>`;
