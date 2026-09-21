@@ -477,6 +477,9 @@ let boardTokenAnim = null;           // {playerIdx, path:[tileIdxs], step} — h
 let reconnectTimer = null;
 let selectedTile = null;
 let selectedRoundLimit = 30;
+// Spectator mode — set when page loaded at /spectate
+const isSpectator = window.location.pathname.includes('/spectate');
+let spectatorJoined = false; // true once spectate_connect is acknowledged
 // Tile element cache — keeps img/GIF elements alive across renders
 // so token moves don't cause image flicker or GIF restarts
 const tileElCache = new Map(); // tileIdx → { el: HTMLElement, contentKey: string }
@@ -695,6 +698,37 @@ function startBoardDieAnimation(finalVal, fromPos, toPos, animPlayerIdx) {
   setTimeout(boardCycle, 50);
 }
 
+// ─── Spectator join screen ───────────────────────────────────────────────────────────────
+function renderSpectatorJoin(errorMsg) {
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  const root = document.createElement('div');
+  root.style.cssText = 'position:fixed;inset:0;background:rgba(6,6,16,.92);display:flex;align-items:center;justify-content:center;z-index:9999;';
+  root.innerHTML = `
+    <div style="background:linear-gradient(160deg,#1a1228 0%,#12101e 100%);border:1px solid rgba(145,132,217,.25);border-radius:16px;padding:44px 52px;text-align:center;max-width:340px;width:90%;box-shadow:0 0 60px rgba(0,0,0,.7);">
+      <div style="font-size:36px;margin-bottom:12px">👁️</div>
+      <div style="font-family:'Cinzel',serif;font-size:22px;font-weight:700;letter-spacing:.18em;color:var(--gold-glow);margin-bottom:4px;">SUMMONERS GAMBIT</div>
+      <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.35em;color:var(--text-mute);text-transform:uppercase;margin-bottom:32px;">Spectator Mode</div>
+      <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:.25em;color:var(--text-mute);text-transform:uppercase;margin-bottom:10px;">Room Code</div>
+      <input id="spec-code-input" maxlength="4" placeholder="ABCD"
+        style="width:100%;box-sizing:border-box;font-family:'Cinzel',serif;font-size:26px;font-weight:700;letter-spacing:.3em;text-align:center;text-transform:uppercase;background:rgba(0,0,0,.4);border:1px solid rgba(145,132,217,.35);border-radius:8px;color:var(--gold-glow);padding:12px 8px;outline:none;margin-bottom:${errorMsg ? '8px' : '20px'};">
+      ${errorMsg ? `<div style="font-size:11px;color:#e05252;margin-bottom:14px;letter-spacing:.03em;">${errorMsg}</div>` : ''}
+      <button onclick="doSpectatorJoin()" style="width:100%;font-family:'Cinzel',serif;font-size:13px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;background:linear-gradient(135deg,var(--gold-glow),#b8862e);color:#0c0c1a;border:none;border-radius:8px;padding:14px;cursor:pointer;">Watch Game</button>
+    </div>`;
+  app.appendChild(root);
+  const inp = document.getElementById('spec-code-input');
+  inp.focus();
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') doSpectatorJoin(); });
+}
+
+function doSpectatorJoin() {
+  const code = (document.getElementById('spec-code-input')?.value || '').toUpperCase().trim();
+  if (!code || code.length < 1) return;
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ action: 'spectate_connect', roomCode: code }));
+  }
+}
+
 // ─── WebSocket connection ────────────────────────────────────────────────────────────────
 function connect(){
   const chip = document.getElementById('conn-chip');
@@ -702,18 +736,31 @@ function connect(){
   ws = new WebSocket(`${proto}//${location.host}`);
 
   ws.onopen = () => {
-    chip.className = 'ok';
-    chip.textContent = '● Board View';
     clearTimeout(reconnectTimer);
-    // Claim or create a room — pass ?room=CODE from URL if present
-    const urlRoom = new URLSearchParams(location.search).get('room') || '';
-    ws.send(JSON.stringify({ action: 'board_connect', roomCode: urlRoom }));
+    if (isSpectator) {
+      chip.className = 'ok';
+      chip.textContent = '● Spectating';
+      if (!spectatorJoined) {
+        renderSpectatorJoin();
+      }
+    } else {
+      chip.className = 'ok';
+      chip.textContent = '● Board View';
+      // Claim or create a room — pass ?room=CODE from URL if present
+      const urlRoom = new URLSearchParams(location.search).get('room') || '';
+      ws.send(JSON.stringify({ action: 'board_connect', roomCode: urlRoom }));
+    }
   };
 
   ws.onmessage = e => {
     const msg = JSON.parse(e.data);
     if (msg.type === 'ready') return; // server ready ping — board_connect was just sent
+    if (msg.type === 'error' && isSpectator && !spectatorJoined) {
+      renderSpectatorJoin(msg.message || 'Room not found');
+      return;
+    }
     if (msg.type === 'state') {
+      if (isSpectator) spectatorJoined = true; // first state received = successfully joined
       if (boardRollAnimating) {
         boardPendingG = msg.game;
         return;
@@ -998,7 +1045,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.21</div>`;
+    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.23</div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -1072,37 +1119,44 @@ function renderLobby(app){
   panels.appendChild(rightPanel);
   splash.appendChild(panels);
 
-  // ── Round limit selector
-  const rlWrap = document.createElement('div');
-  rlWrap.className = 'round-limit-wrap';
-  rlWrap.innerHTML = `<div class="round-limit-lbl">Rounds per Player</div>
-    <div class="round-limit-btns">
-      ${[30,40,60].map(n=>`<button class="round-limit-btn${selectedRoundLimit===n?' selected':''}" data-limit="${n}">${n}</button>`).join('')}
-    </div>`;
-  rlWrap.querySelectorAll('.round-limit-btn').forEach(btn => {
-    btn.onclick = () => {
-      selectedRoundLimit = Number(btn.dataset.limit);
-      // Update button states without full re-render
-      rlWrap.querySelectorAll('.round-limit-btn').forEach(b => b.classList.toggle('selected', Number(b.dataset.limit) === selectedRoundLimit));
-    };
-  });
-  splash.appendChild(rlWrap);
+  // ── Round limit selector (host only)
+  if (!isSpectator) {
+    const rlWrap = document.createElement('div');
+    rlWrap.className = 'round-limit-wrap';
+    rlWrap.innerHTML = `<div class="round-limit-lbl">Rounds per Player</div>
+      <div class="round-limit-btns">
+        ${[20,30,40].map(n=>`<button class="round-limit-btn${selectedRoundLimit===n?' selected':''}" data-limit="${n}">${n}</button>`).join('')}
+      </div>`;
+    rlWrap.querySelectorAll('.round-limit-btn').forEach(btn => {
+      btn.onclick = () => {
+        selectedRoundLimit = Number(btn.dataset.limit);
+        rlWrap.querySelectorAll('.round-limit-btn').forEach(b => b.classList.toggle('selected', Number(b.dataset.limit) === selectedRoundLimit));
+      };
+    });
+    splash.appendChild(rlWrap);
+  }
 
-  // ── Start button
+  // ── Start button (host only) / spectator waiting notice
   const startWrap = document.createElement('div');
   startWrap.className = 'lobby-start-wrap';
-  const startBtn = document.createElement('button');
-  startBtn.className = 'lobby-start-btn';
-  startBtn.disabled = !canStart;
-  startBtn.textContent = canStart ? 'Start Game' : 'Waiting for Players…';
-  startBtn.onclick = doStartGame;
-  startWrap.appendChild(startBtn);
-  const hint = document.createElement('div');
-  hint.className = 'lobby-start-hint';
-  hint.textContent = canStart
-    ? `${playerCount} player${playerCount!==1?'s':''} ready — ${selectedRoundLimit} rounds per player`
-    : 'Need at least 2 players to start';
-  startWrap.appendChild(hint);
+  if (isSpectator) {
+    startWrap.innerHTML = `<div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.25em;color:var(--text-mute);text-transform:uppercase;padding:12px 0;">👁 Watching — waiting for host to start</div>`;
+  } else {
+    const startBtn = document.createElement('button');
+    startBtn.className = 'lobby-start-btn';
+    startBtn.disabled = !canStart;
+    startBtn.textContent = canStart ? 'Start Game' : 'Waiting for Players…';
+    startBtn.onclick = doStartGame;
+    startWrap.appendChild(startBtn);
+  }
+  if (!isSpectator) {
+    const hint = document.createElement('div');
+    hint.className = 'lobby-start-hint';
+    hint.textContent = canStart
+      ? `${playerCount} player${playerCount!==1?'s':''} ready — ${selectedRoundLimit} rounds per player`
+      : 'Need at least 2 players to start';
+    startWrap.appendChild(hint);
+  }
   splash.appendChild(startWrap);
 
   root.appendChild(splash);
@@ -1148,7 +1202,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.21</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.23</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -1162,7 +1216,9 @@ function renderGame(app){
         <span class="roll-val">${lastRoll != null ? lastRoll : '—'}</span>
       </div>
       <div class="vdiv"></div>
-      <button class="tb-end-btn" onclick="showEndGameModal()">End Game</button>
+      ${isSpectator
+        ? `<div style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:.22em;color:#9184d9;background:rgba(145,132,217,.14);border:1px solid rgba(145,132,217,.3);border-radius:5px;padding:5px 10px;text-transform:uppercase;">👁 Spectating</div>`
+        : `<button class="tb-end-btn" onclick="showEndGameModal()">End Game</button>`}
     </div>`;
   root.appendChild(tb);
 
@@ -1485,7 +1541,7 @@ function renderPaper(){
     chip.innerHTML = `<div class="chip-dot">${playerSigilSVG(p, 18)}</div>
       <div class="chip-info">
         <div class="chip-name" style="color:${p.idx===G.currentPlayer?p.color:'var(--parch-ink)'}">${p.name}${isActive ? ' ◄' : ''}${monoTag}</div>
-        <div class="chip-sub">${p.tileCount} tiles · ${p.handSize}/5 hand · ${p.stationedCount} stationed</div>
+        <div class="chip-sub">${p.tileCount} tiles · ${p.stationedCount} stationed · <span style="color:#5dc97d">⚔${p.battlesWon??0}W</span> <span style="color:#e05252">${p.battlesLost??0}L</span></div>
       </div>
       <div class="chip-mana">
         <div class="chip-mana-val">${p.mana}</div>
