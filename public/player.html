@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.4.27</title>
+<title>Summoners Gambit — Player v0.4.32</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -124,6 +124,15 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .resolve-banner.temple { border: 1px solid rgba(145,132,217,.4); background: rgba(145,132,217,.1); }
 .resolve-banner.chest { border: 1px solid rgba(201,160,90,.4); background: rgba(201,160,90,.1); }
 .resolve-banner.healing { border: 1px solid rgba(95,179,164,.4); background: rgba(95,179,164,.1); }
+.setup-status-line { margin: 14px 16px 8px; font-family: 'Cinzel', serif; font-size: 12px; letter-spacing: .12em; color: var(--text-mute); text-align: center; }
+.setup-instr-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 72vh; padding: 28px 20px 32px; }
+.setup-instr-card { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 28px 22px 24px; max-width: 380px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0; }
+.setup-instr-star { font-size: 38px; margin-bottom: 14px; }
+.setup-instr-title { font-family: 'Cinzel', serif; font-size: 17px; font-weight: 700; letter-spacing: .1em; color: var(--gold-glow); margin-bottom: 18px; text-align: center; }
+.setup-instr-body { font-size: 13px; color: var(--text-dim); line-height: 1.65; display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; text-align: left; }
+.setup-instr-body strong { color: var(--text); font-weight: 600; }
+.setup-instr-btn { width: 100%; padding: 14px; border-radius: 10px; border: none; background: var(--accent); color: #fff; font-family: 'Cinzel', serif; font-size: 14px; font-weight: 700; letter-spacing: .1em; cursor: pointer; transition: background .15s; }
+.setup-instr-btn:hover { background: var(--accent-lit); }
 .setup-tile-row { padding: 12px 16px 4px; }
 .setup-tile-label { display: block; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--text-mute); font-family: 'Cinzel', serif; margin-bottom: 8px; }
 .setup-tile-input { width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface); color: var(--text); font-size: 18px; font-family: 'Cinzel', serif; letter-spacing: .1em; text-align: center; outline: none; transition: border-color 150ms; }
@@ -1122,6 +1131,9 @@ function render() {
 
   const isMyTurn = G.currentPlayer === myIdx;
 
+  // Reset setup instruction flag when a new game returns to lobby
+  if (G.phase === 'lobby') _setupClaimSeen = false;
+
   // Notification intercept — show before any other screen
   if (me.notification) { renderNotification(me.notification); return; }
 
@@ -1137,7 +1149,7 @@ function render() {
 
   switch (G.phase) {
     case 'lobby':     renderLobby(); break;
-    case 'setup':     isMyTurn ? renderSetup() : renderSetupWaiting(); break;
+    case 'setup':     !_setupClaimSeen ? renderSetupInstructions(isMyTurn) : (isMyTurn ? renderSetup() : renderSetupWaiting()); break;
     case 'shop':      isMyTurn ? renderShop() : renderWaiting(); break;
     case 'roll':      isMyTurn ? renderRoll() : renderWaiting(); break;
     case 'stalemate':
@@ -1210,7 +1222,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.27</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.32</div>
     </div>
 
     <div class="room-code-group">
@@ -1282,7 +1294,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.27</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.32</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -1559,6 +1571,32 @@ function renderStalemate() {
 // ─── CLAIM ──────────────────────────────────────────────────────────────────
 // ─── SETUP PHASE ─────────────────────────────────────────────────────────────
 
+function renderSetupInstructions(isMyTurn) {
+  updateStatusBar(isMyTurn);
+  updateHandStrip(false);
+  document.getElementById('main-content').classList.add('no-hand');
+  document.getElementById('action-bar').classList.remove('visible');
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="setup-instr-wrap">
+      <div class="setup-instr-card">
+        <div class="setup-instr-star">🌟</div>
+        <div class="setup-instr-title">Free Setup Claim</div>
+        <div class="setup-instr-body">
+          <p>Before the first roll, each player gets to station up to 3 summons on any unclaimed elemental tile — completely free. This is your only chance to claim territory without spending Mana.</p>
+          <p><strong>Element tip:</strong> A summon stationed on a tile that matches its element fights with +15% Attack &amp; Defense. Station it on its opposing element and it takes a −15% penalty. Place your strongest monsters where the element is in your favour.</p>
+          <p>Tap the <strong>?</strong> button at the top of your screen any time to review the full rules and element matchups.</p>
+        </div>
+        <button class="setup-instr-btn" onclick="dismissSetupInstructions()">Got it</button>
+      </div>
+    </div>`;
+}
+
+function dismissSetupInstructions() {
+  _setupClaimSeen = true;
+  render();
+}
+
 function renderSetup() {
   const me = G.players[myIdx];
   updateStatusBar(true);
@@ -1595,23 +1633,19 @@ function renderSetup() {
   }
 
   document.getElementById('main-content').innerHTML = `
-    <div class="resolve-banner claim">
-      <span class="resolve-icon">🌟</span>
-      <div>
-        <div class="resolve-title">Free Setup Claim</div>
-        <div class="resolve-sub">Round ${G.setupRound || 1} of 3${G.setupTotalTurns > 0 ? ` · Turn ${(G.setupTurnIdx||0)+1}/${G.setupTotalTurns}` : ''} — station a summon on any free elemental tile at no cost.</div>
-      </div>
-    </div>
+    <div class="setup-status-line">Round ${G.setupRound || 1} of 3${G.setupTotalTurns > 0 ? ` · Turn ${(G.setupTurnIdx||0)+1}/${G.setupTotalTurns}` : ''}</div>
     <div class="picker-label">Choose a summon to station</div>
     <div class="picker-scroll" id="setup-picker-scroll">${myHand.length > 0 ? pickerCards : '<div style="text-align:center;padding:24px 0;color:var(--text-mute);font-size:13px;">No summons in hand — you must pass.</div>'}</div>
     ${myHand.length > 0 ? scrollNavHTML('setup-picker-scroll','setup-dot',myHand.length) : ''}
     <div class="setup-tile-row">
       <label class="setup-tile-label">Tile number (0–27)</label>
-      <input id="setup-tile-input" class="setup-tile-input" type="number" min="0" max="27"
-        inputmode="numeric" placeholder="e.g. 14"
-        value="${setupTileStr}"
-        oninput="setupTileStr=this.value.trim();updateSetupTilePreview();"
-      />
+      <form onsubmit="event.preventDefault();doSetupClaim();" style="margin:0">
+        <input id="setup-tile-input" class="setup-tile-input" type="number" min="0" max="27"
+          inputmode="numeric" placeholder="e.g. 14"
+          value="${setupTileStr}"
+          oninput="setupTileStr=this.value.trim();updateSetupTilePreview();"
+        />
+      </form>
       <div id="setup-tile-preview">${tilePreview}</div>
     </div>`;
 
@@ -1800,12 +1834,53 @@ function renderNotification(notif) {
 }
 
 // ─── BATTLE RESULT CLASH ─────────────────────────────────────────────────────
+let _setupClaimSeen        = false; // true after player dismisses setup instructions (resets each new game)
 let _battleResultTimer     = null;
 let _battleResultLbId      = null;
 let _battleResultDismissed = false;
 let _battleResultPending   = false; // true = personal result is showing; hold render() until dismissed
 
+// ─── BATTLE MUSIC ────────────────────────────────────────────────────────────
+const _battleAudio = new Audio('/audio/battle.mp3');
+_battleAudio.loop = false;
+_battleAudio.volume = 0.55;
+let _battleMusicKey = null; // tracks which battle we played music for (prevent re-trigger on rebroadcast)
+
+function _tryPlayBattleMusic() {
+  if (!G || myIdx === null) return;
+  if (G.phase !== 'resolve:battle') return;
+  if (G.currentPlayer !== myIdx) return; // only the attacker hears it
+  const key = `${G.currentPlayer}-${G.turnCount}`;
+  if (_battleMusicKey === key) return;  // already played for this attack
+  _battleMusicKey = key;
+  _battleAudio.currentTime = 0;
+  _battleAudio.play().catch(() => {});
+}
+
+function _stopBattleMusic() {
+  if (_battleAudio.paused) return;
+  // Fade out over 1200ms then stop
+  const startVol = _battleAudio.volume;
+  const step = 50; // ms per tick
+  const ticks = 1200 / step;
+  const decrement = startVol / ticks;
+  const fade = setInterval(() => {
+    if (_battleAudio.paused) { clearInterval(fade); return; }
+    const next = _battleAudio.volume - decrement;
+    if (next <= 0) {
+      _battleAudio.volume = 0;
+      _battleAudio.pause();
+      _battleAudio.currentTime = 0;
+      _battleAudio.volume = startVol; // restore for next play
+      clearInterval(fade);
+    } else {
+      _battleAudio.volume = next;
+    }
+  }, step);
+}
+
 function renderBattleResult() {
+  _stopBattleMusic(); // cut battle music as clash animation begins
   updateStatusBar(false);
   updateHandStrip(false);
   document.getElementById('main-content').classList.add('no-hand');
@@ -1946,6 +2021,7 @@ function dismissBattleResult() {
 
 // ─── BATTLE ──────────────────────────────────────────────────────────────────
 function renderBattle() {
+  _tryPlayBattleMusic(); // play battle music for the attacker only
   const me = G.players[myIdx];
   updateStatusBar(true);
   updateHandStrip(true);

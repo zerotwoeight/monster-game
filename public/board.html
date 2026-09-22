@@ -47,6 +47,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .roll-lbl{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;}
 .roll-val{font-size:28px;font-weight:500;letter-spacing:.1em;font-variant-numeric:tabular-nums;font-family:'Cinzel',serif;}
 .vdiv{width:1px;height:34px;background:var(--border2);}
+.mute-btn{background:rgba(145,132,217,.12);border:1px solid rgba(145,132,217,.28);border-radius:7px;color:var(--text-lo);font-size:18px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .18s,border-color .18s;line-height:1;padding:0;}
+.mute-btn:hover{background:rgba(145,132,217,.22);border-color:rgba(145,132,217,.5);}
 
 /* Main */
 .main{flex:1;display:flex;overflow:hidden;}
@@ -1045,7 +1047,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.23</div>`;
+    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.25</div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -1202,7 +1204,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.23</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.25</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -1215,6 +1217,8 @@ function renderGame(app){
         <span class="roll-lbl">Last Roll</span>
         <span class="roll-val">${lastRoll != null ? lastRoll : '—'}</span>
       </div>
+      <div class="vdiv"></div>
+      <button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Toggle music">${typeof _bgMuted !== 'undefined' && _bgMuted ? '🔇' : '🔊'}</button>
       <div class="vdiv"></div>
       ${isSpectator
         ? `<div style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:.22em;color:#9184d9;background:rgba(145,132,217,.14);border:1px solid rgba(145,132,217,.3);border-radius:5px;padding:5px 10px;text-transform:uppercase;">👁 Spectating</div>`
@@ -1664,6 +1668,38 @@ function doNewGame(){
     ws.send(JSON.stringify({ action: 'new_game' }));
   }
 }
+
+// ─── Background Music ───────────────────────────────────────────────────────────────────────
+let _bgMuted = false;
+let _bgStarted = false;
+const _bgAudio = new Audio('/audio/main-theme.mp3');
+_bgAudio.loop = true;
+_bgAudio.volume = 0.15;
+
+function _startBgMusic() {
+  if (_bgStarted || _bgMuted) return;
+  _bgStarted = true;
+  _bgAudio.play().catch(() => {
+    // Autoplay blocked — retry on first user interaction
+    _bgStarted = false;
+  });
+}
+
+function toggleMute() {
+  _bgMuted = !_bgMuted;
+  if (_bgMuted) {
+    _bgAudio.pause();
+  } else {
+    _bgAudio.play().catch(() => {});
+  }
+  const btn = document.getElementById('mute-btn');
+  if (btn) btn.textContent = _bgMuted ? '🔇' : '🔊';
+}
+
+// Start music on first user interaction (browser autoplay policy)
+document.addEventListener('click', () => { _startBgMusic(); }, { once: true });
+// Also try immediately (works if page was navigated to with user gesture)
+window.addEventListener('load', () => { setTimeout(_startBgMusic, 500); });
 
 // ─── Boot ───────────────────────────────────────────────────────────────────────────────────
 connect();
