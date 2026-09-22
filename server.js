@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.28';
+const SERVER_VERSION = 'v1.0.29';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -1867,6 +1867,8 @@ function resolveRoll_fromPos(playerIdx, pos) {
 const fs     = require('fs');
 const crypto = require('crypto');
 
+const STATE_FILE = path.join(__dirname, 'game-state.json');
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js':   'application/javascript',
@@ -1989,6 +1991,38 @@ function sendError(socket, msg) {
   wsSend(socket, { type:'error', message: msg });
 }
 
+// ─── State persistence ────────────────────────────────────────────────────────
+// Serialize the rooms Map to disk on every broadcast so process restarts
+// (Railway deploys, crashes, idle scale-down) don't silently kill active games.
+// Note: Railway's ephemeral filesystem persists within a running container but
+// is wiped on redeploy — this protects against crashes/restarts, not redeploys.
+
+function saveState() {
+  try {
+    const data = JSON.stringify([...rooms.entries()]);
+    fs.writeFileSync(STATE_FILE, data, 'utf8');
+  } catch (e) {
+    console.error('[persist] save failed:', e.message);
+  }
+}
+
+function loadState() {
+  try {
+    if (!fs.existsSync(STATE_FILE)) return;
+    const data = fs.readFileSync(STATE_FILE, 'utf8');
+    const entries = JSON.parse(data);
+    for (const [code, state] of entries) {
+      // Only restore games that aren't over yet
+      if (state && state.phase !== 'game_over') {
+        rooms.set(code, state);
+        console.log(`[persist] restored room ${code} (phase: ${state.phase})`);
+      }
+    }
+  } catch (e) {
+    console.error('[persist] load failed (starting fresh):', e.message);
+  }
+}
+
 // Redefine broadcast to work with raw sockets — only sends to clients in the current room
 function broadcast(extra = {}) {
   if (!G) return;
@@ -2014,6 +2048,8 @@ function broadcast(extra = {}) {
     }
     wsSend(socket, msg);
   }
+  // Persist state after every broadcast
+  saveState();
 }
 
 // ─── HTTP server ──────────────────────────────────────────────────────────────
@@ -2107,6 +2143,7 @@ server.on('upgrade', (req, socket, head) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
+  loadState();
   const ip = getLocalIp();
   console.log('');
   console.log('  ╔════════════════════════════════════════╗');
