@@ -317,6 +317,22 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .lobby-qr-lbl{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;align-self:flex-start;}
 .lobby-qr-box{background:#fff;border-radius:8px;padding:8px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(201,160,90,.2);}
 .lobby-qr-hint{font-size:10px;color:var(--text-mute);letter-spacing:.08em;text-align:center;}
+/* About modal */
+.about-modal-backdrop{position:fixed;inset:0;z-index:9999;background:rgba(6,6,16,.88);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.about-modal-card{background:var(--surface);border:1px solid var(--border2);border-radius:16px;max-width:620px;width:90%;max-height:82vh;overflow-y:auto;padding:40px 44px 36px;position:relative;box-shadow:0 0 80px rgba(145,132,217,.18),0 24px 64px rgba(0,0,0,.7);}
+.about-modal-close{position:absolute;top:16px;right:18px;background:none;border:none;color:var(--text-mute);font-size:20px;cursor:pointer;line-height:1;padding:4px 8px;border-radius:6px;transition:color .15s;}
+.about-modal-close:hover{color:var(--text);}
+.about-modal-eyebrow{font-family:'Cinzel',serif;font-size:9px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent-pale);margin-bottom:8px;}
+.about-modal-title{font-family:'Cinzel',serif;font-size:26px;font-weight:700;letter-spacing:.1em;color:var(--gold-glow);margin-bottom:24px;text-shadow:0 0 30px rgba(201,160,90,.3);}
+.about-modal-section{margin-bottom:24px;}
+.about-modal-section h3{font-family:'Cinzel',serif;font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--accent-pale);margin:0 0 10px;border-bottom:1px solid var(--border);padding-bottom:8px;}
+.about-modal-section p{font-family:'Inter',sans-serif;font-size:13px;line-height:1.75;color:var(--text-lo);margin:0 0 10px;}
+.about-modal-section p:last-child{margin-bottom:0;}
+.about-modal-links{display:flex;gap:12px;flex-wrap:wrap;}
+.about-modal-link{font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);border:1px solid rgba(145,132,217,.35);border-radius:6px;padding:7px 16px;text-decoration:none;transition:all .15s;}
+.about-modal-link:hover{background:rgba(145,132,217,.12);color:var(--accent-pale);}
+.about-link-btn{background:none;border:none;padding:0;font-family:'Cinzel',serif;font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-mute);cursor:pointer;text-decoration:underline;text-underline-offset:3px;transition:color .15s;}
+.about-link-btn:hover{color:var(--accent-pale);}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
@@ -1018,6 +1034,57 @@ function doStartGame(){
   }
 }
 
+// ─── About modal ─────────────────────────────────────────────────────────────
+function openAboutModal(showHowToPlay = true) {
+  if (document.getElementById('about-modal-backdrop')) return;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'about-modal-backdrop';
+  backdrop.id = 'about-modal-backdrop';
+
+  const howToPlayHTML = showHowToPlay ? `
+    <div class="about-modal-section">
+      <h3>How to Play</h3>
+      <p>One person hosts the server and screen-shares the board on a video call — Discord, Zoom, whatever you use. Everyone else opens the game on their phone, no download required.</p>
+      <p>Pick your starter monsters, roll the dice, and try to claim as many tiles as you can by stationing your monsters on them. Land on someone else's tile and you'll have to fight for it. Most tiles when the rounds run out wins.</p>
+    </div>` : '';
+
+  backdrop.innerHTML = `
+    <div class="about-modal-card">
+      <button class="about-modal-close" id="about-modal-close-btn">✕</button>
+      <div class="about-modal-eyebrow">About the Game</div>
+      <div class="about-modal-title">Summoner's Gambit</div>
+      <div class="about-modal-section">
+        <p>This game was born out of a few things — and if you clicked the about button, you probably want to know what they are.</p>
+        <p>The first was a lack of things I could actually do online with friends and family over Discord — quizzes only go so far. The second was board games. It always struck me that a proper board game in a browser should just work, yet every game I came across made it near impossible to actually play with friends. The hardest part of any board game is convincing people to try it — and then you get gatekept by asking everyone to buy it on top of that. The third was simpler: I've always wanted to make a video game and just throw it out there. See if the idea would stick.</p>
+        <p>So here it is — my first, and hopefully not my last, board game: Summoner's Gambit. It's a bit of an abomination of past video games and board games I've loved, ideas taken and tweaked into something I hope is a unique and fun experience for a crew of friends or family to try in an afternoon.</p>
+      </div>
+      ${howToPlayHTML}
+      <div class="about-modal-section">
+        <h3>Credits</h3>
+        <p>This game was vibe coded with Claude. I'm not a developer — I just have ideas, and Claude has made them a reality. The art is all AI generated via Comfy-UI with Kera2, animated with LTX 2.5 and Min Max H3. Sound was made with Claude and Yue2 via Comfy-UI. Without them I would not have been able to do any of this.</p>
+        <p>I'm not saying I don't need artists, or that I'd replace them with AI. I'm one person with no budget and very little time — and people with skills need to be paid. If I ever ask an artist to help, I want to be able to pay them. Without artists the world would be a pale shade of what it is, so if you find one you like, go support them.</p>
+        <p>That said, none of that is the point of this game. I just wanted to make something fun and share it. I hope you find some joy in it.</p>
+      </div>
+      <div class="about-modal-section">
+        <h3>Support &amp; Links</h3>
+        <div class="about-modal-links">
+          <a class="about-modal-link" href="#" onclick="return false;">Ko-fi</a>
+          <a class="about-modal-link" href="#" onclick="return false;">Patreon</a>
+          <a class="about-modal-link" href="#" onclick="return false;">Discord</a>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(backdrop);
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) closeAboutModal(); });
+  document.getElementById('about-modal-close-btn').addEventListener('click', closeAboutModal);
+}
+
+function closeAboutModal() {
+  const el = document.getElementById('about-modal-backdrop');
+  if (el) el.remove();
+}
+
 function renderLobby(app){
   const root = document.createElement('div');
   root.id = 'scale-root';
@@ -1047,7 +1114,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.25</div>`;
+    <div class="lobby-brand-sub">Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.26</div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -1161,6 +1228,16 @@ function renderLobby(app){
   }
   splash.appendChild(startWrap);
 
+  // ── About link (lobby footer)
+  const aboutWrap = document.createElement('div');
+  aboutWrap.style.cssText = 'margin-top:16px;text-align:center;';
+  const aboutBtn = document.createElement('button');
+  aboutBtn.className = 'about-link-btn';
+  aboutBtn.textContent = 'About this game';
+  aboutBtn.onclick = () => openAboutModal(true);
+  aboutWrap.appendChild(aboutBtn);
+  splash.appendChild(aboutWrap);
+
   root.appendChild(splash);
 
   app.appendChild(root);
@@ -1204,7 +1281,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.25</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.26</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -1498,7 +1575,7 @@ function renderGame(app){
         <div class="wt-head">Earned</div>
         ${tableRows}
       </div>
-      <div style="margin-top:28px;display:flex;gap:12px;position:relative;">
+      <div style="margin-top:28px;display:flex;gap:12px;position:relative;align-items:center;">
         <button onclick="doNewGame()" style="
           font-family:'Cinzel',serif;font-size:13px;letter-spacing:.12em;text-transform:uppercase;
           background:linear-gradient(135deg,#3a2e5e,#2a1e4e);
@@ -1506,6 +1583,12 @@ function renderGame(app){
           padding:12px 36px;cursor:pointer;
           box-shadow:0 0 18px rgba(145,132,217,.25);transition:all .2s;">
           ⚔ New Game
+        </button>
+        <button onclick="openAboutModal(false)" style="
+          font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+          background:none;color:var(--text-mute);border:1px solid rgba(255,255,255,.1);border-radius:8px;
+          padding:12px 24px;cursor:pointer;transition:all .2s;">
+          About
         </button>
       </div>`;
     boardArea.appendChild(wo);
