@@ -1048,7 +1048,7 @@ function openAboutModal(showHowToPlay = true) {
   const howToPlayHTML = showHowToPlay ? `
     <div class="about-modal-section">
       <h3>How to Play</h3>
-      <p>One person hosts the server and screen-shares the board on a video call — Discord, Zoom, whatever you use. Everyone else opens the game on their phone, no download required.</p>
+      <p>One person hosts the server and screen-shares the board on a video call, Discord, Zoom, or whatever you use. Everyone else opens the game on their phone, no download required.</p>
       <p>Pick your starter monsters, roll the dice, and try to claim as many tiles as you can by stationing your monsters on them. Land on someone else's tile and you'll have to fight for it. Most tiles when the rounds run out wins.</p>
     </div>` : '';
 
@@ -1058,15 +1058,15 @@ function openAboutModal(showHowToPlay = true) {
       <div class="about-modal-eyebrow">About the Game</div>
       <div class="about-modal-title">Summoner's Gambit</div>
       <div class="about-modal-section">
-        <p>This game was born out of a few things — and if you clicked the about button, you probably want to know what they are.</p>
-        <p>The first was a lack of things I could actually do online with friends and family over Discord — quizzes only go so far. The second was board games. It always struck me that a proper board game in a browser should just work, yet every game I came across made it near impossible to actually play with friends. The hardest part of any board game is convincing people to try it — and then you get gatekept by asking everyone to buy it on top of that. The third was simpler: I've always wanted to make a video game and just throw it out there. See if the idea would stick.</p>
-        <p>So here it is — my first, and hopefully not my last, board game: Summoner's Gambit. It's a bit of an abomination of past video games and board games I've loved, ideas taken and tweaked into something I hope is a unique and fun experience for a crew of friends or family to try in an afternoon.</p>
+        <p>This game was born out of a few things, and if you clicked the about button, you probably want to know what they are.</p>
+        <p>The first was a lack of things I could actually do online with friends and family over Discord or a video call, quizzes only go so far. The second was board games. It always struck me that a proper board game as a videogame should just work, yet every game I came across made it near impossible to actually play with friends. The hardest part of any board game is convincing people to try it, and then you get gatekept by asking everyone to buy it. The third was simpler: I've always wanted to make a video game and just throw it out there. See if the idea would stick.</p>
+        <p>So here it is! my first, and hopefully not my last, board game: Summoner's Gambit. It's a bit of an abomination of past video games and board games I've loved, ideas taken and tweaked into something I hope is a unique and fun experience for a crew of friends or family to try in an afternoon.</p>
       </div>
       ${howToPlayHTML}
       <div class="about-modal-section">
         <h3>Credits</h3>
-        <p>This game was vibe coded with Claude. I'm not a developer — I just have ideas, and Claude has made them a reality. The art is all AI generated via Comfy-UI with Kera2, animated with LTX 2.5 and Min Max H3. Sound was made with Claude and Yue2 via Comfy-UI. Without them I would not have been able to do any of this.</p>
-        <p>I'm not saying I don't need artists, or that I'd replace them with AI. I'm one person with no budget and very little time — and people with skills need to be paid. If I ever ask an artist to help, I want to be able to pay them. Without artists the world would be a pale shade of what it is, so if you find one you like, go support them.</p>
+        <p>This game was vibe coded with Claude. I'm not a developer, I just have ideas, and Claude has made them a reality. The art is all AI generated via Comfy-UI with Kera2, animated with LTX 2.5 and Min Max H3. Sound was made with Claude and Yue2 via Comfy-UI. Without them I would not have been able to do any of this.</p>
+        <p>I'm not saying I don't need artists, or that I'd replace them with AI. I'm one person with no budget and very little time, and people with skills need to be paid. If I ever ask an artist to help, I want to be able to pay them. Without artists the world would be a pale shade of what it is, so if you find one you like, please go support them, it's ruff out there.</p>
         <p>That said, none of that is the point of this game. I just wanted to make something fun and share it. I hope you find some joy in it.</p>
       </div>
       <div class="about-modal-section">
@@ -1116,7 +1116,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.33 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.2.9</div>`;
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.35 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.2.9</div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -1286,7 +1286,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.33</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.35</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
