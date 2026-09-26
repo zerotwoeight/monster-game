@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.4.32</title>
+<title>Summoners Gambit — Player v0.3.0</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -36,8 +36,9 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 #hand-area { display: none; flex-direction: column; flex-shrink: 0; background: linear-gradient(to top, var(--bg-deep) 0%, var(--bg-deep) 70%, transparent 100%); padding-top: 20px; }
 #hand-area.visible { display: flex; }
 #hand-label { font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--text-mute); font-family: 'Cinzel', serif; padding: 0 16px; margin-bottom: 8px; }
-#hand-scroll { display: flex; gap: 8px; padding: 0 16px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+#hand-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 #hand-scroll::-webkit-scrollbar { display: none; }
+#hand-scroll .scroll-inner { display: flex; gap: 8px; padding: 28px 28px 22px; }
 .hand-card-mini { flex-shrink: 0; }
 #action-bar { display: none; flex-direction: row; flex-wrap: wrap; gap: 8px; padding: 8px 16px 12px; flex-shrink: 0; background: var(--bg-deep); }
 #action-bar.visible { display: flex; }
@@ -85,6 +86,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .waiting-turn-info { display: inline-flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 24px; padding: 8px 16px; margin-bottom: 20px; }
 .waiting-pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--gold-glow); animation: pulse 1.6s ease-in-out infinite; }
 @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+@keyframes pulseRed { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(1.15)} }
 .waiting-turn-text { font-size: 13px; color: var(--text-lo); }
 .waiting-turn-name { font-weight: 600; color: var(--text); }
 .mini-board-wrap { width: 220px; height: 220px; margin: 0 auto 16px; }
@@ -105,8 +107,9 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .mana-collect-icon { font-size: 18px; }
 .mana-collect-text { font-size: 13px; color: var(--gold-glow); line-height: 1.4; }
 .shop-cards-wrap { position: relative; }
-.shop-cards-scroll { display: flex; gap: 10px; padding: 0 16px 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; scroll-snap-type: x mandatory; }
+.shop-cards-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; scroll-snap-type: x mandatory; }
 .shop-cards-scroll::-webkit-scrollbar { display: none; }
+.shop-cards-scroll .scroll-inner { display: flex; gap: 10px; padding: 28px 28px 22px; }
 .shop-cards-scroll .summon-card { scroll-snap-align: start; }
 .shop-scroll-nav { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 0 4px; }
 .shop-arrow { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border2); background: var(--surface2); color: var(--text-lo); font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; flex-shrink: 0; transition: background 100ms; }
@@ -152,8 +155,9 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .resolve-title { font-size: 14px; font-weight: 600; line-height: 1.2; }
 .resolve-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; line-height: 1.4; }
 .picker-label { padding: 0 16px; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--text-mute); font-family: 'Cinzel', serif; margin-bottom: 10px; }
-.picker-scroll { display: flex; gap: 10px; padding: 0 16px 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.picker-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .picker-scroll::-webkit-scrollbar { display: none; }
+.picker-scroll .scroll-inner { display: flex; gap: 10px; padding: 28px 24px 22px; }
 .own-tile-options { display: flex; flex-direction: column; gap: 8px; padding: 0 16px; margin-bottom: 16px; }
 .own-tile-opt { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface); cursor: pointer; transition: all 120ms; }
 .own-tile-opt:hover { border-color: var(--accent); background: rgba(145,132,217,.07); }
@@ -235,6 +239,25 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .roll-result.visible { display: block; }
 .roll-result-num { font-size: 36px; font-weight: 700; font-family: 'Cinzel', serif; color: var(--accent-pale); }
 .roll-result-dest { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+/* Landing choice */
+.lc-section { padding: 0 12px 8px; }
+.lc-header { font-family:'Cinzel',serif; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--gold); text-align:center; margin-bottom:12px; animation:fadeSlideUp .35s ease both; }
+.lc-opts { display:flex; gap:10px; justify-content:center; }
+.lc-opt { display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; user-select:none; animation:fadeSlideUp .35s ease both; }
+.lc-tile-num { font-family:'Cinzel',serif; font-size:10px; letter-spacing:.1em; color:var(--text-mute); }
+.lc-tile-card { width:110px; height:142px; border-radius:10px; border:2px solid; position:relative; overflow:hidden; display:flex; align-items:flex-end; transition: transform 100ms, box-shadow 100ms; }
+.lc-opt:active .lc-tile-card, .lc-opt-pressed .lc-tile-card { transform:scale(.93); box-shadow:0 0 18px rgba(145,132,217,.7) !important; }
+.lc-el-label { width:100%; text-align:center; font-family:'Cinzel',serif; font-size:10px; letter-spacing:.08em; padding:4px 0; background:rgba(0,0,0,.55); backdrop-filter:blur(2px); text-transform:capitalize; }
+.lc-status { font-size:11px; text-align:center; font-family:'Cinzel',serif; letter-spacing:.06em; }
+.lc-status.unclaimed { color:var(--text-mute); }
+.lc-status.own { color:#4caf7d; }
+.lc-status.enemy { font-size:10px; }
+.lc-status.special { color:var(--gold); }
+.lc-enemy-monster { background:var(--surface2); border-radius:6px; padding:4px 6px; width:110px; }
+.lc-mon-name { font-size:9px; color:var(--text-dim); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
+.lc-hp-bar-wrap { height:4px; background:var(--border2); border-radius:2px; overflow:hidden; }
+.lc-hp-bar { height:100%; border-radius:2px; transition:width .3s; }
+@keyframes fadeSlideUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
 /* Summon cards */
 .summon-card { border-radius: 10px; border: 2px solid; cursor: pointer; transition: all 120ms; overflow: hidden; position: relative; flex-shrink: 0; user-select: none; }
 .summon-card:hover { filter: brightness(1.12); }
@@ -257,17 +280,18 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .mc-cost-strip { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: flex-end; padding: 4px 7px; background: linear-gradient(to bottom, rgba(6,5,20,.78) 0%, transparent 100%); z-index: 1; }
 .mc-cost-val { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .mc-cost-lbl { font-size: 8px; color: rgba(200,190,255,.6); text-transform: uppercase; letter-spacing: .1em; margin-left: 3px; }
-.special-badge { position: absolute; top: 5px; left: 6px; font-size: 7px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-family: 'Cinzel', serif; color: var(--gold-glow); background: rgba(169,123,64,.22); border: 1px solid rgba(169,123,64,.45); border-radius: 4px; padding: 1px 4px; line-height: 1.4; z-index: 1; }
+.special-badge { display: block; font-size: 7px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-family: 'Cinzel', serif; color: var(--gold-glow); background: rgba(169,123,64,.22); border: 1px solid rgba(169,123,64,.45); border-radius: 4px; padding: 1px 4px; line-height: 1.4; z-index: 3; width: fit-content; margin-bottom: 3px; }
 .special-lock-overlay { position: absolute; inset: 0; background: rgba(0,0,0,.72); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; z-index: 4; padding: 8px; }
 .special-lock-icon { font-size: 22px; line-height: 1; }
 .special-lock-text { font-size: 9px; font-family: 'Cinzel', serif; color: #b8a070; text-align: center; line-height: 1.4; letter-spacing: .04em; }
-.rare-badge { position: absolute; top: 5px; left: 6px; font-size: 7px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-family: 'Cinzel', serif; color: #c8aaff; background: rgba(145,132,217,.22); border: 1px solid rgba(145,132,217,.5); border-radius: 4px; padding: 1px 4px; line-height: 1.4; z-index: 1; }
+.rare-badge { display: block; font-size: 7px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-family: 'Cinzel', serif; color: #e8c870; background: rgba(201,160,90,.22); border: 1px solid rgba(201,160,90,.55); border-radius: 4px; padding: 1px 4px; line-height: 1.4; width: fit-content; margin-bottom: 3px; }
 .dual-type-dots { display: flex; align-items: center; gap: 3px; }
 .summon-card.mini { width: 70px; height: 100px; }
 .summon-card.mini .mc-overlay { display: none; }
 .summon-card.mini .mc-cost-strip { display: none; }
-.mc-mini-strip { position: absolute; bottom: 0; left: 0; right: 0; height: 6px; z-index: 1; }
+.mc-mini-strip { position: absolute; bottom: 0; left: 0; right: 0; height: 9px; z-index: 1; }
 .charm-dot { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--gold-glow); box-shadow: 0 0 6px var(--gold-glow); }
+.mc-element-badge { position: absolute; top: 5px; left: 6px; padding: 2px 6px; border-radius: 8px; font-size: 8px; font-weight: 800; color: #fff; font-family: 'Cinzel', serif; letter-spacing: 0.06em; text-transform: uppercase; z-index: 2; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
 .divider { height: 1px; background: var(--border); margin: 16px 0; }
 /* Connection status */
 #conn-status { position: fixed; top: 8px; right: 8px; z-index: 999; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-family: 'Cinzel', serif; font-weight: 600; letter-spacing: .1em; pointer-events: none; }
@@ -398,8 +422,10 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
       <!-- Win Condition -->
       <div class="help-section">
         <div class="help-s-title">Win Condition</div>
-        <div class="help-p">The game ends after the round limit (30, 40, or 60 rounds). The player with the <b style="color:var(--text)">most tiles</b> wins. If there's a tie, the player with more Mana takes it.</div>
-        <div class="help-p">Tiles compound your income — more tiles means more Mana Gen per turn, which lets you buy stronger summons, which lets you take more tiles.</div>
+        <div class="help-p">There are two ways to win:</div>
+        <div class="help-row"><span class="help-icon">🏆</span><span><b style="color:var(--text)">Most tiles</b> — the game ends after the round limit (30, 40, or 60 rounds). The player with the most tiles wins. Mana breaks ties.</span></div>
+        <div class="help-row"><span class="help-icon">⚔</span><span><b style="color:var(--text)">Last player standing</b> — if you end your turn owning zero tiles (after the first round), you're eliminated. The last active player wins immediately, no need to wait out the rounds.</span></div>
+        <div class="help-p" style="margin-top:4px">Tiles compound your income — more tiles means more Mana Gen per turn, which lets you buy stronger summons, which lets you take more tiles. Don't let yourself be wiped out!</div>
       </div>
 
       <!-- Battle -->
@@ -738,14 +764,20 @@ function renderCard(m, {size='full', selected=false, showCost=true, dim=false, o
       ${miniStrip}
     </div>`;
   }
+  // Element badge label (dual-type for rare cards)
+  const elemBadgeLabel = isRare && c2 ? `${m.type}/${m.type2}` : (m.type || '');
+  const elemBadgeBg = isRare && c2
+    ? `linear-gradient(to right,${c},${c2})`
+    : c;
   return `<div class="${classes}" style="border-color:${borderColor};${glowShadow}"${clickAttr}>
     ${m.charm ? `<div class="charm-dot"></div>` : ''}
-    ${isRare ? `<div class="rare-badge">★ Rare</div>` : ''}
-    ${m.isSpecial ? `<div class="special-badge">✦ Ascendant</div>` : ''}
+    ${elemBadgeLabel ? `<div class="mc-element-badge" style="background:${elemBadgeBg}">${elemBadgeLabel}</div>` : ''}
     ${m.isSpecial && dim && m.conditionDesc ? `<div class="special-lock-overlay"><span class="special-lock-icon">🔒</span><div class="special-lock-text">${m.conditionDesc}</div></div>` : ''}
     ${showCost ? `<div class="mc-cost-strip"><span class="mc-cost-val" style="color:${c}">${m.cost}</span><span class="mc-cost-lbl">Mana</span></div>` : ''}
     <div class="mc-art">${art}</div>
     <div class="mc-overlay">
+      ${m.isSpecial ? `<div class="special-badge">✦ Ascendant</div>` : ''}
+      ${isRare ? `<div class="rare-badge">★ Rare</div>` : ''}
       <div class="mc-ov-name" style="color:${c}"><span>${m.name}</span>${typeDots}</div>
       <div class="mc-ov-hp-row"><div class="mc-hp-track"><div class="mc-hp-fill" style="width:${hpPct}%;background:${hpColor}"></div></div><span class="mc-hp-num">${m.hp}/${m.maxHp}</span></div>
       <div class="mc-ov-stats">${['ATK','DEF','✦','GEN'].map((l,i)=>`<div class="mc-ov-sc"><span class="mc-ov-si">${l}</span><span class="mc-ov-sv">${[m.atk,m.def,m.cost,m.gen][i]}</span></div>`).join('')}</div>
@@ -898,11 +930,11 @@ function updateHandStrip(show = true) {
   const hs = document.getElementById('hand-scroll');
   if (!show || !myHand.length) { ha.classList.remove('visible'); return; }
   ha.classList.add('visible');
-  hs.innerHTML = myHand.map(m => {
+  hs.innerHTML = `<div class="scroll-inner">${myHand.map(m => {
     const card = renderCard(m, {size:'mini'});
     // Wrap in a clickable container for detail view
     return `<div onclick="showCardDetail(${m.iid})" style="cursor:pointer;position:relative;flex-shrink:0;">${card}</div>`;
-  }).join('');
+  }).join('')}</div>`;
 }
 
 // ─── MONSTER LORE ───────────────────────────────────────────────────────────
@@ -1022,7 +1054,7 @@ function showCardDetail(iid) {
           ${m.isSpecial ? `<div style="font-size:9px;color:var(--gold-glow);font-family:'Cinzel',serif;letter-spacing:.1em;">✦ SPECIAL</div>` : ''}
           ${m.rarity === 'rare' ? `<div style="font-size:9px;color:#c8aaff;font-family:'Cinzel',serif;letter-spacing:.1em;">★ RARE</div>` : ''}
         </div>
-        <div style="font-size:10px;color:var(--text-mute);letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px;">${lore.role} · <span style="color:${elColor}">${m.type}</span>${m.type2 ? ` <span style="color:var(--text-mute)">/ </span><span style="color:${TYPE_COLOR[m.type2]||'var(--accent)'}">${m.type2}</span>` : ''}</div>
+        <div style="font-size:10px;color:var(--text-mute);letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px;">${m.rarity === 'rare' ? lore.role : `${lore.role} · <span style="color:${elColor}">${m.type}</span>`}</div>
 
         <!-- Stat row -->
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;">
@@ -1049,24 +1081,29 @@ function showCardDetail(iid) {
         <div style="margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:10px;font-size:11px;line-height:1.6;">
           <div style="color:var(--text-mute);font-size:9px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">Type Matchup</div>
           ${m.rarity === 'rare' ? (() => {
-            const TYPE_STRONG_LOCAL = {Light:'Dark',Dark:'Arcane',Arcane:'Undead',Undead:'Beast',Beast:'Nature',Nature:'Light'};
-            const TYPE_WEAK_LOCAL   = {Light:'Nature',Dark:'Light',Arcane:'Dark',Undead:'Arcane',Beast:'Undead',Nature:'Beast'};
-            const s1 = TYPE_STRONG_LOCAL[m.type],  s2 = TYPE_STRONG_LOCAL[m.type2];
-            const w1 = TYPE_WEAK_LOCAL[m.type],     w2 = TYPE_WEAK_LOCAL[m.type2];
-            const strongs = [...new Set([s1, s2])];
-            const weaks   = [w1, w2].filter(w => !strongs.includes(w) && w !== s1 && w !== s2);
-            const uniqueWeaks = [...new Set(weaks)];
+            const TS = {Light:'Dark',Dark:'Arcane',Arcane:'Undead',Undead:'Beast',Beast:'Nature',Nature:'Light'};
+            const TW = {Light:'Nature',Dark:'Light',Arcane:'Dark',Undead:'Arcane',Beast:'Undead',Nature:'Beast'};
+            const ALL = ['Light','Dark','Arcane','Undead','Beast','Nature'];
+            function singleMod(at, dt) { return TS[at]===dt?2:TW[at]===dt?0.5:1; }
+            const strongs=[], weaks=[];
+            for (const dt of ALL) {
+              const mod1 = singleMod(m.type, dt);
+              const mod2 = m.type2 ? singleMod(m.type2, dt) : mod1;
+              const best = Math.max(mod1, mod2);
+              if (best > 1) strongs.push(dt);
+              else if (best < 1) weaks.push(dt);
+            }
             return strongs.map(s => `<div><span style="color:${TYPE_COLOR[s]||'#7dba81'}">▲ Strong vs ${s}</span> <span style="color:var(--text-mute);font-size:10px;">(2× dmg)</span></div>`).join('')
-              + (uniqueWeaks.length ? uniqueWeaks.map(w => `<div><span style="color:#e08080">▼ Weak vs ${w}</span> <span style="color:var(--text-mute);font-size:10px;">(0.5× dmg)</span></div>`).join('') : `<div style="color:var(--text-mute);font-size:10px;">◆ No weaknesses — dual elements cancel</div>`);
+              + (weaks.length ? weaks.map(w => `<div><span style="color:#e08080">▼ Weak vs ${w}</span> <span style="color:var(--text-mute);font-size:10px;">(0.5× dmg)</span></div>`).join('') : `<div style="color:var(--text-mute);font-size:10px;">◆ No weaknesses — dual elements cancel</div>`);
           })() : `
           <div><span style="color:${TYPE_COLOR[strongType] || '#7dba81'}">▲ Strong vs ${strongType || '—'}</span> <span style="color:var(--text-mute);font-size:10px;">(2× dmg)</span></div>
           <div><span style="color:${TYPE_COLOR[weakType] || '#e08080'}">▼ Weak vs ${weakType || '—'}</span> <span style="color:var(--text-mute);font-size:10px;">(0.5× dmg)</span></div>`}
         </div>
 
         ${lore.ability ? `
-        <!-- Special ability -->
-        <div style="margin-bottom:14px;padding:10px 12px;background:rgba(169,123,64,.12);border:1px solid rgba(169,123,64,.3);border-radius:10px;">
-          <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-glow);font-family:'Cinzel',serif;margin-bottom:5px;">✦ Ascendant Ability</div>
+        <!-- Special/Rare ability -->
+        <div style="margin-bottom:14px;padding:10px 12px;background:${m.rarity==='rare'?'rgba(145,132,217,.12)':'rgba(169,123,64,.12)'};border:1px solid ${m.rarity==='rare'?'rgba(145,132,217,.3)':'rgba(169,123,64,.3)'};border-radius:10px;">
+          <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:${m.rarity==='rare'?'#c8aaff':'var(--gold-glow)'};font-family:'Cinzel',serif;margin-bottom:5px;">${m.rarity==='rare'?'★ Rare Ability':'✦ Ascendant Ability'}</div>
           <div style="font-size:12px;color:var(--text);line-height:1.5;">${lore.ability}</div>
         </div>` : ''}
 
@@ -1140,18 +1177,49 @@ function render() {
   // Hold battle result screen until player explicitly dismisses it
   if (_battleResultPending) return;
 
-  // Debug: log every phase change to console
+  // Debug: log every phase change to console; play turn-notification sound
   if (render._lastPhase !== G.phase || render._lastPlayer !== G.currentPlayer) {
+    // Play sound when it becomes MY turn (guard: _lastPlayer set, not lobby/game_over)
+    if (render._lastPlayer !== undefined &&
+        G.currentPlayer === myIdx &&
+        render._lastPlayer !== myIdx &&
+        G.phase !== 'lobby' && G.phase !== 'game_over') {
+      try { new Audio('/audio/Player-turn.mp3').play().catch(()=>{}); } catch(e) {}
+    }
     console.log(`[SG] phase=${G.phase} currentPlayer=${G.currentPlayer} myIdx=${myIdx} isMyTurn=${isMyTurn}`);
     render._lastPhase = G.phase;
     render._lastPlayer = G.currentPlayer;
   }
 
+  // Eliminated players see a spectator screen for all non-game_over phases
+  if (me && me.eliminated && G.phase !== 'game_over') {
+    renderEliminated();
+    return;
+  }
+
+  // Reset elimination warning when turnCount advances to a new turn
+  if (G.turnCount !== _elimWarnTurn) {
+    _elimWarnSeen = false;
+    _elimWarnTurn = G.turnCount;
+  }
+
   switch (G.phase) {
     case 'lobby':     renderLobby(); break;
     case 'setup':     !_setupClaimSeen ? renderSetupInstructions(isMyTurn) : (isMyTurn ? renderSetup() : renderSetupWaiting()); break;
-    case 'shop':      isMyTurn ? renderShop() : renderWaiting(); break;
-    case 'roll':      isMyTurn ? renderRoll() : renderWaiting(); break;
+    case 'shop': {
+      // Show elimination warning if player starts their turn with 0 tiles (post-setup)
+      const myTileCount = me ? G.board.filter(t => t.ownerId === myIdx).length : 0;
+      const pastGrace = G.turnCount >= G.players.length;
+      if (isMyTurn && myTileCount === 0 && pastGrace && !_elimWarnSeen) {
+        renderEliminationWarning();
+      } else {
+        isMyTurn ? renderShop() : renderWaiting();
+      }
+      break;
+    }
+    case 'roll':           isMyTurn ? renderRoll() : renderWaiting(); break;
+    case 'resolve:well':   renderWell(); break;
+    case 'resolve:landing': isMyTurn ? renderLandingChoice() : renderWaiting(); break;
     case 'stalemate':
       console.log(`[SG] *** STALEMATE PHASE *** isMyTurn=${isMyTurn} stalemateData=`, G.stalemateData);
       isMyTurn ? renderStalemate() : renderWaiting();
@@ -1222,7 +1290,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.32</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.45</div>
     </div>
 
     <div class="room-code-group">
@@ -1294,7 +1362,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.32</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.45</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -1375,12 +1443,12 @@ function renderShop() {
     <div class="shop-section-hdr">Buy${myHand.length >= 5 ? ' <span style="color:#e05555;font-size:11px;font-weight:700;margin-left:6px">✕ HAND FULL (5/5)</span>' : ` <span style="color:var(--text-mute);font-size:11px;margin-left:6px">(${myHand.length}/5)</span>`}</div>
     ${myHand.length >= 5 ? `<div style="background:#3a1515;border:1px solid #e05555;border-radius:8px;padding:8px 12px;font-size:12px;color:#e08888;margin:0 0 8px">Sell a summon first to make room</div>` : ''}
     <div class="shop-cards-wrap">
-      <div class="shop-cards-scroll" id="shop-buy-scroll">${buyCards}</div>
+      <div class="shop-cards-scroll" id="shop-buy-scroll"><div class="scroll-inner">${buyCards}</div></div>
       ${scrollNavHTML('shop-buy-scroll','shop-buy-dot',G.shopOffers.length)}
     </div>
     <div class="shop-section-hdr" style="margin-top:14px">Sell from Hand</div>
     <div class="shop-cards-wrap">
-      <div class="shop-cards-scroll" id="shop-sell-scroll">${sellCards}</div>
+      <div class="shop-cards-scroll" id="shop-sell-scroll"><div class="scroll-inner">${sellCards}</div></div>
       ${myHand.length > 1 ? scrollNavHTML('shop-sell-scroll','shop-sell-dot',myHand.length) : ''}
     </div>`;
 
@@ -1430,6 +1498,22 @@ function renderRoll() {
       </div>
     </div>
     ${synergyBannerHTML()}`;
+}
+
+function renderWell() {
+  const isMyTurn = G.currentPlayer === myIdx;
+  updateStatusBar(isMyTurn);
+  updateHandStrip(isMyTurn);
+  document.getElementById('main-content').classList.remove('no-hand');
+  document.getElementById('action-bar').classList.remove('visible');
+  const name = G.players[G.currentPlayer]?.name || 'Player';
+  document.getElementById('main-content').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;padding:32px;text-align:center">
+      <div style="font-size:40px">✦</div>
+      <div style="font-family:Cinzel,serif;font-size:18px;color:var(--gold-glow)">${isMyTurn ? 'Mana Well' : `${name} landed on the Mana Well`}</div>
+      <div style="font-size:14px;color:var(--text-mute)">${isMyTurn ? 'You collected +10 ✦' : '+10 ✦ collected'}</div>
+      <div style="font-size:12px;color:var(--text-mute);margin-top:8px">Continuing…</div>
+    </div>`;
 }
 
 function doRoll() {
@@ -1507,6 +1591,117 @@ function doRoll() {
   setTimeout(cycleStep, 40);
 }
 
+// ─── LANDING CHOICE ─────────────────────────────────────────────────────────
+
+function renderLandingChoice() {
+  const me = G.players[myIdx];
+  const pl = G.pendingLanding;
+  if (!pl) { renderWaiting(); return; }
+
+  updateStatusBar(true);
+  updateHandStrip(true);
+  document.getElementById('main-content').classList.remove('no-hand');
+  document.getElementById('action-bar').classList.remove('visible');
+
+  // Build each option card
+  const optCards = pl.options.map((pos, i) => {
+    const tile = G.board[pos];
+    const elColor = tile.element ? (TYPE_COLOR[tile.element] || '#888') : '#888';
+    const tileImgSrc = TILE_IMG[tile.element] || TILE_IMG[tile.kind] || '';
+
+    // Tile art (same pattern as renderPlayerTileCard but smaller)
+    const artStyle = tileImgSrc
+      ? `background:url('${tileImgSrc}') center/cover no-repeat;`
+      : `background:linear-gradient(160deg,${elColor}33 0%,${elColor}11 100%);`;
+
+    // Status label below the card
+    let statusHtml;
+    if (tile.kind === 'start') {
+      statusHtml = `<div class="lc-status special">✦ Mana Well</div>`;
+    } else if (tile.kind === 'chest') {
+      statusHtml = `<div class="lc-status special">📦 Chest</div>`;
+    } else if (tile.kind === 'temple') {
+      statusHtml = `<div class="lc-status special">🏛 Temple</div>`;
+    } else if (tile.kind === 'heal') {
+      statusHtml = `<div class="lc-status special">💚 Healing</div>`;
+    } else if (tile.ownerId == null) {
+      statusHtml = `<div class="lc-status unclaimed">Unclaimed</div>`;
+    } else if (tile.ownerId === myIdx) {
+      let myMonsterHtml = '';
+      if (tile.summon) {
+        const m = tile.summon;
+        const hpPct = Math.max(0, Math.round((m.hp / m.maxHp) * 100));
+        const hpColor = hpPct > 60 ? '#4caf7d' : hpPct > 30 ? '#e8a838' : '#e85555';
+        myMonsterHtml = `
+          <div class="lc-enemy-monster">
+            <div class="lc-mon-name">${m.name}</div>
+            <div class="lc-hp-bar-wrap"><div class="lc-hp-bar" style="width:${hpPct}%;background:${hpColor}"></div></div>
+          </div>`;
+      }
+      statusHtml = `${myMonsterHtml}<div class="lc-status own">Your Tile</div>`;
+    } else {
+      // Enemy tile — show owner + stationed monster summary
+      const owner = G.players.find(p => p.idx === tile.ownerId);
+      const ownerColor = owner ? owner.color : '#888';
+      const ownerName = owner ? owner.name : 'Enemy';
+      let monsterHtml = '';
+      if (tile.summon) {
+        const m = tile.summon;
+        const hpPct = Math.max(0, Math.round((m.hp / m.maxHp) * 100));
+        const hpColor = hpPct > 60 ? '#4caf7d' : hpPct > 30 ? '#e8a838' : '#e85555';
+        monsterHtml = `
+          <div class="lc-enemy-monster">
+            <div class="lc-mon-name">${m.name}</div>
+            <div class="lc-hp-bar-wrap"><div class="lc-hp-bar" style="width:${hpPct}%;background:${hpColor}"></div></div>
+          </div>`;
+      }
+      statusHtml = `${monsterHtml}<div class="lc-status enemy" style="color:${ownerColor}">${ownerName}</div>`;
+    }
+
+    // Element label inside card
+    const elLabel = tile.element || (tile.kind === 'start' ? 'Well' : tile.kind || '');
+
+    return `
+      <div class="lc-opt" style="animation-delay:${i * 80}ms" onclick="doChooseLanding(${pos})">
+        <div class="lc-tile-num">${pos}</div>
+        <div class="lc-tile-card" style="${artStyle}border-color:${elColor}88;">
+          <div class="lc-el-label" style="color:${elColor}">${elLabel}</div>
+        </div>
+        ${statusHtml}
+      </div>`;
+  }).join('');
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="roll-hero" style="padding-bottom:8px">
+      <div class="roll-position-chip">Currently on tile <span>${me.position}</span></div>
+      <div class="big-die die-landed" id="die-landed-display">
+        <div class="die-pip pip-tl"></div><div class="die-pip pip-tr"></div>
+        <div class="die-pip pip-bl"></div><div class="die-pip pip-br"></div>
+        <span class="die-face">${pl.roll}</span>
+      </div>
+      <div class="roll-hint" style="color:var(--gold-glow);font-size:16px">You rolled a ${pl.roll}!</div>
+    </div>
+    <div class="lc-section">
+      <div class="lc-header">Choose Your Destination</div>
+      <div class="lc-opts">${optCards}</div>
+    </div>
+    ${synergyBannerHTML()}`;
+}
+
+function doChooseLanding(tilePos) {
+  // Tap feedback — briefly highlight the chosen card
+  const cards = document.querySelectorAll('.lc-opt');
+  cards.forEach(c => c.classList.remove('lc-opt-pressed'));
+  // Find the clicked card by pos (data attribute would be cleaner but onclick index works)
+  if (G.pendingLanding) {
+    const idx = G.pendingLanding.options.indexOf(tilePos);
+    if (idx >= 0 && cards[idx]) {
+      cards[idx].classList.add('lc-opt-pressed');
+    }
+  }
+  send('choose_landing', { tilePos });
+}
+
 // ─── STALEMATE ──────────────────────────────────────────────────────────────
 // stalemateTab: 'attack' | 'buy' | 'sell'
 function renderStalemate() {
@@ -1548,7 +1743,7 @@ function renderStalemate() {
 
     <div style="padding:16px 16px 4px;">
       <div style="font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;margin-bottom:10px;">Your Hand</div>
-      <div class="picker-scroll" id="stalemate-hand-scroll">${handCards}</div>
+      <div class="picker-scroll" id="stalemate-hand-scroll"><div class="scroll-inner">${handCards}</div></div>
       ${scrollNavHTML('stalemate-hand-scroll','stalemate-hand-dot',myHand.length)}
     </div>
 
@@ -1635,7 +1830,7 @@ function renderSetup() {
   document.getElementById('main-content').innerHTML = `
     <div class="setup-status-line">Round ${G.setupRound || 1} of 3${G.setupTotalTurns > 0 ? ` · Turn ${(G.setupTurnIdx||0)+1}/${G.setupTotalTurns}` : ''}</div>
     <div class="picker-label">Choose a summon to station</div>
-    <div class="picker-scroll" id="setup-picker-scroll">${myHand.length > 0 ? pickerCards : '<div style="text-align:center;padding:24px 0;color:var(--text-mute);font-size:13px;">No summons in hand — you must pass.</div>'}</div>
+    <div class="picker-scroll" id="setup-picker-scroll"><div class="scroll-inner">${myHand.length > 0 ? pickerCards : '<div style="text-align:center;padding:24px 0;color:var(--text-mute);font-size:13px;">No summons in hand — you must pass.</div>'}</div></div>
     ${myHand.length > 0 ? scrollNavHTML('setup-picker-scroll','setup-dot',myHand.length) : ''}
     <div class="setup-tile-row">
       <label class="setup-tile-label">Tile number (0–27)</label>
@@ -1664,8 +1859,8 @@ function renderSetup() {
 function renderSetupWaiting() {
   const cp = G.players[G.currentPlayer];
   updateStatusBar(false);
-  updateHandStrip(false);
-  document.getElementById('main-content').classList.add('no-hand');
+  updateHandStrip(true);
+  document.getElementById('main-content').classList.remove('no-hand');
   document.getElementById('action-bar').classList.remove('visible');
 
   const tileRows = G.board
@@ -1770,7 +1965,7 @@ function renderClaim() {
       </div>
     </div>
     <div class="picker-label">Choose a summon to station</div>
-    <div class="picker-scroll" id="claim-picker-scroll">${pickerCards}</div>
+    <div class="picker-scroll" id="claim-picker-scroll"><div class="scroll-inner">${pickerCards}</div></div>
     ${scrollNavHTML('claim-picker-scroll','claim-dot',myHand.length)}
     <div style="display:flex;justify-content:center;padding:20px 16px 8px;">
       ${renderPlayerTileCard(tile)}
@@ -1835,6 +2030,8 @@ function renderNotification(notif) {
 
 // ─── BATTLE RESULT CLASH ─────────────────────────────────────────────────────
 let _setupClaimSeen        = false; // true after player dismisses setup instructions (resets each new game)
+let _elimWarnSeen          = false; // true after player acknowledges elimination warning this turn
+let _elimWarnTurn          = -1;    // tracks which turnCount the warning was shown for
 let _battleResultTimer     = null;
 let _battleResultLbId      = null;
 let _battleResultDismissed = false;
@@ -2059,7 +2256,7 @@ function renderBattle() {
     </div>
     ${effBadge}` : ''}
     <div class="picker-label">Choose your attacker</div>
-    <div class="picker-scroll" id="battle-picker-scroll">${pickerCards}</div>
+    <div class="picker-scroll" id="battle-picker-scroll"><div class="scroll-inner">${pickerCards}</div></div>
     ${scrollNavHTML('battle-picker-scroll','battle-dot',myHand.length)}`;
 
   attachShopScrollListener('battle-picker-scroll','battle-dot',myHand.length);
@@ -2068,10 +2265,10 @@ function renderBattle() {
   ab.classList.add('visible');
   if (selM) {
     // Ascendants are always usable in battle — condition only gates tile claiming
-    ab.innerHTML = `<button class="action-btn danger-btn" onclick="send('retreat')">Retreat (−20 ✦)</button>
+    ab.innerHTML = `<button class="action-btn danger-btn" onclick="doRetreat()">Retreat (−20 ✦)</button>
       <button class="action-btn primary" onclick="doAttack()">Attack!</button>`;
   } else {
-    ab.innerHTML = `<button class="action-btn danger-btn" onclick="send('retreat')">Retreat (−20 ✦)</button>
+    ab.innerHTML = `<button class="action-btn danger-btn" onclick="doRetreat()">Retreat (−20 ✦)</button>
       <button class="action-btn primary" disabled style="opacity:.4">Pick Summon</button>`;
   }
 }
@@ -2120,7 +2317,7 @@ function renderOwn() {
         <span class="own-tile-opt-cost">${healCost} ✦</span>
       </div>
     </div>
-    ${canSwap ? `<div class="picker-label">Swap stationed summon</div><div class="picker-scroll">${swapCards}</div>` : ''}` : ''}
+    ${canSwap ? `<div class="picker-label">Swap stationed summon</div><div class="picker-scroll"><div class="scroll-inner">${swapCards}</div></div>` : ''}` : ''}
     <div style="padding:12px 16px 4px"><div class="picker-label" style="padding:0;margin-bottom:8px">Change tile element (${CHANGE_COST} ✦)</div>
     <div class="element-pick">${elBtns}</div></div>`;
 
@@ -2171,12 +2368,12 @@ function renderChest() {
     const cards = stationedTiles.map(t =>
       renderCard(t.summon, {size:'full', selected: selectedIid===t.pos, showCost:false, onclick:`selectCard(${t.pos})`})
     ).join('');
-    if (cards) pickerHtml = `<div class="picker-label">Apply potion to a stationed summon</div><div class="picker-scroll">${cards}</div>`;
+    if (cards) pickerHtml = `<div class="picker-label">Apply potion to a stationed summon</div><div class="picker-scroll"><div class="scroll-inner">${cards}</div></div>`;
     else pickerHtml = `<div style="padding:12px 16px;font-size:12px;color:var(--text-mute)">No stationed summons to heal.</div>`;
   } else if (chest.kind === 'charm') {
     const handCards = myHand.map(m => renderCard(m, {size:'full', selected: selectedIid===m.iid, showCost:false, onclick:`selectCard(${m.iid})`})).join('');
     const stCards = stationedTiles.map(t => renderCard(t.summon, {size:'full', selected: selectedIid===t.pos, showCost:false, onclick:`selectCard(${t.pos})`})).join('');
-    pickerHtml = `<div class="picker-label">Assign charm to a summon</div><div class="picker-scroll">${handCards}${stCards}</div>`;
+    pickerHtml = `<div class="picker-label">Assign charm to a summon</div><div class="picker-scroll"><div class="scroll-inner">${handCards}${stCards}</div></div>`;
   }
 
   document.getElementById('main-content').innerHTML = `
@@ -2258,10 +2455,10 @@ function renderTemple() {
       </div>
     </div>
     <div class="picker-label">Ascendant offers (3)</div>
-    <div class="picker-scroll" id="temple-special-scroll">${specialCards}</div>
+    <div class="picker-scroll" id="temple-special-scroll"><div class="scroll-inner">${specialCards}</div></div>
     ${scrollNavHTML('temple-special-scroll','temple-sp-dot',G.pendingTemple.offers.length)}
     <div style="height:12px"></div>
-    ${selSpecial ? `<div class="picker-label">Sacrifice a ${selSpecial.type} summon (${selSpecial.cost} ✦)</div><div class="picker-scroll" id="temple-sac-scroll">${sacrificeCards}</div>${scrollNavHTML('temple-sac-scroll','temple-sac-dot',sacrificeable.length)}` : `<div style="padding:0 16px 16px;font-size:12px;color:var(--text-mute)">Select a Special above to see matching sacrifices.</div>`}`;
+    ${selSpecial ? `<div class="picker-label">Sacrifice a ${selSpecial.type} summon (${selSpecial.cost} ✦)</div><div class="picker-scroll" id="temple-sac-scroll"><div class="scroll-inner">${sacrificeCards}</div></div>${scrollNavHTML('temple-sac-scroll','temple-sac-dot',sacrificeable.length)}` : `<div style="padding:0 16px 16px;font-size:12px;color:var(--text-mute)">Select a Special above to see matching sacrifices.</div>`}`;
 
   attachShopScrollListener('temple-special-scroll','temple-sp-dot',G.pendingTemple.offers.length);
   if (selSpecial) attachShopScrollListener('temple-sac-scroll','temple-sac-dot',sacrificeable.length);
@@ -2299,7 +2496,7 @@ function renderHealTile() {
       </div>
     </div>
     <div class="picker-label">Choose a summon to heal</div>
-    <div class="picker-scroll">${stCards || `<div style="color:var(--text-mute);font-size:12px;padding:16px">No stationed summons.</div>`}</div>`;
+    <div class="picker-scroll"><div class="scroll-inner">${stCards || `<div style="color:var(--text-mute);font-size:12px;padding:16px">No stationed summons.</div>`}</div></div>`;
 
   const ab = document.getElementById('action-bar');
   ab.classList.add('visible');
@@ -2316,6 +2513,60 @@ function renderHealTile() {
   }
 }
 
+// ─── ELIMINATION WARNING ─────────────────────────────────────────────────────
+function renderEliminationWarning() {
+  updateStatusBar(true);
+  updateHandStrip(false);
+  document.getElementById('main-content').classList.add('no-hand');
+  document.getElementById('main-content').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:24px;gap:20px;text-align:center;">
+      <div style="font-size:52px;animation:pulseRed 1.2s ease-in-out infinite">⚠️</div>
+      <div style="font-family:'Cinzel',serif;font-size:18px;letter-spacing:.1em;color:#e05252;text-transform:uppercase;">Danger Zone</div>
+      <div style="font-size:13px;line-height:1.6;color:var(--text-dim);max-width:280px">
+        You own <strong style="color:#e05252">no tiles</strong>.<br>
+        Claim a tile this turn or you'll be <strong style="color:#e05252">eliminated</strong> when your turn ends.
+      </div>
+      <div style="font-size:11px;color:var(--text-mute);max-width:260px;line-height:1.5">
+        You still have your shop phase and your roll — use them wisely.
+      </div>
+    </div>`;
+  const ab = document.getElementById('action-bar');
+  ab.classList.add('visible');
+  ab.innerHTML = `<button class="action-btn primary" style="background:#e05252;border-color:#e05252"
+    onclick="_elimWarnSeen=true;render()">Continue to Shop →</button>`;
+}
+
+// ─── ELIMINATED SPECTATOR SCREEN ─────────────────────────────────────────────
+function renderEliminated() {
+  updateStatusBar(false);
+  document.getElementById('hand-area').classList.remove('visible');
+  document.getElementById('action-bar').classList.remove('visible');
+  document.getElementById('main-content').classList.add('no-hand');
+
+  const me = G.players[myIdx];
+  const activePlayers = G.players.filter(p => !p.eliminated);
+  const currentP = G.players[G.currentPlayer];
+
+  document.getElementById('main-content').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:24px;gap:18px;text-align:center;">
+      <div style="font-size:44px">💀</div>
+      <div style="font-family:'Cinzel',serif;font-size:16px;letter-spacing:.1em;color:#e05252;text-transform:uppercase;">Eliminated</div>
+      <div style="font-size:12px;color:var(--text-mute)">You owned 0 tiles at the end of your turn.</div>
+      <div style="width:100%;background:var(--surface2);border-radius:12px;padding:16px;">
+        <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em;color:var(--text-mute);text-transform:uppercase;margin-bottom:10px;">Still Playing</div>
+        ${activePlayers.map(p => `
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border2);">
+            <svg width="20" height="20" viewBox="0 0 20 20">${sigilShape(p.idx,10,10,5,p.color)}</svg>
+            <div style="flex:1;text-align:left;font-size:12px;color:${p.color};font-family:'Cinzel',serif">${p.name}</div>
+            <div style="font-size:11px;color:var(--text-mute)">${G.board.filter(t=>t.ownerId===p.idx).length} tiles</div>
+          </div>`).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--text-mute)">
+        ${currentP ? `${currentP.name}'s turn` : 'Watching game…'}
+      </div>
+    </div>`;
+}
+
 // ─── GAME OVER ────────────────────────────────────────────────────────────────
 function renderGameOver() {
   updateStatusBar(false);
@@ -2326,27 +2577,29 @@ function renderGameOver() {
   const rankings = G.rankings || G.players.map(p => ({...p, tiles: G.board.filter(t=>t.ownerId===p.idx).length}))
     .sort((a,b) => b.tiles - a.tiles || b.mana - a.mana);
   const winner = rankings[0];
+  const wasLastStanding = winner && rankings[0].wasLastStanding;
 
   const rows = rankings.map((p,i) => `
     <div class="standing-row${i===0?' winner':''}">
       <div class="standing-rank${i===0?' first':''}">${['🥇','🥈','🥉'][i]||i+1}</div>
       <svg width="24" height="24" viewBox="0 0 24 24">${sigilShape(p.idx,12,12,6,p.color)}</svg>
       <div class="standing-info">
-        <div class="standing-name" style="color:${p.color}">${p.name}${p.idx===myIdx?' (you)':''}</div>
+        <div class="standing-name" style="color:${p.color}">
+          ${p.name}${p.idx===myIdx?' (you)':''}
+          ${p.eliminated ? '<span style="font-size:9px;color:#e05252;margin-left:4px;font-family:Inter,sans-serif">💀 eliminated</span>' : ''}
+        </div>
         <div class="standing-stats">${p.tiles} tiles · ${p.mana} ✦</div>
       </div>
     </div>`).join('');
 
   document.getElementById('main-content').innerHTML = `
     <div class="gameover-hero">
-      <div class="trophy-icon">🏆</div>
+      <div class="trophy-icon">${wasLastStanding ? '⚔️' : '🏆'}</div>
       <div class="gameover-winner">${winner.name} Wins!</div>
-      <div class="gameover-sub">${winner.tiles} tiles · ${winner.mana} ✦ Mana</div>
+      <div class="gameover-sub">${wasLastStanding ? 'Last Player Standing' : `${winner.tiles} tiles · ${winner.mana} ✦ Mana`}</div>
     </div>
     <div class="standings-list">${rows}</div>
-    <div style="padding:24px 16px 48px">
-      <button class="action-btn secondary" style="width:100%" onclick="doNewGame()">New Game</button>
-    </div>`;
+    <div style="padding:24px 16px 48px;text-align:center;color:var(--muted);font-size:12px">Game over — check the board for final results!</div>`;
 }
 
 // ─── New Game ────────────────────────────────────────────────────────────────
@@ -2648,13 +2901,15 @@ function renderWildCardCoupSummon() {
 
   let html = `<div class="wc-header">🃏 Coup — Deploy</div><div class="wc-sub">Choose a summon from your hand to station on ${tileInfo}</div>`;
   if (!myHand || myHand.length === 0) {
-    html += `<div style="color:var(--text-mute);font-size:12px;padding:20px 16px;text-align:center">No summons in hand.</div>`;
+    html += `
+      <div style="color:var(--text-mute);font-size:12px;padding:20px 16px;text-align:center">No summons in hand — the tile is yours but nothing will be stationed on it.</div>
+      <button onclick="doWildCardCoupSkipSummon()" style="margin:0 20px;width:calc(100% - 40px);padding:14px;background:var(--surface);border:1px solid var(--border2);border-radius:10px;color:var(--text-mute);font-size:13px;font-family:'Cinzel',serif;cursor:pointer;letter-spacing:.08em;">Claim Tile Without Deploying</button>`;
   } else {
-    html += `<div class="picker-scroll" style="padding:12px 16px">`;
+    html += `<div class="picker-scroll"><div class="scroll-inner" style="padding:14px 20px 20px">`;
     for (const m of myHand) {
       html += `<div onclick="doWildCardCoupSummon(${m.iid})">${renderCard(m, {size:'full', showCost:false, onclick:`doWildCardCoupSummon(${m.iid})`})}</div>`;
     }
-    html += `</div>`;
+    html += `</div></div>`;
   }
   document.getElementById('main-content').innerHTML = html;
 }
@@ -2698,6 +2953,7 @@ function doWildCardTargetPlayer(idx) { send('wildcard_target', { targetIdx: idx 
 function doWildCardTargetTile(pos) { send('wildcard_target', { tilePos: pos }); }
 function doWildCardCoupTile(pos) { send('wildcard_coup_tile', { tilePos: pos }); }
 function doWildCardCoupSummon(iid) { send('wildcard_coup_summon', { iid }); }
+function doWildCardCoupSkipSummon() { send('wildcard_coup_skip_summon', {}); }
 function doWildCardShatter(pos) { send('wildcard_shatter', { tilePos: pos }); }
 function doWildCardShatterConfirm() {
   const picks = G.wildCardPending?.picks || [];
@@ -2767,6 +3023,11 @@ function doClaim() {
   SFX.claim();
   send('claim', { iid: selectedIid });
   selectedIid = null;
+}
+
+function doRetreat() {
+  _stopBattleMusic();
+  send('retreat');
 }
 
 function doAttack() {

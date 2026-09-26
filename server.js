@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.29';
+const SERVER_VERSION = 'v1.0.41';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -159,7 +159,7 @@ const PLAYER_COLORS = ['#e05252','#5ca8e0','#5dc97d','#e0b050','#c07fd8','#60cdc
 const CHANGE_ELEMENT_COST = 18;
 const MANA_PENALTY        = 20;
 const HEAL_COST_PER_HP    = 1.5;
-const DEFAULT_ROUND_LIMIT = 30; // rounds per player (selectable in lobby)
+const DEFAULT_ROUND_LIMIT = 20; // rounds per player (selectable in lobby: 10/20/30)
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
@@ -293,8 +293,10 @@ function freshGame(roomCode) {
     setupTurnIdx: 0,         // total setup turns taken (0 to 3*N-1)
     setupTotalTurns: 0,      // = 3 * N, set when setup starts
     pendingWildCard: false,  // set true when player passes position 0
+    pendingLanding: null,    // { roll, options:[pos,pos,pos] } — set after roll, cleared on choose_landing
     wildCardDrawn: null,     // { low: card, mid: card, high: card }
     wildCardPending: null,   // { cardId, step } for multi-step cards (coup/shatter)
+    lastActivityAt: Date.now(), // timestamp of last broadcast — used for stale room cleanup
   };
 }
 
@@ -327,6 +329,8 @@ function addPlayer(name, color, starterSet) {
     totalManaEarned: 40, // starts with initial 40
     wcEffects: { stumble:false, delay:false, jinx:false, ambush:false, fortify:false, rattle:false, windfall:false },
     notification: null,  // { cardId, cardName, cardDesc, castByName, castByColor, tier }
+    eliminated: false,   // true once player owns 0 tiles at end of their own turn (post-setup)
+    eliminatedRank: null, // set when eliminated — higher = survived longer (e.g. last eliminated = 1)
   };
 }
 
@@ -666,9 +670,10 @@ function publicState() {
     const ti = { ...t };
     if (t.summonInstance) {
       const m = t.summonInstance;
-      ti.summon = { iid:m.iid, id:m.id, name:m.name, type:m.type,
+      ti.summon = { iid:m.iid, id:m.id, name:m.name, type:m.type, type2:m.type2||null,
                      hp:m.hp, maxHp:m.maxHp, atk:m.atk, def:m.def,
-                     cost:m.cost, gen:m.gen, isSpecial:m.isSpecial, charm:m.charm };
+                     cost:m.cost, gen:m.gen, isSpecial:m.isSpecial, charm:m.charm,
+                     rarity:m.rarity||null };
     } else {
       ti.summon = null;
     }
@@ -692,6 +697,9 @@ function publicState() {
     totalManaEarned: p.totalManaEarned,
     wcEffects: p.wcEffects || {},
     notification: p.notification || null,
+    isConnected: p.isConnected !== false, // include so board can show disconnect badge
+    eliminated: p.eliminated || false,
+    eliminatedRank: p.eliminatedRank || null,
   }));
 
   return {
@@ -715,12 +723,14 @@ function publicState() {
       }))
     } : null,
     shopOffers: G.shopOffers.map(m => ({
-      iid:m.iid, id:m.id, name:m.name, type:m.type,
+      iid:m.iid, id:m.id, name:m.name, type:m.type, type2:m.type2||null,
       hp:m.hp, maxHp:m.maxHp, atk:m.atk, def:m.def,
-      cost:m.cost, gen:m.gen, isSpecial:false, charm:false
+      cost:m.cost, gen:m.gen, isSpecial:false, charm:false,
+      rarity:m.rarity||null
     })),
     lastBattle: G.lastBattle || null,
     pendingAttackerSummon: G.pendingAttackerSummon || null,
+    pendingLanding: G.pendingLanding || null,
     wildCardDrawn: G.wildCardDrawn || null,
     wildCardPending: G.wildCardPending || null,
     pausedFor: G.pausedFor || null,
@@ -735,6 +745,44 @@ function publicState() {
 
 // broadcast() and sendError() are defined later in the server section,
 // after the clients Map is set up.
+
+// ─── ELIMINATION ─────────────────────────────────────────────────────────────
+
+// Call at the end of a player's own turn. Marks them eliminated if they own 0 tiles.
+// Only fires after setup phase is complete (turnCount >= players.length ensures at least
+// 1 full setup round has passed before the rule can arm).
+function checkElimination(playerIdx) {
+  const p = G.players[playerIdx];
+  if (!p || p.eliminated) return false;
+  // Grace: don't arm during setup phase
+  if (G.phase === 'setup') return false;
+  // Grace: first full round (turnCount < players.length means setup just ended)
+  if (G.turnCount < G.players.length) return false;
+
+  const ownedTiles = G.board.filter(t => t.ownerId === playerIdx).length;
+  if (ownedTiles > 0) return false;
+
+  // Count how many players are already eliminated to assign rank
+  const elimCount = G.players.filter(pl => pl.eliminated).length;
+  p.eliminated = true;
+  p.eliminatedRank = elimCount + 1; // lower = eliminated earlier (1 = first out)
+
+  log(`💀 ${p.name} owns 0 tiles and is ELIMINATED! (rank: out at ${p.eliminatedRank})`);
+
+  // Board overlay hint — set a special notification so board.html can flash it
+  // (the elimination event is in the event log; board.html reads events)
+  return true; // signal: elimination happened
+}
+
+// Call after every turn. If only 1 non-eliminated player remains, end the game immediately.
+function checkLastStanding() {
+  const active = G.players.filter(p => !p.eliminated);
+  if (active.length <= 1) {
+    endGame();
+    return true;
+  }
+  return false;
+}
 
 // ─── TURN MANAGEMENT ─────────────────────────────────────────────────────────
 
@@ -829,12 +877,29 @@ function advanceTurn() {
   G.wildCardDrawn = null;
   G.wildCardPending = null;
 
+  // ── Elimination check (end of current player's turn) ──────────────────────
+  checkElimination(G.currentPlayer);
+  if (checkLastStanding()) return; // game ended — don't advance further
+
   G.turnCount++;
   if (G.turnCount >= G.roundLimit * G.players.length) {
     endGame();
     return;
   }
-  G.currentPlayer = (G.currentPlayer + 1) % G.players.length;
+
+  // Advance to next non-eliminated player
+  let nextPlayer = (G.currentPlayer + 1) % G.players.length;
+  let loopGuard = 0;
+  while (G.players[nextPlayer].eliminated) {
+    nextPlayer = (nextPlayer + 1) % G.players.length;
+    if (++loopGuard > G.players.length) {
+      // All players eliminated somehow — just end the game
+      endGame();
+      return;
+    }
+  }
+  G.currentPlayer = nextPlayer;
+
   // Only clear stalemateData when the stalemate player has actually resolved it.
   // If the incoming current player isn't the stalemate attacker, keep it alive so
   // startShopPhase can detect it when we cycle back around to them.
@@ -849,14 +914,29 @@ function advanceTurn() {
 
 function endGame() {
   G.phase = 'game_over';
-  // Compute final tile counts
   const finalTiles = p => G.board.filter(t => t.ownerId === p.idx).length;
-  const ranked = [...G.players].sort((a, b) => {
-    const ta = finalTiles(a), tb = finalTiles(b);
-    if (tb !== ta) return tb - ta;
-    return b.mana - a.mana;
-  });
-  log(`🏆 Game over! Winner: ${ranked[0].name}!`);
+
+  // Survivors sort by tiles → mana; eliminated sort by eliminatedRank descending
+  // (higher eliminatedRank = survived longer = better placement among losers)
+  const survivors  = G.players.filter(p => !p.eliminated)
+    .sort((a, b) => {
+      const ta = finalTiles(a), tb = finalTiles(b);
+      if (tb !== ta) return tb - ta;
+      return b.mana - a.mana;
+    });
+  const eliminated = G.players.filter(p => p.eliminated)
+    .sort((a, b) => (b.eliminatedRank || 0) - (a.eliminatedRank || 0));
+  const ranked = [...survivors, ...eliminated];
+
+  // Last-standing win: if only 1 survivor remains, announce them as champion
+  const champion = ranked[0];
+  const wasLastStanding = survivors.length === 1 && eliminated.length > 0;
+  if (wasLastStanding) {
+    log(`🏆 Last Player Standing! ${champion.name} wins!`);
+  } else {
+    log(`🏆 Game over! Winner: ${champion.name}!`);
+  }
+
   G.rankings = ranked.map(p => ({
     idx: p.idx, name: p.name, color: p.color,
     tiles: finalTiles(p),
@@ -867,12 +947,16 @@ function endGame() {
     totalManaEarned: p.totalManaEarned,
     summonsLost: p.destroyedCount,
     handSize: p.hand.length,
+    eliminated: p.eliminated || false,
+    eliminatedRank: p.eliminatedRank || null,
+    wasLastStanding,
   }));
   broadcast();
 }
 
 function resolveRoll(playerIdx) {
   const p = G.players[playerIdx];
+  const oldPos = p.position;
   let roll = rand(1, 6) + rand(1, 6);
 
   // Stumble effect — re-roll, take worse result
@@ -887,24 +971,42 @@ function resolveRoll(playerIdx) {
     }
   }
 
-  p.lastDiceRoll = roll;
-  const oldPos = p.position;
-  const newPos = (oldPos + roll) % 28;
-  p.position = newPos;
+  // Minimum floor of 3 (2d6 min is 2; bump to 3)
+  if (roll < 3) roll = 3;
 
-  // Detect passing the Mana Well (position 0) — but not landing on it
-  if (newPos !== 0 && oldPos + roll >= 28) {
+  p.lastDiceRoll = roll;
+
+  // Wild Card eligibility — based on FULL roll arc crossing position 0, NOT the chosen tile
+  const fullRollPos = (oldPos + roll) % 28;
+  if (fullRollPos !== 0 && oldPos + roll >= 28) {
     G.pendingWildCard = true;
   }
 
-  log(`🎲 ${p.name} rolled ${roll} → tile ${newPos}`);
+  log(`🎲 ${p.name} rolled ${roll}`);
 
+  // Compute 3 landing options: [roll-2, roll-1, roll] steps forward from current position
+  // min roll is 3 so roll-2 ≥ 1 — always at least 1 step forward, no duplicates
+  const options = [
+    (oldPos + roll - 2) % 28,
+    (oldPos + roll - 1) % 28,
+    (oldPos + roll)     % 28,
+  ];
+
+  G.pendingLanding = { roll, options };
+  G.phase = 'resolve:landing';
+  broadcast();
+}
+
+// Resolve landing after player chooses their tile (also used by warp)
+function resolveLandingTile(playerIdx) {
+  const p = G.players[playerIdx];
+  const newPos = p.position;
   const tile = G.board[newPos];
 
   if (tile.kind === 'start') {
     p.mana += 10;
     log(`✦ ${p.name} landed on Mana Well: +10 Mana`);
-    G.phase = 'roll';
+    G.phase = 'resolve:well';
     broadcast();
     scheduleRoomAction(G.roomCode, advanceTurn, 1500);
     return;
@@ -1009,10 +1111,22 @@ const handlers = {
     }
     if (!room) return sendError(ws, 'Room not found — ask the host for the room code');
 
+    // If the room is not in lobby phase, check whether it's still active.
+    // An abandoned room (no live WebSocket connections) is reset to a fresh lobby
+    // so new players aren't permanently locked out by a stale session.
+    if (room.phase !== 'lobby') {
+      const hasActiveConn = [...clients.values()].some(c => c.roomCode === room.roomCode);
+      if (!hasActiveConn) {
+        log(`🔄 Player joining abandoned room ${room.roomCode} (phase: ${room.phase}) — reset to lobby`);
+        room = freshGame(room.roomCode);
+        rooms.set(room.roomCode, room);
+      }
+    }
+
     G = room;
     conn.roomCode = room.roomCode;
 
-    // During active game: allow name-based manual rejoin for disconnected players
+    // During an active game: allow name-based manual rejoin for disconnected players
     if (G.phase !== 'lobby') {
       const disc = G.players.find(p => !p.isConnected && p.name.toLowerCase() === name.toLowerCase());
       if (disc) {
@@ -1028,6 +1142,18 @@ const handlers = {
       return sendError(ws, 'Game already in progress');
     }
 
+    // In lobby: if this name matches a disconnected slot, reclaim it (handles lost sessionKey)
+    const discLobby = G.players.find(p => !p.isConnected && p.name.toLowerCase() === name.toLowerCase());
+    if (discLobby) {
+      discLobby.isConnected = true;
+      conn.playerIdx = discLobby.idx;
+      conn.sessionKey = discLobby.sessionKey;
+      log(`🔄 ${discLobby.name} reclaimed lobby slot`);
+      wsSend(ws, { type: 'session', sessionKey: discLobby.sessionKey });
+      broadcast();
+      return;
+    }
+
     if (G.players.length >= 6) return sendError(ws, 'Game full (max 6 players)');
     const set   = ['A','B','C','D','E','F'].includes(data.starterSet) ? data.starterSet : 'C';
     const color = PLAYER_COLORS[G.players.length];
@@ -1035,6 +1161,14 @@ const handlers = {
     G.players.push(p);
     conn.playerIdx = p.idx;
     conn.sessionKey = p.sessionKey;
+    // Auto-adjust default round limit for large groups
+    if (G.players.length >= 5 && G.roundLimit === 20) {
+      G.roundLimit = 10;
+      log(`⏱ Round limit auto-set to 10 (${G.players.length} players)`);
+    } else if (G.players.length <= 4 && G.roundLimit === 10) {
+      G.roundLimit = 20;
+      log(`⏱ Round limit auto-set to 20 (${G.players.length} players)`);
+    }
     log(`👤 ${name} joined with set ${set}`);
     wsSend(ws, { type: 'session', sessionKey: p.sessionKey });
     broadcast();
@@ -1066,7 +1200,7 @@ const handlers = {
   set_round_limit(ws, conn, data) {
     if (!G || G.phase !== 'lobby') return sendError(ws, 'Not in lobby');
     const limit = Number(data.limit);
-    if (![20, 30, 40].includes(limit)) return sendError(ws, 'Invalid round limit');
+    if (![10, 20, 30].includes(limit)) return sendError(ws, 'Invalid round limit');
     G.roundLimit = limit;
     log(`⏱ Round limit set to ${limit} rounds per player`);
     broadcast();
@@ -1074,8 +1208,21 @@ const handlers = {
 
   start_game(ws, conn, data) {
     if (!G || G.phase !== 'lobby') return sendError(ws, 'Not in lobby');
+    // Remove lobby slots that disconnected and never came back before game start
+    const before = G.players.length;
+    G.players = G.players.filter(p => p.isConnected);
+    if (G.players.length < before) {
+      G.players.forEach((p, i) => { p.idx = i; p.color = PLAYER_COLORS[i]; });
+      // Update any lingering connections' playerIdx references
+      for (const [, c] of clients) {
+        if (c.roomCode === G.roomCode && c.sessionKey) {
+          const pl = G.players.find(p => p.sessionKey === c.sessionKey);
+          if (pl) c.playerIdx = pl.idx; else c.playerIdx = null;
+        }
+      }
+    }
     if (G.players.length < 2) return sendError(ws, 'Need at least 2 players');
-    if (data && data.roundLimit && [20,30,40].includes(Number(data.roundLimit))) {
+    if (data && data.roundLimit && [10,20,30].includes(Number(data.roundLimit))) {
       G.roundLimit = Number(data.roundLimit);
     }
     log(`🎮 Game started! ${G.roundLimit} rounds per player`);
@@ -1231,6 +1378,22 @@ const handlers = {
     if (G.phase !== 'roll') return sendError(ws, 'Not roll phase');
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
     resolveRoll(G.currentPlayer);
+  },
+
+  // ── Landing tile choice ────────────────────────────────────────────────────
+
+  choose_landing(ws, conn, data) {
+    if (G.phase !== 'resolve:landing') return sendError(ws, 'Not landing phase');
+    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    const tilePos = parseInt(data.tilePos);
+    if (!Number.isInteger(tilePos) || !G.pendingLanding || !G.pendingLanding.options.includes(tilePos)) {
+      return sendError(ws, 'Invalid landing choice');
+    }
+    const p = G.players[G.currentPlayer];
+    p.position = tilePos;
+    G.pendingLanding = null;
+    log(`🎯 ${p.name} chooses tile ${tilePos}`);
+    resolveLandingTile(G.currentPlayer);
   },
 
   // ── Claim empty tile ───────────────────────────────────────────────────────
@@ -1599,6 +1762,7 @@ const handlers = {
       G.phase = 'resolve:wildcard_target';
       broadcast();
     } else if (card.target === 'coup') {
+      if (p.hand.length === 0) return sendError(ws, 'Coup requires at least one summon in hand to deploy');
       G.wildCardPending = { cardId: 'coup', step: 'tile' };
       G.phase = 'resolve:wildcard_coup_tile';
       broadcast();
@@ -1689,11 +1853,30 @@ const handlers = {
   wildcard_coup_tile(ws, conn, data) {
     if (G.phase !== 'resolve:wildcard_coup_tile') return sendError(ws, 'Wrong phase');
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    const p = G.players[G.currentPlayer];
     const tilePos = parseInt(data.tilePos, 10);
     if (isNaN(tilePos)) return sendError(ws, 'Invalid tile');
     const tile = G.board[tilePos];
     if (!tile || tile.ownerId === null || tile.ownerId === G.currentPlayer) return sendError(ws, 'Must pick an enemy-owned tile');
     G.wildCardPending.tilePos = tilePos;
+    // Safety: if hand is empty (shouldn't happen after guard at selection, but be defensive),
+    // claim the tile now without deploying a summon and skip the summon step.
+    if (p.hand.length === 0) {
+      const prevOwner = G.players[tile.ownerId];
+      if (tile.summonInstance) {
+        if (prevOwner && prevOwner.hand.length < 5) {
+          prevOwner.hand.push(tile.summonInstance);
+        }
+        tile.summonInstance = null;
+        tile.summonId = null;
+      }
+      tile.ownerId = G.currentPlayer;
+      log(`🃏 Coup — ${p.name} seized tile ${tilePos} (no deploy — empty hand)`);
+      _updatePeakTiles(G.currentPlayer);
+      G.wildCardPending = null;
+      advanceTurn();
+      return;
+    }
     G.wildCardPending.step = 'summon';
     G.phase = 'resolve:wildcard_coup_summon';
     broadcast();
@@ -1737,9 +1920,34 @@ const handlers = {
     advanceTurn();
   },
 
+  // Safety escape: claim the tile without deploying (used when hand empties between coup steps)
+  wildcard_coup_skip_summon(ws, conn, data) {
+    if (G.phase !== 'resolve:wildcard_coup_summon') return sendError(ws, 'Wrong phase');
+    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    const p = G.players[G.currentPlayer];
+    const tilePos = G.wildCardPending?.tilePos;
+    if (tilePos === undefined) return sendError(ws, 'No tile selected');
+    const tile = G.board[tilePos];
+    if (!tile) return sendError(ws, 'Invalid tile');
+    const prevOwner = tile.ownerId !== null ? G.players[tile.ownerId] : null;
+    if (tile.summonInstance) {
+      if (prevOwner && prevOwner.hand.length < 5) {
+        prevOwner.hand.push(tile.summonInstance);
+      }
+      tile.summonInstance = null;
+      tile.summonId = null;
+    }
+    tile.ownerId = G.currentPlayer;
+    log(`🃏 Coup — ${p.name} seized tile ${tilePos} (no deploy)`);
+    _updatePeakTiles(G.currentPlayer);
+    G.wildCardPending = null;
+    advanceTurn();
+  },
+
   wildcard_shatter(ws, conn, data) {
     if (G.phase !== 'resolve:wildcard_shatter') return sendError(ws, 'Wrong phase');
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    const p = G.players[G.currentPlayer];
     const picks = G.wildCardPending.picks || [];
     const tilePos = parseInt(data.tilePos, 10);
     if (isNaN(tilePos)) return sendError(ws, 'Invalid tile');
@@ -1847,18 +2055,11 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
   }
 }
 
-// Handle warp landing — same as resolveRoll but position already set
+// Handle warp landing — position already set, just resolve the tile
 function resolveRoll_fromPos(playerIdx, pos) {
-  const p = G.players[playerIdx];
-  const tile = G.board[pos];
-  if (!tile.ownerId && tile.ownerId !== 0) {
-    G.phase = 'resolve:claim';
-  } else if (tile.ownerId === playerIdx) {
-    G.phase = 'resolve:own';
-  } else {
-    G.phase = 'resolve:battle';
-  }
-  broadcast();
+  G.players[playerIdx].position = pos;
+  G.pendingLanding = null;
+  resolveLandingTile(playerIdx);
 }
 
 // ─── PURE NODE.JS HTTP + WEBSOCKET SERVER ────────────────────────────────────
@@ -1948,7 +2149,7 @@ const PUBLIC = path.join(__dirname, 'public');
 function serveStatic(req, res) {
   let urlPath = req.url.split('?')[0];
 
-  // Health-check endpoint — used by Railway and other platforms to confirm the server is alive
+  // Health-check endpoint
   if (urlPath === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
@@ -1957,6 +2158,118 @@ function serveStatic(req, res) {
       rooms: rooms.size,
       roomList: [...rooms.entries()].map(([code, r]) => ({ code, phase: r.phase, players: r.players.length })),
     }));
+    return;
+  }
+
+  // ── Admin endpoints ─────────────────────────────────────────────────────────
+
+  // Clear a specific room by code
+  if (urlPath.startsWith('/admin/clear/')) {
+    const code = urlPath.split('/admin/clear/')[1].toUpperCase().trim();
+    if (rooms.has(code)) {
+      rooms.delete(code);
+      saveState();
+      console.log(`[admin] manually cleared room ${code}`);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, cleared: code }));
+    } else {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Room not found' }));
+    }
+    return;
+  }
+
+  // Clear all rooms with no active connections
+  if (urlPath === '/admin/clear-stale') {
+    const cleared = [];
+    for (const [code] of rooms) {
+      const hasConn = [...clients.values()].some(c => c.roomCode === code);
+      if (!hasConn) { rooms.delete(code); cleared.push(code); }
+    }
+    saveState();
+    console.log(`[admin] cleared stale rooms: ${cleared.join(', ') || 'none'}`);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, cleared }));
+    return;
+  }
+
+  // Clear ALL rooms (nuclear — disconnects everyone)
+  if (urlPath === '/admin/clear-all') {
+    const cleared = [...rooms.keys()];
+    rooms.clear();
+    saveState();
+    console.log(`[admin] cleared ALL rooms (${cleared.length})`);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, cleared }));
+    return;
+  }
+
+  // Admin dashboard page
+  if (urlPath === '/admin') {
+    const now = Date.now();
+    const rowsHtml = [...rooms.entries()].map(([code, room]) => {
+      const idle = Math.round((now - (room.lastActivityAt || 0)) / 1000);
+      const idleStr = idle < 60 ? `${idle}s` : idle < 3600 ? `${Math.round(idle/60)}m` : `${Math.round(idle/3600)}h`;
+      const connCount = [...clients.values()].filter(c => c.roomCode === code).length;
+      const players = room.players.map(p => `${p.name}${p.isConnected ? '' : ' (dc)'}`).join(', ') || '—';
+      const rowStyle = connCount === 0 ? 'background:#2a1a1a' : 'background:#1a2a1a';
+      return `<tr style="${rowStyle}">
+        <td style="font-family:monospace;font-size:16px;letter-spacing:.1em;color:#c9a050">${code}</td>
+        <td>${room.phase}</td>
+        <td>${room.players.length}</td>
+        <td style="color:${connCount>0?'#5dc97d':'#e05252'}">${connCount}</td>
+        <td style="color:#888">${idleStr} ago</td>
+        <td style="max-width:200px;font-size:12px;color:#aaa">${players}</td>
+        <td><button onclick="clearRoom('${code}')" style="background:#5c2a2a;border:1px solid #a04040;color:#e08080;padding:4px 10px;border-radius:6px;cursor:pointer">Clear</button></td>
+      </tr>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>SG Admin — ${SERVER_VERSION}</title>
+<style>
+  body{background:#0d0e1c;color:#c8c9e0;font-family:system-ui,sans-serif;padding:32px;margin:0}
+  h1{font-size:20px;color:#9184d9;margin:0 0 4px}
+  .sub{color:#666;font-size:13px;margin-bottom:24px}
+  table{border-collapse:collapse;width:100%;max-width:900px}
+  th{text-align:left;padding:8px 12px;border-bottom:2px solid #2a2b3d;color:#666;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+  td{padding:8px 12px;border-bottom:1px solid #1e1f2e}
+  .actions{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+  button.action{padding:8px 18px;border-radius:8px;border:1px solid;cursor:pointer;font-size:14px}
+  .btn-stale{background:#2a2a1a;border-color:#8a7a30;color:#c9a050}
+  .btn-all  {background:#2a1a1a;border-color:#a04040;color:#e08080}
+  .btn-ref  {background:#1a1a2a;border-color:#4040a0;color:#8080e0}
+  .empty{color:#555;padding:20px 0;font-size:14px}
+</style></head><body>
+<h1>Summoners Gambit — Admin</h1>
+<div class="sub">${SERVER_VERSION} · ${rooms.size} room(s) in memory · ${clients.size} connection(s)</div>
+<div class="actions">
+  <button class="action btn-stale" onclick="doAction('/admin/clear-stale')">⚡ Clear Stale (no connections)</button>
+  <button class="action btn-all"   onclick="doAction('/admin/clear-all','Are you sure? This disconnects everyone.')">☠ Clear ALL Rooms</button>
+  <button class="action btn-ref"   onclick="location.reload()">↺ Refresh</button>
+</div>
+${rooms.size === 0 ? '<div class="empty">No rooms in memory.</div>' : `
+<table>
+  <thead><tr><th>Code</th><th>Phase</th><th>Players</th><th>Conns</th><th>Idle</th><th>Names</th><th></th></tr></thead>
+  <tbody>${rowsHtml}</tbody>
+</table>`}
+<script>
+function doAction(url, confirm_msg) {
+  if (confirm_msg && !confirm(confirm_msg)) return;
+  fetch(url).then(r=>r.json()).then(d=>{
+    alert(d.cleared && d.cleared.length ? 'Cleared: ' + d.cleared.join(', ') : 'Nothing to clear');
+    location.reload();
+  });
+}
+function clearRoom(code) {
+  if (!confirm('Clear room ' + code + '?')) return;
+  fetch('/admin/clear/' + code).then(r=>r.json()).then(d=>{
+    alert(d.ok ? 'Cleared ' + code : d.error);
+    location.reload();
+  });
+}
+</script></body></html>`;
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(html);
     return;
   }
 
@@ -2026,6 +2339,7 @@ function loadState() {
 // Redefine broadcast to work with raw sockets — only sends to clients in the current room
 function broadcast(extra = {}) {
   if (!G) return;
+  G.lastActivityAt = Date.now();
   const roomCode = G.roomCode;
   const gs = publicState();
   for (const [socket, conn] of clients) {
@@ -2037,11 +2351,12 @@ function broadcast(extra = {}) {
       if (p) {
         msg.myIdx = conn.playerIdx;
         msg.hand = p.hand.map(m => ({
-          iid:m.iid, id:m.id, name:m.name, type:m.type,
+          iid:m.iid, id:m.id, name:m.name, type:m.type, type2:m.type2||null,
           hp:m.hp, maxHp:m.maxHp, atk:m.atk, def:m.def,
           cost:m.cost, gen:m.gen, isSpecial:m.isSpecial, charm:m.charm,
           special:m.special||null, specialDesc:m.specialDesc||null,
           condition:m.condition||null, conditionDesc:m.conditionDesc||null,
+          rarity:m.rarity||null,
           canUse: canUseSpecial(conn.playerIdx, m),
         }));
       }
@@ -2062,11 +2377,31 @@ server.on('upgrade', (req, socket, head) => {
   const conn = { playerIdx: null, sessionKey: null, roomCode: null, isBoard: false, isSpectator: false, buf: Buffer.alloc(0) };
   clients.set(socket, conn);
 
+  // ── Keep-alive: server pings every 20s to prevent proxy/NAT idle-timeout drops ──
+  conn.lastPong = Date.now();
+  const keepAlive = setInterval(() => {
+    if (socket.destroyed) { clearInterval(keepAlive); return; }
+    // Drop connections that haven't ponged in 55 seconds (2+ missed pings)
+    if (Date.now() - conn.lastPong > 55000) {
+      clearInterval(keepAlive);
+      socket.destroy();
+      return;
+    }
+    // Send WebSocket ping frame (opcode 0x89, no payload)
+    const ping = Buffer.alloc(2); ping[0] = 0x89; ping[1] = 0;
+    try { socket.write(ping); } catch { clearInterval(keepAlive); }
+  }, 20000);
+  socket.on('close', () => clearInterval(keepAlive));
+  socket.on('error', () => clearInterval(keepAlive));
+
   // Send a ready ping — client sends board_connect or join to get room state
   wsSend(socket, { type: 'ready', rooms: [...rooms.keys()] });
 
   socket.on('data', (chunk) => {
     conn.buf = Buffer.concat([conn.buf, chunk]);
+    // Any data from the client means the TCP connection is alive — reset the dead-timer.
+    // This is defense-in-depth alongside the explicit pong frame check below.
+    conn.lastPong = Date.now();
     while (true) {
       const frame = wsParseFrame(conn.buf);
       if (!frame) break;
@@ -2074,9 +2409,17 @@ server.on('upgrade', (req, socket, head) => {
 
       if (frame.opcode === 0x8) { socket.destroy(); break; }  // close
       if (frame.opcode === 0x9) {
-        // ping → pong
+        // client ping → respond with pong (0x8a full byte, but opcode bits only = 0x0a)
         const pong = Buffer.alloc(2); pong[0] = 0x8a; pong[1] = 0;
         try { socket.write(pong); } catch {}
+        continue;
+      }
+      // FIX: wsParseFrame extracts opcode as buf[0] & 0x0f (lower 4 bits).
+      // Pong full byte = 0x8A, but extracted opcode = 0x0A (10), NOT 0x8a (138).
+      // The previous check (=== 0x8a) never matched, so conn.lastPong was never updated
+      // from pong frames — causing every connection to be killed after 55s.
+      if (frame.opcode === 0x0a) {
+        // client pong → confirm connection is alive (lastPong already updated above)
         continue;
       }
       if (frame.opcode !== 0x1) continue; // only handle text frames
@@ -2115,16 +2458,15 @@ server.on('upgrade', (req, socket, head) => {
     if (!G) return;
 
     if (G.phase === 'lobby' && conn.playerIdx !== null && conn.playerIdx !== undefined) {
-      // In lobby: remove the player slot entirely
-      G.players = G.players.filter(p => p.idx !== conn.playerIdx);
-      G.players.forEach((p, i) => { p.idx = i; p.color = PLAYER_COLORS[i]; });
-      for (const [sock, c] of clients) {
-        if (c.sessionKey) {
-          const pl = G.players.find(p => p.sessionKey === c.sessionKey);
-          if (pl) c.playerIdx = pl.idx;
-        }
+      // In lobby: mark disconnected (same as in-game) so rejoin with sessionKey works.
+      // Previously we deleted the slot immediately — but that meant rejoin failed and
+      // the player had to re-enter their info, causing a visible disconnect/rejoin flash.
+      const p = G.players.find(pl => pl.idx === conn.playerIdx);
+      if (p && p.isConnected) {
+        p.isConnected = false;
+        log(`⚠ ${p.name} disconnected from lobby`);
+        broadcast();
       }
-      broadcast();
     } else if (G.phase !== 'lobby' && conn.playerIdx !== null && conn.playerIdx !== undefined) {
       // In game: mark disconnected and pause
       const p = G.players[conn.playerIdx];
@@ -2155,4 +2497,32 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('  ║   the same WiFi network)               ║');
   console.log('  ╚════════════════════════════════════════╝');
   console.log('');
+
+  // ── Stale room cleanup — runs every 2 minutes ──────────────────────────────
+  // Prevents rooms from accumulating indefinitely in memory and on disk.
+  // A room is removed only when it has NO active connections AND exceeds the idle threshold:
+  //   game_over        →  5 min  (results seen, nothing to keep)
+  //   setup            → 10 min  (pre-game phase, clearly abandoned)
+  //   lobby (0 players)→ 10 min  (empty shell, board closed without playing)
+  //   lobby (has players)→30 min (players may still be joining)
+  //   any mid-game phase→ 60 min (disconnected players get time to rejoin via session key)
+  setInterval(() => {
+    const now = Date.now();
+    let cleaned = 0;
+    for (const [code, room] of rooms) {
+      const idle = now - (room.lastActivityAt || 0);
+      const hasConn = [...clients.values()].some(c => c.roomCode === code);
+      if (hasConn) continue; // active connections — never evict
+      const phase = room.phase;
+      if (phase === 'game_over'                                         && idle >  5 * 60 * 1000) { rooms.delete(code); cleaned++; continue; }
+      if (phase === 'setup'                                             && idle > 10 * 60 * 1000) { rooms.delete(code); cleaned++; continue; }
+      if (phase === 'lobby' && room.players.length === 0                && idle > 10 * 60 * 1000) { rooms.delete(code); cleaned++; continue; }
+      if (phase === 'lobby' && room.players.length > 0                 && idle > 30 * 60 * 1000) { rooms.delete(code); cleaned++; continue; }
+      if (idle > 60 * 60 * 1000) { rooms.delete(code); cleaned++; continue; } // mid-game: 1 hour
+    }
+    if (cleaned > 0) {
+      console.log(`[cleanup] removed ${cleaned} stale room(s) — ${rooms.size} remaining`);
+      saveState();
+    }
+  }, 2 * 60 * 1000);
 });

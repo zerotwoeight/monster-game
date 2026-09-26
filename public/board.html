@@ -156,7 +156,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .bmc-hp-row{display:flex;align-items:center;gap:4px;margin:3px 0;}
 .bmc-hp-track{flex:1;height:3px;background:rgba(255,255,255,.15);border-radius:2px;}
 .bmc-hp-fill{height:100%;border-radius:2px;}
-.bmc-hp-num{font-size:9px;color:rgba(255,255,255,.45);font-variant-numeric:tabular-nums;}
+.bmc-hp-num{font-size:9px;color:#fff;font-variant-numeric:tabular-nums;}
 .bmc-stats{display:flex;gap:6px;}
 .bmc-stat{display:flex;flex-direction:column;align-items:center;}
 .bmc-stat-lbl{font-size:7px;color:rgba(255,255,255,.4);letter-spacing:.06em;text-transform:uppercase;}
@@ -498,7 +498,10 @@ let boardShowIdleDie = false;        // forces idle die even in battle phase
 let boardTokenAnim = null;           // {playerIdx, path:[tileIdxs], step} — hop-by-hop movement
 let reconnectTimer = null;
 let selectedTile = null;
-let selectedRoundLimit = 30;
+let selectedRoundLimit = 20;
+// Persist room code across WebSocket reconnects so we always rejoin the same room.
+// Initialised from ?room=CODE in the URL; updated when we first receive a state with a code.
+let savedRoomCode = new URLSearchParams(location.search).get('room') || '';
 // Spectator mode — set when page loaded at /spectate
 const isSpectator = window.location.pathname.includes('/spectate');
 let spectatorJoined = false; // true once spectate_connect is acknowledged
@@ -606,7 +609,7 @@ function tileSummonCard(summon, ownerColor){
     </div>
     <div class="tmc-hp-wrap">
       <div class="tmc-hp-bar"><div class="tmc-hp-fill" style="width:${Math.round(pct*100)}%;background:${hpColor};"></div></div>
-      <div class="tmc-hp-num" style="color:${c}cc;">${summon.hp}/${summon.maxHp}</div>
+      <div class="tmc-hp-num" style="color:rgba(255,255,255,.9);">${summon.hp}/${summon.maxHp}</div>
     </div>
   </div>`;
 }
@@ -753,12 +756,14 @@ function doSpectatorJoin() {
 
 // ─── WebSocket connection ────────────────────────────────────────────────────────────────
 function connect(){
+  reconnectTimer = null; // clear so onclose guard knows no timer is pending
   const chip = document.getElementById('conn-chip');
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   ws = new WebSocket(`${proto}//${location.host}`);
 
   ws.onopen = () => {
     clearTimeout(reconnectTimer);
+    reconnectTimer = null;
     if (isSpectator) {
       chip.className = 'ok';
       chip.textContent = '● Spectating';
@@ -768,9 +773,8 @@ function connect(){
     } else {
       chip.className = 'ok';
       chip.textContent = '● Board View';
-      // Claim or create a room — pass ?room=CODE from URL if present
-      const urlRoom = new URLSearchParams(location.search).get('room') || '';
-      ws.send(JSON.stringify({ action: 'board_connect', roomCode: urlRoom }));
+      // Claim or create a room — use persisted room code so reconnects land in the same room
+      ws.send(JSON.stringify({ action: 'board_connect', roomCode: savedRoomCode }));
     }
   };
 
@@ -783,6 +787,11 @@ function connect(){
     }
     if (msg.type === 'state') {
       if (isSpectator) spectatorJoined = true; // first state received = successfully joined
+      // Save room code on first state so reconnects always land in the same room
+      if (msg.game && msg.game.roomCode && !savedRoomCode) {
+        savedRoomCode = msg.game.roomCode;
+        history.replaceState(null, '', `?room=${savedRoomCode}`);
+      }
       if (boardRollAnimating) {
         boardPendingG = msg.game;
         return;
@@ -846,6 +855,7 @@ function connect(){
   };
 
   ws.onclose = ws.onerror = () => {
+    if (reconnectTimer) return; // already scheduled — don't double-queue
     chip.className = 'err';
     chip.textContent = '✕ Disconnected';
     G = null;
@@ -1048,8 +1058,12 @@ function openAboutModal(showHowToPlay = true) {
   const howToPlayHTML = showHowToPlay ? `
     <div class="about-modal-section">
       <h3>How to Play</h3>
-      <p>One person hosts the server and screen-shares the board on a video call, Discord, Zoom, or whatever you use. Everyone else opens the game on their phone, no download required.</p>
-      <p>Pick your starter monsters, roll the dice, and try to claim as many tiles as you can by stationing your monsters on them. Land on someone else's tile and you'll have to fight for it. Most tiles when the rounds run out wins.</p>
+      <p>One person hosts the server and screen-shares the board on a video call — Discord, Zoom, whatever you use. Everyone else opens the game on their phone, no download required. Enter the room code and pick your starter set to join.</p>
+      <p><strong style="color:var(--accent-pale)">Your turn:</strong> Collect passive Mana from your stationed summons, then visit the shop to buy or sell one summon. Roll the dice and move around the 28-tile board. What happens next depends on where you land.</p>
+      <p><strong style="color:var(--accent-pale)">Empty tile:</strong> Station one of your hand summons to claim it. That tile now generates Mana for you each round.</p>
+      <p><strong style="color:var(--accent-pale)">Enemy tile:</strong> Fight! Pick one of your hand summons to attack. Damage is based on ATK vs DEF, modified by elemental type matchups — there are 6 types in a cycle, each strong against one and weak against another. Winner takes the tile; loser's summon is destroyed.</p>
+      <p><strong style="color:var(--accent-pale)">Special tiles:</strong> The Mana Well gives a Mana bonus when you pass or land on it. The Treasure Chest gives a random reward — a heal potion, a battle charm, a warp, or a free summon. The Temple lets you trade a normal summon for a powerful Ascendant. The Healing tile lets you spend Mana to restore a stationed summon's HP.</p>
+      <p><strong style="color:var(--accent-pale)">Winning:</strong> Two ways to win. Hold the most tiles when the round limit runs out — or be the last player standing. If you end your turn owning zero tiles (after the first round), you're eliminated. Last one standing wins immediately.</p>
     </div>` : '';
 
   backdrop.innerHTML = `
@@ -1116,7 +1130,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.35 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.2.9</div>`;
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.44 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.4.45</div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -1163,9 +1177,12 @@ function renderLobby(app){
     slot.className = `lobby-slot ${p ? 'filled' : 'empty'}`;
     if(p){
       const setLabel = p.starterSet ? `Set ${p.starterSet} — ${SET_NAMES[p.starterSet]||''}` : '';
+      const dcBadge = p.isConnected === false
+        ? `<span style="font-size:9px;color:#e87;letter-spacing:.05em;margin-left:6px;">⚠ reconnecting…</span>` : '';
+      slot.style.opacity = p.isConnected === false ? '0.45' : '';
       slot.innerHTML = `
         <div style="flex-shrink:0;">${playerSigilSVG(p, 30)}</div>
-        <div class="lobby-slot-name" style="color:${p.color};">${p.name}</div>
+        <div class="lobby-slot-name" style="color:${p.color};">${p.name}${dcBadge}</div>
         <div class="lobby-slot-set">${setLabel}</div>`;
     } else {
       slot.innerHTML = `
@@ -1203,13 +1220,14 @@ function renderLobby(app){
   kofiRow.appendChild(kofiLink);
   splash.appendChild(kofiRow);
 
-  // ── Round limit selector (host only)
+  // ── Round limit selector (host only) — sync to server's current value (handles auto-switch)
+  if (G.roundLimit && [10,20,30].includes(G.roundLimit)) selectedRoundLimit = G.roundLimit;
   if (!isSpectator) {
     const rlWrap = document.createElement('div');
     rlWrap.className = 'round-limit-wrap';
     rlWrap.innerHTML = `<div class="round-limit-lbl">Rounds per Player</div>
       <div class="round-limit-btns">
-        ${[20,30,40].map(n=>`<button class="round-limit-btn${selectedRoundLimit===n?' selected':''}" data-limit="${n}">${n}</button>`).join('')}
+        ${[10,20,30].map(n=>`<button class="round-limit-btn${selectedRoundLimit===n?' selected':''}" data-limit="${n}">${n}</button>`).join('')}
       </div>`;
     rlWrap.querySelectorAll('.round-limit-btn').forEach(btn => {
       btn.onclick = () => {
@@ -1277,7 +1295,7 @@ function renderGame(app){
     : (PHASE_LABELS[G.phase] || G.phase);
   const roundLabel = isSetup
     ? `Setup R${G.setupRound || 1}/3`
-    : `Round ${Math.floor(G.turnCount / G.players.length) + 1} of ${G.roundLimit || 30}`;
+    : `Round ${Math.floor(G.turnCount / G.players.length) + 1} of ${G.roundLimit || 20}`;
   const lastRoll = curPlayer ? curPlayer.lastDiceRoll : null;
 
   // ── Topbar
@@ -1286,7 +1304,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.35</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.44</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -1548,28 +1566,32 @@ function renderGame(app){
     wo.className = 'winners-overlay';
     wo.style.cssText = 'position:absolute;inset:0;z-index:30;';
 
+    const wasLastStanding = rankings[0]?.wasLastStanding || false;
     const tableRows = rankings.map((p,rank) => {
       const tiles = p.tiles ?? p.tileCount ?? 0;
+      const isElim = p.eliminated || false;
       const playerAwards = awards[p.name] || [];
       const awardBadge = playerAwards.length ? `<span class="wt-award">${playerAwards.join(' · ')}</span>` : '';
+      const elimBadge = isElim ? `<span class="wt-award" style="color:#e05252">💀 Eliminated</span>` : '';
       const medal = rank===0 ? '🥇' : rank===1 ? '🥈' : rank===2 ? '🥉' : `${rank+1}.`;
-      return `<div class="wt-cell wt-row-${rank+1}" style="color:${p.color};padding-left:16px;">${medal} ${p.name}${awardBadge}</div>
-        <div class="wt-cell wt-row-${rank+1}">${tiles}</div>
-        <div class="wt-cell wt-row-${rank+1}">${p.mana ?? '—'}</div>
-        <div class="wt-cell wt-row-${rank+1}">${p.battlesWon ?? '—'}</div>
-        <div class="wt-cell wt-row-${rank+1}">${p.battlesLost ?? '—'}</div>
-        <div class="wt-cell wt-row-${rank+1}">${p.peakTiles ?? '—'}</div>
-        <div class="wt-cell wt-row-${rank+1}">${p.totalManaEarned ?? '—'}</div>`;
+      const rowStyle = isElim ? `color:${p.color};padding-left:16px;opacity:.5;` : `color:${p.color};padding-left:16px;`;
+      return `<div class="wt-cell wt-row-${rank+1}" style="${rowStyle}">${medal} ${p.name}${awardBadge}${elimBadge}</div>
+        <div class="wt-cell wt-row-${rank+1}" style="${isElim?'opacity:.5':'}'}">${tiles}</div>
+        <div class="wt-cell wt-row-${rank+1}" style="${isElim?'opacity:.5':'}'}">${p.mana ?? '—'}</div>
+        <div class="wt-cell wt-row-${rank+1}" style="${isElim?'opacity:.5':'}'}">${p.battlesWon ?? '—'}</div>
+        <div class="wt-cell wt-row-${rank+1}" style="${isElim?'opacity:.5':'}'}">${p.battlesLost ?? '—'}</div>
+        <div class="wt-cell wt-row-${rank+1}" style="${isElim?'opacity:.5':'}'}">${p.peakTiles ?? '—'}</div>
+        <div class="wt-cell wt-row-${rank+1}" style="${isElim?'opacity:.5':'}'}">${p.totalManaEarned ?? '—'}</div>`;
     }).join('');
 
     wo.innerHTML = `
       <div class="winners-bg-art"></div>
-      <div class="winners-eyebrow">Game Over — Final Standings</div>
+      <div class="winners-eyebrow">${wasLastStanding ? '⚔️ Last Player Standing' : 'Game Over — Final Standings'}</div>
       <div class="winners-title">Champion</div>
       <div class="winners-champion" style="color:${champ?.color||'var(--gold-glow)'}">
         ${champ?.name||'—'}
       </div>
-      <div class="winners-champion-sub">${champ ? (champ.tiles??champ.tileCount??0) + ' tiles · ' + (champ.mana??0) + ' mana' : ''}</div>
+      <div class="winners-champion-sub">${wasLastStanding ? 'All other players eliminated' : champ ? (champ.tiles??champ.tileCount??0) + ' tiles · ' + (champ.mana??0) + ' mana' : ''}</div>
       <div class="winners-table">
         <div class="wt-head" style="text-align:left;padding-left:16px;">Player</div>
         <div class="wt-head">Tiles</div>
@@ -1626,17 +1648,21 @@ function renderPaper(){
   const monoElementPlayers = new Map((G.monoElementBonus||[]).map(r=>[r.playerIdx, r.element]));
   G.players.forEach(p => {
     const isActive = p.idx === G.currentPlayer;
+    const isElim = p.eliminated || false;
     const chip = document.createElement('div');
     chip.className = 'player-chip' + (isActive ? ' active' : '');
+    if (isElim) chip.style.cssText = 'opacity:.38;filter:grayscale(.7);';
     const monoEl = monoElementPlayers.get(p.idx);
     const monoTag = monoEl ? `<span class="chip-mono-badge" title="Mono-Element Mastery: ${monoEl}">⭐</span><span class="chip-mono-label" style="color:${TYPE_COLOR[monoEl]||'#ffc840'}">${monoEl}</span>` : '';
-    chip.innerHTML = `<div class="chip-dot">${playerSigilSVG(p, 18)}</div>
+    chip.innerHTML = `<div class="chip-dot">${isElim ? `<span style="font-size:16px">💀</span>` : playerSigilSVG(p, 18)}</div>
       <div class="chip-info">
-        <div class="chip-name" style="color:${p.idx===G.currentPlayer?p.color:'var(--parch-ink)'}">${p.name}${isActive ? ' ◄' : ''}${monoTag}</div>
-        <div class="chip-sub">${p.tileCount} tiles · ${p.stationedCount} stationed · <span style="color:#5dc97d">⚔${p.battlesWon??0}W</span> <span style="color:#e05252">${p.battlesLost??0}L</span></div>
+        <div class="chip-name" style="color:${isElim ? 'var(--text-mute)' : (isActive ? p.color : 'var(--parch-ink)')}">
+          ${p.name}${isActive ? ' ◄' : ''}${isElim ? ' <span style="font-size:9px;color:#e05252;font-family:Inter,sans-serif">ELIMINATED</span>' : monoTag}
+        </div>
+        <div class="chip-sub">${isElim ? 'Out of the game' : `${p.tileCount} tiles · ${p.stationedCount} stationed · <span style="color:#5dc97d">⚔${p.battlesWon??0}W</span> <span style="color:#e05252">${p.battlesLost??0}L</span>`}</div>
       </div>
       <div class="chip-mana">
-        <div class="chip-mana-val">${p.mana}</div>
+        <div class="chip-mana-val">${isElim ? '—' : p.mana}</div>
         <div class="chip-mana-lbl">Mana</div>
       </div>`;
     plist.appendChild(chip);
