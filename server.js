@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.41';
+const SERVER_VERSION = 'v1.0.42';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -1626,21 +1626,28 @@ const handlers = {
     if (G.phase !== 'resolve:heal_tile') return sendError(ws, 'Wrong phase');
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
     const p = G.players[G.currentPlayer];
-    // data.tilePos = tile where the stationed monster is
-    const tile = G.board[data.tilePos];
-    if (!tile || tile.ownerId !== G.currentPlayer) return sendError(ws, 'Not your tile');
-    const m = tile.summonInstance;
-    if (!m) return sendError(ws, 'No summon on that tile');
-    const missing = m.maxHp - m.hp;
-    if (missing <= 0) return sendError(ws, 'Already at full HP');
-    const maxAfford = Math.floor(p.mana / HEAL_COST_PER_HP);
-    const amount = Math.min(missing, maxAfford);
-    const cost = Math.ceil(HEAL_COST_PER_HP * amount);
-    p.mana -= cost;
-    m.hp += amount;
+    const SHRINE_COST = 10;
+    const SHRINE_HEAL = 10;
+    if (p.mana < SHRINE_COST) return sendError(ws, 'Not enough Mana (need 10 ✦)');
+    p.mana -= SHRINE_COST;
+    let healed = 0;
+    // Heal all stationed monsters on owned tiles
+    G.board.forEach(tile => {
+      if (tile.ownerId === G.currentPlayer && tile.summonInstance) {
+        const gain = Math.min(SHRINE_HEAL, tile.summonInstance.maxHp - tile.summonInstance.hp);
+        tile.summonInstance.hp += gain;
+        if (gain > 0) healed++;
+      }
+    });
+    // Heal all hand monsters
+    p.hand.forEach(m => {
+      const gain = Math.min(SHRINE_HEAL, m.maxHp - m.hp);
+      m.hp += gain;
+      if (gain > 0) healed++;
+    });
     p.healCount++;
-    log(`💚 ${p.name} healed ${m.name} for ${amount} HP at Healing tile (−${cost}✦)`);
-    G.phase = 'resolve:heal_tile'; // stays for UI, cleared on skip
+    log(`💚 ${p.name} used Healing Shrine — all monsters +${SHRINE_HEAL} HP (${healed} healed, −${SHRINE_COST}✦)`);
+    G.phase = 'resolve:heal_tile';
     broadcast();
     scheduleRoomAction(G.roomCode, advanceTurn, 800);
   },
