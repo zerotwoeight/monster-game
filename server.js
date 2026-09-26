@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.42';
+const SERVER_VERSION = 'v1.0.45';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -34,7 +34,7 @@ const ROSTER = [
   {id:'high_paladin',   type:'Light',  name:'High Paladin',   arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
   {id:'ardent_saint',   type:'Light',  name:'Ardent Saint',   arch:'ascendant', hp:65, maxHp:65, atk:15, def:15, cost:20, gen:5, isSpecial:true,
     special:'Aura of Renewal',  specialDesc:'Heal all friendly stationed summons 5 HP/turn',
-    condition:'healed4', conditionDesc:'Healed 4+ summons this game'},
+    condition:'healed2', conditionDesc:'Healed 2+ summons this game'},
   // Light — new
   {id:'dawn_striker',   type:'Light',  name:'Dawn Striker',   arch:'assailant', hp:25, maxHp:25, atk:36, def:6,  cost:8,  gen:2, isSpecial:false},
   {id:'radiant_lancer', type:'Light',  name:'Radiant Lancer', arch:'vanguard',  hp:30, maxHp:30, atk:28, def:10, cost:10, gen:2, isSpecial:false},
@@ -45,8 +45,8 @@ const ROSTER = [
   {id:'void_sentinel',  type:'Dark',   name:'Void Sentinel',  arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
   {id:'shadow_paladin', type:'Dark',   name:'Shadow Paladin', arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
   {id:'succubus',       type:'Dark',   name:'Succubus',       arch:'ascendant', hp:45, maxHp:45, atk:32, def:10, cost:20, gen:5, isSpecial:true,
-    special:'Mana Drain', specialDesc:'Win a battle → steal 10 Mana from loser\'s owner',
-    condition:'moreManaThanAll', conditionDesc:'Have more Mana than every other player'},
+    special:'Mana Drain', specialDesc:'Win or stalemate → steal 10 Mana from opponent',
+    condition:'mana40', conditionDesc:'Have at least 40✦ Mana'},
   // Dark — new
   {id:'void_reaper',    type:'Dark',   name:'Void Reaper',    arch:'assailant', hp:18, maxHp:18, atk:42, def:4,  cost:8,  gen:2, isSpecial:false},
   {id:'dusk_blade',     type:'Dark',   name:'Dusk Blade',     arch:'vanguard',  hp:30, maxHp:30, atk:29, def:8,  cost:10, gen:2, isSpecial:false},
@@ -57,8 +57,8 @@ const ROSTER = [
   {id:'rune_priestess', type:'Arcane', name:'Rune Priestess', arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
   {id:'arch_mage',      type:'Arcane', name:'Arch Mage',      arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
   {id:'arcane_arbiter', type:'Arcane', name:'Arcane Arbiter', arch:'ascendant', hp:40, maxHp:40, atk:27, def:15, cost:20, gen:5, isSpecial:true,
-    special:'Nullify', specialDesc:'Cancel type modifier once per battle (forces 1× neutral)',
-    condition:'changed3', conditionDesc:'Changed tile element 3+ times this game'},
+    special:'Chaos Flux', specialDesc:'After any battle or stalemate, one random tile you own changes to a random element',
+    condition:'changed1Arcane', conditionDesc:'Changed 1+ tile to Arcane element this game'},
   // Arcane — new
   {id:'spell_wraith',   type:'Arcane', name:'Spell Wraith',   arch:'assailant', hp:22, maxHp:22, atk:38, def:5,  cost:8,  gen:2, isSpecial:false},
   {id:'runic_duelist',  type:'Arcane', name:'Runic Duelist',  arch:'vanguard',  hp:32, maxHp:32, atk:27, def:9,  cost:10, gen:2, isSpecial:false},
@@ -70,7 +70,7 @@ const ROSTER = [
   {id:'shade_walker',   type:'Undead', name:'Shade Walker',   arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
   {id:'demon_lord',     type:'Undead', name:'Demon Lord',     arch:'ascendant', hp:85, maxHp:85, atk:17, def:8,  cost:20, gen:5, isSpecial:true,
     special:'Last Rite', specialDesc:'When HP hits 0, survive at 15 HP instead (once per game)',
-    condition:'lost4', conditionDesc:'Had 4+ summons destroyed this game', lastRiteUsed:false},
+    condition:'lost2', conditionDesc:'Had 2+ summons destroyed in battle this game', lastRiteUsed:false},
   // Undead — new
   {id:'grave_specter',  type:'Undead', name:'Grave Specter',  arch:'assailant', hp:18, maxHp:18, atk:42, def:4,  cost:8,  gen:2, isSpecial:false},
   {id:'cursed_revenant',type:'Undead', name:'Cursed Revenant',arch:'vanguard',  hp:33, maxHp:33, atk:26, def:10, cost:10, gen:2, isSpecial:false},
@@ -81,8 +81,8 @@ const ROSTER = [
   {id:'iron_hide',      type:'Beast',  name:'Iron Hide',      arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
   {id:'pack_hunter',    type:'Beast',  name:'Pack Hunter',    arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
   {id:'red_dragon',     type:'Beast',  name:'Red Dragon',     arch:'ascendant', hp:35, maxHp:35, atk:40, def:9,  cost:20, gen:5, isSpecial:true,
-    special:'Intimidate', specialDesc:'When claiming a tile, adjacent owners pay 5 Mana each',
-    condition:'mostSummons', conditionDesc:'Have the most summons stationed on board'},
+    special:'Intimidate', specialDesc:'Adjacent enemy stationed summons cost their owner 5✦ at the start of each affected player\'s turn',
+    condition:'stationed3', conditionDesc:'Have 3+ summons stationed on board'},
   // Beast — new
   {id:'feral_striker',  type:'Beast',  name:'Feral Striker',  arch:'assailant', hp:22, maxHp:22, atk:38, def:5,  cost:8,  gen:2, isSpecial:false},
   {id:'stormtalon',     type:'Beast',  name:'Stormtalon',     arch:'vanguard',  hp:32, maxHp:32, atk:28, def:9,  cost:10, gen:2, isSpecial:false},
@@ -93,8 +93,8 @@ const ROSTER = [
   {id:'ancient_oak',    type:'Nature', name:'Ancient Oak',    arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
   {id:'grove_warden',   type:'Nature', name:'Grove Warden',   arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
   {id:'world_tree',     type:'Nature', name:'World Tree',     arch:'ascendant', hp:55, maxHp:55, atk:22, def:13, cost:20, gen:5, isSpecial:true,
-    special:'Deep Roots', specialDesc:'+1 Mana Gen per Nature tile owner controls',
-    condition:'own4Nature', conditionDesc:'Own 4+ Nature tiles currently'},
+    special:'Deep Roots', specialDesc:'+1 Mana Gen per Nature tile owned + per Nature summon stationed on any of your tiles',
+    condition:'own2Nature', conditionDesc:'Own 2+ Nature tiles currently'},
   // Nature — new
   {id:'briar_sprite',   type:'Nature', name:'Briar Sprite',   arch:'assailant', hp:22, maxHp:22, atk:37, def:6,  cost:8,  gen:2, isSpecial:false},
   {id:'vine_stalker',   type:'Nature', name:'Vine Stalker',   arch:'vanguard',  hp:33, maxHp:33, atk:26, def:10, cost:10, gen:2, isSpecial:false},
@@ -121,7 +121,7 @@ const NORMALS  = ROSTER.filter(m => !m.isSpecial && !m.rarity);
 const WILD_CARD_POOLS = {
   low: [
     { id:'mend',    name:'Mend',    cost:15, tier:'low',  target:'own_station', desc:'Heal one of your stationed summons for 20 HP' },
-    { id:'stumble', name:'Stumble', cost:15, tier:'low',  target:'player',      desc:'Force a target player to re-roll their dice next turn; they must use the new result' },
+    { id:'stumble', name:'Stumble', cost:15, tier:'low',  target:'player',      desc:'Curse a target player — they skip their dice roll next turn and move exactly 3 spaces' },
     { id:'delay',   name:'Delay',   cost:15, tier:'low',  target:'player',      desc:'Force a target player to skip their shop phase next turn' },
     { id:'jinx',    name:'Jinx',    cost:15, tier:'low',  target:'player',      desc:"Target player's passive mana income next turn is halved" },
   ],
@@ -132,7 +132,7 @@ const WILD_CARD_POOLS = {
     { id:'poach',   name:'Poach',   cost:30, tier:'mid',  target:'player',      desc:"Steal a random summon from a target player's hand" },
   ],
   high: [
-    { id:'coup',     name:'Coup',     cost:60, tier:'high', target:'coup',    desc:'Take any enemy-owned tile; deploy a summon from your hand (free). Their summon returns to hand — if full, forfeit.' },
+    { id:'coup',     name:'Coup',     cost:60, tier:'high', target:'coup',    desc:'Sacrifice one summon from your hand to seize any occupied enemy tile. Their stationed summon defects — it stays on the tile and now fights for you.' },
     { id:'plague',   name:'Plague',   cost:60, tier:'high', target:'player',  desc:"All of a target player's stationed summons lose 15 HP" },
     { id:'windfall', name:'Windfall', cost:60, tier:'high', target:'self',    desc:'Your passive mana income next turn is tripled' },
     { id:'shatter',  name:'Shatter',  cost:60, tier:'high', target:'shatter', desc:'Destroy any 2 stationed summons on the board; both tiles go neutral' },
@@ -321,6 +321,7 @@ function addPlayer(name, color, starterSet) {
     healCount: 0,
     destroyedCount: 0,
     elementChangeCount: 0,
+    arcaneChangeCount: 0,
     lastDiceRoll: null,
     // stat trackers
     battlesWon: 0,
@@ -346,22 +347,17 @@ function canUseSpecial(playerIdx, summon) {
   if (!summon.isSpecial) return true;
   const p = G.players[playerIdx];
   switch (summon.condition) {
-    case 'healed4':       return p.healCount >= 4;
-    case 'moreManaThanAll': {
-      const others = G.players.filter((_,i) => i !== playerIdx);
-      return others.length === 0 || p.mana > Math.max(...others.map(o => o.mana));
+    case 'healed2':       return p.healCount >= 2;
+    case 'mana40':        return p.mana >= 40;
+    case 'changed1Arcane': return p.arcaneChangeCount >= 1;
+    case 'lost2':         return p.destroyedCount >= 2;
+    case 'stationed3': {
+      const count = G.board.filter(t => t.ownerId === playerIdx && t.summonId).length;
+      return count >= 3;
     }
-    case 'changed3':      return p.elementChangeCount >= 3;
-    case 'lost4':         return p.destroyedCount >= 4;
-    case 'mostSummons': {
-      const counts = G.players.map(pl =>
-        G.board.filter(t => t.ownerId === pl.idx && t.summonId).length
-      );
-      return counts[playerIdx] > 0 && counts[playerIdx] === Math.max(...counts);
-    }
-    case 'own4Nature': {
+    case 'own2Nature': {
       const natureTiles = G.board.filter(t => t.ownerId === playerIdx && t.element === 'Nature').length;
-      return natureTiles >= 4;
+      return natureTiles >= 2;
     }
     default: return true;
   }
@@ -425,8 +421,7 @@ function doStrike(attacker, defender, tile, nullify = false, bonusRun = false, m
 // Returns { attackerHp, defenderHp, atkDmg, defDmg, outcome }
 // outcome: 'attacker_wins' | 'defender_wins' | 'mutual' | 'stalemate'
 function resolveBattle(attackerM, defenderM, tile, rattled = false) {
-  const nullify = (attackerM.isSpecial && attackerM.id === 'arcane_arbiter')
-               || (defenderM.isSpecial  && defenderM.id  === 'arcane_arbiter');
+  const nullify = false; // Arcane Arbiter now has Chaos Flux instead of Nullify
 
   const atkDmg = doStrike(attackerM, defenderM, tile, nullify);
   defenderM.hp -= atkDmg;
@@ -560,10 +555,12 @@ function collectPassiveIncome(playerIdx) {
     const mi = tile.summonInstance;
     if (!mi) continue;
     let gen = mi.gen;
-    // World Tree special
+    // World Tree special — Deep Roots: +1 Gen per Nature tile owned + per Nature summon stationed
     if (mi.id === 'world_tree') {
       const natureTiles = G.board.filter(t => t.ownerId === playerIdx && t.element === 'Nature').length;
-      gen += natureTiles;
+      const natureMonsters = G.board.filter(t => t.ownerId === playerIdx && t.summonInstance &&
+        (t.summonInstance.type === 'Nature' || t.summonInstance.type2 === 'Nature')).length;
+      gen += natureTiles + natureMonsters;
     }
     earned += gen;
   }
@@ -577,6 +574,22 @@ function collectPassiveIncome(playerIdx) {
         if (t2.ownerId === playerIdx && t2.summonInstance && t2 !== tile) {
           t2.summonInstance.hp = Math.min(t2.summonInstance.maxHp, t2.summonInstance.hp + 5);
         }
+      }
+    }
+  }
+
+  // Red Dragon Intimidate aura — enemy stationed summons adjacent to the Red Dragon pay 5✦/turn
+  for (const tile of G.board) {
+    if (!tile.summonInstance || tile.summonInstance.id !== 'red_dragon') continue;
+    if (tile.ownerId === playerIdx) continue; // only affects OTHER players' monsters
+    // Check if current player has a monster adjacent to this Red Dragon
+    const neighbors = [(tile.pos + 1) % 28, (tile.pos + 27) % 28];
+    for (const n of neighbors) {
+      const nt = G.board[n];
+      if (nt && nt.ownerId === playerIdx && nt.summonInstance) {
+        const loss = Math.min(p.mana, 5);
+        p.mana -= loss;
+        log(`🐉 Intimidate! ${p.name}'s ${nt.summonInstance.name} is adjacent to Red Dragon — pays ${loss}✦`);
       }
     }
   }
@@ -690,6 +703,7 @@ function publicState() {
     healCount: p.healCount,
     destroyedCount: p.destroyedCount,
     elementChangeCount: p.elementChangeCount,
+    arcaneChangeCount: p.arcaneChangeCount,
     lastDiceRoll: p.lastDiceRoll,
     battlesWon: p.battlesWon,
     battlesLost: p.battlesLost,
@@ -959,16 +973,11 @@ function resolveRoll(playerIdx) {
   const oldPos = p.position;
   let roll = rand(1, 6) + rand(1, 6);
 
-  // Stumble effect — re-roll, take worse result
+  // Stumble effect — skip roll, forced to move exactly 3
   if (p.wcEffects.stumble) {
     p.wcEffects.stumble = false;
-    const r2 = rand(1, 6) + rand(1, 6);
-    if (r2 < roll) {
-      log(`🃏 Stumble! ${p.name} re-rolls ${roll} → forced to ${r2}`);
-      roll = r2;
-    } else {
-      log(`🃏 Stumble! ${p.name} re-rolls — original ${roll} kept (new ${r2} was worse)`);
-    }
+    roll = 3;
+    log(`🃏 Stumble! ${p.name} is cursed — forced to move 3 spaces`);
   }
 
   // Minimum floor of 3 (2d6 min is 2; bump to 3)
@@ -1415,20 +1424,6 @@ const handlers = {
     tile.summonInstance = m;
     log(`🚩 ${p.name} claimed tile ${p.position} with ${m.name}`);
 
-    // Red Dragon Intimidate
-    if (m.id === 'red_dragon') {
-      const neighbors = [(p.position + 1) % 28, (p.position + 27) % 28];
-      for (const n of neighbors) {
-        const nt = G.board[n];
-        if (nt.ownerId !== null && nt.ownerId !== G.currentPlayer) {
-          const op = G.players[nt.ownerId];
-          const loss = Math.min(op.mana, 5);
-          op.mana -= loss;
-          log(`🐉 Intimidate! ${op.name} pays ${loss}✦`);
-        }
-      }
-    }
-
     advanceTurn();
   },
 
@@ -1580,6 +1575,7 @@ const handlers = {
     tile.label = data.element;
     p.mana -= CHANGE_ELEMENT_COST;
     p.elementChangeCount++;
+    if (data.element === 'Arcane') p.arcaneChangeCount++;
     log(`🌀 ${p.name} changed tile ${p.position}: ${old} → ${data.element} (−${CHANGE_ELEMENT_COST}✦)`);
     advanceTurn();
   },
@@ -1769,7 +1765,7 @@ const handlers = {
       G.phase = 'resolve:wildcard_target';
       broadcast();
     } else if (card.target === 'coup') {
-      if (p.hand.length === 0) return sendError(ws, 'Coup requires at least one summon in hand to deploy');
+      if (p.hand.length === 0) return sendError(ws, 'Coup requires at least one summon in hand to sacrifice');
       G.wildCardPending = { cardId: 'coup', step: 'tile' };
       G.phase = 'resolve:wildcard_coup_tile';
       broadcast();
@@ -1812,8 +1808,8 @@ const handlers = {
 
       if (pending.cardId === 'stumble') {
         target.wcEffects.stumble = true;
-        notifyTarget('stumble', 'Stumble', 'Your dice will be re-rolled next turn — you must use the worse result.', 'low');
-        log(`🃏 Stumble — ${target.name} must re-roll next turn`);
+        notifyTarget('stumble', 'Stumble', 'You\'re cursed — your dice roll is skipped next turn and you\'ll move exactly 3 spaces.', 'low');
+        log(`🃏 Stumble — ${target.name} is cursed, moves 3 next turn`);
       }
       if (pending.cardId === 'delay') {
         target.wcEffects.delay = true;
@@ -1865,25 +1861,8 @@ const handlers = {
     if (isNaN(tilePos)) return sendError(ws, 'Invalid tile');
     const tile = G.board[tilePos];
     if (!tile || tile.ownerId === null || tile.ownerId === G.currentPlayer) return sendError(ws, 'Must pick an enemy-owned tile');
+    if (!tile.summonInstance) return sendError(ws, 'Coup requires an occupied tile — pick a tile with a stationed summon');
     G.wildCardPending.tilePos = tilePos;
-    // Safety: if hand is empty (shouldn't happen after guard at selection, but be defensive),
-    // claim the tile now without deploying a summon and skip the summon step.
-    if (p.hand.length === 0) {
-      const prevOwner = G.players[tile.ownerId];
-      if (tile.summonInstance) {
-        if (prevOwner && prevOwner.hand.length < 5) {
-          prevOwner.hand.push(tile.summonInstance);
-        }
-        tile.summonInstance = null;
-        tile.summonId = null;
-      }
-      tile.ownerId = G.currentPlayer;
-      log(`🃏 Coup — ${p.name} seized tile ${tilePos} (no deploy — empty hand)`);
-      _updatePeakTiles(G.currentPlayer);
-      G.wildCardPending = null;
-      advanceTurn();
-      return;
-    }
     G.wildCardPending.step = 'summon';
     G.phase = 'resolve:wildcard_coup_summon';
     broadcast();
@@ -1893,59 +1872,30 @@ const handlers = {
     if (G.phase !== 'resolve:wildcard_coup_summon') return sendError(ws, 'Wrong phase');
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
     const p = G.players[G.currentPlayer];
-    const m = p.hand.find(h => h.iid === data.iid);
-    if (!m) return sendError(ws, 'Summon not in hand');
+    const sacrifice = p.hand.find(h => h.iid === data.iid);
+    if (!sacrifice) return sendError(ws, 'Summon not in hand');
     const tilePos = G.wildCardPending.tilePos;
     const tile = G.board[tilePos];
+    if (!tile || !tile.summonInstance) return sendError(ws, 'Target tile is no longer occupied');
     const prevOwner = G.players[tile.ownerId];
-    let coupDesc = `${p.name} seized your tile! `;
-    if (tile.summonInstance) {
-      if (prevOwner.hand.length < 5) {
-        prevOwner.hand.push(tile.summonInstance);
-        coupDesc += `${tile.summonInstance.name} was returned to your hand.`;
-        log(`🃏 Coup — ${tile.summonInstance.name} returned to ${prevOwner.name}`);
-      } else {
-        coupDesc += `${tile.summonInstance.name} was forfeited (hand full).`;
-        log(`🃏 Coup — ${tile.summonInstance.name} forfeit (${prevOwner.name}'s hand full)`);
-      }
-    } else {
-      coupDesc += 'The tile had no stationed summon.';
-    }
+    const stolen = tile.summonInstance;
+
+    // Sacrifice the chosen hand monster (destroyed permanently)
+    const sacrificeIdx = p.hand.indexOf(sacrifice);
+    p.hand.splice(sacrificeIdx, 1);
+
+    // Transfer tile ownership — stationed monster stays on tile, now fights for new owner
+    tile.ownerId = G.currentPlayer;
+    // summonInstance and summonId remain unchanged — the monster defects in place
+
+    // Notify previous owner
     prevOwner.notification = {
       cardId: 'coup', cardName: 'Coup',
-      cardDesc: coupDesc,
+      cardDesc: `${p.name} executed a Coup! They sacrificed ${sacrifice.name} to seize your tile — ${stolen.name} now fights for them.`,
       castByName: p.name, castByColor: p.color, tier: 'high'
     };
-    const mIdx = p.hand.indexOf(m);
-    p.hand.splice(mIdx, 1);
-    tile.ownerId = G.currentPlayer;
-    tile.summonInstance = m;
-    tile.summonId = m.iid;
-    log(`🃏 Coup — ${p.name} seized tile ${tilePos} from ${prevOwner.name} with ${m.name}`);
-    _updatePeakTiles(G.currentPlayer);
-    G.wildCardPending = null;
-    advanceTurn();
-  },
 
-  // Safety escape: claim the tile without deploying (used when hand empties between coup steps)
-  wildcard_coup_skip_summon(ws, conn, data) {
-    if (G.phase !== 'resolve:wildcard_coup_summon') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
-    const p = G.players[G.currentPlayer];
-    const tilePos = G.wildCardPending?.tilePos;
-    if (tilePos === undefined) return sendError(ws, 'No tile selected');
-    const tile = G.board[tilePos];
-    if (!tile) return sendError(ws, 'Invalid tile');
-    const prevOwner = tile.ownerId !== null ? G.players[tile.ownerId] : null;
-    if (tile.summonInstance) {
-      if (prevOwner && prevOwner.hand.length < 5) {
-        prevOwner.hand.push(tile.summonInstance);
-      }
-      tile.summonInstance = null;
-      tile.summonId = null;
-    }
-    tile.ownerId = G.currentPlayer;
-    log(`🃏 Coup — ${p.name} seized tile ${tilePos} (no deploy)`);
+    log(`🃏 Coup — ${p.name} sacrificed ${sacrifice.name} to seize tile ${tilePos} and steal ${stolen.name} from ${prevOwner.name}`);
     _updatePeakTiles(G.currentPlayer);
     G.wildCardPending = null;
     advanceTurn();
@@ -2021,32 +1971,23 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     defPlayer.destroyedCount++;
     _updatePeakTiles(attPlayer.idx);
     log(`🏆 ${attPlayer.name} wins! ${defM.name} destroyed, ${tile.pos} claimed`);
-    // Succubus
+    // Succubus — Mana Drain on win
     if (attM.id === 'succubus') {
       const stolen = Math.min(defPlayer.mana, 10);
       defPlayer.mana -= stolen;
       attPlayer.mana += stolen;
       log(`🧛 Mana Drain: ${attPlayer.name} steals ${stolen}✦ from ${defPlayer.name}`);
     }
-    // Red Dragon Intimidate on battle-win claim
-    if (attM.id === 'red_dragon') {
-      const neighbors = [(tilePos + 1) % 28, (tilePos + 27) % 28];
-      for (const n of neighbors) {
-        const nt = G.board[n];
-        if (nt.ownerId !== null && nt.ownerId !== attPlayer.idx) {
-          const op = G.players[nt.ownerId];
-          const loss = Math.min(op.mana, 5);
-          op.mana -= loss;
-          log(`🐉 Intimidate! ${op.name} pays ${loss}✦`);
-        }
-      }
-    }
+    // Arcane Arbiter — Chaos Flux: scramble one attacker-owned tile
+    if (defM.id === 'arcane_arbiter') _applyChaosFlux(attPlayer);
   } else if (outcome === 'defender_wins') {
     attPlayer.hand = attPlayer.hand.filter(m => m.iid !== attM.iid);
     attPlayer.battlesLost++;
     defPlayer.battlesWon++;
     attPlayer.destroyedCount++;
     log(`🛡️ ${defPlayer.name} defends! ${attM.name} destroyed`);
+    // Arcane Arbiter — Chaos Flux on defender win too
+    if (defM.id === 'arcane_arbiter') _applyChaosFlux(attPlayer);
   } else if (outcome === 'mutual') {
     attPlayer.hand = attPlayer.hand.filter(m => m.iid !== attM.iid);
     attPlayer.battlesLost++;
@@ -2057,9 +1998,33 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     tile.summonId = null;
     tile.summonInstance = null;
     log(`💥 Mutual destruction! Tile ${tilePos} unclaimed`);
+    // Arcane Arbiter — Chaos Flux on mutual too
+    if (defM.id === 'arcane_arbiter') _applyChaosFlux(attPlayer);
   } else if (outcome === 'stalemate') {
     log(`🤝 Stalemate! Both survive`);
+    // Succubus — Mana Drain on stalemate too
+    if (attM.id === 'succubus') {
+      const stolen = Math.min(defPlayer.mana, 10);
+      defPlayer.mana -= stolen;
+      attPlayer.mana += stolen;
+      log(`🧛 Mana Drain: ${attPlayer.name} steals ${stolen}✦ from ${defPlayer.name} (stalemate)`);
+    }
+    // Arcane Arbiter — Chaos Flux on stalemate
+    if (defM.id === 'arcane_arbiter') _applyChaosFlux(attPlayer);
   }
+}
+
+// Arcane Arbiter — Chaos Flux: randomly change one attacker-owned tile to a random new element
+function _applyChaosFlux(attPlayer) {
+  const ownedElemTiles = G.board.filter(t => t.ownerId === attPlayer.idx && t.element);
+  if (ownedElemTiles.length === 0) return;
+  const target = ownedElemTiles[Math.floor(Math.random() * ownedElemTiles.length)];
+  const otherTypes = TYPES.filter(t => t !== target.element);
+  const newEl = otherTypes[Math.floor(Math.random() * otherTypes.length)];
+  const oldEl = target.element;
+  target.element = newEl;
+  target.label = newEl;
+  log(`🌀 Chaos Flux! ${attPlayer.name}'s tile ${target.pos} scrambled: ${oldEl} → ${newEl}`);
 }
 
 // Handle warp landing — position already set, just resolve the tile
