@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.45';
+const SERVER_VERSION = 'v1.0.46';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -1401,6 +1401,8 @@ const handlers = {
     const p = G.players[G.currentPlayer];
     p.position = tilePos;
     G.pendingLanding = null;
+    // If player lands on tile 0 (Mana Well), suppress the Wild Card — Mana Well covers the crossing
+    if (tilePos === 0) G.pendingWildCard = false;
     log(`🎯 ${p.name} chooses tile ${tilePos}`);
     resolveLandingTile(G.currentPlayer);
   },
@@ -1746,6 +1748,18 @@ const handlers = {
     const card = drawn[tier];
     if (!card || card.id !== cardId) return sendError(ws, 'Invalid card selection');
     if (p.mana < card.cost) return sendError(ws, 'Not enough Mana');
+
+    // Pre-flight: validate targetable state BEFORE deducting Mana
+    if (card.id === 'poach') {
+      const hasTarget = G.players.some((pl, i) => i !== G.currentPlayer && !pl.eliminated && pl.hand.length > 0);
+      if (!hasTarget) return sendError(ws, 'Poach requires at least one opponent with a summon in hand');
+    }
+    if (card.id === 'plague') {
+      const hasTarget = G.players.some((pl, i) => i !== G.currentPlayer && !pl.eliminated &&
+        G.board.some(t => t.ownerId === i && t.summonInstance));
+      if (!hasTarget) return sendError(ws, 'Plague requires at least one opponent with a stationed summon');
+    }
+
     p.mana -= card.cost;
     G.wildCardDrawn = null;
     log(`🃏 ${p.name} played ${card.name} (−${card.cost}✦)`);
