@@ -1171,8 +1171,23 @@ function render() {
   // Reset setup instruction flag when a new game returns to lobby
   if (G.phase === 'lobby') _setupClaimSeen = false;
 
-  // Notification intercept — show before any other screen
-  if (me.notification) { renderNotification(me.notification); return; }
+  // Notification intercept — show before any other screen.
+  // IMPORTANT: also clear battle-result pending state here. Without this, the following
+  // race causes a permanent stall:
+  //   1. Player is attacker/defender → _battleResultPending = true (timer fires at t+2400ms)
+  //   2. Before they dismiss the battle result, a wildcard notification arrives for them
+  //   3. Notification intercepts render (correct — it has priority)
+  //   4. Player taps dismiss → server clears notification → broadcast → render() called
+  //   5. me.notification = null → passes this check → _battleResultPending still true → return
+  //   6. Nothing renders; player is stuck. Tapping the stale notification card loops forever.
+  // Clearing the pending flags here lets render() proceed normally after notification dismiss.
+  if (me.notification) {
+    _battleResultPending = false;
+    _battleResultDismissed = true;
+    if (_battleResultTimer) { clearTimeout(_battleResultTimer); _battleResultTimer = null; }
+    renderNotification(me.notification);
+    return;
+  }
 
   // Hold battle result screen until player explicitly dismisses it
   if (_battleResultPending) return;
@@ -1290,7 +1305,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.47</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.48</div>
     </div>
 
     <div class="room-code-group">
@@ -1362,7 +1377,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.47</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.48</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
