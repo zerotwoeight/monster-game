@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.46';
+const SERVER_VERSION = 'v1.0.47';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -1758,6 +1758,10 @@ const handlers = {
       const hasTarget = G.players.some((pl, i) => i !== G.currentPlayer && !pl.eliminated &&
         G.board.some(t => t.ownerId === i && t.summonInstance));
       if (!hasTarget) return sendError(ws, 'Plague requires at least one opponent with a stationed summon');
+    }
+    if (card.id === 'mend') {
+      const healable = G.board.some(t => t.ownerId === G.currentPlayer && t.summonInstance);
+      if (!healable) return sendError(ws, 'Mend requires at least one stationed summon to heal');
     }
 
     p.mana -= card.cost;

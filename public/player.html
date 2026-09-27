@@ -1290,7 +1290,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.46</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.47</div>
     </div>
 
     <div class="room-code-group">
@@ -1362,7 +1362,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.46</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.47</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -2836,14 +2836,22 @@ function wcDoFlip() {
   if (!flipper || flipper.classList.contains('flipped')) return;
   flipper.classList.add('flipped');
   // after flip settles, reveal description + Use button
-  flipper.addEventListener('transitionend', () => {
+  // Use both transitionend AND a setTimeout fallback — transitionend can silently
+  // fail to fire (prefers-reduced-motion, interrupted re-render, browser quirk),
+  // which would leave the player stuck with no "Use" button and no way to advance.
+  let revealed = false;
+  function revealCard() {
+    if (revealed) return;
+    revealed = true;
     const hint = document.getElementById('wc-tap-hint');
     const desc = document.getElementById('wc-desc');
     const btn  = document.getElementById('wc-use-btn');
     if (hint) hint.style.display = 'none';
     if (desc) desc.classList.add('visible');
     if (btn)  btn.style.display = 'block';
-  }, { once: true });
+  }
+  flipper.addEventListener('transitionend', revealCard, { once: true });
+  setTimeout(revealCard, 750); // fallback: 650ms animation + 100ms buffer
 }
 
 function renderWildCardTarget() {
@@ -2872,10 +2880,16 @@ function renderWildCardTarget() {
       </div>`;
     }
     html += `</div>`;
+    // Safety escape hatch — server now blocks Mend when there are no stationed summons,
+    // but if we somehow land here anyway, provide a skip so the game never stalls.
+    if (myTiles.length === 0) {
+      html += `<button class="action-btn secondary" onclick="send('wildcard_skip')" style="margin:16px auto;display:block;min-width:160px">Skip</button>`;
+    }
   } else {
     html += `<div class="wc-sub">Pick a target player</div><div class="wc-target-list">`;
     for (const pl of G.players) {
       if (pl.idx === myIdx) continue;
+      if (pl.eliminated) continue; // don't offer eliminated players as valid targets
       html += `<div class="wc-target-row" style="border-left:3px solid ${pl.color}" onclick="doWildCardTargetPlayer(${pl.idx})">
         <svg width="18" height="18" viewBox="0 0 24 24" style="flex-shrink:0">${sigilShape(pl.idx,12,12,6,pl.color)}</svg>
         <span style="color:${pl.color};font-weight:600">${pl.name}</span>
