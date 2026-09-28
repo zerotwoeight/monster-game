@@ -136,6 +136,12 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .setup-instr-body strong { color: var(--text); font-weight: 600; }
 .setup-instr-btn { width: 100%; padding: 14px; border-radius: 10px; border: none; background: var(--accent); color: #fff; font-family: 'Cinzel', serif; font-size: 14px; font-weight: 700; letter-spacing: .1em; cursor: pointer; transition: background .15s; }
 .setup-instr-btn:hover { background: var(--accent-lit); }
+.setup-instr-dots { display: flex; gap: 8px; justify-content: center; margin-bottom: 20px; }
+.setup-instr-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border2); transition: background .25s; }
+.setup-instr-dot.active { background: var(--gold-glow); }
+.instr-tile-demo { display: none; } /* replaced by real board tile — kept for safety */
+.instr-tile-row { display: flex; align-items: center; gap: 14px; margin: 14px 0 6px; }
+.instr-tile-caption { font-size: 12px; color: var(--text-dim); line-height: 1.55; flex: 1; }
 .setup-tile-row { padding: 12px 16px 4px; }
 .setup-tile-label { display: block; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--text-mute); font-family: 'Cinzel', serif; margin-bottom: 8px; }
 .setup-tile-input { width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface); color: var(--text); font-size: 18px; font-family: 'Cinzel', serif; letter-spacing: .1em; text-align: center; outline: none; transition: border-color 150ms; }
@@ -158,6 +164,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .picker-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .picker-scroll::-webkit-scrollbar { display: none; }
 .picker-scroll .scroll-inner { display: flex; gap: 10px; padding: 28px 24px 22px; }
+#setup-picker-scroll .scroll-inner { zoom: 0.8; }
 .own-tile-options { display: flex; flex-direction: column; gap: 8px; padding: 0 16px; margin-bottom: 16px; }
 .own-tile-opt { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface); cursor: pointer; transition: all 120ms; }
 .own-tile-opt:hover { border-color: var(--accent); background: rgba(145,132,217,.07); }
@@ -290,7 +297,8 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .summon-card.mini .mc-overlay { display: none; }
 .summon-card.mini .mc-cost-strip { display: none; }
 .mc-mini-strip { position: absolute; bottom: 0; left: 0; right: 0; height: 9px; z-index: 1; }
-.charm-dot { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--gold-glow); box-shadow: 0 0 6px var(--gold-glow); }
+.charm-badge      { position: absolute; top: 3px; right: 3px; z-index: 4; filter: drop-shadow(0 0 5px #d4a84399) drop-shadow(0 0 2px #d4a84366); pointer-events: none; }
+.charm-badge-mini { position: absolute; top: 2px; right: 2px; z-index: 4; filter: drop-shadow(0 0 4px #d4a84399); pointer-events: none; }
 .mc-element-badge { position: absolute; top: 5px; left: 6px; padding: 2px 6px; border-radius: 8px; font-size: 8px; font-weight: 800; color: #fff; font-family: 'Cinzel', serif; letter-spacing: 0.06em; text-transform: uppercase; z-index: 2; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
 .divider { height: 1px; background: var(--border); margin: 16px 0; }
 /* Connection status */
@@ -411,10 +419,10 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
       <!-- Overview -->
       <div class="help-section">
         <div class="help-s-title">Overview</div>
-        <div class="help-row"><span class="help-icon">✦</span><span>Collect <b style="color:var(--gold-glow)">Mana</b> at the start of every turn — 5 flat, plus your stationed summons' generation.</span></div>
+        <div class="help-row"><span class="help-icon">✦</span><span>Collect <b style="color:var(--gold-glow)">Mana</b> at the start of every turn: 5 flat, plus your stationed summons' generation.</span></div>
         <div class="help-row"><span class="help-icon">🛒</span><span><b style="color:var(--text)">Shop</b> before rolling. Buy one summon, sell one from your hand, or skip.</span></div>
         <div class="help-row"><span class="help-icon">🎲</span><span><b style="color:var(--text)">Roll</b> to move around the 28-tile board.</span></div>
-        <div class="help-row"><span class="help-icon">⚑</span><span><b style="color:var(--text)">Claim</b> empty tiles by deploying a summon from your hand — you pay that summon's Mana Cost.</span></div>
+        <div class="help-row"><span class="help-icon">⚑</span><span><b style="color:var(--text)">Claim</b> empty tiles by deploying a summon from your hand: you pay that summon's Mana Cost.</span></div>
         <div class="help-row"><span class="help-icon">⚔</span><span><b style="color:var(--text)">Battle</b> on enemy tiles. Win to claim them; lose and your summon is destroyed.</span></div>
         <div class="help-row"><span class="help-icon">✋</span><span>Your <b style="color:var(--text)">Hand</b> holds up to 5 summons. A summon leaves your hand the moment it's stationed.</span></div>
       </div>
@@ -422,10 +430,12 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
       <!-- Win Condition -->
       <div class="help-section">
         <div class="help-s-title">Win Condition</div>
-        <div class="help-p">There are two ways to win:</div>
-        <div class="help-row"><span class="help-icon">🏆</span><span><b style="color:var(--text)">Most tiles</b> — the game ends after the round limit (30, 40, or 60 rounds). The player with the most tiles wins. Mana breaks ties.</span></div>
-        <div class="help-row"><span class="help-icon">⚔</span><span><b style="color:var(--text)">Last player standing</b> — if you end your turn owning zero tiles (after the first round), you're eliminated. The last active player wins immediately, no need to wait out the rounds.</span></div>
-        <div class="help-p" style="margin-top:4px">Tiles compound your income — more tiles means more Mana Gen per turn, which lets you buy stronger summons, which lets you take more tiles. Don't let yourself be wiped out!</div>
+        <div class="help-p">There are three ways to be eliminated, and two ways to win:</div>
+        <div class="help-row"><span class="help-icon">💸</span><span><b style="color:var(--text)">Mana hits zero</b>: instant elimination, no grace period. Mana is your life force, not just currency.</span></div>
+        <div class="help-row"><span class="help-icon">💀</span><span><b style="color:var(--text)">No tiles</b>: if you end your turn owning zero tiles (after the first round), you're eliminated.</span></div>
+        <div class="help-row"><span class="help-icon">🏆</span><span><b style="color:var(--text)">Most tiles</b>: the game ends after the round limit (30, 40, or 60 rounds). The player with the most tiles wins. Mana breaks ties.</span></div>
+        <div class="help-row"><span class="help-icon">⚔</span><span><b style="color:var(--text)">Last player standing</b>: if all other players are eliminated, you win immediately without waiting out the rounds.</span></div>
+        <div class="help-p" style="margin-top:4px">Tiles compound your income: more tiles means more Mana Gen per turn, which lets you buy stronger summons, which lets you take more tiles. Don't let yourself be wiped out!</div>
       </div>
 
       <!-- Battle -->
@@ -434,17 +444,18 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
         <div class="help-row"><span class="help-icon">⚔</span><span>Damage = <b style="color:var(--text)">(ATK − DEF) × type modifier + small roll</b>. Minimum 1.</span></div>
         <div class="help-row"><span class="help-icon">🏰</span><span>A summon defending on its <b style="color:var(--text)">own element</b> tile gets +15% ATK & DEF. An element that beats its type costs −15%.</span></div>
         <div class="help-row"><span class="help-icon">🔄</span><span>If the defender survives, they <b style="color:var(--text)">counter-strike</b> immediately.</span></div>
-        <div class="help-row"><span class="help-icon">🏳</span><span><b style="color:var(--text)">Retreat</b> before attacking to avoid the fight — costs up to 20 Mana penalty. If you have no summons in hand you retreat automatically.</span></div>
-        <div class="help-row"><span class="help-icon">🤝</span><span><b style="color:var(--text)">Stalemate</b> — both survive. Next turn you choose to attack again or move on.</span></div>
+        <div class="help-row"><span class="help-icon">🏳</span><span><b style="color:var(--text)">Retreat</b> before attacking to avoid the fight. Costs 5✦. If that drops your Mana to zero, you're eliminated. If you have no summons in hand you retreat automatically.</span></div>
+        <div class="help-row"><span class="help-icon">🤝</span><span><b style="color:var(--text)">Stalemate</b>: both survive. Pay 5✦ to pass and move on next turn, or fight again. The attacker loses 4✦ and the defender gains 4✦ either way.</span></div>
+        <div class="help-row"><span class="help-icon">✦</span><span><b style="color:var(--text)">Battle Mana swings</b>: every fight shifts Mana. Attacker wins: +4✦ attacker, −4✦ defender. Attacker loses or mutual: −8✦ attacker, +4✦ defender. Running out of Mana mid-battle eliminates you immediately.</span></div>
       </div>
 
       <!-- Special Tiles -->
       <div class="help-section">
         <div class="help-s-title">Special Tiles</div>
-        <div class="help-row"><span class="help-icon">💧</span><span><b style="color:var(--text)">Mana Well</b> — bonus Mana whenever you pass or land on it.</span></div>
-        <div class="help-row"><span class="help-icon">⛩</span><span><b style="color:var(--text)">Temple</b> — trade a normal summon for an Ascendant (see below).</span></div>
-        <div class="help-row"><span class="help-icon">❤</span><span><b style="color:var(--text)">Healing Tile</b> — spend Mana to heal any of your stationed summons.</span></div>
-        <div class="help-row"><span class="help-icon">📦</span><span><b style="color:var(--text)">Treasure Chest</b> — random reward: heal potion (45%), battle charm (25%), warp (15%), or a free summon (15%).</span></div>
+        <div class="help-row"><span class="help-icon">💧</span><span><b style="color:var(--text)">Mana Well</b>: bonus Mana whenever you pass or land on it.</span></div>
+        <div class="help-row"><span class="help-icon">⛩</span><span><b style="color:var(--text)">Temple</b>: trade a normal summon for an Ascendant (see below).</span></div>
+        <div class="help-row"><span class="help-icon">❤</span><span><b style="color:var(--text)">Healing Tile</b>: spend Mana to heal any of your stationed summons.</span></div>
+        <div class="help-row"><span class="help-icon">📦</span><span><b style="color:var(--text)">Treasure Chest</b>: random reward: heal potion (45%), battle charm (25%), warp (15%), or a free summon (15%).</span></div>
       </div>
 
       <!-- Temple Trades -->
@@ -455,20 +466,20 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
         <div class="help-row"><span class="help-icon">2</span><span>Pay the Ascendant's <b style="color:var(--text)">Mana Cost</b> (always 20✦).</span></div>
         <div class="help-row"><span class="help-icon">3</span><span>Your summon is surrendered and the Ascendant is added to your hand.</span></div>
         <div class="help-p" style="margin-top:10px">Each Ascendant has a <b style="color:var(--gold-glow)">unique ability</b> and a usability condition that must be met before you can deploy it:</div>
-        <div class="help-row"><span class="help-icon" style="color:var(--el-Light)">✦</span><span><b style="color:var(--el-Light)">Ardent Saint</b> — Aura of Renewal. Condition: healed 4+ summons this game.</span></div>
-        <div class="help-row"><span class="help-icon" style="color:var(--el-Dark)">✦</span><span><b style="color:var(--el-Dark)">Succubus</b> — Mana Drain (steal 10✦ on win). Condition: have more Mana than every opponent.</span></div>
-        <div class="help-row"><span class="help-icon" style="color:var(--el-Arcane)">✦</span><span><b style="color:var(--el-Arcane)">Arcane Arbiter</b> — Nullify type modifier once per battle. Condition: changed a tile element 3+ times.</span></div>
-        <div class="help-row"><span class="help-icon" style="color:var(--el-Undead)">✦</span><span><b style="color:var(--el-Undead)">Demon Lord</b> — Last Rite (survive at 15 HP once). Condition: had 4+ summons destroyed.</span></div>
-        <div class="help-row"><span class="help-icon" style="color:var(--el-Beast)">✦</span><span><b style="color:var(--el-Beast)">Red Dragon</b> — Intimidate (neighbors pay 5✦ on claims). Condition: most summons stationed.</span></div>
-        <div class="help-row"><span class="help-icon" style="color:var(--el-Nature)">✦</span><span><b style="color:var(--el-Nature)">World Tree</b> — Deep Roots (+1 Gen per Nature tile owned). Condition: own 4 Nature tiles.</span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Light)">✦</span><span><b style="color:var(--el-Light)">Ardent Saint</b>: Aura of Renewal. Condition: healed 2+ summons this game.</span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Dark)">✦</span><span><b style="color:var(--el-Dark)">Succubus</b>: Mana Drain (steal 10✦ on win). Condition: have at least 40✦ Mana.</span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Arcane)">✦</span><span><b style="color:var(--el-Arcane)">Arcane Arbiter</b>: Chaos Flux (scrambles one of your tile's elements on win). Condition: changed 1+ tile to Arcane this game.</span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Undead)">✦</span><span><b style="color:var(--el-Undead)">Demon Lord</b>: Last Rite (survive at 15 HP once). Condition: had 2+ summons destroyed in battle.</span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Beast)">✦</span><span><b style="color:var(--el-Beast)">Red Dragon</b>: Intimidate (neighbors pay 5✦ on claims). Condition: have 3+ summons stationed on board.</span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Nature)">✦</span><span><b style="color:var(--el-Nature)">World Tree</b>: Deep Roots (+1 Gen per Nature tile owned). Condition: own 2+ Nature tiles.</span></div>
       </div>
 
       <!-- Tips -->
       <div class="help-section">
         <div class="help-s-title">Tips</div>
-        <div class="help-row"><span class="help-icon">💡</span><span>Type advantage is a <b style="color:var(--text)">massive swing</b> — a 2× hit can eliminate most summons in one shot. Always check the element wheel before attacking.</span></div>
-        <div class="help-row"><span class="help-icon">💡</span><span>Landing on your <b style="color:var(--text)">own tile</b> lets you swap a stationed summon, heal it, or change the tile's element — use this to set up better matchups.</span></div>
-        <div class="help-row"><span class="help-icon">💡</span><span>A <b style="color:var(--text)">Battle Charm</b> from a Chest gives +25% damage for one fight — assign it to your strongest attacker or a summon about to face a tough defender.</span></div>
+        <div class="help-row"><span class="help-icon">💡</span><span>Type advantage is a <b style="color:var(--text)">massive swing</b>: a 2× hit can eliminate most summons in one shot. Always check the element wheel before attacking.</span></div>
+        <div class="help-row"><span class="help-icon">💡</span><span>Landing on your <b style="color:var(--text)">own tile</b> lets you heal your stationed summon (5✦ for +20 HP) or sacrifice it for +15✦ Mana and the tile goes neutral. Use the sacrifice when you need Mana fast.</span></div>
+        <div class="help-row"><span class="help-icon">💡</span><span>A <b style="color:var(--text)">Battle Charm</b> from a Chest gives +25% damage for one fight: assign it to your strongest attacker or a summon about to face a tough defender.</span></div>
         <div class="help-row"><span class="help-icon">💡</span><span>Sell summons you can't afford to deploy back at the shop for partial Mana. A damaged summon is worth less, so sell before they take hits.</span></div>
         <div class="help-row"><span class="help-icon">💡</span><span>Guardians make great tile defenders. Assailants are cheap attackers that can swing battles on type advantage.</span></div>
       </div>
@@ -759,7 +770,7 @@ function renderCard(m, {size='full', selected=false, showCost=true, dim=false, o
 
   if (size === 'mini') {
     return `<div class="${classes}" style="border-color:${borderColor};${glowShadow}"${clickAttr}>
-      ${m.charm ? `<div class="charm-dot"></div>` : ''}
+      ${m.charm ? `<svg class="charm-badge-mini" width="17" height="17" viewBox="0 0 17 17" xmlns="http://www.w3.org/2000/svg" aria-label="Battle Charm"><circle cx="8.5" cy="8.5" r="7.5" fill="rgba(150,100,30,0.92)" stroke="#d4a843" stroke-width="1.4"/><path d="M9.5 3.5L6 9.5h3.5L8 13.5l4.5-6h-3.5z" fill="#fff8d0" stroke="#e8c060" stroke-width="0.5" stroke-linejoin="round"/></svg>` : ''}
       <div class="mc-art">${art}</div>
       ${miniStrip}
     </div>`;
@@ -770,7 +781,7 @@ function renderCard(m, {size='full', selected=false, showCost=true, dim=false, o
     ? `linear-gradient(to right,${c},${c2})`
     : c;
   return `<div class="${classes}" style="border-color:${borderColor};${glowShadow}"${clickAttr}>
-    ${m.charm ? `<div class="charm-dot"></div>` : ''}
+    ${m.charm ? `<svg class="charm-badge" width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" aria-label="Battle Charm"><circle cx="14" cy="14" r="12" fill="rgba(150,100,30,0.92)" stroke="#d4a843" stroke-width="1.8"/><path d="M15.5 6.5L9.5 15.5h5.5L13 22l6.5-9.5h-5.5z" fill="#fff8d0" stroke="#e8c060" stroke-width="0.6" stroke-linejoin="round"/></svg>` : ''}
     ${elemBadgeLabel ? `<div class="mc-element-badge" style="background:${elemBadgeBg}">${elemBadgeLabel}</div>` : ''}
     ${m.isSpecial && dim && m.conditionDesc ? `<div class="special-lock-overlay"><span class="special-lock-icon">🔒</span><div class="special-lock-text">${m.conditionDesc}</div></div>` : ''}
     ${showCost ? `<div class="mc-cost-strip"><span class="mc-cost-val" style="color:${c}">${m.cost}</span><span class="mc-cost-lbl">Mana</span></div>` : ''}
@@ -1168,8 +1179,8 @@ function render() {
 
   const isMyTurn = G.currentPlayer === myIdx;
 
-  // Reset setup instruction flag when a new game returns to lobby
-  if (G.phase === 'lobby') _setupClaimSeen = false;
+  // Reset setup instruction flag and panel when a new game returns to lobby
+  if (G.phase === 'lobby') { _setupClaimSeen = false; _setupPanelIdx = 0; }
 
   // Notification intercept — show before any other screen.
   // IMPORTANT: also clear battle-result pending state here. Without this, the following
@@ -1305,7 +1316,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.48</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.57</div>
     </div>
 
     <div class="room-code-group">
@@ -1377,7 +1388,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.48</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.57</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -1787,22 +1798,77 @@ function renderSetupInstructions(isMyTurn) {
   document.getElementById('main-content').classList.add('no-hand');
   document.getElementById('action-bar').classList.remove('visible');
 
+  // Build a real board-accurate demo tile (Light / tile #7)
+  const _demoEl   = 'Light';
+  const _demoCol  = TYPE_COLOR[_demoEl];                         // '#e0c07a'
+  const _demoBg   = `linear-gradient(160deg,color-mix(in srgb,${_demoCol} 62%,#10111e 38%),color-mix(in srgb,${_demoCol} 40%,#0c0d1a 60%))`;
+  const _demoBdr  = `1px solid ${_demoCol}cc`;
+  const _demoImg  = TILE_IMG[_demoEl];                           // '/img/tiles/tile-light.png'
+  const _demoArt  = _demoImg
+    ? `<div style="display:flex;align-items:center;justify-content:center;width:100%;flex:1;min-height:0;"><img src="${_demoImg}" style="width:100%;height:100%;object-fit:contain;display:block;" alt=""></div>`
+    : `<div style="display:flex;align-items:center;justify-content:center;width:100%;flex:1;min-height:0;font-size:20px;line-height:1;text-shadow:0 0 8px currentColor;color:#fff;">${TYPE_ICON[_demoEl]||'✦'}</div>`;
+  const _demoTile = `<div style="position:relative;display:inline-flex;flex-direction:column;align-items:center;flex-shrink:0;margin-top:20px;">
+    <span style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:10px;color:rgba(255,255,255,.85);line-height:1;white-space:nowrap;font-family:'Inter',system-ui,sans-serif;">7</span>
+    <div style="width:70px;height:102px;border-radius:6px;border:${_demoBdr};background:${_demoBg};overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:4px 3px 4px;">
+      ${_demoArt}
+      <span style="font-size:9px;font-weight:500;letter-spacing:.03em;text-transform:uppercase;text-align:center;line-height:1.2;margin-top:3px;color:${_demoCol};">${_demoEl}</span>
+    </div>
+  </div>`;
+
+  const PANELS = [
+    // Panel 0 — How to Play
+    `<div class="setup-instr-title">How to Play</div>
+     <div class="setup-instr-body">
+       <p>This game runs on two screens: the Board View (the big screen everyone watches) and your Player View (what you're looking at now).</p>
+       <p>The board shows every tile, who owns what, and where all the action is happening.</p>
+       <div class="instr-tile-row">
+         ${_demoTile}
+         <div class="instr-tile-caption">Every tile has a number. That number is how you target where you want to go.</div>
+       </div>
+     </div>`,
+
+    // Panel 1 — Setup & Game Play
+    `<div class="setup-instr-title">Setup &amp; Game Play</div>
+     <div class="setup-instr-body">
+       <p>Before the first roll, each player stations up to 3 summons on unclaimed elemental tiles, completely free.</p>
+       <p>Check the board for open tiles, pick a summon, and enter the tile number to claim it.</p>
+       <p>Once setup is done, you'll roll to move each turn. Landing on a free tile lets you claim it. Landing on an enemy tile picks a fight.</p>
+     </div>`,
+
+    // Panel 2 — The Game
+    `<div class="setup-instr-title">The Game</div>
+     <div class="setup-instr-body">
+       <p>You start with <strong>40✦ Mana</strong>. It's both your life force and your currency. It buys summons, heals fighters, and pays to claim tiles.</p>
+       <p>If your Mana hits zero, you're eliminated. No second chances. The last summoner standing wins outright.</p>
+       <p>If the round limit runs out, the player with the most tiles takes the crown.</p>
+       <p>Tap the <strong>?</strong> button at the top of your screen any time to review the full rules and element matchups.</p>
+     </div>`
+  ];
+
+  const isLast = _setupPanelIdx === PANELS.length - 1;
+  const dots = PANELS.map((_, i) =>
+    `<div class="setup-instr-dot${i === _setupPanelIdx ? ' active' : ''}"></div>`
+  ).join('');
+
   document.getElementById('main-content').innerHTML = `
     <div class="setup-instr-wrap">
       <div class="setup-instr-card">
-        <div class="setup-instr-star">🌟</div>
-        <div class="setup-instr-title">Free Setup Claim</div>
-        <div class="setup-instr-body">
-          <p>Before the first roll, each player gets to station up to 3 summons on any unclaimed elemental tile — completely free. This is your only chance to claim territory without spending Mana.</p>
-          <p><strong>Element tip:</strong> A summon stationed on a tile that matches its element fights with +15% Attack &amp; Defense. Station it on its opposing element and it takes a −15% penalty. Place your strongest monsters where the element is in your favour.</p>
-          <p>Tap the <strong>?</strong> button at the top of your screen any time to review the full rules and element matchups.</p>
-        </div>
-        <button class="setup-instr-btn" onclick="dismissSetupInstructions()">Got it</button>
+        <div class="setup-instr-dots">${dots}</div>
+        ${PANELS[_setupPanelIdx]}
+        <button class="setup-instr-btn" onclick="${isLast ? 'dismissSetupInstructions()' : 'nextSetupPanel()'}">
+          ${isLast ? "Let's Play" : 'Next'}
+        </button>
       </div>
     </div>`;
 }
 
+function nextSetupPanel() {
+  _setupPanelIdx++;
+  render();
+}
+
 function dismissSetupInstructions() {
+  _setupPanelIdx = 0;
   _setupClaimSeen = true;
   render();
 }
@@ -1844,9 +1910,6 @@ function renderSetup() {
 
   document.getElementById('main-content').innerHTML = `
     <div class="setup-status-line">Round ${G.setupRound || 1} of 3${G.setupTotalTurns > 0 ? ` · Turn ${(G.setupTurnIdx||0)+1}/${G.setupTotalTurns}` : ''}</div>
-    <div class="picker-label">Choose a summon to station</div>
-    <div class="picker-scroll" id="setup-picker-scroll"><div class="scroll-inner">${myHand.length > 0 ? pickerCards : '<div style="text-align:center;padding:24px 0;color:var(--text-mute);font-size:13px;">No summons in hand — you must pass.</div>'}</div></div>
-    ${myHand.length > 0 ? scrollNavHTML('setup-picker-scroll','setup-dot',myHand.length) : ''}
     <div class="setup-tile-row">
       <label class="setup-tile-label">Tile number (0–27)</label>
       <form onsubmit="event.preventDefault();doSetupClaim();" style="margin:0">
@@ -1857,7 +1920,10 @@ function renderSetup() {
         />
       </form>
       <div id="setup-tile-preview">${tilePreview}</div>
-    </div>`;
+    </div>
+    <div class="picker-label">Choose a summon to station</div>
+    <div class="picker-scroll" id="setup-picker-scroll"><div class="scroll-inner">${myHand.length > 0 ? pickerCards : '<div style="text-align:center;padding:24px 0;color:var(--text-mute);font-size:13px;">No summons in hand — you must pass.</div>'}</div></div>
+    ${myHand.length > 0 ? scrollNavHTML('setup-picker-scroll','setup-dot',myHand.length) : ''}`;
 
   if (myHand.length > 0) {
     attachShopScrollListener('setup-picker-scroll','setup-dot',myHand.length);
@@ -1903,6 +1969,10 @@ function renderSetupWaiting() {
     <div class="setup-standings">
       <div class="setup-standings-title">Claimed so far</div>
       ${tileRows}
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin:20px 0 8px;">
+      <button class="help-btn" onclick="toggleHelp()" title="How to Play" style="margin:0;">?</button>
+      <div style="font-size:10px;color:var(--text-mute);letter-spacing:.1em;text-transform:uppercase;">Rules &amp; Elements</div>
     </div>`;
 }
 
@@ -2045,6 +2115,7 @@ function renderNotification(notif) {
 
 // ─── BATTLE RESULT CLASH ─────────────────────────────────────────────────────
 let _setupClaimSeen        = false; // true after player dismisses setup instructions (resets each new game)
+let _setupPanelIdx         = 0;    // which panel of the setup walkthrough is showing (0/1/2)
 let _elimWarnSeen          = false; // true after player acknowledges elimination warning this turn
 let _elimWarnTurn          = -1;    // tracks which turnCount the warning was shown for
 let _battleResultTimer     = null;
@@ -2178,6 +2249,13 @@ function _renderPersonalBattleResult(lb, isAttacker) {
     mutual:    { icon:'💥', headline:'Mutual!',   accent:'#e0b050', glow:'rgba(224,176,80,0.15)',  sub:'Both summons were destroyed.' },
   }[personalOutcome];
 
+  const myManaDelta   = isAttacker ? (lb.attManaDelta ?? null) : (lb.defManaDelta ?? null);
+  const manaLine = myManaDelta == null ? '' : (() => {
+    const sign = myManaDelta >= 0 ? '+' : '';
+    const col  = myManaDelta > 0 ? '#5dc97d' : myManaDelta < 0 ? '#e05252' : 'var(--text-mute)';
+    return `<div style="margin-top:4px;font-size:13px;font-weight:700;color:${col}">Mana: ${sign}${myManaDelta}</div>`;
+  })();
+
   // Fade out, swap content, fade in
   mc.style.transition = 'opacity .28s ease';
   mc.style.opacity = '0';
@@ -2192,6 +2270,7 @@ function _renderPersonalBattleResult(lb, isAttacker) {
           <div style="font-size:32px">${cfg.icon}</div>
           <div style="font-size:24px;font-family:'Cinzel',serif;font-weight:700;color:${cfg.accent}">${cfg.headline}</div>
           <div style="font-size:12px;color:var(--text-mute)">${cfg.sub}</div>
+          ${manaLine}
         </div>
         <div style="display:flex;gap:12px;align-items:flex-start;justify-content:center;width:100%">
           <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
@@ -2298,7 +2377,7 @@ function renderOwn() {
   const tile = G.board[me.position];
   const stationed = tile?.summon;
   const missing = stationed ? stationed.maxHp - stationed.hp : 0;
-  const healCost = stationed ? Math.ceil(1.5 * missing) : 0;
+  const canHeal = stationed && missing > 0 && me.mana >= 5;
   const canSwap = myHand.length < 5;
   const CHANGE_COST = 18;
 
@@ -2322,14 +2401,21 @@ function renderOwn() {
     </div>
     ${stationed ? `
     <div class="own-tile-options">
-      ${canSwap ? '' : '<div style="font-size:11px;color:var(--text-mute);padding:0 0 8px">Hand full — sell a summon to swap</div>'}
-      <div class="own-tile-opt${missing===0?' unaffordable':''}" onclick="${missing>0&&me.mana>=healCost?'doHeal()':''}">
+      <div class="own-tile-opt${!canHeal ? ' unaffordable' : ''}" onclick="${canHeal ? 'doHeal()' : ''}">
         <span class="own-tile-opt-icon">💚</span>
         <div class="own-tile-opt-text">
           <div class="own-tile-opt-name">Heal ${stationed.name}</div>
-          <div class="own-tile-opt-desc">${missing>0?`${missing} HP missing`:'Already at full HP'}</div>
+          <div class="own-tile-opt-desc">${missing > 0 ? `+20 HP · ${stationed.hp} → ${Math.min(stationed.maxHp, stationed.hp + 20)} / ${stationed.maxHp}` : 'Already at full HP'}</div>
         </div>
-        <span class="own-tile-opt-cost">${healCost} ✦</span>
+        <span class="own-tile-opt-cost">5 ✦</span>
+      </div>
+      <div class="own-tile-opt" onclick="doSacrificeTile()" style="border-color:rgba(180,60,60,.35)">
+        <span class="own-tile-opt-icon">💀</span>
+        <div class="own-tile-opt-text">
+          <div class="own-tile-opt-name">Sacrifice ${stationed.name}</div>
+          <div class="own-tile-opt-desc">Destroy summon · tile goes neutral</div>
+        </div>
+        <span class="own-tile-opt-cost" style="color:#e07070">+15 ✦</span>
       </div>
     </div>
     ${canSwap ? `<div class="picker-label">Swap stationed summon</div><div class="picker-scroll"><div class="scroll-inner">${swapCards}</div></div>` : ''}` : ''}
@@ -2346,6 +2432,11 @@ function renderOwn() {
     ab.innerHTML = `<button class="action-btn secondary" onclick="send('skip_own')">Leave</button>
       <button class="action-btn primary" disabled style="opacity:.4">${selM?'Not enough Mana':'Select action above'}</button>`;
   }
+}
+
+function doSacrificeTile() {
+  if (!confirm('Sacrifice this summon for +15✦? The tile will go neutral.')) return;
+  send('sacrifice_tile');
 }
 
 // ─── CHEST ───────────────────────────────────────────────────────────────────
@@ -2380,11 +2471,27 @@ function renderChest() {
 
   let pickerHtml = '';
   if (chest.kind === 'potion') {
-    const cards = stationedTiles.map(t =>
-      renderCard(t.summon, {size:'full', selected: selectedIid===t.pos, showCost:false, onclick:`selectCard(${t.pos})`})
-    ).join('');
-    if (cards) pickerHtml = `<div class="picker-label">Apply potion to a stationed summon</div><div class="picker-scroll"><div class="scroll-inner">${cards}</div></div>`;
-    else pickerHtml = `<div style="padding:12px 16px;font-size:12px;color:var(--text-mute)">No stationed summons to heal.</div>`;
+    const POTION_MANA = { Minor: 3, Major: 6, Full: 10 };
+    const convertMana = POTION_MANA[chest.tier] || 3;
+    // Hurt monsters from hand AND stationed tiles (hp < maxHp only)
+    const hurtHand = myHand.filter(m => m.hp < m.maxHp);
+    const hurtStationed = stationedTiles.filter(t => t.summon.hp < t.summon.maxHp);
+    const makeHealCard = (m, id) => {
+      const missing = m.maxHp - m.hp;
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+        ${renderCard(m, {size:'full', selected: selectedIid===id, showCost:false, onclick:`selectCard(${id})`})}
+        <div style="font-size:11px;font-weight:600;color:#b05050;font-variant-numeric:tabular-nums">−${missing} HP</div>
+      </div>`;
+    };
+    const cards = [
+      ...hurtHand.map(m => makeHealCard(m, m.iid)),
+      ...hurtStationed.map(t => makeHealCard(t.summon, t.summon.iid))
+    ].join('');
+    if (cards) {
+      pickerHtml = `<div class="picker-label">Choose a summon to heal</div><div class="picker-scroll"><div class="scroll-inner" style="padding-bottom:32px">${cards}</div></div>`;
+    } else {
+      pickerHtml = `<div style="padding:16px;text-align:center;font-size:13px;color:var(--text-dim);line-height:1.6">All your summons are at full health.<br>Convert this potion to <strong style="color:var(--gold-glow)">${convertMana}✦ mana</strong> instead?</div>`;
+    }
   } else if (chest.kind === 'charm') {
     const handCards = myHand.map(m => renderCard(m, {size:'full', selected: selectedIid===m.iid, showCost:false, onclick:`selectCard(${m.iid})`})).join('');
     const stCards = stationedTiles.map(t => renderCard(t.summon, {size:'full', selected: selectedIid===t.pos, showCost:false, onclick:`selectCard(${t.pos})`})).join('');
@@ -2411,12 +2518,17 @@ function renderChest() {
   const ab = document.getElementById('action-bar');
   ab.classList.add('visible');
   if (chest.kind === 'potion') {
+    const POTION_MANA = { Minor: 3, Major: 6, Full: 10 };
+    const convertMana = POTION_MANA[chest.tier] || 3;
+    const hasHurt = myHand.some(m => m.hp < m.maxHp) || stationedTiles.some(t => t.summon.hp < t.summon.maxHp);
     if (selectedIid !== null) {
-      ab.innerHTML = `<button class="action-btn secondary" onclick="send('chest_skip')">Skip</button>
+      ab.innerHTML = `<button class="action-btn secondary" onclick="send('chest_skip')">Convert (${convertMana}✦)</button>
         <button class="action-btn primary" onclick="doApplyPotion()">Apply Potion</button>`;
+    } else if (hasHurt) {
+      ab.innerHTML = `<button class="action-btn secondary" onclick="send('chest_skip')">Convert (${convertMana}✦)</button>
+        <button class="action-btn primary" disabled style="opacity:.4">↑ Select a summon</button>`;
     } else {
-      ab.innerHTML = `<button class="action-btn secondary" onclick="send('chest_skip')">Skip</button>
-        <button class="action-btn primary" disabled style="opacity:.4">Select Summon</button>`;
+      ab.innerHTML = `<button class="action-btn primary" style="width:100%" onclick="send('chest_skip')">Convert to ${convertMana}✦</button>`;
     }
   } else if (chest.kind === 'charm') {
     if (selectedIid !== null) {
@@ -3120,8 +3232,8 @@ function doChangeElement(el) {
 function doApplyPotion() {
   if (selectedIid === null) return;
   SFX.potion();
-  // selectedIid is the tile.pos for stationed summons
-  send('chest_apply_potion', { tilePos: selectedIid });
+  // selectedIid is the monster's iid (works for both hand and stationed)
+  send('chest_apply_potion', { iid: selectedIid });
   selectedIid = null;
 }
 

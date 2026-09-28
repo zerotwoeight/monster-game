@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.47';
+const SERVER_VERSION = 'v1.0.52';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -157,7 +157,7 @@ const STARTER_SETS = {
 
 const PLAYER_COLORS = ['#e05252','#5ca8e0','#5dc97d','#e0b050','#c07fd8','#60cdc0'];
 const CHANGE_ELEMENT_COST = 18;
-const MANA_PENALTY        = 20;
+const MANA_PENALTY        = 5;
 const HEAL_COST_PER_HP    = 1.5;
 const DEFAULT_ROUND_LIMIT = 20; // rounds per player (selectable in lobby: 10/20/30)
 
@@ -500,16 +500,16 @@ function bonusTileSet() {
 }
 
 // ─── MONO-ELEMENT MASTERY ─────────────────────────────────────────────────────
-// A player qualifies if ALL of the following share exactly one element:
+// A player qualifies if ALL summons share exactly one element:
 //   • every monster in their hand (dual-type rares disqualify)
 //   • every monster stationed on the board by them (dual-type rares disqualify)
-//   • every elemental tile they own
-// Must own at least 1 elemental tile AND have at least 1 monster (hand or stationed).
+// Must own at least 1 elemental tile (strategic gate) AND have at least 1 monster.
+// Tile elements are NOT checked — only summons in hand + stationed matter.
 function getMonoElementBonus() {
   if (!G || !G.board || !G.players) return [];
   const result = [];
   for (const p of G.players) {
-    // Gather element tags; null = dual-type (instant disqualify)
+    // Gather element tags from summons only; null = dual-type (instant disqualify)
     const tags = [];
     for (const m of p.hand) {
       tags.push(m.type2 ? null : m.type);
@@ -520,15 +520,18 @@ function getMonoElementBonus() {
       tags.push(mi.type2 ? null : mi.type);
     }
     const ownedElemTiles = G.board.filter(t => t.ownerId === p.idx && t.kind === 'element');
-    // Must have at least 1 elemental tile AND at least 1 monster
-    if (ownedElemTiles.length === 0 || tags.length === 0) continue;
+    // Must have at least 1 monster AND own at least 1 elemental tile
+    if (tags.length === 0 || ownedElemTiles.length === 0) continue;
     // Dual-type disqualifies
     if (tags.includes(null)) continue;
-    // All tile elements must match
-    for (const t of ownedElemTiles) tags.push(t.element);
+    // All summons must share exactly one element
     const unique = new Set(tags);
     if (unique.size !== 1) continue;
-    result.push({ playerIdx: p.idx, element: [...unique][0] });
+    const monoEl = [...unique][0];
+    // Tile gate: must own at least 1 element tile whose element matches the mono element
+    // (attackers can target that tile to break mastery)
+    if (!ownedElemTiles.some(t => t.element === monoEl)) continue;
+    result.push({ playerIdx: p.idx, element: monoEl });
   }
   return result;
 }
@@ -788,6 +791,20 @@ function checkElimination(playerIdx) {
   return true; // signal: elimination happened
 }
 
+// Immediate mana-death check — call after any action that drains mana.
+// Eliminates the player on the spot if mana hits 0. No grace period.
+function checkManaElimination(playerIdx) {
+  const p = G.players[playerIdx];
+  if (!p || p.eliminated) return false;
+  if (p.mana > 0) return false;
+  p.mana = 0;
+  const elimCount = G.players.filter(pl => pl.eliminated).length;
+  p.eliminated = true;
+  p.eliminatedRank = elimCount + 1;
+  log(`💸 ${p.name} ran out of Mana and is ELIMINATED!`);
+  return true;
+}
+
 // Call after every turn. If only 1 non-eliminated player remains, end the game immediately.
 function checkLastStanding() {
   const active = G.players.filter(p => !p.eliminated);
@@ -872,19 +889,26 @@ function advanceSetupTurn() {
 
 function advanceTurn() {
   // Wild card intercept — fires ONCE after turn resolves if player passed position 0
+  // Skip if the current player was eliminated mid-turn (e.g. mana hit 0 in battle)
   if (G.pendingWildCard && G.wildCardDrawn === null) {
+    const _wcPlayer = G.players[G.currentPlayer];
+    if (_wcPlayer && !_wcPlayer.eliminated) {
+      G.pendingWildCard = false;
+      // Draw one card randomly from each tier pool
+      const drawFrom = pool => pool[rand(0, pool.length - 1)];
+      G.wildCardDrawn = {
+        low:  drawFrom(WILD_CARD_POOLS.low),
+        mid:  drawFrom(WILD_CARD_POOLS.mid),
+        high: drawFrom(WILD_CARD_POOLS.high),
+      };
+      G.phase = 'resolve:wildcard_cards';
+      log(`🃏 ${_wcPlayer.name} passed the Mana Well — Wild Card event!`);
+      broadcast();
+      return; // don't advance turn yet
+    }
+    // Player eliminated — discard the pending wildcard silently
+    log(`🃏 Wild Card skipped — ${_wcPlayer ? _wcPlayer.name : '?'} was eliminated mid-turn`);
     G.pendingWildCard = false;
-    // Draw one card randomly from each tier pool
-    const drawFrom = pool => pool[rand(0, pool.length - 1)];
-    G.wildCardDrawn = {
-      low:  drawFrom(WILD_CARD_POOLS.low),
-      mid:  drawFrom(WILD_CARD_POOLS.mid),
-      high: drawFrom(WILD_CARD_POOLS.high),
-    };
-    G.phase = 'resolve:wildcard_cards';
-    log(`🃏 ${G.players[G.currentPlayer].name} passed the Mana Well — Wild Card event!`);
-    broadcast();
-    return; // don't advance turn yet
   }
   // Clear any lingering wildcard state
   G.pendingWildCard = false;
@@ -1328,18 +1352,20 @@ const handlers = {
     broadcast();
   },
 
-  // Player retreats from stalemate — pays 8 Mana, skips rolling, goes straight to shop
+  // Player retreats from stalemate — pays 5 Mana, skips rolling, goes straight to shop
   stalemate_continue(ws, conn, data) {
     if (G.phase !== 'stalemate') return sendError(ws, 'Not stalemate phase');
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
     const p = G.players[G.currentPlayer];
-    const RETREAT_COST = 8;
+    const RETREAT_COST = 5;
     const paid = Math.min(p.mana, RETREAT_COST);
     p.mana -= paid;
+    log(`🚶 ${p.name} retreats from stalemate${paid > 0 ? ` — paid ${paid}✦` : ''}`);
+    checkManaElimination(G.currentPlayer);
+    if (checkLastStanding()) return; // game ended
     G.stalemateData = null;
     // Jump straight to shop (passive income already collected at turn start)
     G.phase = 'shop';
-    log(`🚶 ${p.name} retreats from stalemate${paid > 0 ? ` — paid ${paid}✦` : ''}`);
     broadcast();
   },
 
@@ -1461,12 +1487,17 @@ const handlers = {
     log(`   ATK dealt ${atkDmg}, DEF struck back ${defDmg} — ${outcome}`);
 
     // snapshot both monsters before _applyBattleOutcome mutates them
+    // mana deltas: attacker_wins(+4/−4), defender_wins(−8/+4), mutual(−8/+4), stalemate(−4/+4)
+    const _manaDeltaMap = { attacker_wins:[+4,-4], defender_wins:[-8,+4], mutual:[-8,+4], stalemate:[-4,+4] };
+    const [_attDelta, _defDelta] = _manaDeltaMap[outcome] || [0,0];
     G.lastBattle = {
       attackerIdx: G.currentPlayer,
       defOwnerIdx: tile.ownerId,
       attM: { name:attM.name, type:attM.type, atk:attM.atk, def:attM.def, id:attM.id, isSpecial:attM.isSpecial||false, hp:attM.hp, maxHp:attM.maxHp, cost:attM.cost, gen:attM.gen },
       defM: { name:defM.name, type:defM.type, atk:defM.atk, def:defM.def, id:defM.id, isSpecial:defM.isSpecial||false, hp:defM.hp, maxHp:defM.maxHp, cost:defM.cost, gen:defM.gen },
-      atkDmg, defDmg, outcome
+      atkDmg, defDmg, outcome,
+      attManaDelta: _attDelta,
+      defManaDelta: _defDelta,
     };
     _applyBattleOutcome(outcome, p, attM, defOwner, defM, tile, p.position);
     G.pendingAttackerSummon = null;
@@ -1502,6 +1533,7 @@ const handlers = {
     const penalty = Math.min(p.mana, MANA_PENALTY);
     p.mana -= penalty;
     log(`🏃 ${p.name} retreated — paid ${penalty}✦ penalty`);
+    checkManaElimination(G.currentPlayer);
     G.pendingAttackerSummon = null;
     advanceTurn();
   },
@@ -1530,6 +1562,7 @@ const handlers = {
     advanceTurn();
   },
 
+  // Flat heal: 5✦ → +20 HP (capped at maxHp)
   heal_stationed(ws, conn, data) {
     if (G.phase !== 'resolve:own') return sendError(ws, 'Wrong phase');
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
@@ -1537,31 +1570,31 @@ const handlers = {
     const tile = G.board[p.position];
     const m = tile.summonInstance;
     if (!m) return sendError(ws, 'No summon to heal');
-    const missing = m.maxHp - m.hp;
-    if (missing <= 0) return sendError(ws, 'Already at full HP');
-    const cost = Math.ceil(HEAL_COST_PER_HP * missing);
-    if (p.mana < cost) return sendError(ws, `Need ${cost}✦ to heal fully — not enough Mana`);
-    p.mana -= cost;
-    m.hp = m.maxHp;
+    if (m.hp >= m.maxHp) return sendError(ws, 'Already at full HP');
+    if (p.mana < 5) return sendError(ws, 'Need 5✦ to heal');
+    const healed = Math.min(20, m.maxHp - m.hp);
+    p.mana -= 5;
+    m.hp += healed;
     p.healCount++;
-    log(`💚 ${p.name} healed ${m.name} to full (−${cost}✦)`);
+    log(`💚 ${p.name} healed ${m.name} for ${healed} HP (−5✦)`);
+    checkManaElimination(G.currentPlayer);
     advanceTurn();
   },
 
-  heal_partial(ws, conn, data) {
+  // Sacrifice stationed summon for +15✦ — tile goes neutral
+  sacrifice_tile(ws, conn, data) {
     if (G.phase !== 'resolve:own') return sendError(ws, 'Wrong phase');
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
     const p = G.players[G.currentPlayer];
     const tile = G.board[p.position];
-    const m = tile.summonInstance;
-    if (!m) return sendError(ws, 'No summon to heal');
-    const amount = Math.min(Math.max(0, parseInt(data.amount) || 0), m.maxHp - m.hp);
-    const cost = Math.ceil(HEAL_COST_PER_HP * amount);
-    if (p.mana < cost) return sendError(ws, 'Not enough Mana');
-    p.mana -= cost;
-    m.hp += amount;
-    p.healCount++;
-    log(`💚 ${p.name} healed ${m.name} for ${amount} HP (−${cost}✦)`);
+    if (!tile.summonInstance) return sendError(ws, 'No summon to sacrifice');
+    const sacrificed = tile.summonInstance;
+    tile.ownerId = null;
+    tile.summonId = null;
+    tile.summonInstance = null;
+    p.mana += 15;
+    p.destroyedCount++;
+    log(`💀 ${p.name} sacrificed ${sacrificed.name} for +15✦ — tile ${p.position} goes neutral`);
     advanceTurn();
   },
 
@@ -1663,16 +1696,20 @@ const handlers = {
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
     if (!G.pendingChest || G.pendingChest.kind !== 'potion') return sendError(ws, 'No potion');
     const p = G.players[G.currentPlayer];
-    const tile = G.board[data.tilePos];
-    if (!tile || tile.ownerId !== G.currentPlayer) return sendError(ws, 'Not your tile');
-    const m = tile.summonInstance;
-    if (!m) return sendError(ws, 'No summon there');
+    // Find by iid in hand OR stationed tiles (supports hand + stationed monsters)
+    let m = p.hand.find(h => h.iid === data.iid);
+    if (!m) {
+      const tile = G.board.find(t => t.ownerId === G.currentPlayer && t.summonInstance && t.summonInstance.iid === data.iid);
+      if (tile) m = tile.summonInstance;
+    }
+    if (!m) return sendError(ws, 'Summon not found');
+    const missing = m.maxHp - m.hp;
+    if (missing <= 0) return sendError(ws, 'Summon already at full HP');
     const chest = G.pendingChest;
     let healed = 0;
-    const missing = m.maxHp - m.hp;
-    if (chest.tier === 'Minor')  healed = Math.min(missing, 15);
-    else if (chest.tier === 'Major') healed = Math.floor(missing * 0.5);
-    else healed = missing;
+    if (chest.tier === 'Minor')       healed = Math.min(missing, 15);
+    else if (chest.tier === 'Major')  healed = Math.floor(missing * 0.5);
+    else                              healed = missing;
     m.hp += healed;
     p.healCount++;
     log(`🧪 ${chest.tier} Potion healed ${m.name} for ${healed} HP`);
@@ -1724,6 +1761,14 @@ const handlers = {
   chest_skip(ws, conn, data) {
     if (G.phase !== 'resolve:chest') return sendError(ws, 'Wrong phase');
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    const p = G.players[G.currentPlayer];
+    const chest = G.pendingChest;
+    if (chest && chest.kind === 'potion') {
+      const POTION_MANA = { Minor: 3, Major: 6, Full: 10 };
+      const bonus = POTION_MANA[chest.tier] || 3;
+      p.mana += bonus;
+      log(`🧪 ${p.name} converted ${chest.tier} Potion for ${bonus}✦`);
+    }
     G.pendingChest = null;
     advanceTurn();
   },
@@ -1989,6 +2034,11 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     defPlayer.destroyedCount++;
     _updatePeakTiles(attPlayer.idx);
     log(`🏆 ${attPlayer.name} wins! ${defM.name} destroyed, ${tile.pos} claimed`);
+    // Mana swings — attacker wins: +4✦ / defender −4✦
+    attPlayer.mana += 4;
+    defPlayer.mana = Math.max(0, defPlayer.mana - 4);
+    log(`✦ Battle mana: ${attPlayer.name} +4✦  ${defPlayer.name} −4✦`);
+    checkManaElimination(defPlayer.idx);
     // Succubus — Mana Drain on win
     if (attM.id === 'succubus') {
       const stolen = Math.min(defPlayer.mana, 10);
@@ -2004,6 +2054,11 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     defPlayer.battlesWon++;
     attPlayer.destroyedCount++;
     log(`🛡️ ${defPlayer.name} defends! ${attM.name} destroyed`);
+    // Mana swings — attacker loses: −8✦ / defender +4✦
+    attPlayer.mana = Math.max(0, attPlayer.mana - 8);
+    defPlayer.mana += 4;
+    log(`✦ Battle mana: ${attPlayer.name} −8✦  ${defPlayer.name} +4✦`);
+    checkManaElimination(attPlayer.idx);
     // Arcane Arbiter — Chaos Flux on defender win too
     if (defM.id === 'arcane_arbiter') _applyChaosFlux(attPlayer);
   } else if (outcome === 'mutual') {
@@ -2016,10 +2071,20 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     tile.summonId = null;
     tile.summonInstance = null;
     log(`💥 Mutual destruction! Tile ${tilePos} unclaimed`);
+    // Mana swings — mutual (treated as attacker loss): attacker −8✦, defender +4✦
+    attPlayer.mana = Math.max(0, attPlayer.mana - 8);
+    defPlayer.mana += 4;
+    log(`✦ Battle mana: ${attPlayer.name} −8✦  ${defPlayer.name} +4✦`);
+    checkManaElimination(attPlayer.idx);
     // Arcane Arbiter — Chaos Flux on mutual too
     if (defM.id === 'arcane_arbiter') _applyChaosFlux(attPlayer);
   } else if (outcome === 'stalemate') {
     log(`🤝 Stalemate! Both survive`);
+    // Mana swings — stalemate: attacker −4✦, defender +4✦
+    attPlayer.mana = Math.max(0, attPlayer.mana - 4);
+    defPlayer.mana += 4;
+    log(`✦ Battle mana: ${attPlayer.name} −4✦  ${defPlayer.name} +4✦`);
+    checkManaElimination(attPlayer.idx);
     // Succubus — Mana Drain on stalemate too
     if (attM.id === 'succubus') {
       const stolen = Math.min(defPlayer.mana, 10);
