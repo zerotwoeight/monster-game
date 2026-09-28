@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.52';
+const SERVER_VERSION = 'v1.0.53';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -831,6 +831,9 @@ function startShopPhase() {
   }
   G.shopOffers = pickShopOffers(); // always generate offers (needed for stalemate buy option too)
 
+  // Safety: if round limit already reached, end now rather than routing to stalemate
+  if (G.turnCount >= G.roundLimit * G.players.length) { endGame(); return; }
+
   // Stalemate check — if this player has a pending stalemate, skip normal shop/roll
   // and go straight to stalemate resolution with buy/sell/attack options
   if (G.stalemateData && G.stalemateData.attackerIdx === G.currentPlayer) {
@@ -888,6 +891,9 @@ function advanceSetupTurn() {
 }
 
 function advanceTurn() {
+  // Guard: stale scheduleRoomAction timers can fire after endGame() — ignore them
+  if (G.phase === 'game_over') return;
+
   // Wild card intercept — fires ONCE after turn resolves if player passed position 0
   // Skip if the current player was eliminated mid-turn (e.g. mana hit 0 in battle)
   if (G.pendingWildCard && G.wildCardDrawn === null) {
@@ -952,6 +958,7 @@ function advanceTurn() {
 
 function endGame() {
   G.phase = 'game_over';
+  G.stalemateData = null; // clear any pending stalemate — game is over
   const finalTiles = p => G.board.filter(t => t.ownerId === p.idx).length;
 
   // Survivors sort by tiles → mana; eliminated sort by eliminatedRank descending
