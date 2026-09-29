@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.53';
+const SERVER_VERSION = 'v1.0.55';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -296,6 +296,7 @@ function freshGame(roomCode) {
     pendingLanding: null,    // { roll, options:[pos,pos,pos] } — set after roll, cleared on choose_landing
     wildCardDrawn: null,     // { low: card, mid: card, high: card }
     wildCardPending: null,   // { cardId, step } for multi-step cards (coup/shatter)
+    turnSummary: null,       // snapshot of this turn's income/effects for the summary screen
     lastActivityAt: Date.now(), // timestamp of last broadcast — used for stale room cleanup
   };
 }
@@ -329,9 +330,12 @@ function addPlayer(name, color, starterSet) {
     peakTiles: 0,
     totalManaEarned: 40, // starts with initial 40
     wcEffects: { stumble:false, delay:false, jinx:false, ambush:false, fortify:false, rattle:false, windfall:false },
+    lastTurnLandedOnWell: false,  // true if player landed on tile 0 (Mana Well) last turn
     notification: null,  // { cardId, cardName, cardDesc, castByName, castByColor, tier }
     eliminated: false,   // true once player owns 0 tiles at end of their own turn (post-setup)
     eliminatedRank: null, // set when eliminated — higher = survived longer (e.g. last eliminated = 1)
+    lastTurnBattleManaGain: 0,   // mana received from battle outcomes last turn
+    lastTurnBattleManaLoss: 0,   // mana paid/lost from battle outcomes last turn
   };
 }
 
@@ -548,11 +552,10 @@ function monoElementPlayerSet() {
 function collectPassiveIncome(playerIdx) {
   const p = G.players[playerIdx];
   let earned = 5; // baseline
+  let summonGen = 0;
 
   for (const tile of G.board) {
     if (tile.ownerId !== playerIdx || !tile.summonId) continue;
-    const m = p.hand.find(h => h.iid === tile.summonId)
-           || G.board.reduce((acc, t) => acc, null); // stationed summon is on the board, not in hand
 
     // stationed summons are stored separately in tile.summonInstance
     const mi = tile.summonInstance;
@@ -566,6 +569,7 @@ function collectPassiveIncome(playerIdx) {
       gen += natureTiles + natureMonsters;
     }
     earned += gen;
+    summonGen += gen;
   }
 
   // Ardent Saint passive — heal all friendly stationed summons 5 HP/turn
@@ -582,6 +586,7 @@ function collectPassiveIncome(playerIdx) {
   }
 
   // Red Dragon Intimidate aura — enemy stationed summons adjacent to the Red Dragon pay 5✦/turn
+  let intimidateLoss = 0;
   for (const tile of G.board) {
     if (!tile.summonInstance || tile.summonInstance.id !== 'red_dragon') continue;
     if (tile.ownerId === playerIdx) continue; // only affects OTHER players' monsters
@@ -592,6 +597,7 @@ function collectPassiveIncome(playerIdx) {
       if (nt && nt.ownerId === playerIdx && nt.summonInstance) {
         const loss = Math.min(p.mana, 5);
         p.mana -= loss;
+        intimidateLoss += loss;
         log(`🐉 Intimidate! ${p.name}'s ${nt.summonInstance.name} is adjacent to Red Dragon — pays ${loss}✦`);
       }
     }
@@ -617,8 +623,8 @@ function collectPassiveIncome(playerIdx) {
 
   // Mono-Element Mastery — heal all stationed summons +1 HP if player qualifies
   const monoBonus = getMonoElementBonus().find(r => r.playerIdx === playerIdx);
+  let monoHealCount = 0;
   if (monoBonus) {
-    let monoHealCount = 0;
     for (const t of G.board) {
       if (t.ownerId !== playerIdx || !t.summonInstance) continue;
       t.summonInstance.hp = Math.min(t.summonInstance.maxHp, t.summonInstance.hp + 1);
@@ -638,12 +644,15 @@ function collectPassiveIncome(playerIdx) {
     log(`🏗️ ${p.name} pays ${upkeep}✦ upkeep for ${ownedTileCount} tile${ownedTileCount > 1 ? 's' : ''}`);
   }
 
-  // Wild card effects on income
+  // Wild card effects on income — snapshot flags before clearing
+  const hadWindfall = p.wcEffects.windfall;
+  const hadJinx = p.wcEffects.jinx;
   if (p.wcEffects.windfall) { earned = earned * 3; p.wcEffects.windfall = false; log(`🃏 Windfall! ${p.name}'s income tripled`); }
   if (p.wcEffects.jinx)    { earned = Math.floor(earned * 0.5); p.wcEffects.jinx = false; log(`🃏 Jinx! ${p.name}'s income halved`); }
 
   const MANA_SOFT_CAP = 150;
-  if (p.mana >= MANA_SOFT_CAP) {
+  const softCapped = p.mana >= MANA_SOFT_CAP;
+  if (softCapped) {
     earned = Math.max(5, Math.floor(earned * 0.5)); // still earn baseline but halved above cap
   }
   p.mana += earned;
@@ -651,6 +660,64 @@ function collectPassiveIncome(playerIdx) {
     log(`⚠️ ${p.name} is over the ${MANA_SOFT_CAP}✦ soft cap — income reduced`);
   }
   log(`✦ ${p.name} earns ${earned} Mana (now ${p.mana})`);
+
+  // ── Build turn summary snapshot ───────────────────────────────────────────
+  const wellBonus = p.lastTurnLandedOnWell ? 10 : 0;
+  p.lastTurnLandedOnWell = false; // consume after reading
+  const stationedCount = countStationedSummons(playerIdx);
+  const tileCount = G.board.filter(t => t.ownerId === playerIdx).length;
+
+  // Active wild card effects to show (effects still pending THIS turn — not the ones just consumed)
+  const activeWcEffects = [];
+  if (p.wcEffects.stumble)  activeWcEffects.push({ id:'stumble',  label:'Stumble',  desc:'Skip roll — move exactly 3', color:'blue' });
+  if (p.wcEffects.delay)    activeWcEffects.push({ id:'delay',    label:'Delay',    desc:'Shop phase skipped',          color:'amber' });
+  // jinx/windfall already consumed above — show if they were active
+  if (hadWindfall)          activeWcEffects.push({ id:'windfall', label:'Windfall', desc:'Income tripled this turn',    color:'green' });
+  if (hadJinx)              activeWcEffects.push({ id:'jinx',     label:'Jinx',     desc:'Income halved this turn',     color:'red' });
+  if (p.wcEffects.ambush)   activeWcEffects.push({ id:'ambush',   label:'Ambush',   desc:'Next attack +40%',            color:'accent' });
+  if (p.wcEffects.fortify)  activeWcEffects.push({ id:'fortify',  label:'Fortify',  desc:'Next defense −40% damage',    color:'accent' });
+  if (p.wcEffects.rattle)   activeWcEffects.push({ id:'rattle',   label:'Rattle',   desc:'Next battle at half ATK',     color:'red' });
+
+  // Tile synergy runs belonging to this player
+  const myRuns = getBonusRuns().filter(r => r.playerIdx === playerIdx);
+  const tileSynergyCount = myRuns.reduce((sum, r) => sum + r.tiles.length, 0);
+
+  const round = Math.floor(G.turnCount / G.players.length) + 1;
+  const roundsRemaining = G.roundLimit - round;
+
+  G.turnSummary = {
+    playerIdx,
+    playerName: p.name,
+    playerColor: p.color,
+    round,
+    roundLimit: G.roundLimit,
+    roundsRemaining: Math.max(0, roundsRemaining),
+    manaAfter: p.mana,
+    tileCount,
+    stationedCount,
+    // Income breakdown
+    baseline: 5,
+    summonGen,
+    wellBonus,
+    intimidateLoss,
+    upkeep,
+    windfallActive: hadWindfall,
+    jinxActive: hadJinx,
+    softCapped,
+    netEarned: earned,
+    // HP bonuses
+    tileSynergyCount,
+    monoHealCount,
+    // Wild card state
+    activeWcEffects,
+    // Battle mana from previous turn
+    battleManaGain: p.lastTurnBattleManaGain,
+    battleManaLoss: p.lastTurnBattleManaLoss,
+  };
+
+  // Reset battle mana trackers for next turn
+  p.lastTurnBattleManaGain = 0;
+  p.lastTurnBattleManaLoss = 0;
 }
 
 function countStationedSummons(playerIdx) {
@@ -756,6 +823,7 @@ function publicState() {
     setupTotalTurns: G.setupTotalTurns || 0,
     bonusRuns: getBonusRuns(),
     monoElementBonus: getMonoElementBonus(),
+    turnSummary: G.turnSummary || null,
     serverVersion: SERVER_VERSION,
   };
 }
@@ -822,17 +890,36 @@ function startShopPhase() {
   p.lastDiceRoll = null;  // reset so stale roll values don't trigger false animations
   G.lastBattle = null;    // clear battle result so it doesn't persist across turns
   G.pendingAttackerSummon = null; // clear attacker preview
+
   // Round 1 grace period — summons placed during setup shouldn't immediately earn;
   // mana generation starts from round 2 onward (turnCount >= playerCount)
-  if (G.turnCount >= G.players.length) {
+  const isRound1 = G.turnCount < G.players.length;
+  if (!isRound1) {
     collectPassiveIncome(G.currentPlayer);
   } else {
-    log(`⏳ ${G.players[G.currentPlayer].name} — income starts Round 2`);
+    G.turnSummary = null; // no summary in round 1
+    log(`⏳ ${p.name} — income starts Round 2`);
   }
   G.shopOffers = pickShopOffers(); // always generate offers (needed for stalemate buy option too)
 
   // Safety: if round limit already reached, end now rather than routing to stalemate
   if (G.turnCount >= G.roundLimit * G.players.length) { endGame(); return; }
+
+  // Round 2+ — show turn summary before shop/stalemate/roll
+  if (!isRound1) {
+    G.phase = 'resolve:turn_summary';
+    log(`📋 ${p.name}'s turn summary`);
+    broadcast();
+    return;
+  }
+
+  // Round 1 — skip summary and go straight to shop
+  _startActualTurn();
+}
+
+// Called after turn summary is dismissed (or directly in round 1)
+function _startActualTurn() {
+  const p = G.players[G.currentPlayer];
 
   // Stalemate check — if this player has a pending stalemate, skip normal shop/roll
   // and go straight to stalemate resolution with buy/sell/attack options
@@ -1294,6 +1381,15 @@ const handlers = {
     broadcast();
   },
 
+  // ── Turn Summary ───────────────────────────────────────────────────────────
+
+  dismiss_turn_summary(ws, conn, data) {
+    if (G.phase !== 'resolve:turn_summary') return sendError(ws, 'Wrong phase');
+    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    G.turnSummary = null;
+    _startActualTurn();
+  },
+
   // ── Shop ───────────────────────────────────────────────────────────────────
 
   buy(ws, conn, data) {
@@ -1367,6 +1463,7 @@ const handlers = {
     const RETREAT_COST = 5;
     const paid = Math.min(p.mana, RETREAT_COST);
     p.mana -= paid;
+    if (paid > 0) _trackBattleMana(p, -paid);
     log(`🚶 ${p.name} retreats from stalemate${paid > 0 ? ` — paid ${paid}✦` : ''}`);
     checkManaElimination(G.currentPlayer);
     if (checkLastStanding()) return; // game ended
@@ -1434,6 +1531,8 @@ const handlers = {
     const p = G.players[G.currentPlayer];
     p.position = tilePos;
     G.pendingLanding = null;
+    // Track well landing for next turn's summary
+    p.lastTurnLandedOnWell = (tilePos === 0);
     // If player lands on tile 0 (Mana Well), suppress the Wild Card — Mana Well covers the crossing
     if (tilePos === 0) G.pendingWildCard = false;
     log(`🎯 ${p.name} chooses tile ${tilePos}`);
@@ -1539,6 +1638,7 @@ const handlers = {
     const p = G.players[G.currentPlayer];
     const penalty = Math.min(p.mana, MANA_PENALTY);
     p.mana -= penalty;
+    if (penalty > 0) _trackBattleMana(p, -penalty);
     log(`🏃 ${p.name} retreated — paid ${penalty}✦ penalty`);
     checkManaElimination(G.currentPlayer);
     G.pendingAttackerSummon = null;
@@ -2028,6 +2128,12 @@ function _updatePeakTiles(playerIdx) {
   if (cur > p.peakTiles) p.peakTiles = cur;
 }
 
+function _trackBattleMana(player, delta) {
+  if (!player) return;
+  if (delta > 0) player.lastTurnBattleManaGain += delta;
+  else if (delta < 0) player.lastTurnBattleManaLoss += Math.abs(delta);
+}
+
 function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, tilePos) {
   if (outcome === 'attacker_wins') {
     // Remove attacker from hand, place on tile
@@ -2044,6 +2150,8 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     // Mana swings — attacker wins: +4✦ / defender −4✦
     attPlayer.mana += 4;
     defPlayer.mana = Math.max(0, defPlayer.mana - 4);
+    _trackBattleMana(attPlayer, +4);
+    _trackBattleMana(defPlayer, -4);
     log(`✦ Battle mana: ${attPlayer.name} +4✦  ${defPlayer.name} −4✦`);
     checkManaElimination(defPlayer.idx);
     // Succubus — Mana Drain on win
@@ -2051,6 +2159,8 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
       const stolen = Math.min(defPlayer.mana, 10);
       defPlayer.mana -= stolen;
       attPlayer.mana += stolen;
+      _trackBattleMana(attPlayer, +stolen);
+      _trackBattleMana(defPlayer, -stolen);
       log(`🧛 Mana Drain: ${attPlayer.name} steals ${stolen}✦ from ${defPlayer.name}`);
     }
     // Arcane Arbiter — Chaos Flux: scramble one attacker-owned tile
@@ -2064,6 +2174,8 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     // Mana swings — attacker loses: −8✦ / defender +4✦
     attPlayer.mana = Math.max(0, attPlayer.mana - 8);
     defPlayer.mana += 4;
+    _trackBattleMana(attPlayer, -8);
+    _trackBattleMana(defPlayer, +4);
     log(`✦ Battle mana: ${attPlayer.name} −8✦  ${defPlayer.name} +4✦`);
     checkManaElimination(attPlayer.idx);
     // Arcane Arbiter — Chaos Flux on defender win too
@@ -2081,6 +2193,8 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     // Mana swings — mutual (treated as attacker loss): attacker −8✦, defender +4✦
     attPlayer.mana = Math.max(0, attPlayer.mana - 8);
     defPlayer.mana += 4;
+    _trackBattleMana(attPlayer, -8);
+    _trackBattleMana(defPlayer, +4);
     log(`✦ Battle mana: ${attPlayer.name} −8✦  ${defPlayer.name} +4✦`);
     checkManaElimination(attPlayer.idx);
     // Arcane Arbiter — Chaos Flux on mutual too
@@ -2090,6 +2204,8 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     // Mana swings — stalemate: attacker −4✦, defender +4✦
     attPlayer.mana = Math.max(0, attPlayer.mana - 4);
     defPlayer.mana += 4;
+    _trackBattleMana(attPlayer, -4);
+    _trackBattleMana(defPlayer, +4);
     log(`✦ Battle mana: ${attPlayer.name} −4✦  ${defPlayer.name} +4✦`);
     checkManaElimination(attPlayer.idx);
     // Succubus — Mana Drain on stalemate too
@@ -2097,6 +2213,8 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
       const stolen = Math.min(defPlayer.mana, 10);
       defPlayer.mana -= stolen;
       attPlayer.mana += stolen;
+      _trackBattleMana(attPlayer, +stolen);
+      _trackBattleMana(defPlayer, -stolen);
       log(`🧛 Mana Drain: ${attPlayer.name} steals ${stolen}✦ from ${defPlayer.name} (stalemate)`);
     }
     // Arcane Arbiter — Chaos Flux on stalemate
