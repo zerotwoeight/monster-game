@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.55';
+const SERVER_VERSION = 'v1.0.58';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -23,8 +23,8 @@ const TYPE_COLOR = {
 };
 
 // Strong[A] = type A beats
-const TYPE_STRONG = { Light:'Dark', Dark:'Arcane', Arcane:'Undead', Undead:'Beast', Beast:'Nature', Nature:'Light' };
-const TYPE_WEAK   = { Light:'Nature', Dark:'Light', Arcane:'Dark', Undead:'Arcane', Beast:'Undead', Nature:'Beast' };
+const TYPE_STRONG = { Light:'Undead', Dark:'Beast', Arcane:'Dark', Undead:'Arcane', Beast:'Nature', Nature:'Light' };
+const TYPE_WEAK   = { Light:'Nature', Dark:'Arcane', Arcane:'Undead', Undead:'Light', Beast:'Dark', Nature:'Beast' };
 
 // Master summon roster
 const ROSTER = [
@@ -107,10 +107,10 @@ const ROSTER = [
    rareDesc:'2× vs Dark & Undead · No weaknesses'},
   {id:'hex_stalker',      type:'Undead', type2:'Beast',  name:'Hex Stalker',      arch:'rare', rarity:'rare',
    hp:42, maxHp:42, atk:20, def:11, cost:25, gen:3, isSpecial:false,
-   rareDesc:'2× vs Beast & Nature · No weaknesses'},
+   rareDesc:'2× vs Arcane & Nature · No weaknesses'},
   {id:'verdant_sorcerer', type:'Arcane', type2:'Nature', name:'Verdant Sorcerer', arch:'rare', rarity:'rare',
    hp:30, maxHp:30, atk:24, def:12, cost:27, gen:4, isSpecial:false,
-   rareDesc:'2× vs Light & Undead · No weaknesses'},
+   rareDesc:'2× vs Dark & Light · No weaknesses'},
 ];
 
 const SPECIALS = ROSTER.filter(m => m.isSpecial);
@@ -1936,11 +1936,21 @@ const handlers = {
       broadcast();
     } else if (card.target === 'coup') {
       if (p.hand.length === 0) return sendError(ws, 'Coup requires at least one summon in hand to sacrifice');
+      // Pre-flight: need at least one occupied enemy tile
+      const hasOccupiedEnemyTile = G.board.some(t =>
+        t.ownerId !== null && t.ownerId !== G.currentPlayer &&
+        !G.players[t.ownerId]?.eliminated && t.summonInstance
+      );
+      if (!hasOccupiedEnemyTile) return sendError(ws, 'Coup requires at least one occupied enemy tile to target');
       G.wildCardPending = { cardId: 'coup', step: 'tile' };
       G.phase = 'resolve:wildcard_coup_tile';
       broadcast();
     } else if (card.target === 'shatter') {
-      G.wildCardPending = { cardId: 'shatter', step: 'pick', picks: [] };
+      // Pre-flight: need at least one stationed summon anywhere on the board
+      const totalStationed = G.board.filter(t => t.summonInstance).length;
+      if (totalStationed === 0) return sendError(ws, 'Shatter requires at least one stationed summon on the board');
+      const minPicks = Math.min(2, totalStationed);
+      G.wildCardPending = { cardId: 'shatter', step: 'pick', picks: [], minPicks };
       G.phase = 'resolve:wildcard_shatter';
       broadcast();
     }
@@ -2008,19 +2018,43 @@ const handlers = {
         log(`🃏 Plague — ${target.name}'s ${hit} summon${hit!==1?'s':''} each lose 15 HP`);
       }
       if (pending.cardId === 'poach') {
-        if (target.hand.length === 0) { log(`🃏 Poach fizzled — ${target.name} has no summons in hand`); }
-        else if (p.hand.length >= 5)  { log(`🃏 Poach failed — your hand is full`); }
-        else {
-          const idx = rand(0, target.hand.length - 1);
-          const stolen = target.hand.splice(idx, 1)[0];
-          p.hand.push(stolen);
-          notifyTarget('poach', 'Poach', `${p.name} stole ${stolen.name} from your hand!`, 'mid');
-          log(`🃏 Poach — ${p.name} stole ${stolen.name} from ${target.name}`);
+        if (target.hand.length === 0) {
+          // Target has no hand cards — refund the mana cost and block the action
+          const poachCard = (WILD_CARD_POOLS.mid || []).find(c => c.id === 'poach');
+          if (poachCard) p.mana += poachCard.cost;
+          G.wildCardPending = null;
+          log(`🃏 Poach blocked — ${target.name} has no summons in hand (mana refunded)`);
+          broadcast();
+          return sendError(ws, `${target.name} has no summons in hand — Poach refunded`);
         }
+        if (p.hand.length >= 5) {
+          log(`🃏 Poach failed — ${p.name}'s hand is full`);
+          G.wildCardPending = null;
+          advanceTurn();
+          return;
+        }
+        const idx = rand(0, target.hand.length - 1);
+        const stolen = target.hand.splice(idx, 1)[0];
+        p.hand.push(stolen);
+        notifyTarget('poach', 'Poach', `${p.name} stole ${stolen.name} from your hand!`, 'mid');
+        log(`🃏 Poach — ${p.name} stole ${stolen.name} from ${target.name}`);
       }
       G.wildCardPending = null;
       advanceTurn();
     }
+  },
+
+  wildcard_coup_cancel(ws, conn, data) {
+    if (G.phase !== 'resolve:wildcard_coup_tile' && G.phase !== 'resolve:wildcard_coup_summon') return sendError(ws, 'Wrong phase');
+    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    const p = G.players[G.currentPlayer];
+    // 50% refund — escape hatch when game forces a dead-end (no valid target tiles)
+    const coupCard = (WILD_CARD_POOLS.high || []).find(c => c.id === 'coup');
+    const refund = coupCard ? Math.floor(coupCard.cost / 2) : 30;
+    p.mana += refund;
+    G.wildCardPending = null;
+    log(`🃏 Coup cancelled — ${p.name} received ${refund}✦ refund (50%)`);
+    advanceTurn();
   },
 
   wildcard_coup_tile(ws, conn, data) {
@@ -2083,7 +2117,8 @@ const handlers = {
     if (picks.includes(tilePos)) return sendError(ws, 'Already selected');
     picks.push(tilePos);
     G.wildCardPending.picks = picks;
-    if (picks.length < 2) {
+    const minPicks = G.wildCardPending.minPicks || 2;
+    if (picks.length < minPicks) {
       broadcast();
       return;
     }

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.4.59</title>
+<title>Summoners Gambit — Player v0.4.64</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -504,8 +504,8 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 <script>
 // ─── CONSTANTS ─────────────────────────────────────────────────────────────
 const TYPE_COLOR = { Light:'#e0c07a', Dark:'#6b6b7a', Arcane:'#7f92e8', Undead:'#5fb3a4', Beast:'#d98a5a', Nature:'#3aaa5c' };
-const TYPE_STRONG = {Light:'Dark',Dark:'Arcane',Arcane:'Undead',Undead:'Beast',Beast:'Nature',Nature:'Light'};
-const TYPE_WEAK   = {Light:'Nature',Dark:'Light',Arcane:'Dark',Undead:'Arcane',Beast:'Undead',Nature:'Beast'};
+const TYPE_STRONG = {Light:'Undead',Dark:'Beast',Arcane:'Dark',Undead:'Arcane',Beast:'Nature',Nature:'Light'};
+const TYPE_WEAK   = {Light:'Nature',Dark:'Arcane',Arcane:'Undead',Undead:'Light',Beast:'Dark',Nature:'Beast'};
 const TYPE_ICON   = {Light:'✦',Dark:'◉',Arcane:'✶',Undead:'☠',Beast:'⚔',Nature:'❧'};
 const SPECIAL_ICONS = {start:'✦',temple:'❖',chest:'❖',heal:'❖',healing:'❖',mana:'❖','mana well':'❖',well:'❖'};
 const TILE_IMG = {
@@ -1030,9 +1030,9 @@ const MONSTER_LORE = {
   'Moss Golem':     { role:'Vanguard',lore:'Built from centuries of accumulated forest material, the Moss Golem is slow but deeply difficult to remove from a tile it has claimed. Prioritises defensive durability above all — the kind of unit that is still standing long after the board around it has changed completely.', ability:null },
 
   // ── DUAL-ELEMENT RARES ──
-  'Luminar Operative': { role:'Rare · Light / Arcane', lore:'The Luminar Operative exists at the intersection of divine radiance and arcane precision — a being that channels both orders of power without contradiction. Its Light burns away Darkness while its Arcane wards dissolve Undead bindings. Enemies on either front find it an equally punishing opponent, with no easy angle of attack in return.', ability:'Dual Element: 2× vs Dark & Undead. Mutual weaknesses cancel — no weak side.' },
-  'Hex Stalker':     { role:'Rare · Undead / Beast', lore:'When a predator dies cursed, something worse comes back. The Hex Stalker retains the feral hunting instincts of the creature it was, now fused with the relentless persistence of the undead. It haunts the edges of the board — lethal to beasts that rely on numbers and nature that relies on endurance, indifferent to everything else.', ability:'Dual Element: 2× vs Beast & Nature. Mutual weaknesses cancel — no weak side.' },
-  'Verdant Sorcerer':{ role:'Rare · Arcane / Nature', lore:'A practitioner who stopped drawing the line between learned magic and wild magic a long time ago. The Verdant Sorcerer has grown roots into both traditions deep enough that neither feels like a compromise. It dismantles Light with nature\'s hunger and unravels Undead with arcane precision — a pairing most opponents never see coming.', ability:'Dual Element: 2× vs Light & Undead. Mutual weaknesses cancel — no weak side.' },
+  'Luminar Operative': { role:'Rare · Light / Arcane', lore:'The Luminar Operative exists at the intersection of divine radiance and arcane precision — a being that channels both orders of power without contradiction. Its Light unravels Undead bindings while its Arcane precision dismantles Dark sorcery. Enemies on either front find it an equally punishing opponent, with no easy angle of attack in return.', ability:'Dual Element: 2× vs Undead & Dark. Mutual weaknesses cancel — no weak side.' },
+  'Hex Stalker':     { role:'Rare · Undead / Beast', lore:'When a predator dies cursed, something worse comes back. The Hex Stalker retains the feral hunting instincts of the creature it was, now fused with the relentless persistence of the undead. It haunts the edges of the board — its Undead essence dismantles Arcane constructs while its Beast fury tears through Nature\'s endurance, indifferent to everything else.', ability:'Dual Element: 2× vs Arcane & Nature. Mutual weaknesses cancel — no weak side.' },
+  'Verdant Sorcerer':{ role:'Rare · Arcane / Nature', lore:'A practitioner who stopped drawing the line between learned magic and wild magic a long time ago. The Verdant Sorcerer has grown roots into both traditions deep enough that neither feels like a compromise. It dismantles Dark sorcery with arcane counter-magic and devours Light with nature\'s hunger — a pairing most opponents never see coming.', ability:'Dual Element: 2× vs Dark & Light. Mutual weaknesses cancel — no weak side.' },
 };
 
 // ─── CARD DETAIL OVERLAY ────────────────────────────────────────────────────
@@ -1105,8 +1105,8 @@ function showCardDetail(iid) {
         <div style="margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:10px;font-size:11px;line-height:1.6;">
           <div style="color:var(--text-mute);font-size:9px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">Type Matchup</div>
           ${m.rarity === 'rare' ? (() => {
-            const TS = {Light:'Dark',Dark:'Arcane',Arcane:'Undead',Undead:'Beast',Beast:'Nature',Nature:'Light'};
-            const TW = {Light:'Nature',Dark:'Light',Arcane:'Dark',Undead:'Arcane',Beast:'Undead',Nature:'Beast'};
+            const TS = {Light:'Undead',Dark:'Beast',Arcane:'Dark',Undead:'Arcane',Beast:'Nature',Nature:'Light'};
+            const TW = {Light:'Nature',Dark:'Arcane',Arcane:'Undead',Undead:'Light',Beast:'Dark',Nature:'Beast'};
             const ALL = ['Light','Dark','Arcane','Undead','Beast','Nature'];
             function singleMod(at, dt) { return TS[at]===dt?2:TW[at]===dt?0.5:1; }
             const strongs=[], weaks=[];
@@ -1330,7 +1330,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.59</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.64</div>
     </div>
 
     <div class="room-code-group">
@@ -1402,7 +1402,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.59</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.64</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -2858,12 +2858,10 @@ function toggleHelp() {
 
 function buildHelpWheel() {
   const wrap = document.getElementById('help-wheel');
-  if (!wrap || wrap._built) return;
-  wrap._built = true;
+  if (!wrap) return;
 
-  const W = 220, H = 220, cx = 110, cy = 112, R = 72, nr = 22;
-  const types = ['Light','Dark','Arcane','Undead','Beast','Nature'];
-  const strong = TYPE_STRONG;
+  const W = 230, H = 230, cx = 115, cy = 117, R = 76, nr = 24;
+  const types = ['Light','Undead','Arcane','Dark','Beast','Nature'];
 
   // Hexagon positions: clockwise from top
   const angles = [-90,-30,30,90,150,210].map(d => d*Math.PI/180);
@@ -2876,37 +2874,36 @@ function buildHelpWheel() {
   // Arrow markers
   const defs = types.map((t,i) =>
     `<marker id="ha${i}" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto">
-       <polygon points="0 0,7 2.5,0 5" fill="${TYPE_COLOR[t]}" opacity=".75"/>
+       <polygon points="0 0,7 2.5,0 5" fill="${TYPE_COLOR[t]}" opacity=".9"/>
      </marker>`
   ).join('');
 
-  // Arrows: each node → the node it beats (next in cycle, clockwise)
+  // Arrows: each node → the node it beats
   const arrows = types.map((t,i) => {
     const from = pos[i];
-    const toT  = strong[t];
-    const to   = pos[types.indexOf(toT)];
+    const to   = pos[types.indexOf(TYPE_STRONG[t])];
     const dx = to.x-from.x, dy = to.y-from.y;
     const len = Math.sqrt(dx*dx+dy*dy);
     const nx = dx/len, ny = dy/len;
-    const sx = (from.x + nx*(nr+2)).toFixed(1);
-    const sy = (from.y + ny*(nr+2)).toFixed(1);
-    const ex = (to.x - nx*(nr+8)).toFixed(1);
-    const ey = (to.y - ny*(nr+8)).toFixed(1);
-    return `<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" stroke="${from.c}" stroke-width="1.8" opacity=".72" marker-end="url(#ha${i})"/>`;
+    const sx = (from.x + nx*(nr+3)).toFixed(1);
+    const sy = (from.y + ny*(nr+3)).toFixed(1);
+    const ex = (to.x - nx*(nr+9)).toFixed(1);
+    const ey = (to.y - ny*(nr+9)).toFixed(1);
+    return `<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" stroke="${from.c}" stroke-width="2" opacity=".8" marker-end="url(#ha${i})"/>`;
   }).join('');
 
-  // Nodes
+  // Nodes — richer fill, slightly larger stroke
   const nodes = pos.map(p => {
     const lx = p.x.toFixed(1), ly = (p.y+3.5).toFixed(1);
-    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${nr}" fill="${p.c}1a" stroke="${p.c}" stroke-width="1.5"/>
-            <text x="${lx}" y="${ly}" text-anchor="middle" font-family="Cinzel,serif" font-size="9" font-weight="700" fill="${p.c}">${p.t}</text>`;
+    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${nr}" fill="${p.c}28" stroke="${p.c}" stroke-width="2"/>
+            <text x="${lx}" y="${ly}" text-anchor="middle" font-family="Cinzel,serif" font-size="9.5" font-weight="700" fill="${p.c}">${p.t}</text>`;
   }).join('');
 
-  wrap.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="200" height="200">
+  wrap.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="210" height="210">
     <defs>${defs}</defs>
     ${arrows}
     ${nodes}
-    <text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="8.5" fill="rgba(255,255,255,.22)" font-family="Inter,sans-serif">2× clockwise</text>
+    <text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="8" fill="rgba(255,255,255,.18)" font-family="Inter,sans-serif">2× clockwise</text>
   </svg>`;
 }
 
@@ -3103,16 +3100,27 @@ function renderWildCardTarget() {
     }
   } else {
     html += `<div class="wc-sub">Pick a target player</div><div class="wc-target-list">`;
+    let validTargets = 0;
     for (const pl of G.players) {
       if (pl.idx === myIdx) continue;
-      if (pl.eliminated) continue; // don't offer eliminated players as valid targets
+      if (pl.eliminated) continue;
+      // Poach: only show players who actually have hand cards
+      if (pending.cardId === 'poach' && pl.handSize === 0) continue;
+      // Plague: only show players who have stationed summons
+      if (pending.cardId === 'plague' && pl.stationedCount === 0) continue;
+      validTargets++;
       html += `<div class="wc-target-row" style="border-left:3px solid ${pl.color}" onclick="doWildCardTargetPlayer(${pl.idx})">
         <svg width="18" height="18" viewBox="0 0 24 24" style="flex-shrink:0">${sigilShape(pl.idx,12,12,6,pl.color)}</svg>
         <span style="color:${pl.color};font-weight:600">${pl.name}</span>
         <span style="font-size:11px;color:var(--text-mute);margin-left:auto">${pl.mana}✦ · ${pl.tileCount} tiles</span>
       </div>`;
     }
-    html += `</div>`;
+    if (validTargets === 0) {
+      html += `<div style="color:var(--text-mute);font-size:12px;padding:20px 16px;text-align:center">No valid targets available.</div>`;
+      html += `</div><button class="action-btn secondary" onclick="send('wildcard_skip')" style="margin:16px auto;display:block;min-width:160px">Skip</button>`;
+    } else {
+      html += `</div>`;
+    }
   }
   document.getElementById('main-content').innerHTML = html;
 }
@@ -3123,10 +3131,12 @@ function renderWildCardCoupTile() {
   document.getElementById('main-content').classList.add('no-hand');
   document.getElementById('action-bar').classList.remove('visible');
 
-  const enemyTiles = G.board.filter(t => t.ownerId !== null && t.ownerId !== myIdx);
-  let html = `<div class="wc-header">🃏 Coup</div><div class="wc-sub">Choose an enemy-owned tile to seize</div><div class="wc-target-list">`;
-  if (enemyTiles.length === 0) {
-    html += `<div style="color:var(--text-mute);font-size:12px;padding:20px 16px;text-align:center">No enemy tiles.</div>`;
+  // Only show occupied enemy tiles (server also enforces this)
+  const enemyTiles = G.board.filter(t => t.ownerId !== null && t.ownerId !== myIdx && t.summon);
+  const hasTargets = enemyTiles.length > 0;
+  let html = `<div class="wc-header">🃏 Coup</div><div class="wc-sub">Choose an occupied enemy tile to seize (sacrifice one summon from hand)</div><div class="wc-target-list">`;
+  if (!hasTargets) {
+    html += `<div style="color:var(--text-mute);font-size:12px;padding:20px 16px;text-align:center">No occupied enemy tiles — no valid target.</div>`;
   }
   for (const t of enemyTiles) {
     const owner = G.players[t.ownerId];
@@ -3134,10 +3144,13 @@ function renderWildCardCoupTile() {
     html += `<div class="wc-target-row" style="border-left:3px solid ${owner?.color||'#aaa'}" onclick="doWildCardCoupTile(${t.pos})">
       <span style="font-size:11px;color:var(--text-mute)">Tile ${t.pos} · ${elem}</span>
       <span style="margin-left:6px;font-weight:600;color:${owner?.color||'#aaa'}">${owner?.name||'?'}</span>
-      ${t.summon ? `<span style="font-size:10px;color:var(--text-mute);margin-left:auto">${t.summon.name} · ${t.summon.hp}HP</span>` : ''}
+      <span style="font-size:10px;color:var(--text-mute);margin-left:auto">${t.summon.name} · ${t.summon.hp}HP</span>
     </div>`;
   }
   html += `</div>`;
+  if (!hasTargets) {
+    html += `<button onclick="doWildCardCoupCancel()" style="margin:12px 20px 4px;width:calc(100% - 40px);padding:14px;background:var(--surface);border:1px solid var(--border2);border-radius:10px;color:#c9922a;font-size:13px;font-family:'Cinzel',serif;cursor:pointer;letter-spacing:.08em;">Cancel Coup (50% Mana Refund)</button>`;
+  }
   document.getElementById('main-content').innerHTML = html;
 }
 
@@ -3172,8 +3185,9 @@ function renderWildCardShatter() {
   updateHandStrip(false);
   document.getElementById('main-content').classList.add('no-hand');
   const picks = G.wildCardPending?.picks || [];
+  const minPicks = G.wildCardPending?.minPicks ?? 2;
 
-  let html = `<div class="wc-header">🃏 Shatter</div><div class="wc-sub">Choose 2 stationed summons to destroy (${picks.length}/2 selected)</div><div class="wc-target-list">`;
+  let html = `<div class="wc-header">🃏 Shatter</div><div class="wc-sub">Choose ${minPicks === 1 ? '1 stationed summon' : '2 stationed summons'} to destroy (${picks.length}/${minPicks} selected)</div><div class="wc-target-list">`;
   const stationedTiles = G.board.filter(t => t.summon);
   if (stationedTiles.length === 0) {
     html += `<div style="color:var(--text-mute);font-size:12px;padding:20px 16px;text-align:center">No stationed summons.</div>`;
@@ -3191,7 +3205,7 @@ function renderWildCardShatter() {
 
   document.getElementById('main-content').innerHTML = html;
   const ab = document.getElementById('action-bar');
-  if (picks.length === 2) {
+  if (picks.length >= minPicks) {
     ab.classList.add('visible');
     ab.innerHTML = `<button class="action-btn gold-btn" style="width:100%" onclick="doWildCardShatterConfirm()">Confirm Shatter</button>`;
   } else {
@@ -3206,11 +3220,13 @@ function doWildCardTargetTile(pos) { send('wildcard_target', { tilePos: pos }); 
 function doWildCardCoupTile(pos) { send('wildcard_coup_tile', { tilePos: pos }); }
 function doWildCardCoupSummon(iid) { send('wildcard_coup_summon', { iid }); }
 function doWildCardCoupSkipSummon() { send('wildcard_coup_skip_summon', {}); }
+function doWildCardCoupCancel() { send('wildcard_coup_cancel', {}); }
 function doWildCardShatter(pos) { send('wildcard_shatter', { tilePos: pos }); }
 function doWildCardShatterConfirm() {
   const picks = G.wildCardPending?.picks || [];
-  if (picks.length < 2) return;
-  // Already sent two picks to server — server confirms on second pick
+  const minPicks = G.wildCardPending?.minPicks ?? 2;
+  if (picks.length < minPicks) return;
+  // Already sent picks to server — server confirms on last pick
   // This button is cosmetic; the last send already triggered completion
 }
 

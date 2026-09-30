@@ -484,8 +484,8 @@ const SFX = (() => {
 // ─── Constants ────────────────────────────────────────────────────────────────────────────────
 const TYPE_COLOR  = {Light:'#e0c07a',Dark:'#6b6b7a',Arcane:'#7f92e8',Undead:'#5fb3a4',Beast:'#d98a5a',Nature:'#3aaa5c'};
 const TYPE_ICON   = {Light:'✦',Dark:'◉',Arcane:'✶',Undead:'☠',Beast:'⚔',Nature:'❧'};
-const TYPE_STRONG = {Light:'Dark',Dark:'Arcane',Arcane:'Undead',Undead:'Beast',Beast:'Nature',Nature:'Light'};
-const TYPE_WEAK   = {Light:'Nature',Dark:'Light',Arcane:'Dark',Undead:'Arcane',Beast:'Undead',Nature:'Beast'};
+const TYPE_STRONG = {Light:'Undead',Dark:'Beast',Arcane:'Dark',Undead:'Arcane',Beast:'Nature',Nature:'Light'};
+const TYPE_WEAK   = {Light:'Nature',Dark:'Arcane',Arcane:'Undead',Undead:'Light',Beast:'Dark',Nature:'Beast'};
 const SPECIAL_ICONS = {start:'✦',temple:'❖',chest:'❖',heal:'❖',healing:'❖',mana:'❖','mana well':'❖',well:'❖'};
 const TILE_IMG = {
   Light:'/img/tiles/tile-light.png', Dark:'/img/tiles/tile-dark.png',
@@ -1170,7 +1170,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.49 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.4.59</div>`;
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.51 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.4.64</div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -1344,7 +1344,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.49</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.51</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
