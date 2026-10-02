@@ -51,10 +51,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .mute-btn:hover{background:rgba(145,132,217,.22);border-color:rgba(145,132,217,.5);}
 
 /* Main */
-.main{flex:1;display:flex;overflow:hidden;}
+.main{flex:1;display:flex;overflow:visible;}
 
 /* Board area */
-.board-area{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.board-area{flex:1;position:relative;overflow:visible;display:flex;align-items:center;justify-content:center;}
 .board-bg{position:absolute;inset:0;background-size:cover;background-position:center;}
 .board-bg::after{content:'';position:absolute;inset:0;background:rgba(10,10,20,.18);}
 
@@ -84,7 +84,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .tile-target svg{position:absolute;inset:0;}
 
 /* Player token */
-.player-token{position:absolute;width:36px;height:36px;border-radius:50%;background:rgba(13,14,28,.9);border:2.5px solid;box-shadow:0 0 12px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;top:50%;left:50%;margin-left:-18px;margin-top:-18px;pointer-events:none;z-index:10;}
+.player-token{position:absolute;width:140px;height:140px;background:none;border:none;box-shadow:none;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:10;--tok-pos:translate(0px,0px);}
 /* Token hop: lands with a bounce pop */
 @keyframes tokenHopIn{0%{opacity:.55;transform:var(--tok-pos) scale(1.15);}65%{opacity:1;transform:var(--tok-pos) scale(.94);}100%{transform:var(--tok-pos) scale(1);}}
 .player-token.hopping{animation:tokenHopIn 190ms cubic-bezier(.34,1.56,.64,1);}
@@ -104,6 +104,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .center-idle{display:flex;flex-direction:column;align-items:center;gap:12px;}
 .arcane-die{width:108px;height:108px;border-radius:20px;background:linear-gradient(145deg,#2a1f4a,#1a1230);border:2px solid var(--gold);box-shadow:0 0 30px rgba(145,132,217,.35);display:flex;align-items:center;justify-content:center;position:relative;}
 .arcane-die.die-cycling{animation:boardDieCycle .09s ease-in-out;}
+.die-hit-lottie{position:absolute;width:600px;height:600px;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:10;display:none;opacity:1;transition:opacity .25s ease-out;}
 @keyframes boardDieCycle{0%{transform:scale(1.08) rotate(4deg)}50%{transform:scale(0.91) rotate(-4deg)}100%{transform:scale(1) rotate(0)}}
 .arcane-die.die-landed{animation:boardDieLand .45s cubic-bezier(.36,.07,.19,.97);}
 @keyframes boardDieLand{0%{transform:scale(1.45) rotate(-6deg)}35%{transform:scale(0.86) rotate(5deg)}65%{transform:scale(1.12) rotate(-2deg)}100%{transform:scale(1) rotate(0)}}
@@ -361,6 +362,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .kofi-corner:hover{opacity:1;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 </head>
 <body>
 
@@ -589,29 +591,26 @@ function renderBoardCard(m) {
 function playerSigilSVG(player, size=20){
   const c = player.color;
   const i = (player.idx !== undefined ? player.idx : 0) % 6;
-  const s = size, h = s/2;
-  // Distinct geometric shape per player slot
+  const s = size;
   if(i===0){
-    // Circle (ring)
     return `<svg width="${s}" height="${s}" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5" fill="${c}33" stroke="${c}" stroke-width="2"/><circle cx="10" cy="10" r="3" fill="${c}" opacity=".85"/></svg>`;
   } else if(i===1){
-    // Diamond
     return `<svg width="${s}" height="${s}" viewBox="0 0 20 20"><polygon points="10,2 18,10 10,18 2,10" fill="${c}44" stroke="${c}" stroke-width="1.8"/><polygon points="10,6 14,10 10,14 6,10" fill="${c}" opacity=".85"/></svg>`;
   } else if(i===2){
-    // Triangle
     return `<svg width="${s}" height="${s}" viewBox="0 0 20 20"><polygon points="10,2 18.5,17.5 1.5,17.5" fill="${c}44" stroke="${c}" stroke-width="1.8"/><polygon points="10,7 15,16 5,16" fill="${c}" opacity=".85"/></svg>`;
   } else if(i===3){
-    // Star
     return `<svg width="${s}" height="${s}" viewBox="0 0 20 20"><polygon points="10,1 12.5,7.5 19.5,7.5 14,12 16,18.5 10,14.5 4,18.5 6,12 0.5,7.5 7.5,7.5" fill="${c}55" stroke="${c}" stroke-width="1.2"/><polygon points="10,4.5 11.8,9.5 17,9.5 12.8,12.5 14.4,17.5 10,14.5 5.6,17.5 7.2,12.5 3,9.5 8.2,9.5" fill="${c}" opacity=".85"/></svg>`;
   } else if(i===4){
-    // Pentagon
     const pts=(r,cy=10)=>Array.from({length:5},(_,j)=>{const a=j*72-90;return `${10+Math.cos(a*Math.PI/180)*r},${cy+Math.sin(a*Math.PI/180)*r}`;}).join(' ');
     return `<svg width="${s}" height="${s}" viewBox="0 0 20 20"><polygon points="${pts(8.5)}" fill="${c}44" stroke="${c}" stroke-width="1.8"/><polygon points="${pts(4.5)}" fill="${c}" opacity=".85"/></svg>`;
   } else {
-    // Hexagon
     const pts=r=>Array.from({length:6},(_,j)=>{const a=j*60-30;return `${10+Math.cos(a*Math.PI/180)*r},${10+Math.sin(a*Math.PI/180)*r}`;}).join(' ');
     return `<svg width="${s}" height="${s}" viewBox="0 0 20 20"><polygon points="${pts(8.5)}" fill="${c}44" stroke="${c}" stroke-width="1.8"/><polygon points="${pts(4.5)}" fill="${c}" opacity=".85"/></svg>`;
   }
+}
+function playerTokenSVG(player, size=40){
+  const i = ((player.idx !== undefined ? player.idx : 0) % 6) + 1;
+  return `<img src="/img/svg/Player${i}.svg" width="${size}" height="${size}" style="display:block;pointer-events:none;" alt="P${i}">`;
 }
 
 // ─── Tile mini summon card ─────────────────────────────────────────────────────────────────────
@@ -717,10 +716,46 @@ function startBoardDieAnimation(finalVal, fromPos, toPos, animPlayerIdx) {
       dieEl.classList.remove('die-cycling');
       dieEl.classList.add('die-landed');
       SFX.dieLand(finalVal);
-      faceEl.textContent = finalVal;
-      faceEl.classList.remove('board-die-flash');
-      void faceEl.offsetWidth;
-      faceEl.classList.add('board-die-flash');
+
+      // ── Lottie hit effect — plays before number reveals ──────────────────
+      const lottieEl = document.getElementById('board-die-hit-lottie');
+      let lottieDuration = 0;
+      if (lottieEl && typeof lottie !== 'undefined') {
+        lottieEl.style.display = 'block';
+        lottieEl.innerHTML = '';
+        const hitAnim = lottie.loadAnimation({
+          container: lottieEl,
+          renderer: 'svg',
+          loop: false,
+          autoplay: true,
+          path: '/animations/Hit-effect.json'
+        });
+        // Estimate duration from animation data; fallback to 600ms
+        hitAnim.addEventListener('DOMLoaded', () => {
+          const frames = hitAnim.totalFrames || 0;
+          const fps = hitAnim.frameRate || 30;
+          lottieDuration = frames > 0 ? Math.round((frames / fps) * 1000) : 600;
+        });
+        hitAnim.addEventListener('complete', () => {
+          lottieEl.style.opacity = '0';
+          setTimeout(() => {
+            lottieEl.style.display = 'none';
+            lottieEl.style.opacity = '1';
+            hitAnim.destroy();
+          }, 250);
+        });
+        lottieDuration = 600; // safe initial estimate while DOMLoaded fires
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
+      // Reveal number after Lottie completes (or immediately if no Lottie)
+      setTimeout(() => {
+        faceEl.textContent = finalVal;
+        faceEl.classList.remove('board-die-flash');
+        void faceEl.offsetWidth;
+        faceEl.classList.add('board-die-flash');
+      }, lottieDuration);
+
       setTimeout(() => {
         boardShowIdleDie = false;
         boardRollAnimating = false;
@@ -886,6 +921,38 @@ function connect(){
   };
 }
 
+// ─── Battle hit animation helpers ───────────────────────────────────────────────────────────
+function getHitAnim(monster) {
+  if (!monster) return null;
+  // Rare monster ID overrides
+  if (monster.id === 'hex_stalker')      return 'Hit_Claw';
+  if (monster.id === 'verdant_sorcerer') return 'Hit_Magic';
+  if (monster.id === 'seraphim')         return 'Hit_Magic';
+  // Element fallback
+  const map = { Beast:'Hit_Claw', Nature:'Hit_Claw', Dark:'Hit_Slash', Undead:'Hit_Slash', Light:'Hit_Magic', Arcane:'Hit_Magic' };
+  return map[monster.type] || null;
+}
+
+function playCardHitAnim(cardEl, animFile) {
+  if (!cardEl || !animFile || typeof lottie === 'undefined') return;
+  const container = document.createElement('div');
+  container.style.cssText = 'position:absolute;width:330px;height:330px;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:30;filter:brightness(0) invert(1);';
+  cardEl.style.position = 'relative';
+  cardEl.appendChild(container);
+  const anim = lottie.loadAnimation({
+    container,
+    renderer: 'svg',
+    loop: false,
+    autoplay: true,
+    path: `/animations/${animFile}.json`
+  });
+  anim.addEventListener('complete', () => {
+    anim.destroy();
+    container.remove();
+  });
+}
+// ────────────────────────────────────────────────────────────────────────────────────────────
+
 // ─── 5-beat battle animation ────────────────────────────────────────────────────────────────
 async function runBattleAnimation(lb, attPlayer, defPlayer, overlay) {
   const hasCounter = lb.outcome === 'defender_wins' || lb.outcome === 'stalemate';
@@ -982,7 +1049,7 @@ async function runBattleAnimation(lb, attPlayer, defPlayer, overlay) {
     {transform:'translateX(0) scale(1)'}
   ],{duration:330,easing:'ease'});
   shock('rgba(255,180,60,.75)');
-  setTimeout(()=>{ if (!skipped){ shake(defCard,-1); floatDmg(defDmg); } },130);
+  setTimeout(()=>{ if (!skipped){ shake(defCard,-1); floatDmg(defDmg); playCardHitAnim(defCard, getHitAnim(lb.attM)); } },130);
 
   await wait(hasCounter ? 390 : 330); if (skipped) return;
 
@@ -994,7 +1061,7 @@ async function runBattleAnimation(lb, attPlayer, defPlayer, overlay) {
       {transform:'translateX(0) scale(1)'}
     ],{duration:330,easing:'ease'});
     shock('rgba(100,140,255,.75)');
-    setTimeout(()=>{ if (!skipped){ shake(attCard,1); floatDmg(attDmg); } },130);
+    setTimeout(()=>{ if (!skipped){ shake(attCard,1); floatDmg(attDmg); playCardHitAnim(attCard, getHitAnim(lb.defM)); } },130);
     await wait(390); if (skipped) return;
   }
 
@@ -1170,7 +1237,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.51 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.4.64</div>`;
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.69 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.4.64</div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -1344,7 +1411,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.51</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.69</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -1475,26 +1542,45 @@ function renderGame(app){
     wheel.appendChild(div);
   });
 
-  // Render player tokens in a separate pass using effective positions
+  // Render player tokens — absolute layer INSIDE the wheel (wheel-space coordinates).
+  // No getBoundingClientRect needed: the wheel is still being built (not yet in DOM),
+  // and scale-root handles all viewport scaling automatically.
+  // Art-center ring: tile outer edge = R+51; art center 30.5px inward → R+20.5 = 336.5px.
+  // board-area overflow:hidden doesn't clip tile-0 tokens because the wheel is centered
+  // with a 50px margin above (topbar=80px → board-area=820px → (820-720)/2 = 50px margin),
+  // and the token at tile-0 only reaches 46.5px above the wheel top edge.
+  const TOKEN_RING_R = R + 20.5; // 336.5px from wheel center (wheel-space, unscaled)
+
+  // Clean up any old body-level overlay from a prior approach
+  const _oldLayer = document.getElementById('board-token-layer');
+  if (_oldLayer) _oldLayer.remove();
+
+  const tokLayer = document.createElement('div');
+  tokLayer.id = 'wheel-token-layer';
+  tokLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:20;overflow:visible;';
+
   G.players.forEach((p, pi) => {
     const tileIdx = effPos[pi];
-    const angleDeg = (tileIdx / N) * 360;
-    const angleRad = angleDeg * Math.PI / 180;
+    const angleRad = (tileIdx / N) * 2 * Math.PI;
+
     // Spread tokens that share the same tile
     const tokensAtTile = G.players.filter((q, qi) => effPos[qi] === tileIdx);
     const ti = tokensAtTile.findIndex(q => q.idx === p.idx);
-    const offsetX = ti * 15 - 7 * tokensAtTile.length;
+    const offsetX = (ti - (tokensAtTile.length - 1) / 2) * 15;
 
     const isHopping = boardTokenAnim && boardTokenAnim.playerIdx === pi;
-    // --tok-pos is used by the CSS animation to start transform from correct position
-    const posTransform = `translate(${Math.sin(angleRad)*R}px,${-Math.cos(angleRad)*R}px) translate(${offsetX}px,0px)`;
+
+    // Token center in wheel coords (360,360 = wheel center) — flag up, pin at art center
+    const cx = 360 + TOKEN_RING_R * Math.sin(angleRad) + offsetX;
+    const cy = 380 - TOKEN_RING_R * Math.cos(angleRad);
 
     const tok = document.createElement('div');
     tok.className = 'player-token' + (isHopping ? ' hopping' : '');
-    tok.style.cssText = `border-color:${p.color};box-shadow:0 0 10px ${p.color}66;transform:${posTransform};--tok-pos:${posTransform};`;
-    tok.innerHTML = playerSigilSVG(p, 18);
-    wheel.appendChild(tok);
+    tok.style.cssText = `left:${cx - 70}px;top:${cy - 140}px;`; // anchor BOTTOM of token box to ring (base at cy)
+    tok.innerHTML = playerTokenSVG(p, 140);
+    tokLayer.appendChild(tok);
   });
+  wheel.appendChild(tokLayer); // append layer to wheel after tiles
 
   // Wheel center — idle die or battle overlay
   const wc = document.createElement('div');
@@ -1541,10 +1627,11 @@ function renderGame(app){
     </div>`;
   } else {
     wc.innerHTML = `<div class="center-idle">
-      <div class="arcane-die" id="board-anim-die">
+      <div class="arcane-die" id="board-anim-die" style="position:relative;overflow:visible;">
         <div class="die-pip pip-tl"></div><div class="die-pip pip-tr"></div>
         <div class="die-pip pip-bl"></div><div class="die-pip pip-br"></div>
         <div class="die-face" id="board-die-face">${boardShowIdleDie ? '?' : (lastRoll != null ? lastRoll : '?')}</div>
+        <div class="die-hit-lottie" id="board-die-hit-lottie"></div>
       </div>
       <div class="center-title">Summoners Gambit</div>
       <div class="center-sub">${curPlayer ? curPlayer.name + ' — ' + phaseLabel : 'Waiting…'}</div>

@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 140 140">
+  <!-- Generator: Adobe Illustrator 30.8.2, SVG Export Plug-In . SVG Version: 2.1.4 Build 7)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: url(#linear-gradient2);
+      }
+
+      .st1 {
+        fill: #2a1f4a;
+      }
+
+      .st2 {
+        fill: url(#linear-gradient1);
+      }
+
+      .st3 {
+        fill: #cfd3e5;
+      }
+
+      .st4 {
+        stroke: #2a1f4a;
+        stroke-width: 3px;
+      }
+
+      .st4, .st5, .st6 {
+        fill: none;
+        stroke-miterlimit: 10;
+      }
+
+      .st7 {
+        fill: #2b2e3c;
+      }
+
+      .st5, .st6 {
+        stroke: #1a1710;
+        stroke-linecap: round;
+      }
+
+      .st8 {
+        fill: #1a1710;
+        isolation: isolate;
+        opacity: .2;
+      }
+
+      .st9 {
+        fill: url(#linear-gradient3);
+      }
+
+      .st10 {
+        fill: #a97b40;
+      }
+
+      .st6 {
+        stroke-width: .5px;
+      }
+
+      .st11 {
+        fill: url(#linear-gradient);
+      }
+    </style>
+    <linearGradient id="linear-gradient" x1="70" y1="666.4" x2="70.37" y2="716.94" gradientTransform="translate(0 -580)" gradientUnits="userSpaceOnUse">
+      <stop offset=".38" stop-color="#3f424d"/>
+      <stop offset="1" stop-color="#000"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient1" x1="68.18" y1="662.65" x2="72.24" y2="662.65" gradientTransform="translate(0 -580)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3f424d"/>
+      <stop offset=".53" stop-color="#000"/>
+      <stop offset="1" stop-color="#3f424d"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient2" x1="70.39" y1="552.76" x2="70.19" y2="586.5" gradientTransform="translate(0 -580)" gradientUnits="userSpaceOnUse">
+      <stop offset=".64" stop-color="#fff"/>
+      <stop offset=".68" stop-color="#efefef"/>
+      <stop offset=".74" stop-color="#c8c8c8"/>
+      <stop offset=".83" stop-color="#888"/>
+      <stop offset=".94" stop-color="#313131"/>
+      <stop offset="1" stop-color="#000"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient3" x1="70.41" y1="584.56" x2="70.11" y2="637.28" gradientTransform="translate(0 -580)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f0c060"/>
+      <stop offset=".22" stop-color="#e7e9f2"/>
+      <stop offset=".24" stop-color="#e7e6e7"/>
+      <stop offset=".3" stop-color="#e9dcc3"/>
+      <stop offset=".38" stop-color="#ebd3a4"/>
+      <stop offset=".46" stop-color="#edcc8b"/>
+      <stop offset=".54" stop-color="#eec678"/>
+      <stop offset=".64" stop-color="#efc26a"/>
+      <stop offset=".77" stop-color="#efc062"/>
+      <stop offset="1" stop-color="#f0c060"/>
+    </linearGradient>
+  </defs>
+  <g>
+    <path class="st7" d="M94.66,114.19c-2.83-8.79-12.7-15.28-24.45-15.28s-21.61,6.49-24.45,15.28h-.82v6.45h.05c.81,10.71,11.79,19.18,25.22,19.18s24.4-8.48,25.22-19.18h.05v-6.45h-.82,0Z"/>
+    <ellipse class="st11" cx="70.21" cy="114.66" rx="25.26" ry="20.46"/>
+  </g>
+  <path class="st2" d="M70.03,112.41h.35c1.02,0,1.86-.83,1.86-1.86v-57.65h-4.06v57.65c0,1.02.83,1.86,1.86,1.86h0Z"/>
+  <path class="st6" d="M68.18,52.9v57.65c0,1.02.83,1.86,1.86,1.86h.35c.61,0,1.15-.29,1.48-.74"/>
+  <path class="st5" d="M68.35,110.64"/>
+  <path class="st5" d="M68.35,55.69"/>
+  <g>
+    <path class="st0" d="M48.87.57h42.68c1.12,0,2.03.91,2.03,2.03v.07c0,1.12-.91,2.03-2.03,2.03h-42.68c-1.12,0-2.03-.91-2.03-2.03v-.07c0-1.12.91-2.03,2.03-2.03Z"/>
+    <polygon class="st10" points="88.02 81.98 70.21 53.93 52.4 81.98 52.4 .57 88.02 .57 88.02 81.98"/>
+    <polygon class="st9" points="88.02 79.93 70.21 52.59 52.4 79.93 52.4 .57 88.02 .57 88.02 79.93"/>
+    <path class="st3" d="M92.81,3.05c-.22,0-.4-.18-.4-.4,0-.4-.32-.72-.72-.72-.22,0-.4-.18-.4-.4s.18-.4.4-.4c.84,0,1.53.69,1.53,1.53,0,.22-.18.4-.4.4Z"/>
+    <rect class="st8" x="52.4" y=".57" width="35.61" height=".89"/>
+  </g>
+  <circle class="st4" cx="70.21" cy="22.71" r="12.42"/>
+  <polygon class="st1" points="70.21 15.71 71.75 20.44 76.72 20.44 72.7 23.36 74.23 28.09 70.21 25.17 66.19 28.09 67.72 23.36 63.7 20.44 68.67 20.44 70.21 15.71"/>
+</svg>

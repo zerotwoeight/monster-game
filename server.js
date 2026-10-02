@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.58';
+const SERVER_VERSION = 'v1.0.59';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -2291,6 +2291,10 @@ const MIME = {
   '.css':  'text/css',
   '.png':  'image/png',
   '.jpg':  'image/jpeg',
+  '.gif':  'image/gif',
+  '.svg':  'image/svg+xml',
+  '.json': 'application/json',
+  '.mp3':  'audio/mpeg',
   '.ico':  'image/x-icon',
 };
 
@@ -2362,7 +2366,7 @@ function wsParseFrame(buf) {
 const PUBLIC = path.join(__dirname, 'public');
 
 function serveStatic(req, res) {
-  let urlPath = req.url.split('?')[0];
+  let urlPath = decodeURIComponent(req.url.split('?')[0]);
 
   // Health-check endpoint
   if (urlPath === '/health') {
