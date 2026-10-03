@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.4.64</title>
+<title>Summoners Gambit — Player v0.4.65</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -646,6 +646,7 @@ let joinCode = (() => { try { return localStorage.getItem('sg_last_code') || '';
 let joinName = (() => { try { return localStorage.getItem('sg_last_name') || 'Player'; } catch(e){ return 'Player'; } })();
 let joinSet = 'C';
 let joinError = '';
+let desktopMode = false; // desktop mode — splits view into board iframe (left) + player controls (right)
 
 // Session key for reconnection (persisted to localStorage so refresh auto-rejoins)
 let mySessionKey = (() => { try { return localStorage.getItem('sg_session_key') || null; } catch(e){ return null; } })();
@@ -1330,7 +1331,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.64</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.65</div>
     </div>
 
     <div class="room-code-group">
@@ -1359,6 +1360,10 @@ function renderJoin() {
         <label class="field-lbl">Starter Set</label>
         <div class="starter-grid">${starters}</div>
       </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0 18px;">
+        <input type="checkbox" id="desktop-mode-toggle" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;" ${desktopMode?'checked':''} onchange="desktopMode=this.checked">
+        <label for="desktop-mode-toggle" style="font-size:12px;color:var(--text-mute);cursor:pointer;letter-spacing:.04em;">Desktop Mode &nbsp;<span style="opacity:.5;font-size:10px;">— board + controls side by side</span></label>
+      </div>
       <button class="action-btn primary" style="width:100%;margin-bottom:32px" onclick="doJoin()">Join Game</button>
     </div>`;
 }
@@ -1375,7 +1380,35 @@ function doJoin() {
   }
   joinName = joinName || 'Player';
   try { localStorage.setItem('sg_last_code', joinCode); localStorage.setItem('sg_last_name', joinName); } catch(e){}
+  if (desktopMode) setupDesktopLayout(joinCode);
   send('join', { roomCode: joinCode, name: joinName, starterSet: joinSet });
+}
+
+function setupDesktopLayout(code) {
+  const body = document.body;
+  const app = document.getElementById('app');
+  const connStatus = document.getElementById('conn-status');
+
+  const wrapper = document.createElement('div');
+  wrapper.id = 'desktop-wrapper';
+  wrapper.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;display:flex;overflow:hidden;z-index:1;background:var(--bg-deep);';
+
+  const leftPane = document.createElement('div');
+  leftPane.style.cssText = 'flex:1;min-width:600px;overflow:hidden;';
+  const iframe = document.createElement('iframe');
+  iframe.src = `/spectate?room=${code}&embed=true`;
+  iframe.style.cssText = 'width:100%;height:100%;border:none;display:block;';
+  leftPane.appendChild(iframe);
+
+  const rightPane = document.createElement('div');
+  rightPane.style.cssText = 'width:390px;flex-shrink:0;overflow:hidden;height:100vh;border-left:1px solid rgba(145,132,217,.18);display:flex;flex-direction:column;';
+
+  wrapper.appendChild(leftPane);
+  wrapper.appendChild(rightPane);
+  body.appendChild(wrapper);
+
+  if (connStatus) connStatus.style.display = 'none';
+  rightPane.appendChild(app);
 }
 
 function doStartGame() {
@@ -1402,7 +1435,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.64</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.65</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">

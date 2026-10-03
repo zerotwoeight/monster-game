@@ -529,6 +529,7 @@ let savedRoomCode = new URLSearchParams(location.search).get('room') || '';
 // Spectator mode — set when page loaded at /spectate
 const isSpectator = window.location.pathname.includes('/spectate');
 let spectatorJoined = false; // true once spectate_connect is acknowledged
+const isEmbed = new URLSearchParams(location.search).get('embed') === 'true'; // desktop mode — skip spectator join UI, auto-connect
 // Tile element cache — keeps img/GIF elements alive across renders
 // so token moves don't cause image flicker or GIF restarts
 const tileElCache = new Map(); // tileIdx → { el: HTMLElement, contentKey: string }
@@ -648,9 +649,11 @@ function buildHopPath(fromPos, toPos) {
   const N = 28;
   const path = [fromPos];
   let p = fromPos;
-  while (p !== toPos) {
+  let _hopSafety = 0;
+  while (p !== toPos && _hopSafety < 30) {
     p = (p + 1) % N;
     path.push(p);
+    _hopSafety++;
   }
   return path;
 }
@@ -822,10 +825,17 @@ function connect(){
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
     if (isSpectator) {
-      chip.className = 'ok';
-      chip.textContent = '● Spectating';
+      if (!isEmbed) {
+        chip.className = 'ok';
+        chip.textContent = '● Spectating';
+      }
       if (!spectatorJoined) {
-        renderSpectatorJoin();
+        if (isEmbed && savedRoomCode) {
+          // Desktop embed mode — auto-connect directly, skip join UI
+          ws.send(JSON.stringify({ action: 'spectate_connect', roomCode: savedRoomCode }));
+        } else {
+          renderSpectatorJoin();
+        }
       }
     } else {
       chip.className = 'ok';
@@ -836,6 +846,7 @@ function connect(){
   };
 
   ws.onmessage = e => {
+    try {
     const msg = JSON.parse(e.data);
     if (msg.type === 'ready') return; // server ready ping — board_connect was just sent
     if (msg.type === 'error' && isSpectator && !spectatorJoined) {
@@ -875,6 +886,9 @@ function connect(){
         const toPos = newG.players[animPlayerIdx]?.position;
         // Pre-seed boardTokenAnim at fromPos so the token STAYS at the old tile
         // while the die is spinning — prevents the "jump-to-destination" bug.
+        fromPos = Math.round(Number(fromPos)) % 28;
+        toPos   = Math.round(Number(toPos))   % 28;
+        if (isNaN(fromPos) || isNaN(toPos)) fromPos = toPos; // skip animation if garbage data
         if (fromPos != null && toPos != null && fromPos !== toPos) {
           boardTokenAnim = {playerIdx: animPlayerIdx, path: buildHopPath(fromPos, toPos), step: 0};
         }
@@ -909,6 +923,9 @@ function connect(){
         render();
       }
     }
+    } catch(err) {
+      console.error('[board] ws.onmessage error:', err);
+    }
   };
 
   ws.onclose = ws.onerror = () => {
@@ -935,6 +952,10 @@ function getHitAnim(monster) {
 
 function playCardHitAnim(cardEl, animFile) {
   if (!cardEl || !animFile || typeof lottie === 'undefined') return;
+  // Play matching SFX
+  if      (animFile === 'Hit_Slash') _playSfx(_sfxHitSlash);
+  else if (animFile === 'Hit_Magic') _playSfx(_sfxHitMagic);
+  else if (animFile === 'Hit_Claw')  _playSfx(_sfxHitClaw);
   const container = document.createElement('div');
   container.style.cssText = 'position:absolute;width:330px;height:330px;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:30;filter:brightness(0) invert(1);';
   cardEl.style.position = 'relative';
@@ -1151,6 +1172,7 @@ function renderConnecting(app){
 
 function doStartGame(){
   if(ws && ws.readyState === WebSocket.OPEN){
+    _playSfx(_sfxTitle);
     ws.send(JSON.stringify({action:'start_game', roundLimit: selectedRoundLimit}));
   }
 }
@@ -1237,7 +1259,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.69 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.4.64</div>`;
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.71 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.4.64</div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -1411,7 +1433,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.69</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.71</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -1946,6 +1968,12 @@ function doNewGame(){
 
 // ─── Background Music ───────────────────────────────────────────────────────────────────────
 let _bgMuted = false;
+// ─── Hit / UI SFX ───────────────────────────────────────────────────────────────────────────
+const _sfxTitle    = new Audio('/audio/title-sound.mp3'); _sfxTitle.volume    = 0.6;
+const _sfxHitSlash = new Audio('/audio/Hit-Slash.mp3');   _sfxHitSlash.volume = 0.5;
+const _sfxHitMagic = new Audio('/audio/Hit-Magic.mp3');   _sfxHitMagic.volume = 0.5;
+const _sfxHitClaw  = new Audio('/audio/Hit-Claw.mp3');    _sfxHitClaw.volume  = 0.5;
+function _playSfx(audio) { if (_bgMuted) return; audio.currentTime = 0; audio.play().catch(() => {}); }
 let _bgStarted = false;
 const _bgAudio = new Audio('/audio/main-theme.mp3');
 _bgAudio.loop = true;
@@ -1971,6 +1999,11 @@ function toggleMute() {
   } else {
     _bgAudio.play().catch(() => {});
   }
+  // Sync all SFX to the same mute state
+  _sfxTitle.muted = _bgMuted;
+  _sfxHitSlash.muted = _bgMuted;
+  _sfxHitMagic.muted = _bgMuted;
+  _sfxHitClaw.muted  = _bgMuted;
   const btn = document.getElementById('mute-btn');
   if (btn) btn.textContent = _bgMuted ? '🔇' : '🔊';
 }
@@ -1981,6 +2014,8 @@ document.addEventListener('click', () => { _startBgMusic(); }, { once: true });
 window.addEventListener('load', () => { setTimeout(_startBgMusic, 500); });
 
 // ─── Boot ───────────────────────────────────────────────────────────────────────────────────
+// In embed mode (desktop layout iframe), hide the floating conn-chip — it would float over the board
+if (isEmbed) { const _ec = document.getElementById('conn-chip'); if (_ec) _ec.style.display = 'none'; }
 connect();
 </script>
 
