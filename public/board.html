@@ -882,8 +882,8 @@ function connect(){
         boardRollAnimating = true;
         boardPendingG = null;
         const animPlayerIdx = newG.currentPlayer;
-        const fromPos = prevPositions ? prevPositions[animPlayerIdx] : null;
-        const toPos = newG.players[animPlayerIdx]?.position;
+        let fromPos = prevPositions ? prevPositions[animPlayerIdx] : null;
+        let toPos = newG.players[animPlayerIdx]?.position;
         // Pre-seed boardTokenAnim at fromPos so the token STAYS at the old tile
         // while the die is spinning — prevents the "jump-to-destination" bug.
         fromPos = Math.round(Number(fromPos)) % 28;
