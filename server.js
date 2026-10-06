@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.59';
+const SERVER_VERSION = 'v1.0.60';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -103,19 +103,34 @@ const ROSTER = [
   // ── Dual-Element Rares ──
   // Gets BOTH elements' advantages: max(mod1, mod2). Mutual weaknesses cancel → no weak sides.
   {id:'seraphim',         type:'Light',  type2:'Arcane', name:'Luminar Operative', arch:'rare', rarity:'rare',
-   hp:35, maxHp:35, atk:22, def:12, cost:26, gen:4, isSpecial:false,
+   hp:35, maxHp:35, atk:30, def:12, cost:26, gen:4, isSpecial:false,
    rareDesc:'2× vs Dark & Undead · No weaknesses'},
   {id:'hex_stalker',      type:'Undead', type2:'Beast',  name:'Hex Stalker',      arch:'rare', rarity:'rare',
-   hp:42, maxHp:42, atk:20, def:11, cost:25, gen:3, isSpecial:false,
+   hp:42, maxHp:42, atk:35, def:11, cost:25, gen:3, isSpecial:false,
    rareDesc:'2× vs Arcane & Nature · No weaknesses'},
   {id:'verdant_sorcerer', type:'Arcane', type2:'Nature', name:'Verdant Sorcerer', arch:'rare', rarity:'rare',
-   hp:30, maxHp:30, atk:24, def:12, cost:27, gen:4, isSpecial:false,
+   hp:30, maxHp:30, atk:40, def:12, cost:27, gen:4, isSpecial:false,
    rareDesc:'2× vs Dark & Light · No weaknesses'},
+
+  // ── Support Cards — neutral (no element), passive aura while stationed ──
+  {id:'mana_refinery', type:null, name:'Mana Refinery', arch:'support', rarity:'support',
+   hp:20, maxHp:20, atk:1, def:10, cost:12, gen:0, isSpecial:false,
+   supportDesc:'+1✦/round per stationed tile (stacks)'},
+  {id:'weapon_smith',  type:null, name:'Weapon Smith',  arch:'support', rarity:'support',
+   hp:20, maxHp:20, atk:1, def:10, cost:12, gen:0, isSpecial:false,
+   supportDesc:'+5 ATK to all hand summons (stacks)'},
+  {id:'forge',         type:null, name:'Forge',         arch:'support', rarity:'support',
+   hp:20, maxHp:20, atk:1, def:10, cost:12, gen:0, isSpecial:false,
+   supportDesc:'+5 DEF to all stationed summons (stacks)'},
+  {id:'field_medic',   type:null, name:'Field Medic',   arch:'support', rarity:'support',
+   hp:20, maxHp:20, atk:1, def:10, cost:12, gen:0, isSpecial:false,
+   supportDesc:'+2 HP/round to all stationed summons (stacks)'},
 ];
 
-const SPECIALS = ROSTER.filter(m => m.isSpecial);
-const RARES    = ROSTER.filter(m => m.rarity === 'rare');
-const NORMALS  = ROSTER.filter(m => !m.isSpecial && !m.rarity);
+const SPECIALS  = ROSTER.filter(m => m.isSpecial);
+const RARES     = ROSTER.filter(m => m.rarity === 'rare');
+const SUPPORTS  = ROSTER.filter(m => m.rarity === 'support');
+const NORMALS   = ROSTER.filter(m => !m.isSpecial && !m.rarity);
 
 // ─── WILD CARD POOLS ─────────────────────────────────────────────────────────
 const WILD_CARD_POOLS = {
@@ -196,6 +211,11 @@ function pickShopOffers() {
   if (RARES.length > 0 && Math.random() < 0.10) {
     const rare = RARES[rand(0, RARES.length - 1)];
     offers[rand(0, 4)] = { ...rare, iid: ++_iid };
+  }
+  // ~10% chance: replace one slot with a support card (independent roll)
+  if (SUPPORTS.length > 0 && Math.random() < 0.10) {
+    const sup = SUPPORTS[rand(0, SUPPORTS.length - 1)];
+    offers[rand(0, 4)] = { ...sup, iid: ++_iid };
   }
   return offers;
 }
@@ -514,13 +534,16 @@ function getMonoElementBonus() {
   const result = [];
   for (const p of G.players) {
     // Gather element tags from summons only; null = dual-type (instant disqualify)
+    // Support cards (rarity:'support') are neutral — skip them entirely
     const tags = [];
     for (const m of p.hand) {
+      if (m.rarity === 'support') continue;
       tags.push(m.type2 ? null : m.type);
     }
     for (const t of G.board) {
       if (t.ownerId !== p.idx || !t.summonInstance) continue;
       const mi = t.summonInstance;
+      if (mi.rarity === 'support') continue;
       tags.push(mi.type2 ? null : mi.type);
     }
     const ownedElemTiles = G.board.filter(t => t.ownerId === p.idx && t.kind === 'element');
@@ -583,6 +606,25 @@ function collectPassiveIncome(playerIdx) {
         }
       }
     }
+  }
+
+  // Mana Refinery passive — +1✦ per copy stationed (stacks)
+  const manaRefineryCount = G.board.filter(t => t.ownerId === playerIdx && t.summonInstance && t.summonInstance.id === 'mana_refinery').length;
+  if (manaRefineryCount > 0) {
+    earned += manaRefineryCount;
+    log(`🏭 Mana Refinery ×${manaRefineryCount}: ${p.name} earns +${manaRefineryCount}✦`);
+  }
+
+  // Field Medic passive — +2 HP/round to all stationed summons per copy (stacks)
+  const fieldMedicCount = G.board.filter(t => t.ownerId === playerIdx && t.summonInstance && t.summonInstance.id === 'field_medic').length;
+  if (fieldMedicCount > 0) {
+    const healPerSummon = fieldMedicCount * 2;
+    for (const tile of G.board) {
+      if (tile.ownerId !== playerIdx || !tile.summonInstance) continue;
+      if (tile.summonInstance.id === 'field_medic') continue; // field medics don't heal themselves
+      tile.summonInstance.hp = Math.min(tile.summonInstance.maxHp, tile.summonInstance.hp + healPerSummon);
+    }
+    log(`🏥 Field Medic ×${fieldMedicCount}: ${p.name}'s summons heal +${healPerSummon} HP`);
   }
 
   // Red Dragon Intimidate aura — enemy stationed summons adjacent to the Red Dragon pay 5✦/turn
@@ -756,7 +798,8 @@ function publicState() {
       ti.summon = { iid:m.iid, id:m.id, name:m.name, type:m.type, type2:m.type2||null,
                      hp:m.hp, maxHp:m.maxHp, atk:m.atk, def:m.def,
                      cost:m.cost, gen:m.gen, isSpecial:m.isSpecial, charm:m.charm,
-                     rarity:m.rarity||null };
+                     rarity:m.rarity||null, arch:m.arch||null,
+                     supportDesc:m.supportDesc||null };
     } else {
       ti.summon = null;
     }
@@ -810,7 +853,7 @@ function publicState() {
       iid:m.iid, id:m.id, name:m.name, type:m.type, type2:m.type2||null,
       hp:m.hp, maxHp:m.maxHp, atk:m.atk, def:m.def,
       cost:m.cost, gen:m.gen, isSpecial:false, charm:false,
-      rarity:m.rarity||null
+      rarity:m.rarity||null, arch:m.arch||null, supportDesc:m.supportDesc||null
     })),
     lastBattle: G.lastBattle || null,
     pendingAttackerSummon: G.pendingAttackerSummon || null,
@@ -1588,7 +1631,28 @@ const handlers = {
     const rattled = !!(defOwnerP && defOwnerP.wcEffects && defOwnerP.wcEffects.rattle);
     if (rattled) { defOwnerP.wcEffects.rattle = false; }
 
+    // Weapon Smith aura — +5 ATK to attacker per copy in attacker's hand (stacks)
+    const weaponSmithCount = p.hand.filter(m => m.id === 'weapon_smith').length;
+    const origAttAtk = attM.atk;
+    if (weaponSmithCount > 0) {
+      attM.atk += weaponSmithCount * 5;
+      log(`⚒️ Weapon Smith ×${weaponSmithCount}: ${attM.name} ATK ${origAttAtk} → ${attM.atk}`);
+    }
+
+    // Forge aura — +5 DEF to defender per copy stationed by defending player (stacks)
+    const forgeCount = G.board.filter(t => t.ownerId === tile.ownerId && t.summonInstance && t.summonInstance.id === 'forge').length;
+    const origDefDef = defM.def;
+    if (forgeCount > 0) {
+      defM.def += forgeCount * 5;
+      log(`🔩 Forge ×${forgeCount}: ${defM.name} DEF ${origDefDef} → ${defM.def}`);
+    }
+
     const { atkDmg, defDmg, outcome } = resolveBattle(attM, defM, tile, rattled);
+
+    // Restore temporarily boosted stats after battle
+    if (weaponSmithCount > 0) attM.atk = origAttAtk;
+    if (forgeCount > 0) defM.def = origDefDef;
+
     log(`⚔️ ${p.name}(${attM.name}) attacks ${defOwner.name}(${defM.name}) on tile ${p.position}`);
     log(`   ATK dealt ${atkDmg}, DEF struck back ${defDmg} — ${outcome}`);
 
@@ -2496,6 +2560,7 @@ function clearRoom(code) {
   if (urlPath === '/board')    urlPath = '/board.html';
   if (urlPath === '/player')   urlPath = '/player.html';
   if (urlPath === '/spectate') urlPath = '/board.html'; // spectator uses same board view
+  if (urlPath === '/battle-tester') urlPath = '/battle-tester.html';
 
   const filePath = path.join(PUBLIC, urlPath);
   // Security: ensure we stay within public/
@@ -2575,7 +2640,7 @@ function broadcast(extra = {}) {
           cost:m.cost, gen:m.gen, isSpecial:m.isSpecial, charm:m.charm,
           special:m.special||null, specialDesc:m.specialDesc||null,
           condition:m.condition||null, conditionDesc:m.conditionDesc||null,
-          rarity:m.rarity||null,
+          rarity:m.rarity||null, arch:m.arch||null, supportDesc:m.supportDesc||null,
           canUse: canUseSpecial(conn.playerIdx, m),
         }));
       }

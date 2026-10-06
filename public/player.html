@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.4.65</title>
+<title>Summoners Gambit — Player v0.4.68</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -283,6 +283,10 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .summon-card:hover { filter: brightness(1.12); }
 .summon-card.selected { box-shadow: 0 0 0 2px white, 0 0 16px var(--accent-glow) !important; filter: brightness(1.15); }
 .summon-card.unaffordable { opacity: .45; cursor: default; }
+.summon-card.type-advantage { border-color: #d4a843 !important; box-shadow: 0 0 0 2px #d4a84388, 0 0 18px #d4a84366, 0 0 32px #d4a84333 !important; animation: adv-pulse 2s ease-in-out infinite; }
+.summon-card.type-advantage.selected { box-shadow: 0 0 0 2px white, 0 0 0 4px #d4a843, 0 0 24px #d4a84388 !important; animation: none; }
+@keyframes adv-pulse { 0%,100% { box-shadow: 0 0 0 2px #d4a84388, 0 0 18px #d4a84366, 0 0 32px #d4a84333; } 50% { box-shadow: 0 0 0 2px #d4a843cc, 0 0 26px #d4a84399, 0 0 44px #d4a84355; } }
+.adv-badge { position: absolute; bottom: 30px; left: 4px; z-index: 5; background: rgba(140,95,20,0.92); border: 1px solid #d4a843; border-radius: 4px; padding: 1px 5px; font-size: 9px; font-weight: 700; color: #fff8d0; letter-spacing: .03em; pointer-events: none; line-height: 1.5; }
 .summon-card.full { width: 130px; height: 186px; }
 .mc-art { position: absolute; inset: 0; width: 100%; height: 100%; }
 .mc-art svg { display: block; width: 100%; height: 100%; }
@@ -305,6 +309,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .special-lock-icon { font-size: 22px; line-height: 1; }
 .special-lock-text { font-size: 9px; font-family: 'Cinzel', serif; color: #b8a070; text-align: center; line-height: 1.4; letter-spacing: .04em; }
 .rare-badge { display: block; font-size: 7px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-family: 'Cinzel', serif; color: #e8c870; background: rgba(201,160,90,.22); border: 1px solid rgba(201,160,90,.55); border-radius: 4px; padding: 1px 4px; line-height: 1.4; width: fit-content; margin-bottom: 3px; }
+.support-card { /* support card base styling — border/shadow applied inline */ }
 .dual-type-dots { display: flex; align-items: center; gap: 3px; }
 .summon-card.mini { width: 70px; height: 100px; }
 .summon-card.mini .mc-overlay { display: none; }
@@ -503,7 +508,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 
 <script>
 // ─── CONSTANTS ─────────────────────────────────────────────────────────────
-const TYPE_COLOR = { Light:'#e0c07a', Dark:'#6b6b7a', Arcane:'#7f92e8', Undead:'#5fb3a4', Beast:'#d98a5a', Nature:'#3aaa5c' };
+const TYPE_COLOR = { Light:'#e0c07a', Dark:'#6b6b7a', Arcane:'#7f92e8', Undead:'#5fb3a4', Beast:'#d98a5a', Nature:'#3aaa5c', Support:'#9aabbc' };
 const TYPE_STRONG = {Light:'Undead',Dark:'Beast',Arcane:'Dark',Undead:'Arcane',Beast:'Nature',Nature:'Light'};
 const TYPE_WEAK   = {Light:'Nature',Dark:'Arcane',Arcane:'Undead',Undead:'Light',Beast:'Dark',Nature:'Beast'};
 const TYPE_ICON   = {Light:'✦',Dark:'◉',Arcane:'✶',Undead:'☠',Beast:'⚔',Nature:'❧'};
@@ -752,15 +757,20 @@ function summonImg(id, suffix='') {
 }
 
 // ─── CARD RENDERER ─────────────────────────────────────────────────────────
-function renderCard(m, {size='full', selected=false, showCost=true, dim=false, onclick=''}={}) {
-  const isRare = m.rarity === 'rare';
-  const c  = TYPE_COLOR[m.type]  || '#9184d9';
+function renderCard(m, {size='full', selected=false, showCost=true, dim=false, onclick='', typeAdvantage=false}={}) {
+  const isRare    = m.rarity === 'rare';
+  const isSupport = m.rarity === 'support';
+  const SUPC = '#9aabbc';
+  const c  = isSupport ? SUPC : (TYPE_COLOR[m.type] || '#9184d9');
   const c2 = m.type2 ? (TYPE_COLOR[m.type2] || '#9184d9') : null;
   const pct = Math.max(0, Math.min(1, m.hp / m.maxHp));
   const hpColor = pct < .35 ? '#b05050' : c;
   const hpPct = Math.round(pct * 100);
   let borderColor, glowShadow;
-  if (isRare) {
+  if (isSupport) {
+    borderColor = SUPC;
+    glowShadow = `box-shadow:0 0 0 2px ${SUPC}99,0 0 18px ${SUPC}33`;
+  } else if (isRare) {
     borderColor = c;
     glowShadow = `box-shadow:0 0 0 2px ${c}99,0 0 0 3.5px ${c2}66,0 0 22px ${c}44,0 0 22px ${c2}22`;
   } else if (m.isSpecial) {
@@ -770,14 +780,14 @@ function renderCard(m, {size='full', selected=false, showCost=true, dim=false, o
     borderColor = `${c}88`;
     glowShadow = `box-shadow:0 0 14px ${c}28`;
   }
-  const classes = `summon-card ${size}${selected?' selected':''}${dim?' unaffordable':''}${m.isSpecial?' special-card':''}${isRare?' rare-card':''}`;
+  const classes = `summon-card ${size}${selected?' selected':''}${dim?' unaffordable':''}${m.isSpecial?' special-card':''}${isRare?' rare-card':''}${isSupport?' support-card':''}${typeAdvantage?' type-advantage':''}`;
   const art = m.id ? summonImg(m.id, size === 'mini' ? '-mini' : '') : artSVG(m.type, size==='mini'?70:130, size==='mini'?100:186);
   const clickAttr = onclick ? ` onclick="${onclick}"` : '';
-  // Dual-element type dots
-  const typeDots = isRare && c2
+  // Dual-element type dots (not shown for support)
+  const typeDots = !isSupport && isRare && c2
     ? `<div class="dual-type-dots"><div class="mc-ov-eldot" style="background:${c}"></div><div class="mc-ov-eldot" style="background:${c2}"></div></div>`
     : `<div class="mc-ov-eldot" style="background:${c}"></div>`;
-  // Mini strip for rare: split color
+  // Mini strip
   const miniStrip = isRare && c2
     ? `<div class="mc-mini-strip" style="background:linear-gradient(to right,${c} 50%,${c2} 50%)"></div>`
     : `<div class="mc-mini-strip" style="background:${c}"></div>`;
@@ -789,23 +799,27 @@ function renderCard(m, {size='full', selected=false, showCost=true, dim=false, o
       ${miniStrip}
     </div>`;
   }
-  // Element badge label (dual-type for rare cards)
-  const elemBadgeLabel = isRare && c2 ? `${m.type}/${m.type2}` : (m.type || '');
-  const elemBadgeBg = isRare && c2
-    ? `linear-gradient(to right,${c},${c2})`
-    : c;
+  // Element badge label (support cards show "Support" label)
+  const elemBadgeLabel = isSupport ? 'Support' : (isRare && c2 ? `${m.type}/${m.type2}` : (m.type || ''));
+  const elemBadgeBg = isSupport ? SUPC : (isRare && c2 ? `linear-gradient(to right,${c},${c2})` : c);
+  // Support effect line replaces stats row
+  const statsRow = isSupport && m.supportDesc
+    ? `<div style="font-size:7px;color:${SUPC};text-align:center;line-height:1.3;padding:0 2px;margin-top:1px;">${m.supportDesc}</div>`
+    : `<div class="mc-ov-stats">${['ATK','DEF','✦','GEN'].map((l,i)=>`<div class="mc-ov-sc"><span class="mc-ov-si">${l}</span><span class="mc-ov-sv">${[m.atk,m.def,m.cost,m.gen][i]}</span></div>`).join('')}</div>`;
   return `<div class="${classes}" style="border-color:${borderColor};${glowShadow}"${clickAttr}>
     ${m.charm ? `<svg class="charm-badge" width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" aria-label="Battle Charm"><circle cx="14" cy="14" r="12" fill="rgba(150,100,30,0.92)" stroke="#d4a843" stroke-width="1.8"/><path d="M15.5 6.5L9.5 15.5h5.5L13 22l6.5-9.5h-5.5z" fill="#fff8d0" stroke="#e8c060" stroke-width="0.6" stroke-linejoin="round"/></svg>` : ''}
     ${elemBadgeLabel ? `<div class="mc-element-badge" style="background:${elemBadgeBg}">${elemBadgeLabel}</div>` : ''}
     ${m.isSpecial && dim && m.conditionDesc ? `<div class="special-lock-overlay"><span class="special-lock-icon">🔒</span><div class="special-lock-text">${m.conditionDesc}</div></div>` : ''}
+    ${typeAdvantage ? `<div class="adv-badge">⚔ 2×</div>` : ''}
     ${showCost ? `<div class="mc-cost-strip"><span class="mc-cost-val" style="color:${c}">${m.cost}</span><span class="mc-cost-lbl">Mana</span></div>` : ''}
     <div class="mc-art">${art}</div>
     <div class="mc-overlay">
       ${m.isSpecial ? `<div class="special-badge">✦ Ascendant</div>` : ''}
       ${isRare ? `<div class="rare-badge">★ Rare</div>` : ''}
+      ${isSupport ? `<div class="rare-badge" style="color:${SUPC};background:rgba(154,171,188,.15);border-color:${SUPC}66;">◈ Support</div>` : ''}
       <div class="mc-ov-name" style="color:${c}"><span>${m.name}</span>${typeDots}</div>
       <div class="mc-ov-hp-row"><div class="mc-hp-track"><div class="mc-hp-fill" style="width:${hpPct}%;background:${hpColor}"></div></div><span class="mc-hp-num">${m.hp}/${m.maxHp}</span></div>
-      <div class="mc-ov-stats">${['ATK','DEF','✦','GEN'].map((l,i)=>`<div class="mc-ov-sc"><span class="mc-ov-si">${l}</span><span class="mc-ov-sv">${[m.atk,m.def,m.cost,m.gen][i]}</span></div>`).join('')}</div>
+      ${statsRow}
     </div>
   </div>`;
 }
@@ -883,9 +897,16 @@ function renderPlayerTileCard(tile) {
 }
 
 // ─── TYPE EFFECTIVENESS ─────────────────────────────────────────────────────
-function typeEff(atkType, defType) {
-  if (TYPE_STRONG[atkType]===defType) return {label:'2× Strong', cls:'strong'};
-  if (TYPE_WEAK[atkType]===defType)   return {label:'½× Weak',   cls:'weak'};
+// atkMon can be a monster object (with optional .type2) or a plain type string.
+// defType is always a plain type string (we only check defender's primary type, matching server logic).
+function typeEff(atkMon, defType) {
+  const t1 = (typeof atkMon === 'string') ? atkMon : atkMon.type;
+  const t2 = (typeof atkMon === 'object' && atkMon.type2) ? atkMon.type2 : null;
+  const mod1 = TYPE_STRONG[t1]===defType ? 2 : TYPE_WEAK[t1]===defType ? 0.5 : 1;
+  const mod2 = t2 ? (TYPE_STRONG[t2]===defType ? 2 : TYPE_WEAK[t2]===defType ? 0.5 : 1) : mod1;
+  const best = Math.max(mod1, mod2); // mirrors server typeMultiplier Math.max() logic
+  if (best >= 2)   return {label:'2× Strong', cls:'strong'};
+  if (best <= 0.5) return {label:'½× Weak',   cls:'weak'};
   return {label:'1× Neutral', cls:'neutral'};
 }
 
@@ -1040,8 +1061,10 @@ const MONSTER_LORE = {
 function showCardDetail(iid) {
   const m = myHand.find(x => x.iid === iid);
   if (!m) return;
-  const lore = MONSTER_LORE[m.name] || { role: m.archetype || '', lore: 'A mysterious creature of unknown origin.', ability: null };
-  const elColor = TYPE_COLOR[m.type] || 'var(--accent)';
+  const isSupport = m.rarity === 'support';
+  const SUPC = '#9aabbc';
+  const lore = MONSTER_LORE[m.name] || { role: isSupport ? 'Support Card' : (m.archetype || ''), lore: isSupport ? 'A neutral support card with no elemental affiliation. Station it on any tile to activate its passive aura. The effect persists as long as it remains stationed, and stacks with additional copies.' : 'A mysterious creature of unknown origin.', ability: isSupport ? (m.supportDesc || null) : null };
+  const elColor = isSupport ? SUPC : (TYPE_COLOR[m.type] || 'var(--accent)');
   const hpPct = Math.round((m.hp / m.maxHp) * 100);
   const strongType = TYPE_STRONG[m.type];
   const weakType   = TYPE_WEAK[m.type];
@@ -1078,8 +1101,9 @@ function showCardDetail(iid) {
           <div style="font-family:'Cinzel',serif;font-size:16px;font-weight:700;color:${elColor};">${m.name}</div>
           ${m.isSpecial ? `<div style="font-size:9px;color:var(--gold-glow);font-family:'Cinzel',serif;letter-spacing:.1em;">✦ SPECIAL</div>` : ''}
           ${m.rarity === 'rare' ? `<div style="font-size:9px;color:#c8aaff;font-family:'Cinzel',serif;letter-spacing:.1em;">★ RARE</div>` : ''}
+          ${isSupport ? `<div style="font-size:9px;color:${SUPC};font-family:'Cinzel',serif;letter-spacing:.1em;">◈ SUPPORT</div>` : ''}
         </div>
-        <div style="font-size:10px;color:var(--text-mute);letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px;">${m.rarity === 'rare' ? lore.role : `${lore.role} · <span style="color:${elColor}">${m.type}</span>`}</div>
+        <div style="font-size:10px;color:var(--text-mute);letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px;">${m.rarity === 'rare' || isSupport ? lore.role : `${lore.role} · <span style="color:${elColor}">${m.type}</span>`}</div>
 
         <!-- Stat row -->
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;">
@@ -1102,8 +1126,13 @@ function showCardDetail(iid) {
           </div>
         </div>
 
-        <!-- Type matchup -->
+        <!-- Type matchup / Support Effect -->
         <div style="margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:10px;font-size:11px;line-height:1.6;">
+          ${isSupport ? `
+          <div style="color:${SUPC};font-size:9px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">Support Effect</div>
+          <div style="color:${SUPC};font-size:13px;font-weight:600;">${m.supportDesc || '—'}</div>
+          <div style="color:var(--text-mute);font-size:10px;margin-top:6px;">Stacks with each additional copy stationed. Destroyed when HP reaches 0 — buff is lost.</div>
+          ` : `
           <div style="color:var(--text-mute);font-size:9px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">Type Matchup</div>
           ${m.rarity === 'rare' ? (() => {
             const TS = {Light:'Undead',Dark:'Beast',Arcane:'Dark',Undead:'Arcane',Beast:'Nature',Nature:'Light'};
@@ -1123,6 +1152,7 @@ function showCardDetail(iid) {
           })() : `
           <div><span style="color:${TYPE_COLOR[strongType] || '#7dba81'}">▲ Strong vs ${strongType || '—'}</span> <span style="color:var(--text-mute);font-size:10px;">(2× dmg)</span></div>
           <div><span style="color:${TYPE_COLOR[weakType] || '#e08080'}">▼ Weak vs ${weakType || '—'}</span> <span style="color:var(--text-mute);font-size:10px;">(0.5× dmg)</span></div>`}
+          `}
         </div>
 
         ${lore.ability ? `
@@ -1331,7 +1361,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.65</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.68</div>
     </div>
 
     <div class="room-code-group">
@@ -1435,7 +1465,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.65</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.68</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -2303,7 +2333,7 @@ function renderBattleResult() {
 
   const attPlayer = G.players[lb.attackerIdx];
   const defPlayer = lb.defOwnerIdx != null ? G.players.find(p => p.idx === lb.defOwnerIdx) : null;
-  const eff = lb.attM && lb.defM ? typeEff(lb.attM.type, lb.defM.type) : null;
+  const eff = lb.attM && lb.defM ? typeEff(lb.attM, lb.defM.type) : null;
   const isAttacker = myIdx === lb.attackerIdx;
   const isDefender = myIdx === lb.defOwnerIdx;
 
@@ -2351,7 +2381,7 @@ function _renderPersonalBattleResult(lb, isAttacker) {
 
   const attPlayer = G.players[lb.attackerIdx];
   const defPlayer = lb.defOwnerIdx != null ? G.players.find(p => p.idx === lb.defOwnerIdx) : null;
-  const eff       = lb.attM && lb.defM ? typeEff(lb.attM.type, lb.defM.type) : null;
+  const eff       = lb.attM && lb.defM ? typeEff(lb.attM, lb.defM.type) : null;
   const myMonster    = isAttacker ? lb.attM : lb.defM;
   const theirMonster = isAttacker ? lb.defM : lb.attM;
   const opponent     = isAttacker ? defPlayer : attPlayer;
@@ -2447,14 +2477,23 @@ function renderBattle() {
 
   let effBadge = '';
   if (selM && defM) {
-    const eff = typeEff(selM.type, defM.type);
+    const eff = typeEff(selM, defM.type);
     effBadge = `<div style="text-align:center;padding-bottom:8px"><span class="type-eff-badge ${eff.cls}">${eff.label}</span></div>`;
+  }
+
+  // Compute type advantage for each hand card vs the defender
+  function hasTypeAdvantage(attacker, defender) {
+    if (!defender) return false;
+    const strong1 = TYPE_STRONG[attacker.type] === defender.type;
+    const strong2 = attacker.type2 ? TYPE_STRONG[attacker.type2] === defender.type : false;
+    return strong1 || strong2;
   }
 
   const pickerCards = myHand.map(m => renderCard(m, {
     size:'full', selected: selectedIid===m.iid,
     dim: false,  // Ascendants always usable in battle; condition only gates tile claiming
-    onclick: `selectCard(${m.iid})`
+    onclick: `selectCard(${m.iid})`,
+    typeAdvantage: hasTypeAdvantage(m, defM)
   })).join('');
 
   document.getElementById('main-content').innerHTML = `
