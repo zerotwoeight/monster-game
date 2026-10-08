@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.60';
+const SERVER_VERSION = 'v1.0.61';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 

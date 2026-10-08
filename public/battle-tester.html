@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>Battle Tester — Summoner's Gambit</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<style>
+:root {
+  --bg:#0d0e1c; --surface:#151627; --surface2:#1c1e35; --border:#2a2d4a;
+  --accent:#9184d9; --gold:#d4a843; --text:#e8e8f0; --muted:#6b6e90;
+  --red:#e05555; --green:#5cb85c; --orange:#e07a30;
+  --el-Light:#e0c07a; --el-Dark:#b56fd0; --el-Arcane:#7f92e8;
+  --el-Undead:#5fb3a4; --el-Beast:#d98a5a; --el-Nature:#7fb36a; --el-null:#9aabbc;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-height:100vh;overflow-x:hidden}
+/* ── TOP BAR ── */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;gap:12px}
+.topbar-title{font-family:'Cinzel',serif;font-size:18px;color:var(--gold);letter-spacing:.05em}
+.topbar-sub{color:var(--muted);font-size:12px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px;font-size:11px;color:var(--muted)}
+.topbar-right a{color:var(--muted);text-decoration:none}
+.topbar-right a:hover{color:var(--text)}
+/* ── LAYOUT ── */
+.arena{display:grid;grid-template-columns:1fr 110px 1fr;gap:0;padding:16px 24px;max-width:1140px;margin:0 auto}
+.side-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:11px}
+.side-label{font-family:'Cinzel',serif;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+/* ── CARD ── */
+.card-wrap{position:relative;width:130px;height:186px;margin:0 auto;border-radius:8px;overflow:visible;flex-shrink:0;cursor:default}
+.card-img{width:130px;height:186px;border-radius:8px;object-fit:cover;display:block;background:#111320}
+.card-bottom-grad{position:absolute;bottom:0;left:0;right:0;height:72px;border-radius:0 0 8px 8px;background:linear-gradient(transparent,rgba(0,0,0,.93));pointer-events:none}
+.card-name{position:absolute;bottom:28px;left:0;right:0;text-align:center;font-family:'Cinzel',serif;font-size:7.5px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.card-hp-wrap{position:absolute;bottom:17px;left:6px;right:6px;height:4px;background:rgba(255,255,255,.14);border-radius:2px;pointer-events:none}
+.card-hp-fill{height:100%;border-radius:2px;background:var(--green);transition:width .25s,background .25s}
+.card-stats{position:absolute;bottom:4px;left:0;right:0;display:flex;justify-content:center;gap:8px;font-size:7px;color:rgba(255,255,255,.72);pointer-events:none}
+.card-badge{position:absolute;top:4px;left:4px;font-family:'Cinzel',serif;font-size:6px;padding:1px 3px;border-radius:2px;font-weight:600;display:none;pointer-events:none}
+.card-border{position:absolute;inset:0;border-radius:8px;pointer-events:none}
+.hp-display{text-align:center;font-size:11px;color:var(--muted);margin-top:2px}
+/* ── FORM ELEMENTS ── */
+select,input[type=number]{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-family:'Inter',sans-serif;font-size:13px;width:100%;outline:none}
+select:focus,input:focus{border-color:var(--accent)}
+select option{background:#1c1e35}
+.fl{font-size:10px;color:var(--muted);margin-bottom:3px}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.stat-field{display:flex;flex-direction:column;gap:3px}
+.stat-field label{font-size:10px;color:var(--muted);text-transform:uppercase}
+.stat-field input{padding:5px 6px;font-size:14px;font-weight:600;text-align:center}
+.stat-base{font-size:9px;color:var(--muted);text-align:center}
+.stat-mod{border-color:var(--gold)!important;color:var(--gold)!important}
+.maxhp-row{display:flex;align-items:center;gap:8px;margin-top:-4px}
+.maxhp-row input{width:72px}
+/* ── BUFFS ── */
+.buffs-hdr{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;border-top:1px solid var(--border);padding-top:8px;margin-top:2px}
+.buff-row{display:flex;align-items:center;gap:8px;padding:3px 0}
+.buff-row input[type=checkbox]{width:14px;height:14px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.buff-lbl{font-size:12px;flex:1}
+.buff-mod{font-size:10px;color:var(--accent);white-space:nowrap}
+.spin-row{display:flex;align-items:center;gap:6px;padding:3px 0}
+.spin-btn{width:22px;height:22px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;cursor:pointer;font-size:14px;line-height:1;flex-shrink:0}
+.spin-btn:hover{border-color:var(--accent)}
+.spin-val{width:24px;text-align:center;font-weight:600;font-size:13px}
+.spin-lbl{font-size:12px;flex:1}
+.spin-mod{font-size:10px;color:var(--el-Arcane);white-space:nowrap}
+/* ── TILE MOD PILL ── */
+.tile-pill{display:none;font-size:10px;padding:2px 7px;border-radius:3px;font-weight:600;margin-top:3px}
+.tile-bonus{display:inline-block;background:rgba(92,184,92,.18);color:#5cb85c;border:1px solid rgba(92,184,92,.3)}
+.tile-debuff{display:inline-block;background:rgba(224,85,85,.18);color:var(--red);border:1px solid rgba(224,85,85,.3)}
+.tile-neutral{display:inline-block;background:rgba(107,110,144,.18);color:var(--muted);border:1px solid rgba(107,110,144,.3)}
+/* ── CENTER PANEL ── */
+.vs-panel{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:36px;gap:14px}
+.vs-text{font-family:'Cinzel',serif;font-size:30px;font-weight:700;color:var(--gold);text-shadow:0 0 20px rgba(212,168,67,.5)}
+.type-preview{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:11px;text-align:center;line-height:1.6}
+.btn-run{background:linear-gradient(135deg,#7b1fa2,#4a148c);border:1px solid #9c27b0;color:#fff;font-family:'Cinzel',serif;font-size:13px;padding:10px 14px;border-radius:8px;cursor:pointer;width:100%;letter-spacing:.05em;transition:all .15s}
+.btn-run:hover{background:linear-gradient(135deg,#9c27b0,#6a1b9a);box-shadow:0 0 16px rgba(156,39,176,.4)}
+.btn-run:disabled{opacity:.45;cursor:not-allowed}
+.btn-sm{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:11px;padding:6px 10px;border-radius:6px;cursor:pointer;width:100%;text-align:center;transition:all .15s}
+.btn-sm:hover{border-color:var(--accent)}
+.btn-sm.active{border-color:var(--accent);color:var(--accent)}
+.btns2{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%}
+.vs-label{font-size:10px;color:var(--muted);text-align:center}
+/* ── LOG + OUTCOME ── */
+.log-section{max-width:1140px;margin:0 auto 16px;padding:0 24px}
+.section-hdr{font-family:'Cinzel',serif;font-size:13px;color:var(--muted);margin-bottom:7px;display:flex;align-items:center;gap:8px}
+.outcome-banner{text-align:center;font-family:'Cinzel',serif;font-size:17px;padding:11px;margin-bottom:8px;border-radius:8px;display:none}
+.ob-att-win{display:block!important;background:rgba(212,168,67,.14);color:var(--gold);border:1px solid rgba(212,168,67,.4)}
+.ob-def-win{display:block!important;background:rgba(145,132,217,.14);color:var(--accent);border:1px solid rgba(145,132,217,.4)}
+.ob-stalemate{display:block!important;background:rgba(156,39,176,.14);color:#ce93d8;border:1px solid rgba(156,39,176,.3)}
+.ob-mutual{display:block!important;background:rgba(107,110,144,.14);color:var(--muted);border:1px solid rgba(107,110,144,.3)}
+.log-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;min-height:72px;max-height:210px;overflow-y:auto;font-family:monospace;font-size:12px;line-height:1.75}
+.le{display:block}.le-dmg{color:#ff7043}.le-cdmg{color:#b06fe8}.le-buff{color:var(--accent)}.le-info{color:var(--muted)}.le-win{color:var(--gold);font-weight:600}.le-lose{color:var(--red)}.le-draw{color:#ce93d8}.le-dead{color:var(--muted)}
+/* ── NOTES ── */
+.notes-section{max-width:1140px;margin:0 auto 40px;padding:0 24px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px}
+.panel-hdr{font-family:'Cinzel',serif;font-size:13px;color:var(--gold);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+textarea{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;padding:8px;border-radius:6px;width:100%;resize:vertical;min-height:150px;line-height:1.65;outline:none}
+textarea:focus{border-color:var(--accent)}
+.btn-copy{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:11px;padding:5px 10px;border-radius:4px;cursor:pointer;margin-top:8px;transition:all .15s}
+.btn-copy:hover{border-color:var(--accent);color:var(--text)}
+.chg-list{font-family:monospace;font-size:12px;min-height:120px;max-height:180px;overflow-y:auto;line-height:1.85}
+.chg-item{display:flex;align-items:center;gap:6px;padding:1px 0}
+.chg-name{color:var(--muted)}.chg-field{color:var(--el-Arcane)}.chg-old{text-decoration:line-through;color:var(--muted)}.chg-arrow{color:var(--muted)}.chg-new{color:var(--gold);font-weight:600}
+.no-chg{color:var(--muted);font-style:italic;font-size:12px}
+.btn-clr{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:2px 6px}
+.btn-clr:hover{color:var(--red)}
+/* ── ANIMATIONS ── */
+@keyframes dmgPop{0%{transform:translate(-50%,-40%) scale(1.5);opacity:1}60%{transform:translate(-50%,-110%) scale(1);opacity:1}100%{transform:translate(-50%,-150%) scale(.8);opacity:0}}
+.dmg-float{position:absolute;top:50%;left:50%;font-family:'Cinzel',serif;font-size:26px;font-weight:700;pointer-events:none;z-index:20;animation:dmgPop 1s ease-out forwards;white-space:nowrap;text-shadow:0 2px 8px rgba(0,0,0,.8)}
+@keyframes shockOut{0%{transform:scale(.4);opacity:1}100%{transform:scale(2.2);opacity:0}}
+.shock-ring{position:absolute;inset:0;border-radius:8px;border:3px solid #ff6b35;pointer-events:none;z-index:15;animation:shockOut .5s ease-out forwards}
+.lottie-hit{position:absolute;width:200px;height:200px;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:30;filter:brightness(0) invert(1)}
+.res-badge{position:absolute;inset:0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:13px;font-weight:700;pointer-events:none;z-index:25;text-align:center;padding:8px}
+.rb-win{background:rgba(212,168,67,.78);color:#fff}
+.rb-loss{background:rgba(180,30,30,.78);color:#fff}
+.rb-draw{background:rgba(130,60,180,.78);color:#fff}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="topbar-title">⚔ Battle Tester</span>
+  <span class="topbar-sub">Summoner's Gambit</span>
+  <div class="topbar-right">
+    <span id="topbar-matchup">Select both summons</span>
+    <a href="/board">← Board</a>
+    <span style="font-family:monospace">v1.0.0</span>
+  </div>
+</div>
+
+<div class="arena">
+
+  <!-- ══ ATTACKER ══ -->
+  <div class="side-panel">
+    <div class="side-label">⚔ Attacker</div>
+
+    <div class="card-wrap" id="att-wrap">
+      <img class="card-img" id="att-img" src="" alt="">
+      <div class="card-bottom-grad"></div>
+      <div class="card-name" id="att-cname"></div>
+      <div class="card-hp-wrap"><div class="card-hp-fill" id="att-hpbar" style="width:100%"></div></div>
+      <div class="card-stats" id="att-cstats"></div>
+      <div class="card-badge" id="att-badge"></div>
+      <div class="card-border" id="att-cborder"></div>
+    </div>
+    <div class="hp-display" id="att-hpdisp"></div>
+
+    <div>
+      <div class="fl">SUMMON</div>
+      <select id="att-sel" onchange="pickMonster('att')"></select>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-field">
+        <label>HP</label>
+        <input type="number" id="att-hp" min="1" oninput="statEdit('att','hp')">
+        <div class="stat-base" id="att-hp-b"></div>
+      </div>
+      <div class="stat-field">
+        <label>ATK</label>
+        <input type="number" id="att-atk" min="1" oninput="statEdit('att','atk')">
+        <div class="stat-base" id="att-atk-b"></div>
+      </div>
+      <div class="stat-field">
+        <label>DEF</label>
+        <input type="number" id="att-def" min="0" oninput="statEdit('att','def')">
+        <div class="stat-base" id="att-def-b"></div>
+      </div>
+    </div>
+    <div class="maxhp-row">
+      <span class="fl" style="white-space:nowrap;margin:0">MAX HP</span>
+      <input type="number" id="att-mhp" min="1" oninput="statEdit('att','mhp')">
+    </div>
+
+    <div class="buffs-hdr">Attacker Buffs</div>
+    <div class="buff-row">
+      <input type="checkbox" id="att-charm" onchange="refreshPreview()">
+      <span class="buff-lbl">⚡ Battle Charm</span><span class="buff-mod">+25% dmg</span>
+    </div>
+    <div class="buff-row">
+      <input type="checkbox" id="att-ambush" onchange="refreshPreview()">
+      <span class="buff-lbl">🃏 Ambush</span><span class="buff-mod">+40% dmg</span>
+    </div>
+    <div class="buff-row">
+      <input type="checkbox" id="att-fortify" onchange="refreshPreview()">
+      <span class="buff-lbl">🛡 Fortify</span><span class="buff-mod">−40% counter received</span>
+    </div>
+    <div class="spin-row">
+      <span class="spin-lbl">⚒ Weapon Smith</span>
+      <button class="spin-btn" onclick="spin('att-ws',-1)">−</button>
+      <span class="spin-val" id="att-ws">0</span>
+      <button class="spin-btn" onclick="spin('att-ws',1)">+</button>
+      <span class="spin-mod" id="att-ws-lbl">+0 ATK</span>
+    </div>
+  </div>
+
+  <!-- ══ VS CENTER ══ -->
+  <div class="vs-panel">
+    <div class="vs-text">VS</div>
+    <div class="type-preview" id="type-preview">—</div>
+    <button class="btn-run" id="btn-run" onclick="runBattle()" disabled>⚔ RUN BATTLE</button>
+    <button class="btn-sm" onclick="resetHP()">↺ Reset HP</button>
+    <button class="btn-sm" onclick="resetStats()">↺ Reset Stats</button>
+    <div class="vs-label">Speed</div>
+    <div class="btns2">
+      <button class="btn-sm active" id="sp-norm" onclick="setSpeed('normal')">Normal</button>
+      <button class="btn-sm" id="sp-fast" onclick="setSpeed('fast')">Fast</button>
+    </div>
+    <div class="vs-label">Roll</div>
+    <div class="btns2">
+      <button class="btn-sm active" id="rl-rand" onclick="setRoll('rand')">Random</button>
+      <button class="btn-sm" id="rl-avg" onclick="setRoll('avg')">Avg</button>
+    </div>
+  </div>
+
+  <!-- ══ DEFENDER ══ -->
+  <div class="side-panel">
+    <div class="side-label">🛡 Defender</div>
+
+    <div class="card-wrap" id="def-wrap">
+      <img class="card-img" id="def-img" src="" alt="">
+      <div class="card-bottom-grad"></div>
+      <div class="card-name" id="def-cname"></div>
+      <div class="card-hp-wrap"><div class="card-hp-fill" id="def-hpbar" style="width:100%"></div></div>
+      <div class="card-stats" id="def-cstats"></div>
+      <div class="card-badge" id="def-badge"></div>
+      <div class="card-border" id="def-cborder"></div>
+    </div>
+    <div class="hp-display" id="def-hpdisp"></div>
+
+    <div>
+      <div class="fl">SUMMON</div>
+      <select id="def-sel" onchange="pickMonster('def')"></select>
+    </div>
+
+    <div>
+      <div class="fl">DEFENDER TILE</div>
+      <select id="def-tile" onchange="onTileChange()">
+        <option value="">No tile / Neutral</option>
+        <option value="Light">☀ Light</option>
+        <option value="Dark">🌑 Dark</option>
+        <option value="Arcane">✨ Arcane</option>
+        <option value="Undead">💀 Undead</option>
+        <option value="Beast">🐾 Beast</option>
+        <option value="Nature">🌿 Nature</option>
+      </select>
+      <div class="tile-pill" id="tile-pill"></div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-field">
+        <label>HP</label>
+        <input type="number" id="def-hp" min="1" oninput="statEdit('def','hp')">
+        <div class="stat-base" id="def-hp-b"></div>
+      </div>
+      <div class="stat-field">
+        <label>ATK</label>
+        <input type="number" id="def-atk" min="1" oninput="statEdit('def','atk')">
+        <div class="stat-base" id="def-atk-b"></div>
+      </div>
+      <div class="stat-field">
+        <label>DEF</label>
+        <input type="number" id="def-def" min="0" oninput="statEdit('def','def')">
+        <div class="stat-base" id="def-def-b"></div>
+      </div>
+    </div>
+    <div class="maxhp-row">
+      <span class="fl" style="white-space:nowrap;margin:0">MAX HP</span>
+      <input type="number" id="def-mhp" min="1" oninput="statEdit('def','mhp')">
+    </div>
+
+    <div class="buffs-hdr">Defender Buffs</div>
+    <div class="buff-row">
+      <input type="checkbox" id="def-tilesynergy" onchange="refreshPreview()">
+      <span class="buff-lbl">🔥 Tile Synergy (defender's tile)</span><span class="buff-mod">+20% counter</span>
+    </div>
+    <div class="buff-row">
+      <input type="checkbox" id="def-mono" onchange="refreshPreview()">
+      <span class="buff-lbl">⭐ Mono-Element Mastery</span><span class="buff-mod">+20% counter</span>
+    </div>
+    <div class="buff-row">
+      <input type="checkbox" id="def-rattle" onchange="refreshPreview()">
+      <span class="buff-lbl">🃏 Rattle applied</span><span class="buff-mod">½ ATK counter</span>
+    </div>
+    <div class="spin-row">
+      <span class="spin-lbl">🔨 Forge copies</span>
+      <button class="spin-btn" onclick="spin('def-fg',-1)">−</button>
+      <span class="spin-val" id="def-fg">0</span>
+      <button class="spin-btn" onclick="spin('def-fg',1)">+</button>
+      <span class="spin-mod" id="def-fg-lbl">+0 DEF</span>
+    </div>
+  </div>
+
+</div><!-- /arena -->
+
+<!-- ── LOG ── -->
+<div class="log-section">
+  <div class="section-hdr">📋 Battle Log</div>
+  <div class="outcome-banner" id="outcome-banner"></div>
+  <div class="log-box" id="log-box">
+    <span class="le le-info">Select both summons and click RUN BATTLE…</span>
+  </div>
+</div>
+
+<!-- ── NOTES ── -->
+<div class="notes-section">
+  <div class="panel">
+    <div class="panel-hdr">📝 Notes <span style="font-size:10px;color:var(--muted)">auto-saved</span></div>
+    <textarea id="notes" placeholder="e.g. Solar Knight ATK 40 → 35 feels better&#10;Death Knight DEF 12 → 15 makes a real wall&#10;Red Dragon vs Guardians — needs nerf" oninput="saveNotes()"></textarea>
+    <button class="btn-copy" onclick="copyForClaude()">📋 Copy All for Claude</button>
+  </div>
+  <div class="panel">
+    <div class="panel-hdr">📊 Stat Changes <button class="btn-clr" onclick="clearChanges()">✕ Clear</button></div>
+    <div class="chg-list" id="chg-list"><div class="no-chg">Edit a stat above to track changes here.</div></div>
+    <div style="margin-top:8px;font-size:10px;color:var(--muted)">Gold highlight = differs from base roster value</div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+// DATA  (mirrors server.js ROSTER exactly)
+// ═══════════════════════════════════════════════════════════════════════
+const TYPE_STRONG={Light:'Undead',Dark:'Beast',Arcane:'Dark',Undead:'Arcane',Beast:'Nature',Nature:'Light'};
+const TYPE_WEAK  ={Light:'Nature',Dark:'Arcane',Arcane:'Undead',Undead:'Light',Beast:'Dark',Nature:'Beast'};
+
+const EL_CLR={Light:'#e0c07a',Dark:'#b56fd0',Arcane:'#7f92e8',Undead:'#5fb3a4',Beast:'#d98a5a',Nature:'#7fb36a',null:'#9aabbc'};
+
+const ROSTER=[
+  // ── Light ──
+  {id:'solar_knight',   type:'Light',  name:'Solar Knight',    arch:'assailant',hp:20, maxHp:20, atk:40,def:5,  gen:2,cost:8},
+  {id:'dawn_striker',   type:'Light',  name:'Dawn Striker',    arch:'assailant',hp:25, maxHp:25, atk:36,def:6,  gen:2,cost:8},
+  {id:'dawnguard',      type:'Light',  name:'Dawnguard',       arch:'guardian', hp:60, maxHp:60, atk:18,def:12, gen:3,cost:12},
+  {id:'high_paladin',   type:'Light',  name:'High Paladin',    arch:'vanguard', hp:35, maxHp:35, atk:25,def:9,  gen:2,cost:10},
+  {id:'radiant_lancer', type:'Light',  name:'Radiant Lancer',  arch:'vanguard', hp:30, maxHp:30, atk:28,def:10, gen:2,cost:10},
+  {id:'sunfire_herald', type:'Light',  name:'Sunfire Herald',  arch:'vanguard', hp:40, maxHp:40, atk:22,def:11, gen:2,cost:10},
+  {id:'ardent_saint',   type:'Light',  name:'Ardent Saint',    arch:'ascendant',hp:65, maxHp:65, atk:15,def:15, gen:5,cost:20,special:'Aura of Renewal'},
+  // ── Dark ──
+  {id:'nightshard',     type:'Dark',   name:'Nightshard',      arch:'assailant',hp:20, maxHp:20, atk:40,def:5,  gen:2,cost:8},
+  {id:'void_reaper',    type:'Dark',   name:'Void Reaper',     arch:'assailant',hp:18, maxHp:18, atk:42,def:4,  gen:2,cost:8},
+  {id:'void_sentinel',  type:'Dark',   name:'Void Sentinel',   arch:'guardian', hp:60, maxHp:60, atk:18,def:12, gen:3,cost:12},
+  {id:'shadow_paladin', type:'Dark',   name:'Shadow Paladin',  arch:'vanguard', hp:35, maxHp:35, atk:25,def:9,  gen:2,cost:10},
+  {id:'dusk_blade',     type:'Dark',   name:'Dusk Blade',      arch:'vanguard', hp:30, maxHp:30, atk:29,def:8,  gen:2,cost:10},
+  {id:'umbral_stalker', type:'Dark',   name:'Umbral Stalker',  arch:'vanguard', hp:42, maxHp:42, atk:21,def:11, gen:2,cost:10},
+  {id:'succubus',       type:'Dark',   name:'Succubus',        arch:'ascendant',hp:45, maxHp:45, atk:32,def:10, gen:5,cost:20,special:'Mana Drain'},
+  // ── Arcane ──
+  {id:'sorcerer',       type:'Arcane', name:'Sorcerer',        arch:'assailant',hp:20, maxHp:20, atk:40,def:5,  gen:2,cost:8},
+  {id:'spell_wraith',   type:'Arcane', name:'Spell Wraith',    arch:'assailant',hp:22, maxHp:22, atk:38,def:5,  gen:2,cost:8},
+  {id:'rune_priestess', type:'Arcane', name:'Rune Priestess',  arch:'guardian', hp:60, maxHp:60, atk:18,def:12, gen:3,cost:12},
+  {id:'arch_mage',      type:'Arcane', name:'Arch Mage',       arch:'vanguard', hp:35, maxHp:35, atk:25,def:9,  gen:2,cost:10},
+  {id:'runic_duelist',  type:'Arcane', name:'Runic Duelist',   arch:'vanguard', hp:32, maxHp:32, atk:27,def:9,  gen:2,cost:10},
+  {id:'mana_weaver',    type:'Arcane', name:'Mana Weaver',     arch:'vanguard', hp:38, maxHp:38, atk:23,def:12, gen:2,cost:10},
+  {id:'arcane_arbiter', type:'Arcane', name:'Arcane Arbiter',  arch:'ascendant',hp:40, maxHp:40, atk:27,def:15, gen:5,cost:20,special:'Chaos Flux'},
+  // ── Undead ──
+  {id:'bone_wraith',    type:'Undead', name:'Bone Wraith',     arch:'assailant',hp:20, maxHp:20, atk:40,def:5,  gen:2,cost:8},
+  {id:'grave_specter',  type:'Undead', name:'Grave Specter',   arch:'assailant',hp:18, maxHp:18, atk:42,def:4,  gen:2,cost:8},
+  {id:'death_knight',   type:'Undead', name:'Death Knight',    arch:'guardian', hp:60, maxHp:60, atk:18,def:12, gen:3,cost:12},
+  {id:'shade_walker',   type:'Undead', name:'Shade Walker',    arch:'vanguard', hp:35, maxHp:35, atk:25,def:9,  gen:2,cost:10},
+  {id:'cursed_revenant',type:'Undead', name:'Cursed Revenant', arch:'vanguard', hp:33, maxHp:33, atk:26,def:10, gen:2,cost:10},
+  {id:'plague_herald',  type:'Undead', name:'Plague Herald',   arch:'vanguard', hp:40, maxHp:40, atk:22,def:11, gen:2,cost:10},
+  {id:'demon_lord',     type:'Undead', name:'Demon Lord',      arch:'ascendant',hp:85, maxHp:85, atk:17,def:8,  gen:5,cost:20,special:'Last Rite'},
+  // ── Beast ──
+  {id:'razorclaw',      type:'Beast',  name:'Razorclaw',       arch:'assailant',hp:20, maxHp:20, atk:40,def:5,  gen:2,cost:8},
+  {id:'feral_striker',  type:'Beast',  name:'Feral Striker',   arch:'assailant',hp:22, maxHp:22, atk:38,def:5,  gen:2,cost:8},
+  {id:'iron_hide',      type:'Beast',  name:'Iron Hide',       arch:'guardian', hp:60, maxHp:60, atk:18,def:12, gen:3,cost:12},
+  {id:'pack_hunter',    type:'Beast',  name:'Pack Hunter',     arch:'vanguard', hp:35, maxHp:35, atk:25,def:9,  gen:2,cost:10},
+  {id:'stormtalon',     type:'Beast',  name:'Stormtalon',      arch:'vanguard', hp:32, maxHp:32, atk:28,def:9,  gen:2,cost:10},
+  {id:'stoneback',      type:'Beast',  name:'Stoneback',       arch:'vanguard', hp:42, maxHp:42, atk:20,def:12, gen:2,cost:10},
+  {id:'red_dragon',     type:'Beast',  name:'Red Dragon',      arch:'ascendant',hp:35, maxHp:35, atk:40,def:9,  gen:5,cost:20,special:'Intimidate'},
+  // ── Nature ──
+  {id:'thornling',      type:'Nature', name:'Thornling',       arch:'assailant',hp:20, maxHp:20, atk:40,def:5,  gen:2,cost:8},
+  {id:'briar_sprite',   type:'Nature', name:'Briar Sprite',    arch:'assailant',hp:22, maxHp:22, atk:37,def:6,  gen:2,cost:8},
+  {id:'ancient_oak',    type:'Nature', name:'Ancient Oak',     arch:'guardian', hp:60, maxHp:60, atk:18,def:12, gen:3,cost:12},
+  {id:'grove_warden',   type:'Nature', name:'Grove Warden',    arch:'vanguard', hp:35, maxHp:35, atk:25,def:9,  gen:2,cost:10},
+  {id:'vine_stalker',   type:'Nature', name:'Vine Stalker',    arch:'vanguard', hp:33, maxHp:33, atk:26,def:10, gen:2,cost:10},
+  {id:'moss_golem',     type:'Nature', name:'Moss Golem',      arch:'vanguard', hp:42, maxHp:42, atk:20,def:12, gen:2,cost:10},
+  {id:'world_tree',     type:'Nature', name:'World Tree',      arch:'ascendant',hp:55, maxHp:55, atk:22,def:13, gen:5,cost:20,special:'Deep Roots'},
+  // ── Dual-Element Rares ──
+  {id:'seraphim',         type:'Light',  type2:'Arcane', name:'Luminar Operative',arch:'rare',hp:35,maxHp:35,atk:22,def:12,gen:4,cost:26},
+  {id:'hex_stalker',      type:'Undead', type2:'Beast',  name:'Hex Stalker',      arch:'rare',hp:42,maxHp:42,atk:20,def:11,gen:3,cost:25},
+  {id:'verdant_sorcerer', type:'Arcane', type2:'Nature', name:'Verdant Sorcerer', arch:'rare',hp:30,maxHp:30,atk:24,def:12,gen:4,cost:27},
+  // ── Support ──
+  {id:'mana_refinery',type:null,name:'Mana Refinery',arch:'support',hp:20,maxHp:20,atk:1,def:10,gen:0,cost:12,supportDesc:'+1✦/round per stationed tile'},
+  {id:'weapon_smith', type:null,name:'Weapon Smith', arch:'support',hp:20,maxHp:20,atk:1,def:10,gen:0,cost:12,supportDesc:'+5 ATK to attacker per copy in hand'},
+  {id:'forge',        type:null,name:'Forge',        arch:'support',hp:20,maxHp:20,atk:1,def:10,gen:0,cost:12,supportDesc:'+5 DEF to defender per stationed copy'},
+  {id:'field_medic',  type:null,name:'Field Medic',  arch:'support',hp:20,maxHp:20,atk:1,def:10,gen:0,cost:12,supportDesc:'+2 HP/round to stationed summons'},
+];
+
+// ═══════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════
+let attM=null, defM=null, attBase=null, defBase=null;
+let statChanges={};
+let battleRunning=false;
+let speedMode='normal', rollMode='rand';
+const SPD={normal:1, fast:.3};
+
+// ═══════════════════════════════════════════════════════════════════════
+// COMBAT LOGIC  (mirrors server.js exactly)
+// ═══════════════════════════════════════════════════════════════════════
+function rand(min,max){
+  if(rollMode==='avg') return Math.round((min+max)/2);
+  return Math.floor(Math.random()*(max-min+1))+min;
+}
+
+function tileEffectOnDefender(tileEl, defender){
+  if(!tileEl||!defender) return 1;
+  const defTypes=[defender.type,...(defender.type2?[defender.type2]:[])];
+  if(defTypes.includes(tileEl)) return 1.15;
+  if(!defender.type2 && TYPE_STRONG[tileEl]===defender.type) return 0.85;
+  return 1;
+}
+
+function _typeMod1(at,dt){ if(TYPE_STRONG[at]===dt) return 2; if(TYPE_WEAK[at]===dt) return 0.5; return 1; }
+
+function typeMultiplier(att, def){
+  if(!att.type) return 1;
+  if(att.type2) return Math.max(_typeMod1(att.type,def.type), _typeMod1(att.type2,def.type));
+  return _typeMod1(att.type, def.type);
+}
+
+// doStrike mirrors server signature: (attacker, defender, tileEl, charm, ambush, bonusRun, monoBuff, forgeBonus)
+// Returns {dmg, steps[]}
+function doStrike(att, def, tileEl, charm, ambush, bonusRun, monoBuff, forgeBonus=0){
+  const steps=[];
+  const tileEff=tileEffectOnDefender(tileEl, def);
+  const rawDef=def.def+forgeBonus;
+  const effDef=Math.round(rawDef*tileEff);
+  const baseDmg=Math.max(1, att.atk - effDef);
+  const typeMod=typeMultiplier(att, def);
+  const roll=rand(0,3);
+  let dmg=Math.round(baseDmg*typeMod)+roll;
+
+  let defStr=`DEF ${rawDef}${forgeBonus?` (+${forgeBonus}🔨)`:''}`;
+  if(tileEff!==1) defStr+=` ×${tileEff} tile → ${effDef}`;
+  steps.push({cls:'le-info',t:`  ATK ${att.atk} − ${defStr} = base ${baseDmg} × ${typeMod}× type + roll ${roll} → ${dmg}`});
+  if(tileEff>1)  steps.push({cls:'le-buff',t:`  🗺 Tile bonus: defender's ${tileEl} tile +15% DEF`});
+  if(tileEff<1)  steps.push({cls:'le-buff',t:`  🗺 Tile penalty: ${tileEl} tile beats ${def.type} −15% DEF`});
+
+  if(charm){
+    dmg=Math.round(dmg*1.25);
+    steps.push({cls:'le-buff',t:`  ⚡ Battle Charm +25% → ${dmg}`});
+  }
+  if(ambush){
+    dmg=Math.round(dmg*1.40);
+    steps.push({cls:'le-buff',t:`  🃏 Ambush +40% → ${dmg}`});
+  }
+  if(bonusRun){
+    dmg=Math.round(dmg*1.20);
+    steps.push({cls:'le-buff',t:`  🔥 Tile Synergy +20% → ${dmg}`});
+  }
+  if(monoBuff){
+    dmg=Math.round(dmg*1.20);
+    steps.push({cls:'le-buff',t:`  ⭐ Mono-Element Mastery +20% → ${dmg}`});
+  }
+  return {dmg:Math.max(1,dmg), steps};
+}
+
+function calcBattle(){
+  const tileEl=document.getElementById('def-tile').value||null;
+  const ws=parseInt(document.getElementById('att-ws').textContent)||0;
+  const fg=parseInt(document.getElementById('def-fg').textContent)||0;
+  const charm=document.getElementById('att-charm').checked;
+  const ambush=document.getElementById('att-ambush').checked;
+  const fortify=document.getElementById('att-fortify').checked;
+  const defTS=document.getElementById('def-tilesynergy').checked;
+  const mono=document.getElementById('def-mono').checked;
+  const rattle=document.getElementById('def-rattle').checked;
+
+  const att={...attM, atk:attM.atk+ws*5, lastRiteUsed:false};
+  const def={...defM, lastRiteUsed:false};
+
+  const log=[];
+  const typeMod=typeMultiplier(att,def);
+  const typeLabel=typeMod===2?'2× STRONG (⚡)':typeMod===0.5?'0.5× WEAK (💧)':'1× Neutral';
+  log.push({cls:'le-info',t:`⚔ ${att.name} [${att.type||'Support'}${att.type2?'/'+att.type2:''}] vs ${def.name} [${def.type||'Support'}]`});
+  log.push({cls:'le-info',t:`   Type modifier: ${typeLabel}`});
+  if(ws) log.push({cls:'le-buff',t:`   ⚒ Weapon Smith ×${ws}: +${ws*5} ATK on attacker (${attM.atk} → ${att.atk})`});
+  if(fg) log.push({cls:'le-buff',t:`   🔨 Forge ×${fg}: +${fg*5} DEF on defender (${defM.def} → ${defM.def+fg*5})`});
+  log.push({cls:'le-info',t:``});
+
+  // ─ Attacker strikes ─
+  log.push({cls:'le-info',t:`🗡 ${att.name} strikes ${def.name}…`});
+  const {dmg:atkDmg, steps:s1}=doStrike(att, def, tileEl, charm, ambush, false, false, fg*5);
+  s1.forEach(s=>log.push(s));
+
+  let defHp=def.hp-atkDmg;
+  log.push({cls:'le-dmg',t:`→ ${def.name} takes ${atkDmg} damage  (${def.hp} → ${Math.max(0,defHp)} HP)`});
+
+  // Last Rite (Demon Lord defending)
+  if(defHp<=0 && def.id==='demon_lord' && !def.lastRiteUsed){
+    def.lastRiteUsed=true; defHp=15;
+    log.push({cls:'le-buff',t:`💀 Last Rite! Demon Lord survives at 15 HP!`});
+  }
+
+  let ctrDmg=0, attHp=att.hp;
+  // ─ Counter-strike ─
+  if(defHp>0){
+    log.push({cls:'le-info',t:``});
+    log.push({cls:'le-info',t:`🔄 ${def.name} counter-strikes…`});
+    let defAtk=def.atk;
+    if(rattle){
+      defAtk=Math.floor(def.atk*0.5);
+      log.push({cls:'le-buff',t:`  🃏 Rattle! ATK halved (${def.atk} → ${defAtk})`});
+    }
+    const defForStrike={...def, atk:defAtk};
+    // Counter uses defender's tile element; forge/ws don't apply here
+    const {dmg:raw, steps:s2}=doStrike(defForStrike, att, tileEl, false, false, defTS, mono, 0);
+    s2.forEach(s=>log.push(s));
+    ctrDmg=raw;
+    if(fortify){
+      ctrDmg=Math.round(ctrDmg*0.60);
+      log.push({cls:'le-buff',t:`  🛡 Fortify! Counter reduced 40% → ${ctrDmg}`});
+    }
+    attHp=att.hp-ctrDmg;
+    log.push({cls:'le-cdmg',t:`→ ${att.name} takes ${ctrDmg} counter-damage  (${att.hp} → ${Math.max(0,attHp)} HP)`});
+    // Last Rite (Demon Lord attacking)
+    if(attHp<=0 && att.id==='demon_lord' && !att.lastRiteUsed){
+      att.lastRiteUsed=true; attHp=15;
+      log.push({cls:'le-buff',t:`💀 Last Rite! Demon Lord (attacker) survives at 15 HP!`});
+    }
+  }
+
+  let outcome;
+  if(attHp<=0&&defHp<=0) outcome='mutual';
+  else if(attHp<=0)       outcome='def_wins';
+  else if(defHp<=0)       outcome='att_wins';
+  else                    outcome='stalemate';
+
+  log.push({cls:'le-info',t:``});
+  const resultText={
+    att_wins:`⚔ ${att.name} WINS — ${def.name} destroyed!`,
+    def_wins:`🛡 ${def.name} WINS — ${att.name} destroyed!`,
+    stalemate:`🤝 STALEMATE — both survive`,
+    mutual:`💥 MUTUAL DESTRUCTION`
+  }[outcome];
+  log.push({cls:outcome==='att_wins'?'le-win':outcome==='def_wins'?'le-lose':'le-draw',t:resultText});
+
+  return {atkDmg,ctrDmg,attHpAfter:Math.max(0,attHp),defHpAfter:Math.max(0,defHp),outcome,log,resultText};
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// HIT ANIMATION
+// ═══════════════════════════════════════════════════════════════════════
+function getHitAnim(m){
+  if(!m||!m.type) return 'Hit_Magic';
+  if(m.id==='hex_stalker')       return 'Hit_Claw';
+  if(m.id==='verdant_sorcerer')  return 'Hit_Magic';
+  if(m.id==='seraphim')          return 'Hit_Magic';
+  if(m.type==='Beast'||m.type==='Nature') return 'Hit_Claw';
+  if(m.type==='Dark' ||m.type==='Undead') return 'Hit_Slash';
+  return 'Hit_Magic';
+}
+
+function playHitAnim(wrap, animFile){
+  const el=document.createElement('div');
+  el.className='lottie-hit';
+  wrap.appendChild(el);
+  try{
+    const a=lottie.loadAnimation({container:el,renderer:'svg',loop:false,autoplay:true,path:`/animations/${animFile}.json`});
+    a.addEventListener('complete',()=>{ el.style.transition='opacity .2s'; el.style.opacity='0'; setTimeout(()=>el.remove(),220); });
+    setTimeout(()=>{ try{a.destroy()}catch(e){} el.remove(); },2200);
+  }catch(e){ el.remove(); }
+}
+
+function showShock(wrap){
+  const r=document.createElement('div'); r.className='shock-ring';
+  wrap.appendChild(r); setTimeout(()=>r.remove(),600);
+}
+
+function showDmgFloat(wrap, dmg, color){
+  const el=document.createElement('div'); el.className='dmg-float';
+  el.textContent=`−${dmg}`; el.style.color=color||'#ff6b35';
+  wrap.appendChild(el); setTimeout(()=>el.remove(),1100);
+}
+
+function showResultBadge(wrap, text, cls){
+  wrap.querySelectorAll('.res-badge').forEach(e=>e.remove());
+  const el=document.createElement('div'); el.className=`res-badge ${cls}`;
+  el.textContent=text; wrap.appendChild(el);
+}
+
+function clearBadges(){ document.querySelectorAll('.res-badge').forEach(e=>e.remove()); }
+
+function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+// ═══════════════════════════════════════════════════════════════════════
+// BATTLE RUNNER
+// ═══════════════════════════════════════════════════════════════════════
+async function runBattle(){
+  if(battleRunning||!attM||!defM) return;
+  battleRunning=true;
+  clearBadges();
+  const btn=document.getElementById('btn-run');
+  btn.disabled=true;
+
+  const logBox=document.getElementById('log-box');
+  const banner=document.getElementById('outcome-banner');
+  logBox.innerHTML='';
+  banner.className='outcome-banner';
+  banner.textContent='';
+
+  const res=calcBattle();
+  const sp=SPD[speedMode];
+  const attWrap=document.getElementById('att-wrap');
+  const defWrap=document.getElementById('def-wrap');
+
+  // Beat 1 — attacker hits defender
+  await wait(300*sp);
+  showShock(defWrap);
+  showDmgFloat(defWrap, res.atkDmg, '#ff6b35');
+  await wait(130*sp);
+  playHitAnim(defWrap, getHitAnim(attM));
+  await wait(700*sp);
+  defM.hp=res.defHpAfter;
+  refreshHpDisplay('att');
+  refreshHpDisplay('def');
+
+  // Beat 2 — counter-strike (if defender survived)
+  if(res.ctrDmg>0){
+    await wait(350*sp);
+    showShock(attWrap);
+    showDmgFloat(attWrap, res.ctrDmg, '#b06fe8');
+    await wait(130*sp);
+    playHitAnim(attWrap, getHitAnim(defM));
+    await wait(700*sp);
+    attM.hp=res.attHpAfter;
+    refreshHpDisplay('att');
+  }
+
+  // Beat 3 — result badges
+  await wait(350*sp);
+  if(res.outcome==='att_wins'){
+    showResultBadge(attWrap,'⚔ WIN','rb-win');
+    showResultBadge(defWrap,'✕ DESTROYED','rb-loss');
+  } else if(res.outcome==='def_wins'){
+    showResultBadge(defWrap,'🛡 WIN','rb-win');
+    showResultBadge(attWrap,'✕ DESTROYED','rb-loss');
+  } else if(res.outcome==='stalemate'){
+    showResultBadge(attWrap,'🤝 STALEMATE','rb-draw');
+    showResultBadge(defWrap,'🤝 STALEMATE','rb-draw');
+  } else {
+    showResultBadge(attWrap,'💥 MUTUAL','rb-loss');
+    showResultBadge(defWrap,'💥 MUTUAL','rb-loss');
+  }
+
+  // Render log
+  res.log.forEach(l=>{
+    const sp=document.createElement('span');
+    sp.className=`le ${l.cls}`; sp.textContent=l.t;
+    logBox.appendChild(sp); logBox.appendChild(document.createElement('br'));
+  });
+  logBox.scrollTop=logBox.scrollHeight;
+
+  // Banner
+  const bCls={att_wins:'ob-att-win',def_wins:'ob-def-win',stalemate:'ob-stalemate',mutual:'ob-mutual'}[res.outcome];
+  banner.className=`outcome-banner ${bCls}`;
+  banner.textContent=res.resultText;
+
+  battleRunning=false;
+  btn.disabled=false;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════════════════════════════
+function buildDropdowns(){
+  const GROUPS=['Light','Dark','Arcane','Undead','Beast','Nature'];
+  ['att','def'].forEach(s=>{
+    const sel=document.getElementById(`${s}-sel`);
+    const ph=new Option('— Select Summon —',''); sel.add(ph);
+    GROUPS.forEach(el=>{
+      const g=document.createElement('optgroup'); g.label=el;
+      ROSTER.filter(m=>m.type===el&&m.arch!=='rare').forEach(m=>{
+        g.appendChild(new Option(`${m.name}  (${m.arch})`,m.id));
+      });
+      sel.appendChild(g);
+    });
+    const rg=document.createElement('optgroup'); rg.label='★ Dual-Element Rares';
+    ROSTER.filter(m=>m.arch==='rare').forEach(m=>{ rg.appendChild(new Option(`${m.name}  (${m.type}/${m.type2})`,m.id)); });
+    sel.appendChild(rg);
+    const sg=document.createElement('optgroup'); sg.label='◈ Support Cards';
+    ROSTER.filter(m=>m.arch==='support').forEach(m=>{ sg.appendChild(new Option(`${m.name}  (support)`,m.id)); });
+    sel.appendChild(sg);
+  });
+}
+
+function pickMonster(s){
+  const id=document.getElementById(`${s}-sel`).value; if(!id) return;
+  const base=ROSTER.find(m=>m.id===id); if(!base) return;
+  if(s==='att'){ attBase=base; attM={...base}; }
+  else          { defBase=base; defM={...base}; }
+  populateStats(s,base);
+  renderCard(s,base);
+  onTileChange();
+  refreshPreview();
+  document.getElementById('btn-run').disabled=!(attM&&defM);
+  refreshTopbar();
+}
+
+function populateStats(s,m){
+  document.getElementById(`${s}-hp`).value=m.hp;
+  document.getElementById(`${s}-mhp`).value=m.maxHp;
+  document.getElementById(`${s}-atk`).value=m.atk;
+  document.getElementById(`${s}-def`).value=m.def;
+  ['hp','atk','def'].forEach(f=>{
+    const bEl=document.getElementById(`${s}-${f}-b`);
+    if(bEl) bEl.textContent=`base ${f==='hp'?m.maxHp:m[f]}`;
+    const iEl=document.getElementById(`${s}-${f}`);
+    if(iEl) iEl.classList.remove('stat-mod');
+  });
+  document.getElementById(`${s}-mhp`).classList.remove('stat-mod');
+  refreshHpDisplay(s);
+}
+
+function statEdit(s, f){
+  const m=s==='att'?attM:defM; if(!m) return;
+  const base=s==='att'?attBase:defBase;
+  const el=document.getElementById(`${s}-${f}`);
+  const v=parseInt(el.value)||0;
+  if(f==='hp')  { m.hp=v; refreshHpDisplay(s); }
+  if(f==='mhp') { m.maxHp=v; refreshHpDisplay(s); }
+  if(f==='atk') { m.atk=v; }
+  if(f==='def') { m.def=v; }
+  const baseV=f==='hp'?base.hp:f==='mhp'?base.maxHp:base[f];
+  el.classList.toggle('stat-mod', v!==baseV);
+  trackChange(base, f, baseV, v);
+  refreshPreview();
+}
+
+function trackChange(base, field, from, to){
+  if(!statChanges[base.id]) statChanges[base.id]={name:base.name};
+  if(to!==from) statChanges[base.id][field]={from,to};
+  else { delete statChanges[base.id][field]; if(Object.keys(statChanges[base.id]).filter(k=>k!=='name').length===0) delete statChanges[base.id]; }
+  renderChanges();
+}
+
+function refreshHpDisplay(s){
+  const m=s==='att'?attM:defM; if(!m) return;
+  const pct=Math.max(0,Math.min(100,(m.hp/m.maxHp)*100));
+  const bar=document.getElementById(`${s}-hpbar`);
+  bar.style.width=pct+'%';
+  bar.style.background=pct>50?'#5cb85c':pct>25?'#f0ad4e':'#e05555';
+  document.getElementById(`${s}-hpdisp`).textContent=`${Math.max(0,m.hp)} / ${m.maxHp} HP`;
+  document.getElementById(`${s}-hpdisp`).style.color=m.hp<=0?'#e05555':'';
+  // sync input
+  document.getElementById(`${s}-hp`).value=Math.max(0,m.hp);
+}
+
+function renderCard(s,m){
+  const elC=EL_CLR[m.type]||EL_CLR[null];
+  const elC2=m.type2?EL_CLR[m.type2]:null;
+  const img=document.getElementById(`${s}-img`);
+  img.src=`/img/monsters/monster-${m.id}.gif`;
+  img.onerror=function(){ this.onerror=null; this.src=`/img/monsters/monster-${m.id}.png`; };
+  img.style.borderBottom=`2px solid ${elC}88`;
+
+  document.getElementById(`${s}-cname`).textContent=m.name;
+  document.getElementById(`${s}-cname`).style.color=elC;
+
+  const stats=document.getElementById(`${s}-cstats`);
+  stats.innerHTML=`<span>⚔${m.atk}</span><span>🛡${m.def}</span><span>✦${m.gen}</span>`;
+
+  const badge=document.getElementById(`${s}-badge`);
+  if(m.arch==='ascendant'){
+    badge.textContent='✦ Ascendant';
+    badge.style.cssText=`background:rgba(212,168,67,.28);color:#d4a843;border:1px solid rgba(212,168,67,.4);display:block`;
+  } else if(m.arch==='rare'){
+    badge.textContent='★ Rare';
+    badge.style.cssText=`background:rgba(145,132,217,.28);color:#9184d9;border:1px solid rgba(145,132,217,.4);display:block`;
+  } else if(m.arch==='support'){
+    badge.textContent='◈ Support';
+    badge.style.cssText=`background:rgba(154,171,188,.2);color:#9aabbc;border:1px solid rgba(154,171,188,.3);display:block`;
+  } else { badge.style.display='none'; }
+
+  const border=document.getElementById(`${s}-cborder`);
+  border.style.boxShadow=elC2
+    ? `0 0 0 2px ${elC}99, 0 0 0 3.5px ${elC2}77, 0 0 14px ${elC}44`
+    : `0 0 0 2px ${elC}88, 0 0 12px ${elC}33`;
+
+  refreshHpDisplay(s);
+}
+
+function onTileChange(){
+  const tileEl=document.getElementById('def-tile').value;
+  const m=defM;
+  const pill=document.getElementById('tile-pill');
+  if(!tileEl||!m){ pill.style.display='none'; refreshPreview(); return; }
+  const eff=tileEffectOnDefender(tileEl,m);
+  if(eff>1){
+    pill.textContent=`+15% DEF — ${tileEl} tile matches ${m.type||''}`;
+    pill.className='tile-pill tile-bonus'; pill.style.display='inline-block';
+  } else if(eff<1){
+    pill.textContent=`−15% DEF — ${tileEl} beats ${m.type}`;
+    pill.className='tile-pill tile-debuff'; pill.style.display='inline-block';
+  } else {
+    pill.textContent='No tile modifier'; pill.className='tile-pill tile-neutral'; pill.style.display='inline-block';
+  }
+  refreshPreview();
+}
+
+function refreshPreview(){
+  const el=document.getElementById('type-preview');
+  if(!attM||!defM){ el.innerHTML='<span style="color:var(--muted)">Select both summons</span>'; return; }
+  const tileEl=document.getElementById('def-tile').value||null;
+  const ws=parseInt(document.getElementById('att-ws').textContent)||0;
+  const fg=parseInt(document.getElementById('def-fg').textContent)||0;
+  const tm=typeMultiplier(attM,defM);
+  const tmLabel=tm===2?`<span style="color:#5cb85c">2× ⚡ STRONG</span>`:tm===0.5?`<span style="color:var(--red)">0.5× 💧 WEAK</span>`:`<span style="color:var(--muted)">1× Neutral</span>`;
+  const tileEff=tileEffectOnDefender(tileEl,defM);
+  const effDef=Math.round((defM.def+fg*5)*tileEff);
+  const effAtk=attM.atk+ws*5;
+  const base=Math.max(1,effAtk-effDef);
+  const avgDmg=Math.round(base*tm)+1; // avg roll 1
+  el.innerHTML=`${tmLabel}<br><span style="color:var(--muted);font-size:10px">ATK ${effAtk} − DEF ${effDef} = ${base} × ${tm}</span><br><span style="color:var(--gold)">~${avgDmg} avg initial dmg</span>`;
+}
+
+function refreshTopbar(){
+  if(attM&&defM)
+    document.getElementById('topbar-matchup').textContent=`${attM.name} vs ${defM.name}`;
+}
+
+function spin(id, d){
+  const el=document.getElementById(id);
+  let v=Math.max(0,Math.min(5,(parseInt(el.textContent)||0)+d));
+  el.textContent=v;
+  if(id==='att-ws') document.getElementById('att-ws-lbl').textContent=`+${v*5} ATK`;
+  if(id==='def-fg') document.getElementById('def-fg-lbl').textContent=`+${v*5} DEF`;
+  refreshPreview();
+}
+
+function resetHP(){
+  clearBadges();
+  ['att','def'].forEach(s=>{
+    const m=s==='att'?attM:defM; const base=s==='att'?attBase:defBase;
+    if(!m||!base) return;
+    m.hp=base.hp; m.maxHp=base.maxHp;
+    document.getElementById(`${s}-hp`).value=base.hp;
+    document.getElementById(`${s}-mhp`).value=base.maxHp;
+    document.getElementById(`${s}-hp`).classList.remove('stat-mod');
+    document.getElementById(`${s}-mhp`).classList.remove('stat-mod');
+    refreshHpDisplay(s);
+  });
+  document.getElementById('log-box').innerHTML='<span class="le le-info">HP reset — ready to run again.</span>';
+  document.getElementById('outcome-banner').className='outcome-banner';
+  document.getElementById('outcome-banner').textContent='';
+}
+
+function resetStats(){
+  clearBadges();
+  if(attBase){ attM={...attBase}; populateStats('att',attBase); }
+  if(defBase){ defM={...defBase}; populateStats('def',defBase); }
+  document.getElementById('log-box').innerHTML='<span class="le le-info">Stats reset to base values.</span>';
+  document.getElementById('outcome-banner').className='outcome-banner';
+  document.getElementById('outcome-banner').textContent='';
+}
+
+function setSpeed(m){
+  speedMode=m;
+  document.getElementById('sp-norm').classList.toggle('active',m==='normal');
+  document.getElementById('sp-fast').classList.toggle('active',m==='fast');
+}
+
+function setRoll(m){
+  rollMode=m;
+  document.getElementById('rl-rand').classList.toggle('active',m==='rand');
+  document.getElementById('rl-avg').classList.toggle('active',m==='avg');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// NOTES + CHANGES
+// ═══════════════════════════════════════════════════════════════════════
+function saveNotes(){ try{localStorage.setItem('sg-bt-notes',document.getElementById('notes').value);}catch(e){} }
+
+function loadNotes(){ try{const v=localStorage.getItem('sg-bt-notes'); if(v) document.getElementById('notes').value=v;}catch(e){} }
+
+function renderChanges(){
+  const el=document.getElementById('chg-list');
+  const rows=Object.entries(statChanges).flatMap(([id,d])=>
+    Object.entries(d).filter(([k])=>k!=='name').map(([f,{from,to}])=>({name:d.name,f,from,to}))
+  );
+  if(!rows.length){ el.innerHTML='<div class="no-chg">No changes yet.</div>'; return; }
+  el.innerHTML=rows.map(r=>`<div class="chg-item">
+    <span class="chg-name">${r.name}</span>
+    <span class="chg-field">${r.f.toUpperCase()}</span>
+    <span class="chg-old">${r.from}</span>
+    <span class="chg-arrow">→</span>
+    <span class="chg-new">${r.to}</span>
+  </div>`).join('');
+}
+
+function clearChanges(){
+  statChanges={};
+  renderChanges();
+  document.querySelectorAll('.stat-mod').forEach(e=>e.classList.remove('stat-mod'));
+}
+
+function copyForClaude(){
+  const rows=Object.entries(statChanges).flatMap(([id,d])=>
+    Object.entries(d).filter(([k])=>k!=='name').map(([f,{from,to}])=>`${d.name}: ${f.toUpperCase()} ${from} → ${to}`)
+  );
+  const notes=document.getElementById('notes').value.trim();
+  let txt='';
+  if(rows.length) txt+=`=== STAT CHANGES ===\n${rows.join('\n')}\n\n`;
+  if(notes) txt+=`=== NOTES ===\n${notes}`;
+  if(!txt) txt='(no changes or notes yet)';
+  navigator.clipboard.writeText(txt)
+    .then(()=>{ const b=document.querySelector('.btn-copy'); b.textContent='✓ Copied!'; setTimeout(()=>b.textContent='📋 Copy All for Claude',1800); })
+    .catch(()=>{ prompt('Copy:',txt); });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════
+buildDropdowns();
+loadNotes();
+// Default: Solar Knight vs Death Knight on an Undead tile
+document.getElementById('att-sel').value='solar_knight'; pickMonster('att');
+document.getElementById('def-sel').value='death_knight';  pickMonster('def');
+document.getElementById('def-tile').value='Undead'; onTileChange();
+</script>
+</body>
+</html>
