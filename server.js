@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.61';
+const SERVER_VERSION = 'v1.0.65';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -596,6 +596,7 @@ function collectPassiveIncome(playerIdx) {
   }
 
   // Ardent Saint passive — heal all friendly stationed summons 5 HP/turn
+  const ardentSaintCount = G.board.filter(t => t.ownerId === playerIdx && t.summonInstance && t.summonInstance.id === 'ardent_saint').length;
   for (const tile of G.board) {
     if (tile.ownerId !== playerIdx) continue;
     const mi = tile.summonInstance;
@@ -608,11 +609,13 @@ function collectPassiveIncome(playerIdx) {
     }
   }
 
-  // Mana Refinery passive — +1✦ per copy stationed (stacks)
+  // Mana Refinery passive — +1✦ per ALL stationed summons (when at least 1 Mana Refinery is stationed)
   const manaRefineryCount = G.board.filter(t => t.ownerId === playerIdx && t.summonInstance && t.summonInstance.id === 'mana_refinery').length;
-  if (manaRefineryCount > 0) {
-    earned += manaRefineryCount;
-    log(`🏭 Mana Refinery ×${manaRefineryCount}: ${p.name} earns +${manaRefineryCount}✦`);
+  const stationedSummonCount = G.board.filter(t => t.ownerId === playerIdx && t.summonInstance).length;
+  const manaRefineryBonus = manaRefineryCount > 0 ? stationedSummonCount : 0;
+  if (manaRefineryBonus > 0) {
+    earned += manaRefineryBonus;
+    log(`🏭 Mana Refinery ×${manaRefineryCount}: ${p.name} earns +${manaRefineryBonus}✦ (${stationedSummonCount} stationed summons)`);
   }
 
   // Field Medic passive — +2 HP/round to all stationed summons per copy (stacks)
@@ -626,6 +629,12 @@ function collectPassiveIncome(playerIdx) {
     }
     log(`🏥 Field Medic ×${fieldMedicCount}: ${p.name}'s summons heal +${healPerSummon} HP`);
   }
+
+  // Weapon Smith passive — +5 ATK per copy stationed (applied at battle time in doStrike; tracked here for summary display)
+  const weaponSmithCount = G.board.filter(t => t.ownerId === playerIdx && t.summonInstance && t.summonInstance.id === 'weapon_smith').length;
+
+  // Forge passive — +5 DEF per copy stationed (applied at battle time in resolveBattle; tracked here for summary display)
+  const forgeCount = G.board.filter(t => t.ownerId === playerIdx && t.summonInstance && t.summonInstance.id === 'forge').length;
 
   // Red Dragon Intimidate aura — enemy stationed summons adjacent to the Red Dragon pay 5✦/turn
   let intimidateLoss = 0;
@@ -740,6 +749,7 @@ function collectPassiveIncome(playerIdx) {
     // Income breakdown
     baseline: 5,
     summonGen,
+    manaRefineryBonus,
     wellBonus,
     intimidateLoss,
     upkeep,
@@ -750,6 +760,19 @@ function collectPassiveIncome(playerIdx) {
     // HP bonuses
     tileSynergyCount,
     monoHealCount,
+    medicHeal: fieldMedicCount > 0 ? fieldMedicCount * 2 : 0,
+    auraHeal: ardentSaintCount > 0 ? ardentSaintCount * 5 : 0,
+    weaponSmithCount,
+    forgeCount,
+    activePassives: (() => {
+      const ap = [];
+      if (ardentSaintCount > 0) ap.push({ id:'ardent_saint', label:`Ardent Saint ×${ardentSaintCount}`, desc:`Aura of Renewal: +${ardentSaintCount * 5} HP/turn to all friendly summons` });
+      if (fieldMedicCount > 0) ap.push({ id:'field_medic', label:`Field Medic ×${fieldMedicCount}`, desc:`+${fieldMedicCount * 2} HP/turn to all friendly summons` });
+      if (manaRefineryCount > 0) ap.push({ id:'mana_refinery', label:`Mana Refinery ×${manaRefineryCount}`, desc:`+${manaRefineryBonus}✦ bonus income (1✦ per stationed summon × ${stationedSummonCount})` });
+      if (weaponSmithCount > 0) ap.push({ id:'weapon_smith', label:`Weapon Smith ×${weaponSmithCount}`, desc:`+${weaponSmithCount * 5} ATK to your attacking summon` });
+      if (forgeCount > 0) ap.push({ id:'forge', label:`Forge ×${forgeCount}`, desc:`+${forgeCount * 5} DEF to all stationed summons` });
+      return ap;
+    })(),
     // Wild card state
     activeWcEffects,
     // Battle mana from previous turn
@@ -1631,8 +1654,8 @@ const handlers = {
     const rattled = !!(defOwnerP && defOwnerP.wcEffects && defOwnerP.wcEffects.rattle);
     if (rattled) { defOwnerP.wcEffects.rattle = false; }
 
-    // Weapon Smith aura — +5 ATK to attacker per copy in attacker's hand (stacks)
-    const weaponSmithCount = p.hand.filter(m => m.id === 'weapon_smith').length;
+    // Weapon Smith aura — +5 ATK to attacker per copy stationed by attacker (stacks)
+    const weaponSmithCount = G.board.filter(t => t.ownerId === p.idx && t.summonInstance && t.summonInstance.id === 'weapon_smith').length;
     const origAttAtk = attM.atk;
     if (weaponSmithCount > 0) {
       attM.atk += weaponSmithCount * 5;
@@ -2773,7 +2796,7 @@ server.listen(PORT, '0.0.0.0', () => {
   const ip = getLocalIp();
   console.log('');
   console.log('  ╔════════════════════════════════════════╗');
-  console.log('  ║      Summon Board Game — Server        ║');
+  console.log(`  ║   Summon Board Game — Server ${SERVER_VERSION}  ║`);
   console.log('  ╠════════════════════════════════════════╣');
   console.log(`  ║  Board view  →  http://${ip}:${PORT}/board  `);
   console.log(`  ║  Player view →  http://${ip}:${PORT}/player `);

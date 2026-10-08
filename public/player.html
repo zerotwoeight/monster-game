@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.4.68</title>
+<title>Summoners Gambit — Player v0.4.73</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -93,6 +93,15 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .ts-p-tag.blue{background:rgba(91,141,238,.12);color:#5b8dee;}
 .ts-p-tag.green{background:rgba(76,175,130,.12);color:#4caf82;}
 .ts-p-tag.acc{background:rgba(145,132,217,.14);color:#9184d9;}
+.ts-p-tag.gold{background:rgba(201,168,76,.12);color:#c9a84c;}
+.ts-hp-section{padding:4px 0;}
+.ts-hp-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;border-bottom:1px solid rgba(42,45,74,.4);}
+.ts-hp-row:last-child{border-bottom:none;}
+.ts-hp-name{flex:1;min-width:0;color:#e2e0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ts-hp-bar-wrap{width:56px;height:4px;background:#2a2d4a;border-radius:2px;overflow:hidden;flex-shrink:0;}
+.ts-hp-bar{height:100%;border-radius:2px;}
+.ts-hp-val{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12px;}
+.ts-hp-heal{font-size:11px;color:#4caf82;white-space:nowrap;}
 
 /* Waiting */
 .waiting-hero { padding: 20px 16px 16px; text-align: center; }
@@ -1361,7 +1370,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.68</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.73</div>
     </div>
 
     <div class="room-code-group">
@@ -1465,7 +1474,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.68</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.73</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -1497,6 +1506,7 @@ function renderTurnSummary() {
   // Income rows
   let incomeRows = `<div class="ts-p-row"><span class="ts-p-lbl">🏦 Baseline income</span><span class="ts-p-val" style="color:#a97b40">+${ts.baseline} ✦</span></div>`;
   if (ts.summonGen > 0) incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">👹 Summon passive</span><span class="ts-p-val" style="color:#a97b40">+${ts.summonGen} ✦</span></div>`;
+  if ((ts.manaRefineryBonus||0) > 0) incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">🏭 Mana Refinery bonus</span><span class="ts-p-val" style="color:#a97b40">+${ts.manaRefineryBonus} ✦</span></div>`;
   if (ts.wellBonus > 0) incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">💎 Mana Well (last turn)</span><span class="ts-p-val" style="color:#4caf82">+${ts.wellBonus} ✦</span></div>`;
   if ((ts.battleManaGain||0) > 0) incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">⚔️ Battle outcomes</span><span class="ts-p-val" style="color:#4caf82">+${ts.battleManaGain} ✦</span></div>`;
   if (ts.windfallActive) incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">🃏 Windfall (×3 income)</span><span class="ts-p-val" style="color:#4caf82">active</span></div>`;
@@ -1517,8 +1527,48 @@ function renderTurnSummary() {
   }
   if (ts.tileSynergyCount > 0) effectTags += `<span class="ts-p-tag acc">✨ Tile Synergy ×${ts.tileSynergyCount}</span>`;
   if (ts.monoHealCount > 0) effectTags += `<span class="ts-p-tag acc">⭐ Mono Mastery ×${ts.monoHealCount}</span>`;
+  if ((ts.medicHeal||0) > 0) effectTags += `<span class="ts-p-tag green">🏥 Field Medic +${ts.medicHeal} HP/summon</span>`;
+  if ((ts.auraHeal||0) > 0) effectTags += `<span class="ts-p-tag green">✨ Aura of Renewal +${ts.auraHeal} HP/summon</span>`;
+  if ((ts.weaponSmithCount||0) > 0) effectTags += `<span class="ts-p-tag gold">⚒️ Hand +${(ts.weaponSmithCount||0) * 5} ATK</span>`;
+  if ((ts.forgeCount||0) > 0) effectTags += `<span class="ts-p-tag gold">🔩 Stationed +${(ts.forgeCount||0) * 5} DEF</span>`;
 
-  const effectsBlock = effectTags ? `<div class="ts-p-section-lbl">Effects This Turn</div><div class="ts-p-effects">${effectTags}</div>` : '';
+  // Active passive abilities block
+  let passiveTags = '';
+  if (ts.activePassives && ts.activePassives.length) {
+    for (const ap of ts.activePassives) {
+      const icon = ap.id === 'ardent_saint' ? '✨' : ap.id === 'field_medic' ? '🏥' : ap.id === 'weapon_smith' ? '⚒️' : ap.id === 'forge' ? '🔩' : '🏭';
+      const descColor = (ap.id === 'weapon_smith' || ap.id === 'forge') ? '#c9a84c' : '#9184d9';
+      passiveTags += `<div class="ts-p-row"><span class="ts-p-lbl">${icon} ${ap.label}</span><span class="ts-p-val" style="color:${descColor};font-size:11px;">${ap.desc}</span></div>`;
+    }
+  }
+  const passivesBlock = passiveTags ? `<div class="ts-p-section-lbl" style="margin-top:8px;">Active Abilities</div>${passiveTags}` : '';
+
+  const effectsBlock = (effectTags || passivesBlock) ? `${passivesBlock}<div class="ts-p-section-lbl" style="margin-top:8px;">Effects This Turn</div><div class="ts-p-effects">${effectTags}</div>` : '';
+
+  // Summon HP After Healing section — only shown when healing actually occurred this turn
+  const totalHeal = (ts.medicHeal||0) + (ts.auraHeal||0);
+  let hpRows = '';
+  if (totalHeal > 0 && G && G.board) {
+    for (const tile of G.board) {
+      if (tile.ownerId !== myIdx || !tile.summon) continue;
+      const s = tile.summon;
+      // Skip summons that were already at full HP and could not have benefited
+      const hpBeforeHeal = s.hp - totalHeal;
+      const wasHealed = hpBeforeHeal < s.maxHp;
+      if (!wasHealed) continue;
+      const pct = Math.round((s.hp / s.maxHp) * 100);
+      const barColor = pct > 60 ? '#4caf82' : pct > 30 ? '#c9a84c' : '#e05a5a';
+      // Actual heal received = min(totalHeal, maxHp - (hp before heal)) clamped to >= 0
+      const actualHeal = Math.max(0, Math.min(totalHeal, s.maxHp - Math.max(0, hpBeforeHeal)));
+      hpRows += `<div class="ts-hp-row">
+        <span class="ts-hp-name">${s.name}</span>
+        <div class="ts-hp-bar-wrap"><div class="ts-hp-bar" style="width:${pct}%;background:${barColor}"></div></div>
+        <span class="ts-hp-val" style="color:${barColor}">${s.hp}/${s.maxHp}</span>
+        <span class="ts-hp-heal">(+${actualHeal})</span>
+      </div>`;
+    }
+  }
+  const hpBlock = hpRows ? `<div class="ts-p-section-lbl" style="margin-top:8px;">Summon HP After Healing</div><div class="ts-hp-section">${hpRows}</div>` : '';
 
   document.getElementById('main-content').innerHTML = `
     <div style="padding:14px 16px 120px;display:flex;flex-direction:column;gap:12px;">
@@ -1540,6 +1590,7 @@ function renderTurnSummary() {
         ${incomeRows}
         ${lossRows ? `<div class="ts-p-section-lbl" style="margin-top:8px;">Penalties</div>${lossRows}` : ''}
         ${effectsBlock}
+        ${hpBlock}
 
         <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(76,175,130,.1);border:1px solid rgba(76,175,130,.2);border-radius:8px;padding:10px 14px;margin-top:10px;">
           <span style="font-size:13px;font-weight:600;color:${netColor};">Net mana this turn</span>
@@ -2579,9 +2630,11 @@ function renderOwn() {
         <span class="own-tile-opt-cost" style="color:#e07070">+15 ✦</span>
       </div>
     </div>
-    ${canSwap ? `<div class="picker-label">Swap stationed summon</div><div class="picker-scroll"><div class="scroll-inner">${swapCards}</div></div>` : ''}` : ''}
+    ${canSwap ? `<div class="picker-label">Swap stationed summon</div><div class="picker-scroll" id="own-swap-scroll"><div class="scroll-inner">${swapCards}</div></div>${scrollNavHTML('own-swap-scroll','own-swap-dot',myHand.length)}` : ''}` : ''}
     <div style="padding:12px 16px 4px"><div class="picker-label" style="padding:0;margin-bottom:8px">Change tile element (${CHANGE_COST} ✦)</div>
     <div class="element-pick">${elBtns}</div></div>`;
+
+  if (canSwap && myHand.length > 1) attachShopScrollListener('own-swap-scroll','own-swap-dot',myHand.length);
 
   const ab = document.getElementById('action-bar');
   ab.classList.add('visible');
