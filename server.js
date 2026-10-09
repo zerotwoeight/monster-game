@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.65';
+const SERVER_VERSION = 'v1.0.66';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -1738,7 +1738,8 @@ const handlers = {
     if (G.phase !== 'resolve:own') return sendError(ws, 'Wrong phase');
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
     const p = G.players[G.currentPlayer];
-    if (p.hand.length >= 5) return sendError(ws, 'Hand full — cannot swap');
+    // Hand-full check removed: swap is net-zero (stationed comes back to hand),
+    // so a full hand of 5 is always valid for a swap.
     const tile = G.board[p.position];
     const oldM = tile.summonInstance;
     const newM = p.hand.find(m => m.iid === data.newSummonIid);
@@ -2779,6 +2780,12 @@ server.on('upgrade', (req, socket, head) => {
       const p = G.players[conn.playerIdx];
       if (p && p.isConnected) {
         p.isConnected = false;
+        // Eliminated players are already out — don't pause the game for them
+        if (p.eliminated) {
+          log(`👻 ${p.name} (eliminated) disconnected — no pause`);
+          broadcast();
+          return;
+        }
         if (!G.pausedFor) {
           G.pausedFor = { idx: p.idx, name: p.name, color: p.color };
           log(`⚡ ${p.name} disconnected — game paused`);

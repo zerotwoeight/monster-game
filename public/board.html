@@ -634,7 +634,8 @@ function tileSummonCard(summon, ownerColor){
   const imgLayer = summon.id
     ? `<img src="/img/monsters/monster-${summon.id}-mini.gif" class="tmc-art-img-overlay" onerror="this.src='/img/monsters/monster-${summon.id}-mini.png';this.onerror=function(){this.remove()}" alt="">`
     : '';
-  return `<div class="tmc-wrap">
+  return `<div class="tmc-wrap" style="position:relative;">
+    ${summon.charm ? `<div style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#c9a05a;box-shadow:0 0 7px #c9a05acc;z-index:5;display:flex;align-items:center;justify-content:center;font-size:8px;line-height:1;" title="Battle Charm">⚡</div>` : ''}
     <div class="tmc-card" style="border-color:${ownerColor};">
       <div class="tmc-art">${svgArt}${imgLayer}</div>
       <div class="tmc-strip" style="background:${c};"></div>
@@ -1286,7 +1287,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.74 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.4.70</div>`;
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.75 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.4.79</div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -1460,7 +1461,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.74</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.75</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -1538,7 +1539,7 @@ function renderGame(app){
 
     // Content key — only changes when tile ownership/summon/HP actually changes.
     // Token moves and animation flags are NOT included so they don't trigger rebuilds.
-    const contentKey = `${tile.element}|${tile.kind}|${tile.ownerId}|${tile.summon?.id}|${tile.summon?.hp}|${isBonus}`;
+    const contentKey = `${tile.element}|${tile.kind}|${tile.ownerId}|${tile.summon?.id}|${tile.summon?.hp}|${tile.summon?.charm}|${isBonus}`;
 
     const cached = tileElCache.get(i);
     let div;
