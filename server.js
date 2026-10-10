@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.66';
+const SERVER_VERSION = 'v1.0.73';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -172,7 +172,7 @@ const STARTER_SETS = {
 
 const PLAYER_COLORS = ['#e05252','#5ca8e0','#5dc97d','#e0b050','#c07fd8','#60cdc0'];
 const CHANGE_ELEMENT_COST = 18;
-const MANA_PENALTY        = 5;
+const MANA_PENALTY        = 8;
 const HEAL_COST_PER_HP    = 1.5;
 const DEFAULT_ROUND_LIMIT = 20; // rounds per player (selectable in lobby: 10/20/30)
 
@@ -190,7 +190,41 @@ function generateRoomCode() {
 function makeSummon(templateId) {
   const t = ROSTER.find(r => r.id === templateId);
   if (!t) throw new Error('unknown summon: ' + templateId);
-  return { ...t, iid: ++_iid, charm: false, lastRiteUsed: false };
+  return {
+    ...t,
+    iid: ++_iid,
+    charm: false,
+    lastRiteUsed: false,
+    // ── Phase 1: per-instance ability state ──────────────────────────────────
+    abilityData: {
+      // Light
+      layOnHandsUsed: false,         // High Paladin: once per game reactive survive below 30% HP
+      // Dark
+      voidHungerBonus: 0,            // Void Reaper: cumulative ATK stacks from wins (+2 per win)
+      // Arcane
+      sorcererAtkBonus: 0,           // Sorcerer: permanent ATK bonus (+1 per win)
+      sorcererGenBonus: 0,           // Sorcerer: permanent Gen bonus (+1 per win)
+      runicDuelistBonus: 0,          // Runic Duelist: ATK bonus from friendly arcane count (recalc each battle)
+      // Rune Priestess: Runic Amplification — gen doubled on Arcane tile (handled in collectPassiveIncome, no flag needed)
+      // Arch Mage: Mana Infusion — +3✦/turn while stationed (handled in collectPassiveIncome, no flag needed)
+      // Undead
+      cursedRevenantSurvivals: 0,    // Cursed Revenant: survivals → DEF stacks (+2 DEF per survival)
+      shadeWalkerCurse: 0,           // Shade Walker: turns remaining on post-battle DoT curse
+      shadeWalkerCurseAmt: 0,        // Shade Walker: HP loss per tick
+      deathSentenceEnabled: true,    // Death Knight: 10% instant kill on any damage dealt
+      // Beast
+      apexPredatorBattleWins: 0,     // Razorclaw: battle wins counter (+1 ATK per win)
+      ironHideHpBonus: 0,            // Iron Hide: permanent HP bonus from survivals (+3 maxHp per survival)
+      // Nature
+      stationedTurns: 0,             // Vine Stalker / Moss Golem / Ancient Oak: rounds stationed
+      vineAuraActive: false,         // Vine Stalker: aura unlocked after 5 turns
+      mossAuraActive: false,         // Moss Golem: aura unlocked after 5 turns
+      oakOvergrowthAtk: 0,           // Ancient Oak: permanent ATK bonus from Overgrowth (+3 every 3 turns)
+      oakOvergrowthDef: 0,           // Ancient Oak: permanent DEF bonus from Overgrowth (+3 every 3 turns)
+      // Shared / Generic
+      extraGenPerTurn: 0,            // Spell Wraith steal, Mana Weaver aura, etc.
+    },
+  };
 }
 
 function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -266,11 +300,21 @@ function buildBoard() {
     const sp = specials.find(s => s.pos === i);
     if (sp) {
       tiles.push({ pos:i, kind:sp.kind, label:sp.label, icon:sp.icon,
-                   element:null, ownerId:null, summonId:null });
+                   element:null, ownerId:null, summonId:null,
+                   // Phase 1: per-tile ability fields
+                   neverOwned: true,    // Grave Specter: true until first claimed
+                   cursed: 0,           // Cursed Revenant / dark effects: turns remaining
+                   genReduction: 0,     // Spell Wraith steal: permanent gen reduction on tile
+                 });
     } else {
       const el = elementAt.get(i);
       tiles.push({ pos:i, kind:'element', label:el, icon:'', element:el,
-                   ownerId:null, summonId:null });
+                   ownerId:null, summonId:null,
+                   // Phase 1: per-tile ability fields
+                   neverOwned: true,    // Grave Specter: true until first claimed
+                   cursed: 0,           // Cursed Revenant / dark effects: turns remaining
+                   genReduction: 0,     // Spell Wraith steal: permanent gen reduction on tile
+                 });
     }
   }
   return tiles;
@@ -350,6 +394,9 @@ function addPlayer(name, color, starterSet) {
     peakTiles: 0,
     totalManaEarned: 40, // starts with initial 40
     wcEffects: { stumble:false, delay:false, jinx:false, ambush:false, fortify:false, rattle:false, windfall:false },
+    // Phase 1: per-player ability state
+    hemorrhageStacks: 0,       // Plague Herald: turns remaining of HP drain
+    hemorrhageAmt: 0,          // Plague Herald: HP drained per tick
     lastTurnLandedOnWell: false,  // true if player landed on tile 0 (Mana Well) last turn
     notification: null,  // { cardId, cardName, cardDesc, castByName, castByColor, tier }
     eliminated: false,   // true once player owns 0 tiles at end of their own turn (post-setup)
@@ -447,8 +494,83 @@ function doStrike(attacker, defender, tile, nullify = false, bonusRun = false, m
 function resolveBattle(attackerM, defenderM, tile, rattled = false) {
   const nullify = false; // Arcane Arbiter now has Chaos Flux instead of Nullify
 
+  // ── PRE-STRIKE ABILITIES ────────────────────────────────────────────────────
+
+  // Solar Knight — Radiant Strike: on claim, tile converts to Light element (handled in claim/battle outcome, not here)
+
+  // Radiant Lancer — Piercing Light: ignore 30% of defender DEF on every attack
+  // Applied by temporarily reducing defenderM.def before doStrike
+  let piercingLightActive = false;
+  let pierceRestore = 0;
+  if (attackerM.id === 'radiant_lancer') {
+    piercingLightActive = true;
+    pierceRestore = defenderM.def;
+    defenderM.def = Math.max(0, defenderM.def - Math.round(defenderM.def * 0.3));
+    log(`🔱 Piercing Light: ${defenderM.name} DEF reduced by 30% for this strike (${pierceRestore} → ${defenderM.def})`);
+  }
+
+  // Void Sentinel — Last Darkness: reactive ATK boost when HP drops below 30% (checked post-damage)
+  // No pre-strike block needed here; handled after damage is applied below
+
+  // Rune Priestess — Runic Amplification: gen doubled on Arcane tile (handled in collectPassiveIncome)
+  // Rune Priestess no longer has Runic Barrier one-shot survive
+
+  // Dusk Blade — Hemorrhage: on win, reduces defPlayer mana income next turn by 4✦ (handled in _applyBattleOutcome)
+  // No pre-strike ATK boost for Dusk Blade
+
+  // Stormtalon — Lightning Strike: always attacks first; if defender dies on initial strike, no counter (handled below)
+  // No pre-strike ATK boost for Stormtalon
+
+  // Shadow Paladin — Dark Pact: +1 ATK per friendly Dark summon stationed (handled in getEffectiveStats)
+  // No pre-strike ATK boost for Shadow Paladin here
+
+  // Arch Mage — Mana Infusion: +3✦/turn while stationed (handled in collectPassiveIncome, not pre-strike)
+
   const atkDmg = doStrike(attackerM, defenderM, tile, nullify);
-  defenderM.hp -= atkDmg;
+
+  // Restore Piercing Light DEF reduction after attacker's strike
+  if (piercingLightActive) defenderM.def = pierceRestore;
+
+  const actualAtkDmg = atkDmg;
+  defenderM.hp -= actualAtkDmg;
+
+  // Death Knight — Death Sentence: 10% chance to instantly kill defender on any damage dealt
+  if (attackerM.id === 'death_knight' && actualAtkDmg > 0 && defenderM.hp > 0) {
+    if (Math.random() < 0.10) {
+      defenderM.hp = 0;
+      log(`💀 Death Sentence: Death Knight instant kill triggers! ${defenderM.name} slain!`);
+    }
+  }
+
+  // Void Sentinel — Last Darkness: when HP drops below 30% of maxHp, ATK becomes 36 (reactive)
+  if (defenderM.id === 'void_sentinel' && defenderM.maxHp > 0) {
+    const threshold30 = Math.floor(defenderM.maxHp * 0.30);
+    if (defenderM.hp <= threshold30 && defenderM.hp > 0) {
+      defenderM.atk = 36;
+      log(`🌑 Last Darkness: Void Sentinel HP critical — ATK surges to 36!`);
+    }
+  }
+
+  // High Paladin — Lay on Hands: once per game, self-heal 15 HP when HP drops below 30%
+  if (defenderM.id === 'high_paladin' && defenderM.abilityData && !defenderM.abilityData.layOnHandsUsed && defenderM.maxHp > 0) {
+    const threshold30 = Math.floor(defenderM.maxHp * 0.30);
+    if (defenderM.hp <= threshold30 && defenderM.hp > 0) {
+      const healed = Math.min(15, defenderM.maxHp - defenderM.hp);
+      defenderM.hp = Math.min(defenderM.maxHp, defenderM.hp + 15);
+      defenderM.abilityData.layOnHandsUsed = true;
+      log(`✝️ Lay on Hands: High Paladin heals ${healed} HP (triggered below 30% HP, now ${defenderM.hp}/${defenderM.maxHp})`);
+    }
+  }
+  // High Paladin as attacker — Lay on Hands reactive
+  if (attackerM.id === 'high_paladin' && attackerM.abilityData && !attackerM.abilityData.layOnHandsUsed && attackerM.maxHp > 0) {
+    const threshold30 = Math.floor(attackerM.maxHp * 0.30);
+    if (attackerM.hp <= threshold30 && attackerM.hp > 0) {
+      const healed = Math.min(15, attackerM.maxHp - attackerM.hp);
+      attackerM.hp = Math.min(attackerM.maxHp, attackerM.hp + 15);
+      attackerM.abilityData.layOnHandsUsed = true;
+      log(`✝️ Lay on Hands: High Paladin heals ${healed} HP (triggered below 30% HP, now ${attackerM.hp}/${attackerM.maxHp})`);
+    }
+  }
 
   // Last Rite check for defender
   if (defenderM.hp <= 0 && defenderM.id === 'demon_lord' && !defenderM.lastRiteUsed) {
@@ -458,9 +580,26 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
   }
 
   let defDmg = 0;
-  if (defenderM.hp > 0) {
+  // Stormtalon — Lightning Strike: if defender killed on initial strike, no counter
+  const stormtalonKilledDefender = (attackerM.id === 'stormtalon' && defenderM.hp <= 0);
+  if (stormtalonKilledDefender) {
+    log(`⚡ Lightning Strike: Stormtalon killed ${defenderM.name} — no counter-strike!`);
+  }
+  // Nightshard — Soul Siphon: on kill, steal 4✦ from defeated monster's owner (handled in _applyBattleOutcome)
+  // No counter skip for Nightshard anymore
+
+  if (defenderM.hp > 0 && !stormtalonKilledDefender) {
     const defBonus = bonusTileSet().has(tile.pos);
     const defMonoBuff = monoElementPlayerSet().has(tile.ownerId);
+
+    // Radiant Lancer defending — Piercing Light on counter-strike too (30% of attacker DEF)
+    let counterPierceRestore = 0;
+    if (defenderM.id === 'radiant_lancer') {
+      counterPierceRestore = attackerM.def;
+      attackerM.def = Math.max(0, attackerM.def - Math.round(attackerM.def * 0.3));
+      log(`🔱 Piercing Light: ${attackerM.name} DEF reduced by 30% for counter-strike (${counterPierceRestore} → ${attackerM.def})`);
+    }
+
     if (rattled) {
       const savedAtk = defenderM.atk;
       defenderM.atk = Math.floor(defenderM.atk * 0.5);
@@ -470,14 +609,55 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
     } else {
       defDmg = doStrike(defenderM, attackerM, tile, nullify, defBonus, defMonoBuff);
     }
+
+    // Restore counter Piercing Light
+    if (defenderM.id === 'radiant_lancer') attackerM.def = counterPierceRestore;
+
+    // High Paladin defending — no more Divine Retribution; Lay on Hands is reactive above
+
     // Fortify: reduce damage dealt to the attacker
     if (attackerM._fortify) { defDmg = Math.round(defDmg * 0.60); attackerM._fortify = false; log(`🃏 Fortify! damage reduced 40%`); }
     attackerM.hp -= defDmg;
+
+    // Death Knight — Death Sentence on counter-strike: 10% chance to instantly kill attacker
+    if (defenderM.id === 'death_knight' && defDmg > 0 && attackerM.hp > 0) {
+      if (Math.random() < 0.10) {
+        attackerM.hp = 0;
+        log(`💀 Death Sentence: Death Knight counter instant kill triggers! ${attackerM.name} slain!`);
+      }
+    }
+
+    // Void Sentinel — Last Darkness: check post-counter too (if attacker is void_sentinel)
+    if (attackerM.id === 'void_sentinel' && attackerM.maxHp > 0) {
+      const threshold30 = Math.floor(attackerM.maxHp * 0.30);
+      if (attackerM.hp <= threshold30 && attackerM.hp > 0) {
+        attackerM.atk = 36;
+        log(`🌑 Last Darkness: Void Sentinel HP critical — ATK surges to 36!`);
+      }
+    }
+
+    // High Paladin — Lay on Hands: also check post-counter for attacker
+    if (attackerM.id === 'high_paladin' && attackerM.abilityData && !attackerM.abilityData.layOnHandsUsed && attackerM.maxHp > 0) {
+      const threshold30 = Math.floor(attackerM.maxHp * 0.30);
+      if (attackerM.hp <= threshold30 && attackerM.hp > 0) {
+        const healed = Math.min(15, attackerM.maxHp - attackerM.hp);
+        attackerM.hp = Math.min(attackerM.maxHp, attackerM.hp + 15);
+        attackerM.abilityData.layOnHandsUsed = true;
+        log(`✝️ Lay on Hands: High Paladin heals ${healed} HP after counter (now ${attackerM.hp}/${attackerM.maxHp})`);
+      }
+    }
+
     if (attackerM.hp <= 0 && attackerM.id === 'demon_lord' && !attackerM.lastRiteUsed) {
       attackerM.hp = 15;
       attackerM.lastRiteUsed = true;
       log('💀 Last Rite triggers! Demon Lord survives at 15 HP!');
     }
+  }
+
+  // Ancient Oak — Overgrowth: when Ancient Oak is attacked (as defender), reset stationedTurns
+  if (defenderM.id === 'ancient_oak' && defenderM.abilityData) {
+    defenderM.abilityData.stationedTurns = 0;
+    log(`🌳 Overgrowth: Ancient Oak was attacked — stationedTurns reset to 0`);
   }
 
   let outcome;
@@ -486,7 +666,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
   else if (defenderM.hp <= 0) outcome = 'attacker_wins';
   else outcome = 'stalemate';
 
-  return { atkDmg, defDmg, outcome };
+  return { atkDmg: actualAtkDmg, defDmg, outcome };
 }
 
 // ─── CONSECUTIVE TILE BONUS ───────────────────────────────────────────────────
@@ -570,6 +750,244 @@ function monoElementPlayerSet() {
   return s;
 }
 
+// ─── PHASE 1: ABILITY INFRASTRUCTURE ─────────────────────────────────────────
+
+/**
+ * getEffectiveStats(monster, tilePos, ownerIdx)
+ * Returns { atk, def, gen } after applying all aura buffs/debuffs.
+ * Called before battle resolution so abilities affect the fight without
+ * permanently mutating the monster's base stats.
+ *
+ * Auras covered:
+ *  • Dawnguard       — +5 DEF to adjacent friendly stationed summons
+ *  • Sunfire Herald  — +5 ATK to adjacent friendly stationed summons
+ *  • Umbral Stalker  — −5 DEF to adjacent enemy stationed summons
+ *  • Briar Sprite    — +5 ATK to all friendly Nature summons (same owner)
+ *  • Grove Warden    — +5 DEF to all friendly Nature summons (same owner)
+ *  • Mana Weaver     — +1 GEN/turn to all friendly stationed summons (same owner)
+ *  • Forge support   — +5 DEF per stationed Forge (existing, handled in resolveBattle;
+ *                       included here for completeness via weaponSmithCount path)
+ */
+function getEffectiveStats(monster, tilePos, ownerIdx) {
+  if (!G || !G.board) return { atk: monster.atk, def: monster.def, gen: monster.gen };
+
+  let atkBonus = 0;
+  let defBonus = 0;
+  let genBonus = 0;
+
+  const neighbors = [(tilePos + 1) % 28, (tilePos + 27) % 28];
+
+  for (const tile of G.board) {
+    const mi = tile.summonInstance;
+    if (!mi) continue;
+
+    // ── Adjacent auras (only affect neighboring tiles) ─────────────────────
+    if (neighbors.includes(tile.pos)) {
+      // Dawnguard: +5 DEF to adjacent FRIENDLY summons (not self)
+      if (mi.id === 'dawnguard' && tile.ownerId === ownerIdx && tile.pos !== tilePos) {
+        defBonus += 5;
+      }
+      // Sunfire Herald: +5 ATK to adjacent FRIENDLY summons (not self)
+      if (mi.id === 'sunfire_herald' && tile.ownerId === ownerIdx && tile.pos !== tilePos) {
+        atkBonus += 5;
+      }
+      // Umbral Stalker: −5 DEF to adjacent ENEMY summons
+      if (mi.id === 'umbral_stalker' && tile.ownerId !== ownerIdx) {
+        defBonus -= 5;
+      }
+    }
+
+    // ── Board-wide auras (affect all friendly stationed summons) ───────────
+    if (tile.ownerId === ownerIdx && tile.pos !== tilePos) {
+      // Briar Sprite: +5 ATK to all friendly Nature summons
+      if (mi.id === 'briar_sprite' && monster.type === 'Nature') {
+        atkBonus += 5;
+      }
+      // Grove Warden: +5 DEF to all friendly Nature summons
+      if (mi.id === 'grove_warden' && monster.type === 'Nature') {
+        defBonus += 5;
+      }
+      // Mana Weaver: +1 GEN/turn to all friendly stationed summons
+      if (mi.id === 'mana_weaver') {
+        genBonus += 1;
+      }
+    }
+  }
+
+  // Vine Stalker / Moss Golem: board-wide buff once aura is active
+  // These are applied here so getEffectiveStats captures them at battle time
+  for (const tile of G.board) {
+    const mi = tile.summonInstance;
+    if (!mi || tile.ownerId !== ownerIdx || tile.pos === tilePos) continue;
+    if (mi.id === 'vine_stalker' && mi.abilityData && mi.abilityData.vineAuraActive) {
+      atkBonus += 3; // +3 ATK to all friendly stationed monsters
+    }
+    if (mi.id === 'moss_golem' && mi.abilityData && mi.abilityData.mossAuraActive) {
+      defBonus += 5; // +5 DEF to all friendly stationed monsters
+    }
+  }
+
+  // ── Per-monster self-buff stacks ──────────────────────────────────────────
+  if (monster.abilityData) {
+    const ad = monster.abilityData;
+
+    // Undead — Bone Wraith: Death Rattle is on-death (handled in _applyBattleOutcome); no stat mod here
+    // Dark — Void Reaper: Void Hunger +2 ATK per win (stacks)
+    if (monster.id === 'void_reaper') atkBonus += ad.voidHungerBonus || 0;
+    // Arcane — Sorcerer: Arcane Ascent permanent +1 ATK and +1 Gen per win
+    if (monster.id === 'sorcerer') atkBonus += ad.sorcererAtkBonus || 0;
+    if (monster.id === 'runic_duelist') {
+      // Arcane Pact: +1 ATK per friendly Arcane-type summon stationed
+      const arcaneCount = G.board.filter(t => t.ownerId === ownerIdx && t.summonInstance && t.summonInstance.type === 'Arcane').length;
+      atkBonus += arcaneCount;
+    }
+    // Undead — Cursed Revenant: Undead Resilience +2 DEF per SURVIVAL (not per kill)
+    if (monster.id === 'cursed_revenant') defBonus += (ad.cursedRevenantSurvivals || 0) * 2;
+    // Dark — Shadow Paladin: Dark Pact +1 ATK per friendly Dark summon stationed
+    if (monster.id === 'shadow_paladin') {
+      const darkCount = G.board.filter(t => t.ownerId === ownerIdx && t.summonInstance && t.summonInstance.type === 'Dark').length;
+      atkBonus += darkCount;
+    }
+    // Beast — Razorclaw: Apex Predator +1 ATK per tile owned + +1 ATK per battle won
+    if (monster.id === 'razorclaw') {
+      const tilesOwned = G.board.filter(t => t.ownerId === ownerIdx).length;
+      const battleWins = ad.apexPredatorBattleWins || 0;
+      atkBonus += tilesOwned + battleWins;
+    }
+    // Beast — Feral Striker: Territorial +2 ATK per tile currently owned (dynamic)
+    if (monster.id === 'feral_striker') {
+      const tilesOwned = G.board.filter(t => t.ownerId === ownerIdx).length;
+      atkBonus += tilesOwned * 2;
+    }
+    // Nature — Stoneback: Granite Hide +2 DEF per tile currently owned (dynamic)
+    if (monster.id === 'stoneback') {
+      const tilesOwned = G.board.filter(t => t.ownerId === ownerIdx).length;
+      defBonus += tilesOwned * 2;
+    }
+    // Beast — Pack Hunter: Pack Tactics +3 ATK per other Beast summon stationed
+    if (monster.id === 'pack_hunter') {
+      const beastCount = G.board.filter(t => t.ownerId === ownerIdx && t.summonInstance && t.summonInstance.type === 'Beast' && t.pos !== tilePos).length;
+      atkBonus += beastCount * 3;
+    }
+    // Nature — Ancient Oak: Overgrowth permanent ATK/DEF stacks
+    if (monster.id === 'ancient_oak') {
+      atkBonus += ad.oakOvergrowthAtk || 0;
+      defBonus += ad.oakOvergrowthDef || 0;
+    }
+    // Iron Hide: Hardened Shell — +3 HP permanently each time it survives (maxHp increased; no stat mod here)
+  }
+
+  return {
+    atk: Math.max(1, monster.atk + atkBonus),
+    def: Math.max(0, monster.def + defBonus),
+    gen: Math.max(0, monster.gen + genBonus),
+  };
+}
+
+/**
+ * processTurnStartEffects(playerIdx)
+ * Called at the START of a player's turn (before income), handling:
+ *  • Shade Walker DoT curse on stationed monsters
+ *  • Hemorrhage stacks on players (Plague Herald)
+ *  • Vine Stalker / Moss Golem stationed-turn counters
+ *  • stationedTurns increment for Ancient Oak (uses Grove Warden identity once active)
+ *  • Increments / decrements per-instance abilityData counters
+ */
+function processTurnStartEffects(playerIdx) {
+  if (!G || !G.board || !G.players) return;
+
+  const p = G.players[playerIdx];
+
+  // ── Hemorrhage stacks (Plague Herald ability — Phase 2 sets them) ─────────
+  if (p.hemorrhageStacks > 0) {
+    let totalDrain = 0;
+    for (const tile of G.board) {
+      if (tile.ownerId !== playerIdx || !tile.summonInstance) continue;
+      const mi = tile.summonInstance;
+      const drain = Math.min(mi.hp - 1, p.hemorrhageAmt); // can't kill via hemorrhage
+      if (drain > 0) {
+        mi.hp -= drain;
+        totalDrain += drain;
+      }
+    }
+    p.hemorrhageStacks--;
+    if (totalDrain > 0) {
+      log(`🩸 Hemorrhage! ${p.name}'s stationed summons bleed ${p.hemorrhageAmt} HP (${p.hemorrhageStacks} turns left)`);
+    }
+    if (p.hemorrhageStacks <= 0) {
+      p.hemorrhageStacks = 0;
+      p.hemorrhageAmt = 0;
+    }
+  }
+
+  // ── Shade Walker DoT curse on enemy monsters ──────────────────────────────
+  // Shade Walker's curse is stored on the MONSTER instance (shadeWalkerCurse turns)
+  // We tick it for all monsters across the whole board that belong to this player.
+  // Note: Shade Walker afflicts the OPPONENT's monster — so we tick ALL board monsters
+  // each turn, decrement the curse counter on whatever monster holds it.
+  for (const tile of G.board) {
+    const mi = tile.summonInstance;
+    if (!mi || !mi.abilityData) continue;
+    if (mi.abilityData.shadeWalkerCurse > 0) {
+      const loss = mi.abilityData.shadeWalkerCurseAmt || 5;
+      mi.hp = Math.max(1, mi.hp - loss); // can't kill via Shade Walker DoT
+      mi.abilityData.shadeWalkerCurse--;
+      log(`🌑 Shade Walker curse: ${mi.name} at tile ${tile.pos} takes ${loss} HP (${mi.abilityData.shadeWalkerCurse} turns left)`);
+    }
+  }
+
+  // ── Vine Stalker / Moss Golem stationed-turn counters ────────────────────
+  // Tick stationedTurns for ALL stationed summons (across all owned tiles by any player)
+  // We only tick those whose owner is the CURRENT player so turns are counted per-player-turn
+  for (const tile of G.board) {
+    if (tile.ownerId !== playerIdx || !tile.summonInstance) continue;
+    const mi = tile.summonInstance;
+    if (!mi.abilityData) continue;
+
+    // Increment stationed turns for aura-building pieces
+    if (mi.id === 'vine_stalker' || mi.id === 'moss_golem' || mi.id === 'ancient_oak') {
+      mi.abilityData.stationedTurns = (mi.abilityData.stationedTurns || 0) + 1;
+      const turns = mi.abilityData.stationedTurns;
+
+      if (mi.id === 'vine_stalker' && !mi.abilityData.vineAuraActive && turns >= 5) {
+        mi.abilityData.vineAuraActive = true;
+        log(`🌿 Vine Stalker awakens! +3 ATK aura active for ${p.name}'s friendly stationed summons`);
+      }
+      if (mi.id === 'moss_golem' && !mi.abilityData.mossAuraActive && turns >= 5) {
+        mi.abilityData.mossAuraActive = true;
+        log(`🪨 Moss Golem awakens! +5 DEF aura active for ${p.name}'s friendly stationed summons`);
+      }
+      // Ancient Oak — Overgrowth: every 3 turns stationed without being attacked, +3 ATK/+3 DEF permanently
+      // stationedTurns resets on attack (handled in resolveBattle when ancient_oak is defender)
+      if (mi.id === 'ancient_oak' && turns > 0 && turns % 3 === 0) {
+        mi.abilityData.oakOvergrowthAtk = (mi.abilityData.oakOvergrowthAtk || 0) + 3;
+        mi.abilityData.oakOvergrowthDef = (mi.abilityData.oakOvergrowthDef || 0) + 3;
+        log(`🌳 Overgrowth: Ancient Oak grows! +3 ATK +3 DEF permanently (turns: ${turns}, total: +${mi.abilityData.oakOvergrowthAtk}/+${mi.abilityData.oakOvergrowthDef})`);
+      }
+    }
+
+    // Iron Hide — Hardened Shell: gains +3 HP permanently each time it SURVIVES a battle
+    // (HP regen per tile was wrong; survival bonus is applied in _applyBattleOutcome)
+  }
+
+  // ── Plague Herald — Pestilence: adjacent enemy stationed monsters lose 3 HP/turn ──
+  for (const tile of G.board) {
+    if (tile.ownerId !== playerIdx || !tile.summonInstance) continue;
+    if (tile.summonInstance.id !== 'plague_herald') continue;
+    const phNeighbors = [(tile.pos + 1) % 28, (tile.pos + 27) % 28];
+    for (const np of phNeighbors) {
+      const nt = G.board[np];
+      if (nt && nt.ownerId !== playerIdx && nt.summonInstance) {
+        const loss = Math.max(0, Math.min(nt.summonInstance.hp - 1, 3)); // can't kill via Pestilence
+        if (loss > 0) {
+          nt.summonInstance.hp -= loss;
+          log(`🦠 Pestilence: ${nt.summonInstance.name} loses ${loss} HP from adjacent Plague Herald (now ${nt.summonInstance.hp}/${nt.summonInstance.maxHp})`);
+        }
+      }
+    }
+  }
+}
+
 // ─── PASSIVE INCOME / SPECIALS ────────────────────────────────────────────────
 
 function collectPassiveIncome(playerIdx) {
@@ -591,6 +1009,23 @@ function collectPassiveIncome(playerIdx) {
         (t.summonInstance.type === 'Nature' || t.summonInstance.type2 === 'Nature')).length;
       gen += natureTiles + natureMonsters;
     }
+    // Rune Priestess — Runic Amplification: gen doubled while stationed on an Arcane tile
+    if (mi.id === 'rune_priestess' && tile.element === 'Arcane') {
+      gen *= 2;
+      log(`🔮 Runic Amplification: Rune Priestess on Arcane tile — gen doubled to ${gen}✦`);
+    }
+
+    // Arch Mage — Mana Infusion: +3✦ bonus income per turn while stationed
+    if (mi.id === 'arch_mage') {
+      gen += 3;
+      log(`🔮 Mana Infusion: Arch Mage grants +3✦ bonus income (total gen: ${gen})`);
+    }
+
+    // Sorcerer — Arcane Ascent: gen bonus from permanent sorcererGenBonus
+    if (mi.id === 'sorcerer' && mi.abilityData && mi.abilityData.sorcererGenBonus) {
+      gen += mi.abilityData.sorcererGenBonus;
+    }
+
     earned += gen;
     summonGen += gen;
   }
@@ -609,13 +1044,13 @@ function collectPassiveIncome(playerIdx) {
     }
   }
 
-  // Mana Refinery passive — +1✦ per ALL stationed summons (when at least 1 Mana Refinery is stationed)
+  // Mana Refinery passive — +1✦ per friendly summon stationed on the board (any summon, stacks per Refinery)
   const manaRefineryCount = G.board.filter(t => t.ownerId === playerIdx && t.summonInstance && t.summonInstance.id === 'mana_refinery').length;
-  const stationedSummonCount = G.board.filter(t => t.ownerId === playerIdx && t.summonInstance).length;
-  const manaRefineryBonus = manaRefineryCount > 0 ? stationedSummonCount : 0;
+  const friendlySummonCount = G.board.filter(t => t.ownerId === playerIdx && t.summonInstance).length;
+  const manaRefineryBonus = manaRefineryCount > 0 ? friendlySummonCount : 0; // +1✦ per stationed summon (requires at least 1 Refinery)
   if (manaRefineryBonus > 0) {
     earned += manaRefineryBonus;
-    log(`🏭 Mana Refinery ×${manaRefineryCount}: ${p.name} earns +${manaRefineryBonus}✦ (${stationedSummonCount} stationed summons)`);
+    log(`🏭 Mana Refinery ×${manaRefineryCount}: ${p.name} earns +${manaRefineryBonus}✦ (${friendlySummonCount} friendly summons stationed)`);
   }
 
   // Field Medic passive — +2 HP/round to all stationed summons per copy (stacks)
@@ -630,8 +1065,8 @@ function collectPassiveIncome(playerIdx) {
     log(`🏥 Field Medic ×${fieldMedicCount}: ${p.name}'s summons heal +${healPerSummon} HP`);
   }
 
-  // Weapon Smith passive — +5 ATK per copy stationed (applied at battle time in doStrike; tracked here for summary display)
-  const weaponSmithCount = G.board.filter(t => t.ownerId === playerIdx && t.summonInstance && t.summonInstance.id === 'weapon_smith').length;
+  // Weapon Smith passive — +5 ATK per copy IN HAND of attacker (applied at battle time in doStrike; tracked here for summary display)
+  const weaponSmithCount = p.hand.filter(m => m.id === 'weapon_smith').length;
 
   // Forge passive — +5 DEF per copy stationed (applied at battle time in resolveBattle; tracked here for summary display)
   const forgeCount = G.board.filter(t => t.ownerId === playerIdx && t.summonInstance && t.summonInstance.id === 'forge').length;
@@ -693,6 +1128,14 @@ function collectPassiveIncome(playerIdx) {
     upkeep = ownedTileCount;
     p.mana = Math.max(0, p.mana - upkeep);
     log(`🏗️ ${p.name} pays ${upkeep}✦ upkeep for ${ownedTileCount} tile${ownedTileCount > 1 ? 's' : ''}`);
+  }
+
+  // Dusk Blade — Hemorrhage: reduce this player's income if flagged by an enemy Dusk Blade win last turn
+  if (p._hemorrhageIncomeReduction) {
+    const reduction = Math.min(earned, p._hemorrhageIncomeReduction);
+    earned = Math.max(0, earned - reduction);
+    log(`🗡️ Hemorrhage: ${p.name}'s Mana income reduced by ${reduction}✦ (Dusk Blade curse)`);
+    p._hemorrhageIncomeReduction = 0;
   }
 
   // Wild card effects on income — snapshot flags before clearing
@@ -768,8 +1211,8 @@ function collectPassiveIncome(playerIdx) {
       const ap = [];
       if (ardentSaintCount > 0) ap.push({ id:'ardent_saint', label:`Ardent Saint ×${ardentSaintCount}`, desc:`Aura of Renewal: +${ardentSaintCount * 5} HP/turn to all friendly summons` });
       if (fieldMedicCount > 0) ap.push({ id:'field_medic', label:`Field Medic ×${fieldMedicCount}`, desc:`+${fieldMedicCount * 2} HP/turn to all friendly summons` });
-      if (manaRefineryCount > 0) ap.push({ id:'mana_refinery', label:`Mana Refinery ×${manaRefineryCount}`, desc:`+${manaRefineryBonus}✦ bonus income (1✦ per stationed summon × ${stationedSummonCount})` });
-      if (weaponSmithCount > 0) ap.push({ id:'weapon_smith', label:`Weapon Smith ×${weaponSmithCount}`, desc:`+${weaponSmithCount * 5} ATK to your attacking summon` });
+      if (manaRefineryCount > 0) ap.push({ id:'mana_refinery', label:`Mana Refinery ×${manaRefineryCount}`, desc:`+${manaRefineryBonus}✦ bonus income (1✦ per friendly summon stationed)` });
+      if (weaponSmithCount > 0) ap.push({ id:'weapon_smith', label:`Weapon Smith ×${weaponSmithCount}`, desc:`+${weaponSmithCount * 5} ATK to your attacking summon (copies in hand)` });
       if (forgeCount > 0) ap.push({ id:'forge', label:`Forge ×${forgeCount}`, desc:`+${forgeCount * 5} DEF to all stationed summons` });
       return ap;
     })(),
@@ -961,6 +1404,9 @@ function startShopPhase() {
   // mana generation starts from round 2 onward (turnCount >= playerCount)
   const isRound1 = G.turnCount < G.players.length;
   if (!isRound1) {
+    processTurnStartEffects(G.currentPlayer); // Phase 1 + 2: ability ticks before income
+    // Phase 2: clear Bone Wraith's "friendly died last turn" flag for this player
+    if (G._lastDestroyedFriendly) G._lastDestroyedFriendly[G.currentPlayer] = false;
     collectPassiveIncome(G.currentPlayer);
   } else {
     G.turnSummary = null; // no summary in round 1
@@ -1526,7 +1972,7 @@ const handlers = {
     if (G.phase !== 'stalemate') return sendError(ws, 'Not stalemate phase');
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
     const p = G.players[G.currentPlayer];
-    const RETREAT_COST = 5;
+    const RETREAT_COST = 8;
     const paid = Math.min(p.mana, RETREAT_COST);
     p.mana -= paid;
     if (paid > 0) _trackBattleMana(p, -paid);
@@ -1565,8 +2011,17 @@ const handlers = {
     tile.ownerId = G.currentPlayer;
     tile.summonId = m.iid;
     tile.summonInstance = m;
+    tile.neverOwned = false; // Phase 1: mark tile as ever-claimed
     _updatePeakTiles(G.currentPlayer);
     log(`🌟 ${p.name} claimed tile ${tilePos} (${tile.element}) with ${m.name} [Setup]`);
+    // Per-claim ability triggers (setup phase)
+    // Feral Striker: Territorial is now dynamic (tile count) — no per-claim stack
+    // Stoneback: Granite Hide is now dynamic (tile count) — no per-claim stack
+    // Solar Knight — Radiant Strike: on claim, tile converts to Light element
+    if (m.id === 'solar_knight') {
+      tile.element = 'Light';
+      log(`☀️ Radiant Strike: Solar Knight converts tile ${tilePos} to Light element (setup)!`);
+    }
     advanceSetupTurn();
   },
 
@@ -1622,7 +2077,18 @@ const handlers = {
     tile.ownerId = G.currentPlayer;
     tile.summonId = m.iid;
     tile.summonInstance = m;
+    tile.neverOwned = false; // Phase 1: mark tile as ever-claimed
     log(`🚩 ${p.name} claimed tile ${p.position} with ${m.name}`);
+
+    // ── Per-claim ability triggers ──────────────────────────────────────────
+    // Feral Striker: Territorial is now dynamic (tile count) — no per-claim stack
+    // Stoneback: Granite Hide is now dynamic (tile count) — no per-claim stack
+    // Grave Specter: Necrotic Claim — tile converts to Undead on BATTLE WIN only (not free claim)
+    // Solar Knight — Radiant Strike: on claim, tile converts to Light element
+    if (m.id === 'solar_knight') {
+      tile.element = 'Light';
+      log(`☀️ Radiant Strike: Solar Knight converts tile ${p.position} to Light element!`);
+    }
 
     advanceTurn();
   },
@@ -1654,27 +2120,49 @@ const handlers = {
     const rattled = !!(defOwnerP && defOwnerP.wcEffects && defOwnerP.wcEffects.rattle);
     if (rattled) { defOwnerP.wcEffects.rattle = false; }
 
-    // Weapon Smith aura — +5 ATK to attacker per copy stationed by attacker (stacks)
-    const weaponSmithCount = G.board.filter(t => t.ownerId === p.idx && t.summonInstance && t.summonInstance.id === 'weapon_smith').length;
+    // ── Aura buffs via getEffectiveStats ──────────────────────────────────────
+    // Attacker: apply aura modifiers (Sunfire Herald +ATK, Vine Stalker aura, etc.)
+    const attTile = G.board.find(t => t.ownerId === p.idx && t.summonInstance && t.summonInstance.iid === attM.iid);
+    const attTilePos = attTile ? attTile.pos : -1;
+    const attEffective = getEffectiveStats(attM, attTilePos, p.idx);
     const origAttAtk = attM.atk;
+    const origAttDef = attM.def;
+    attM.atk = attEffective.atk;
+    attM.def = attEffective.def;
+    if (attEffective.atk !== origAttAtk) log(`✨ Aura: ${attM.name} ATK ${origAttAtk} → ${attEffective.atk}`);
+    if (attEffective.def !== origAttDef) log(`✨ Aura: ${attM.name} DEF ${origAttDef} → ${attEffective.def}`);
+
+    // Defender: apply aura modifiers (Dawnguard +DEF, Umbral Stalker −DEF, etc.)
+    const defTilePos = tile.pos;
+    const defEffective = getEffectiveStats(defM, defTilePos, tile.ownerId);
+    const origDefAtk = defM.atk;
+    const origDefDef = defM.def;
+    defM.atk = defEffective.atk;
+    defM.def = defEffective.def;
+    if (defEffective.atk !== origDefAtk) log(`✨ Aura: ${defM.name} ATK ${origDefAtk} → ${defEffective.atk}`);
+    if (defEffective.def !== origDefDef) log(`✨ Aura: ${defM.name} DEF ${origDefDef} → ${defEffective.def}`);
+
+    // Weapon Smith aura — +5 ATK to attacker per copy IN HAND of attacker (stacks, per xlsx)
+    const weaponSmithCount = p.hand.filter(m => m.id === 'weapon_smith').length;
     if (weaponSmithCount > 0) {
       attM.atk += weaponSmithCount * 5;
-      log(`⚒️ Weapon Smith ×${weaponSmithCount}: ${attM.name} ATK ${origAttAtk} → ${attM.atk}`);
+      log(`⚒️ Weapon Smith ×${weaponSmithCount}: ${attM.name} ATK → ${attM.atk}`);
     }
 
     // Forge aura — +5 DEF to defender per copy stationed by defending player (stacks)
     const forgeCount = G.board.filter(t => t.ownerId === tile.ownerId && t.summonInstance && t.summonInstance.id === 'forge').length;
-    const origDefDef = defM.def;
     if (forgeCount > 0) {
       defM.def += forgeCount * 5;
-      log(`🔩 Forge ×${forgeCount}: ${defM.name} DEF ${origDefDef} → ${defM.def}`);
+      log(`🔩 Forge ×${forgeCount}: ${defM.name} DEF → ${defM.def}`);
     }
 
     const { atkDmg, defDmg, outcome } = resolveBattle(attM, defM, tile, rattled);
 
     // Restore temporarily boosted stats after battle
-    if (weaponSmithCount > 0) attM.atk = origAttAtk;
-    if (forgeCount > 0) defM.def = origDefDef;
+    attM.atk = origAttAtk;
+    attM.def = origAttDef;
+    defM.atk = origDefAtk;
+    defM.def = origDefDef;
 
     log(`⚔️ ${p.name}(${attM.name}) attacks ${defOwner.name}(${defM.name}) on tile ${p.position}`);
     log(`   ATK dealt ${atkDmg}, DEF struck back ${defDmg} — ${outcome}`);
@@ -2178,6 +2666,7 @@ const handlers = {
 
     // Transfer tile ownership — stationed monster stays on tile, now fights for new owner
     tile.ownerId = G.currentPlayer;
+    tile.neverOwned = false; // Phase 1: mark tile as ever-claimed
     // summonInstance and summonId remain unchanged — the monster defects in place
 
     // Notify previous owner
@@ -2264,6 +2753,7 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     tile.ownerId = attPlayer.idx;
     tile.summonId = attM.iid;
     tile.summonInstance = attM;
+    tile.neverOwned = false; // Phase 1: mark tile as ever-claimed
     // Stats
     attPlayer.battlesWon++;
     defPlayer.battlesLost++;
@@ -2277,6 +2767,96 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     _trackBattleMana(defPlayer, -4);
     log(`✦ Battle mana: ${attPlayer.name} +4✦  ${defPlayer.name} −4✦`);
     checkManaElimination(defPlayer.idx);
+
+    // ── Light attacker win abilities ──────────────────────────────────────────
+    // Dawn Striker — Soulmend: heals 8 HP after winning a battle
+    if (attM.id === 'dawn_striker') {
+      const healed = Math.min(8, attM.maxHp - attM.hp);
+      attM.hp = Math.min(attM.maxHp, attM.hp + 8);
+      log(`🌅 Soulmend: Dawn Striker heals ${healed} HP on win (now ${attM.hp}/${attM.maxHp})`);
+    }
+    // Solar Knight — Radiant Strike: on claim (battle win), tile converts to Light element
+    if (attM.id === 'solar_knight') {
+      tile.element = 'Light';
+      log(`☀️ Radiant Strike: Solar Knight converts tile ${tilePos} to Light element!`);
+    }
+
+    // ── Dark attacker win abilities ───────────────────────────────────────────
+    // Void Reaper — Void Hunger: +2 ATK per win (stacks)
+    if (attM.id === 'void_reaper' && attM.abilityData) {
+      attM.abilityData.voidHungerBonus = (attM.abilityData.voidHungerBonus || 0) + 2;
+      log(`👁️ Void Hunger: Void Reaper ATK stack +2 (total bonus: +${attM.abilityData.voidHungerBonus})`);
+    }
+    // Nightshard — Soul Siphon: on kill, steal 4✦ from defeated monster's owner
+    if (attM.id === 'nightshard') {
+      const stolen = Math.min(defPlayer.mana, 4);
+      defPlayer.mana -= stolen;
+      attPlayer.mana += stolen;
+      _trackBattleMana(attPlayer, +stolen);
+      _trackBattleMana(defPlayer, -stolen);
+      log(`🌑 Soul Siphon: Nightshard steals ${stolen}✦ from ${defPlayer.name} on kill`);
+    }
+    // Dusk Blade — Hemorrhage: on win, target's Mana income next turn reduced by 4✦
+    if (attM.id === 'dusk_blade') {
+      defPlayer.hemorrhageStacks = 1; // 1 turn of income reduction
+      defPlayer.hemorrhageAmt = 4;   // 4✦ income reduction (encoded as mana drain)
+      // Reuse hemorrhage system: will drain 4 from stationed summons next turn
+      // Actually: use a separate flag for income reduction
+      defPlayer._hemorrhageIncomeReduction = (defPlayer._hemorrhageIncomeReduction || 0) + 4;
+      log(`🗡️ Hemorrhage: Dusk Blade reduces ${defPlayer.name}'s Mana income by 4✦ next turn`);
+    }
+    // Shade Walker — Cursed Touch: place a DoT curse on the defeated monster's tile
+    if (attM.id === 'shade_walker') {
+      tile.cursed = 3; // 3 turns of DoT
+      tile.genReduction = 0;
+      log(`🌑 Cursed Touch: Shade Walker curses tile ${tilePos} — next summon placed here takes DoT for 3 turns`);
+    }
+
+    // ── Arcane attacker win abilities ─────────────────────────────────────────
+    // Sorcerer — Arcane Ascent: permanently gain +1 ATK and +1 Gen per win
+    if (attM.id === 'sorcerer' && attM.abilityData) {
+      attM.abilityData.sorcererAtkBonus = (attM.abilityData.sorcererAtkBonus || 0) + 1;
+      attM.abilityData.sorcererGenBonus = (attM.abilityData.sorcererGenBonus || 0) + 1;
+      log(`✨ Arcane Ascent: Sorcerer permanently gains +1 ATK +1 Gen (total: +${attM.abilityData.sorcererAtkBonus} ATK, +${attM.abilityData.sorcererGenBonus} Gen)`);
+    }
+    // Spell Wraith — Mana Siphon: steal 1 Mana Gen from the claimed tile
+    if (attM.id === 'spell_wraith' && tile.genReduction < 2) {
+      tile.genReduction = (tile.genReduction || 0) + 1;
+      if (attM.abilityData) attM.abilityData.extraGenPerTurn = (attM.abilityData.extraGenPerTurn || 0) + 1;
+      log(`✨ Mana Siphon: Spell Wraith siphons 1 Gen from tile ${tilePos} (tile genReduction: ${tile.genReduction})`);
+    }
+
+    // ── Undead attacker win abilities ─────────────────────────────────────────
+    // Grave Specter — Necrotic Claim: on win, tile converts to Undead element
+    if (attM.id === 'grave_specter') {
+      tile.element = 'Undead';
+      log(`👻 Necrotic Claim: Grave Specter converts tile ${tilePos} to Undead element!`);
+    }
+    // Bone Wraith — Death Rattle: on death of DEFENDER Bone Wraith, deals 12 damage to killer
+    if (defM.id === 'bone_wraith') {
+      attM.hp -= 12;
+      log(`💀 Death Rattle: Bone Wraith's death deals 12 damage to ${attM.name} (now ${attM.hp}/${attM.maxHp})`);
+    }
+    // Thornling — Thorn Burst: on death of DEFENDER Thornling, attacker loses 5 HP and tile converts to Nature
+    if (defM.id === 'thornling') {
+      attM.hp -= 5;
+      tile.element = 'Nature';
+      log(`🌿 Thorn Burst: Thornling's death deals 5 damage to ${attM.name} and tile ${tilePos} becomes Nature!`);
+    }
+    // Cursed Revenant — Undead Resilience: survival tracked separately; kill does NOT stack DEF
+    // (DEF stacks only when Cursed Revenant itself SURVIVES — see survivor section below)
+
+    // ── Beast attacker win abilities ──────────────────────────────────────────
+    // Razorclaw — Apex Predator: count battle wins (+1 ATK per win, tracked)
+    if (attM.id === 'razorclaw' && attM.abilityData) {
+      attM.abilityData.apexPredatorBattleWins = (attM.abilityData.apexPredatorBattleWins || 0) + 1;
+      log(`🦁 Apex Predator: Razorclaw battle wins: ${attM.abilityData.apexPredatorBattleWins}`);
+    }
+    // Feral Striker: Territorial is dynamic (tile count) — no per-win stack needed
+    // Stoneback: Granite Hide is dynamic (tile count) — no per-win stack needed
+
+    // Plague Herald — Pestilence: aura handled in processTurnStartEffects (not on-win)
+
     // Succubus — Mana Drain on win
     if (attM.id === 'succubus') {
       const stolen = Math.min(defPlayer.mana, 10);
@@ -2301,6 +2881,65 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     _trackBattleMana(defPlayer, +4);
     log(`✦ Battle mana: ${attPlayer.name} −8✦  ${defPlayer.name} +4✦`);
     checkManaElimination(attPlayer.idx);
+
+    // ── Light defender win abilities ──────────────────────────────────────────
+    // Dawn Striker defending — Soulmend: heals 8 HP after winning
+    if (defM.id === 'dawn_striker') {
+      const healed = Math.min(8, defM.maxHp - defM.hp);
+      defM.hp = Math.min(defM.maxHp, defM.hp + 8);
+      log(`🌅 Soulmend: Dawn Striker heals ${healed} HP on defensive win (now ${defM.hp}/${defM.maxHp})`);
+    }
+    // Cursed Revenant — Undead Resilience: gains +2 DEF each time it SURVIVES a battle (as defender)
+    if (defM.id === 'cursed_revenant' && defM.abilityData) {
+      defM.abilityData.cursedRevenantSurvivals = (defM.abilityData.cursedRevenantSurvivals || 0) + 1;
+      log(`💀 Undead Resilience: Cursed Revenant survives — +2 DEF (survivals: ${defM.abilityData.cursedRevenantSurvivals})`);
+    }
+    // Iron Hide — Hardened Shell: gains +3 maxHp permanently each time it SURVIVES
+    if (defM.id === 'iron_hide') {
+      defM.maxHp += 3;
+      defM.hp += 3; // also restore the extra HP
+      log(`🦏 Hardened Shell: Iron Hide survives! +3 maxHp permanently (now ${defM.hp}/${defM.maxHp})`);
+    }
+
+    // ── Dark defender win abilities ───────────────────────────────────────────
+    // Void Reaper — Void Hunger: +2 ATK per win (stacks, even when defending)
+    if (defM.id === 'void_reaper' && defM.abilityData) {
+      defM.abilityData.voidHungerBonus = (defM.abilityData.voidHungerBonus || 0) + 2;
+      log(`👁️ Void Hunger: Void Reaper ATK stack +2 on defense win (total bonus: +${defM.abilityData.voidHungerBonus})`);
+    }
+    // Shade Walker — Cursed Touch: curse attacker's hand monster for 3-turn DoT
+    if (defM.id === 'shade_walker' && attM.abilityData) {
+      attM.abilityData.shadeWalkerCurse = 3;
+      attM.abilityData.shadeWalkerCurseAmt = 5;
+      log(`🌑 Cursed Touch: Shade Walker curses ${attM.name} — 5 HP DoT for 3 turns`);
+    }
+
+    // ── Arcane defender win abilities ─────────────────────────────────────────
+    // Sorcerer — Arcane Ascent on defense win: permanently gain +1 ATK and +1 Gen
+    if (defM.id === 'sorcerer' && defM.abilityData) {
+      defM.abilityData.sorcererAtkBonus = (defM.abilityData.sorcererAtkBonus || 0) + 1;
+      defM.abilityData.sorcererGenBonus = (defM.abilityData.sorcererGenBonus || 0) + 1;
+      log(`✨ Arcane Ascent: Sorcerer permanently gains +1 ATK +1 Gen on defense win`);
+    }
+
+    // ── Beast defender win abilities ──────────────────────────────────────────
+    // Razorclaw — Apex Predator: battle wins count on defense too
+    if (defM.id === 'razorclaw' && defM.abilityData) {
+      defM.abilityData.apexPredatorBattleWins = (defM.abilityData.apexPredatorBattleWins || 0) + 1;
+      log(`🦁 Apex Predator: Razorclaw defense battle wins: ${defM.abilityData.apexPredatorBattleWins}`);
+    }
+    // Bone Wraith — Death Rattle: on death of ATTACKER Bone Wraith when defending wins
+    if (attM.id === 'bone_wraith') {
+      defM.hp -= 12;
+      log(`💀 Death Rattle: Bone Wraith's death deals 12 damage to ${defM.name} (now ${defM.hp}/${defM.maxHp})`);
+    }
+    // Thornling defending wins — Thorn Burst is not applicable (Thornling is the killer, not the killed)
+    // (Thorn Burst only triggers when Thornling DIES — handled in attacker_wins when defM=thornling)
+
+    // Track that attPlayer's summon was destroyed (for Bone Wraith Death Surge next turn)
+    if (!G._lastDestroyedFriendly) G._lastDestroyedFriendly = {};
+    G._lastDestroyedFriendly[attPlayer.idx] = true;
+
     // Arcane Arbiter — Chaos Flux on defender win too
     if (defM.id === 'arcane_arbiter') _applyChaosFlux(attPlayer);
   } else if (outcome === 'mutual') {
@@ -2320,6 +2959,11 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     _trackBattleMana(defPlayer, +4);
     log(`✦ Battle mana: ${attPlayer.name} −8✦  ${defPlayer.name} +4✦`);
     checkManaElimination(attPlayer.idx);
+    // (Solar Knight is destroyed; layOnHandsUsed reset not needed — fresh makeSummon on next buy)
+    // Track destroyed summons for Bone Wraith (both sides lost a summon)
+    if (!G._lastDestroyedFriendly) G._lastDestroyedFriendly = {};
+    G._lastDestroyedFriendly[attPlayer.idx] = true;
+    G._lastDestroyedFriendly[defPlayer.idx] = true;
     // Arcane Arbiter — Chaos Flux on mutual too
     if (defM.id === 'arcane_arbiter') _applyChaosFlux(attPlayer);
   } else if (outcome === 'stalemate') {
@@ -2331,6 +2975,21 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     _trackBattleMana(defPlayer, +4);
     log(`✦ Battle mana: ${attPlayer.name} −4✦  ${defPlayer.name} +4✦`);
     checkManaElimination(attPlayer.idx);
+
+    // Sorcerer — Arcane Ascent: permanent gains (no streak to reset; stalemate gives no bonus)
+    // Cursed Revenant — Undead Resilience: gains +2 DEF each time it SURVIVES (stalemate = survival)
+    if (attM.id === 'cursed_revenant' && attM.abilityData) {
+      attM.abilityData.cursedRevenantSurvivals = (attM.abilityData.cursedRevenantSurvivals || 0) + 1;
+      log(`💀 Undead Resilience: Cursed Revenant survives stalemate — +2 DEF (survivals: ${attM.abilityData.cursedRevenantSurvivals})`);
+    }
+    if (defM.id === 'cursed_revenant' && defM.abilityData) {
+      defM.abilityData.cursedRevenantSurvivals = (defM.abilityData.cursedRevenantSurvivals || 0) + 1;
+      log(`💀 Undead Resilience: Cursed Revenant survives stalemate — +2 DEF (survivals: ${defM.abilityData.cursedRevenantSurvivals})`);
+    }
+    // Iron Hide — Hardened Shell: both survive in stalemate
+    if (attM.id === 'iron_hide') { attM.maxHp += 3; attM.hp += 3; log(`🦏 Hardened Shell: Iron Hide survives stalemate! +3 maxHp`); }
+    if (defM.id === 'iron_hide') { defM.maxHp += 3; defM.hp += 3; log(`🦏 Hardened Shell: Iron Hide survives stalemate! +3 maxHp`); }
+
     // Succubus — Mana Drain on stalemate too
     if (attM.id === 'succubus') {
       const stolen = Math.min(defPlayer.mana, 10);
