@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.4.82</title>
+<title>Summoners Gambit — Player v0.4.86</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 <style>
 :root {
   --bg: #0d0e1c; --bg-deep: #09091a; --surface: #151627; --surface2: #1c1e2b;
@@ -1000,70 +1001,70 @@ function updateHandStrip(show = true) {
 // ─── MONSTER LORE ───────────────────────────────────────────────────────────
 const MONSTER_LORE = {
   // ── LIGHT ──
-  'Solar Knight':   { role:'Assailant',lore:'A warrior wreathed in living sunfire, the Solar Knight charges into battle with reckless brilliance. Their armor blazes so brightly that enemies are blinded before the blade even lands — but the intensity that makes them lethal also burns through their endurance fast.', ability:'Lay on Hands — once per battle, heals itself for 15 HP before striking.' },
+  'Solar Knight':   { role:'Assailant',lore:'A warrior wreathed in living sunfire, the Solar Knight charges into battle with reckless brilliance. Their armor blazes so brightly that enemies are blinded before the blade even lands — but the intensity that makes them lethal also burns through their endurance fast.', ability:'Radiant Strike — on claim or battle win, tile converts to Light element.' },
   'Dawnguard':      { role:'Guardian',lore:'The Dawnguard were founded to hold the line at the world\'s edge, and they have done so for a thousand years. Slow but unyielding, a Dawnguard unit doesn\'t retreat. Ever. Their shields are blessed to turn aside blows that would fell lesser warriors, and their patience outlasts nearly any assault.', ability:'Bulwark Aura — grants +5 DEF to the friendly summon on each adjacent tile.' },
-  'High Paladin':   { role:'Vanguard',lore:'Chosen from among the bravest and most disciplined of the Light orders, the High Paladin combines martial skill with divine judgment. They are neither the fastest nor the most powerful, but their balance of offense and defense makes them reliable in almost any engagement.', ability:'Holy Strike — restores 5 HP to itself each time it wins a battle.' },
+  'High Paladin':   { role:'Vanguard',lore:'Chosen from among the bravest and most disciplined of the Light orders, the High Paladin combines martial skill with divine judgment. They are neither the fastest nor the most powerful, but their balance of offense and defense makes them reliable in almost any engagement.', ability:'Lay on Hands — once per game, heals itself for 15 HP when HP drops below 30%.' },
   'Ardent Saint':   { role:'Ascendant · Temple Only',lore:'Legends say the Ardent Saint ascended to the Light after taking a wound that should have been fatal — and stood back up anyway. Now she radiates a gentle healing aura that sustains all friendly summons on the field, turning attrition into advantage over a long game.', ability:'Aura of Renewal — heals all your stationed summons 5 HP each turn.' },
 
   // ── DARK ──
-  'Nightshard':     { role:'Assailant',lore:'Crystallized shadow given lethal purpose, the Nightshard moves like a rumor and hits like a verdict. What they lack in durability they make up for in aggression — a summon that lives or dies in the opening exchange.', ability:'Shadowstep — strikes before the defender can counter; the counter-strike is skipped on this monster\'s attacks.' },
-  'Void Sentinel':  { role:'Guardian',lore:'The Void Sentinel was carved from the space between stars and set to guard a gateway that no longer exists. It protects tiles with the same impassive resolve regardless of what crosses its path, drawing on an endless reservoir of shadow to endure.', ability:'Void Bulwark — reduces all incoming damage by 5 (minimum 1).' },
-  'Shadow Paladin': { role:'Vanguard',lore:'Where Light Paladins serve order, Shadow Paladins serve inevitability. They have studied every fighting style and countered every tactic, making them adaptable soldiers who can hold ground or push forward depending on what the moment demands.', ability:'Tile Pressure — gains +2 ATK for each tile the enemy currently owns (recalculated each battle).' },
+  'Nightshard':     { role:'Assailant',lore:'Crystallized shadow given lethal purpose, the Nightshard moves like a rumor and hits like a verdict. What they lack in durability they make up for in aggression — a summon that lives or dies in the opening exchange.', ability:'Soul Siphon — on kill, steals 4✦ from the defeated monster\'s owner.' },
+  'Void Sentinel':  { role:'Guardian',lore:'The Void Sentinel was carved from the space between stars and set to guard a gateway that no longer exists. It protects tiles with the same impassive resolve regardless of what crosses its path, drawing on an endless reservoir of shadow to endure.', ability:'Last Darkness — when HP drops below 30%, ATK transforms to 36.' },
+  'Shadow Paladin': { role:'Vanguard',lore:'Where Light Paladins serve order, Shadow Paladins serve inevitability. They have studied every fighting style and countered every tactic, making them adaptable soldiers who can hold ground or push forward depending on what the moment demands.', ability:'Dark Pact — gains +1 ATK per friendly Dark summon currently stationed on tiles.' },
   'Succubus':       { role:'Ascendant · Temple Only',lore:'Beautiful, ruthless, and economically devastating. The Succubus doesn\'t just win battles — she taxes them. Every victory drains the loser\'s treasury, turning combat into a Mana siphon that compounds with every fight.', ability:'Mana Drain — steal 10 Mana from the opposing player each time you win a battle.' },
 
   // ── ARCANE ──
-  'Sorcerer':       { role:'Assailant',lore:'Pure channeled spellfire in a mortal frame. The Sorcerer can disintegrate enemies in seconds, but maintaining those output levels leaves almost nothing for self-defense. High risk, high reward — one wrong trade ends them.', ability:'Spellfire — gains +5 ATK for each consecutive battle won (stacks, resets on loss).' },
-  'Rune Priestess': { role:'Guardian',lore:'She inscribed every ward she knows onto her own body, and now each rune absorbs a measure of incoming force. Attacking a Rune Priestess is an exercise in frustration — the damage just keeps getting absorbed, layer by layer.', ability:'Runic Barrier — damage received is reduced to a minimum of 1 (can never be one-shot).' },
-  'Arch Mage':      { role:'Vanguard',lore:'The Arch Mage has spent decades mastering not just destruction, but efficiency. Every spell is precisely calibrated for the situation. Not flashy, but rarely caught off-guard, and never wasteful.', ability:'Overload — once per battle, ignores the defender\'s tile element bonus.' },
-  'Arcane Arbiter': { role:'Ascendant · Temple Only',lore:'Once a judge in the Great Arcane Courts, the Arbiter discovered that type advantages were being exploited as legal loopholes. They devised a countermeasure: a field-disruption technique that collapses elemental affinities to neutral, leveling any fight.', ability:'Nullify — cancel the type modifier in one battle per fight, forcing 1× neutral damage.' },
+  'Sorcerer':       { role:'Assailant',lore:'Pure channeled spellfire in a mortal frame. The Sorcerer can disintegrate enemies in seconds, but maintaining those output levels leaves almost nothing for self-defense. High risk, high reward — one wrong trade ends them.', ability:'Arcane Ascent — on win, permanently gains +1 ATK and +1 Gen (stacks).' },
+  'Rune Priestess': { role:'Guardian',lore:'She inscribed every ward she knows onto her own body, and now each rune absorbs a measure of incoming force. Attacking a Rune Priestess is an exercise in frustration — the damage just keeps getting absorbed, layer by layer.', ability:'Runic Amplification — Gen is doubled while stationed on an Arcane tile.' },
+  'Arch Mage':      { role:'Vanguard',lore:'The Arch Mage has spent decades mastering not just destruction, but efficiency. Every spell is precisely calibrated for the situation. Not flashy, but rarely caught off-guard, and never wasteful.', ability:'Mana Infusion — generates +3✦ bonus income per turn while stationed.' },
+  'Arcane Arbiter': { role:'Ascendant · Temple Only',lore:'Once a judge in the Great Arcane Courts, the Arbiter discovered that type advantages were being exploited as legal loopholes. They devised a countermeasure: a field-disruption technique that collapses elemental affinities to neutral, leveling any fight.', ability:'Chaos Flux — after any battle or stalemate against it, one random attacker-owned tile changes to a random element.' },
 
   // ── UNDEAD ──
-  'Bone Wraith':    { role:'Assailant',lore:'What it lacks in flesh it makes up for in fury. The Bone Wraith is animated by spite and propelled by the memory of every grievance it suffered in life. It hits hard and disintegrates fast — exactly as planned.', ability:'Death Surge — gains +10 ATK permanently if any friendly summon has been destroyed this game.' },
-  'Death Knight':   { role:'Guardian',lore:'A paladin who refused to die and cut a deal to keep going. The Death Knight\'s oath binds them to the tile they guard with unnatural persistence. Killing them once isn\'t always enough — they have a way of not staying down.', ability:'Undying — revives once per game at 20 HP the first time it would be destroyed.' },
-  'Shade Walker':   { role:'Vanguard',lore:'The Shade Walker exists between states — partially corporeal, partially not. This makes them genuinely hard to read in combat: they can absorb a blow or dodge it depending on their angle. Versatile survivors of the Undead roster.', ability:'Cursed Touch — on winning a battle, the defeated enemy\'s replacement suffers 5 HP damage per turn for 3 turns.' },
+  'Bone Wraith':    { role:'Assailant',lore:'What it lacks in flesh it makes up for in fury. The Bone Wraith is animated by spite and propelled by the memory of every grievance it suffered in life. It hits hard and disintegrates fast — exactly as planned.', ability:'Death Rattle — on death, deals 12 damage to the monster that killed it.' },
+  'Death Knight':   { role:'Guardian',lore:'A paladin who refused to die and cut a deal to keep going. The Death Knight\'s oath binds them to the tile they guard with unnatural persistence. Killing them once isn\'t always enough — they have a way of not staying down.', ability:'Death Sentence — 10% chance to instantly kill on any damage dealt (attack or counter-strike).' },
+  'Shade Walker':   { role:'Vanguard',lore:'The Shade Walker exists between states — partially corporeal, partially not. This makes them genuinely hard to read in combat: they can absorb a blow or dodge it depending on their angle. Versatile survivors of the Undead roster.', ability:'Cursed Touch — after any battle, the opposing monster loses 5 HP per turn for 2 turns (follows the monster, does not stack).' },
   'Demon Lord':     { role:'Ascendant · Temple Only',lore:'The Demon Lord has died so many times that death simply stopped sticking. Once per game, when their HP drops to zero, they stabilize at 15 and keep fighting — a nightmare to put down permanently.', ability:'Last Rite — survives fatal damage once per game, continuing at 15 HP.' },
 
   // ── BEAST ──
-  'Razorclaw':      { role:'Assailant',lore:'Part predator, part projectile. The Razorclaw doesn\'t have a defensive strategy because it has never needed one — it closes the distance so fast that the opponent rarely gets to counterattack. Fragile in a prolonged fight, lethal in a short one.', ability:'Apex Predator — gains +5 ATK each time it earns 3 battle wins or claims 3 tiles (stacks, tracked separately).' },
-  'Iron Hide':      { role:'Guardian',lore:'An ancient creature armored by centuries of scar tissue. The Iron Hide has survived things that should have ended it a dozen times, and each survival made it harder. A reliable defensive anchor that enemies learn to respect or route around.', ability:'Ironclad — regenerates +2 HP per turn for each tile you currently own.' },
-  'Pack Hunter':    { role:'Vanguard',lore:'The Pack Hunter is most dangerous when it feels like a fair fight — because that means you\'re not watching the flanks. Even alone it applies pressure from multiple angles, feinting and circling rather than committing to a straight exchange.', ability:'Pack Tactics — gains +5 ATK when attacking if you have 2 or more other summons stationed on adjacent tiles.' },
-  'Red Dragon':     { role:'Ascendant · Temple Only',lore:'A dragon that has claimed a territory burns that claim into the land itself. Neighboring tile owners feel the heat every time someone new tries to stake a claim — the Red Dragon\'s intimidating presence costs them Mana even before the battle starts.', ability:'Intimidate — neighboring tile owners pay 5 Mana each time a new claim is made on an adjacent tile.' },
+  'Razorclaw':      { role:'Assailant',lore:'Part predator, part projectile. The Razorclaw doesn\'t have a defensive strategy because it has never needed one — it closes the distance so fast that the opponent rarely gets to counterattack. Fragile in a prolonged fight, lethal in a short one.', ability:'Apex Predator — gains +1 ATK per tile currently owned and +1 ATK per battle won (both stack cumulatively).' },
+  'Iron Hide':      { role:'Guardian',lore:'An ancient creature armored by centuries of scar tissue. The Iron Hide has survived things that should have ended it a dozen times, and each survival made it harder. A reliable defensive anchor that enemies learn to respect or route around.', ability:'Hardened Shell — permanently gains +3 HP each time it survives a battle (stacks).' },
+  'Pack Hunter':    { role:'Vanguard',lore:'The Pack Hunter is most dangerous when it feels like a fair fight — because that means you\'re not watching the flanks. Even alone it applies pressure from multiple angles, feinting and circling rather than committing to a straight exchange.', ability:'Pack Tactics — gains +3 ATK per other Beast summon currently stationed on tiles.' },
+  'Red Dragon':     { role:'Ascendant · Temple Only',lore:'A dragon that has claimed a territory burns that claim into the land itself. Neighboring tile owners feel the heat every time someone new tries to stake a claim — the Red Dragon\'s intimidating presence costs them Mana even before the battle starts.', ability:'Intimidate — at the start of each affected player\'s turn, they pay 5✦ per stationed summon adjacent to the Red Dragon.' },
 
   // ── NATURE ──
-  'Thornling':      { role:'Assailant',lore:'A creature made of compressed briar and thorns, launched at problems. The Thornling explodes with violent speed from a standing position, impaling anything in range before the target has time to react. Its fragility is the cost of being mostly made of spikes.', ability:'Thorn Wall — counter-strike deals +10 bonus damage when defending.' },
-  'Ancient Oak':    { role:'Guardian',lore:'Older than the kingdom it now defends, the Ancient Oak moves slowly and doesn\'t need to move quickly. Its roots stabilize in every tile it stands on, making it extraordinarily difficult to dislodge. It has simply outlasted everything that has ever challenged it.', ability:'Deep Roots — regenerates +1 HP per turn for each turn it has been continuously stationed on this tile.' },
-  'Grove Warden':   { role:'Vanguard',lore:'The Grove Warden tends the living battlefield with as much care as it fights on it. Neither the most aggressive nor the most defensive of the Nature roster, but adaptable — capable of holding tiles or applying pressure depending on what the board demands.', ability:'Grove Aura — grants +5 DEF to all friendly Nature-type summons stationed anywhere on the board.' },
+  'Thornling':      { role:'Assailant',lore:'A creature made of compressed briar and thorns, launched at problems. The Thornling explodes with violent speed from a standing position, impaling anything in range before the target has time to react. Its fragility is the cost of being mostly made of spikes.', ability:'Thorn Burst — on death, the attacker loses 5 HP and the tile converts to Nature element.' },
+  'Ancient Oak':    { role:'Guardian',lore:'Older than the kingdom it now defends, the Ancient Oak moves slowly and doesn\'t need to move quickly. Its roots stabilize in every tile it stands on, making it extraordinarily difficult to dislodge. It has simply outlasted everything that has ever challenged it.', ability:'Overgrowth — every 3 turns stationed without being attacked, permanently gains +3 ATK and +3 DEF (resets on attack).' },
+  'Grove Warden':   { role:'Vanguard',lore:'The Grove Warden tends the living battlefield with as much care as it fights on it. Neither the most aggressive nor the most defensive of the Nature roster, but adaptable — capable of holding tiles or applying pressure depending on what the board demands.', ability:'Nature\'s Bulwark — grants +5 DEF to all friendly Nature-type summons stationed anywhere on the board.' },
   'World Tree':     { role:'Ascendant · Temple Only',lore:'The World Tree\'s roots run under every Nature tile on the board. The more Nature territory your team controls, the faster it grows — feeding Mana back into your reserves with every passing round through the network it maintains beneath the surface.', ability:'Deep Roots — generates +1 bonus Mana Gen for each Nature tile you currently own, and +1 for each Nature-type summon you have stationed.' },
 
   // ── LIGHT (new) ──
-  'Dawn Striker':   { role:'Assailant',lore:'The Dawn Striker hits before the enemy even sees the light. Trained to attack the moment the sun breaks the horizon, this warrior combines celestial timing with brutal force — high attack, low armour, built for the decisive first blow.', ability:'Rally — heals itself for 10 HP each time it wins a battle.' },
+  'Dawn Striker':   { role:'Assailant',lore:'The Dawn Striker hits before the enemy even sees the light. Trained to attack the moment the sun breaks the horizon, this warrior combines celestial timing with brutal force — high attack, low armour, built for the decisive first blow.', ability:'Soulmend — heals itself for 8 HP each time it wins a battle.' },
   'Radiant Lancer': { role:'Vanguard',lore:'Carrying a spear infused with concentrated sunlight, the Radiant Lancer punches through shields and shadows alike. Steady and adaptable, it holds tiles reliably while threatening enemies who stray too close to its extended reach.', ability:'Piercing Light — ignores 3 of the defender\'s DEF on every attack.' },
-  'Sunfire Herald': { role:'Vanguard',lore:'The Sunfire Herald moves across the board like a slow burn — patient, inevitable. It prioritises endurance over aggression, trusting that the longer a battle drags on, the more its radiant resilience tips the scales in its favour.', ability:'Blaze Aura — grants +5 ATK to the friendly summon on each adjacent tile.' },
+  'Sunfire Herald': { role:'Vanguard',lore:'The Sunfire Herald moves across the board like a slow burn — patient, inevitable. It prioritises endurance over aggression, trusting that the longer a battle drags on, the more its radiant resilience tips the scales in its favour.', ability:'Battle Cry — grants +5 ATK to the friendly summon on each adjacent tile.' },
 
   // ── DARK (new) ──
   'Void Reaper':    { role:'Assailant',lore:'The Void Reaper tears through enemy lines with terrifying speed, leaving nothing but silence. Extremely fragile, but hits with an attack stat most summons at double the cost cannot match. It exists to delete one thing, then disappear.', ability:'Void Hunger — gains +3 ATK permanently each time it wins a battle (stacks).' },
-  'Dusk Blade':     { role:'Vanguard',lore:'Half shadow, half blade — the Dusk Blade occupies the space between an assassin and a soldier. It trades blows with most opponents on even footing while always looking for the moment to strike something decisive with its slightly elevated attack.', ability:'Backstab — deals +15% bonus damage when attacking (not defending).' },
-  'Umbral Stalker': { role:'Vanguard',lore:'The Umbral Stalker watches from the dark and waits for the right time. Tougher than most balanced units, it absorbs punishment while wearing opponents down — less about explosive damage and more about outlasting the thing standing in its way.', ability:'Unnerve — reduces the DEF of enemy summons on adjacent tiles by 5 (aura, while stationed).' },
+  'Dusk Blade':     { role:'Vanguard',lore:'Half shadow, half blade — the Dusk Blade occupies the space between an assassin and a soldier. It trades blows with most opponents on even footing while always looking for the moment to strike something decisive with its slightly elevated attack.', ability:'Hemorrhage — on win, the target\'s Mana income next turn is reduced by 4✦.' },
+  'Umbral Stalker': { role:'Vanguard',lore:'The Umbral Stalker watches from the dark and waits for the right time. Tougher than most balanced units, it absorbs punishment while wearing opponents down — less about explosive damage and more about outlasting the thing standing in its way.', ability:'Umbral Aura — adjacent enemy stationed monsters lose 5 DEF (active aura, while stationed).' },
 
   // ── ARCANE (new) ──
-  'Spell Wraith':   { role:'Assailant',lore:'A barely-contained burst of arcane energy given a body just long enough to fight. The Spell Wraith collapses its own existence into a single devastating strike. Impressive attack, practically no armour, and a lifespan measured in battles rather than rounds.', ability:'Mana Siphon — on winning a battle, permanently steals 1 Mana Gen from the defeated enemy\'s tile.' },
-  'Runic Duelist':  { role:'Vanguard',lore:'The Runic Duelist inscribes battle equations into the air mid-fight, calculating angles and energy output on the fly. It leans slightly toward aggression, finding combat solutions faster than opponents can adapt their defences.', ability:'Arcane Edge — gains +5 ATK for every 2 friendly Arcane-type summons you have stationed (recalculated each battle).' },
-  'Mana Weaver':    { role:'Vanguard',lore:'The Mana Weaver treats the battlefield like a loom, threading magical currents through everything it touches. A durable generalist with exceptional defensive depth, it holds positions long enough for the board to shift in your favour.', ability:'Mana Flow — grants +1 Mana Gen per turn to all your other stationed summons while this is on the board.' },
+  'Spell Wraith':   { role:'Assailant',lore:'A barely-contained burst of arcane energy given a body just long enough to fight. The Spell Wraith collapses its own existence into a single devastating strike. Impressive attack, practically no armour, and a lifespan measured in battles rather than rounds.', ability:'Mana Siphon — per turn, drains the full Gen value from each adjacent enemy stationed monster.' },
+  'Runic Duelist':  { role:'Vanguard',lore:'The Runic Duelist inscribes battle equations into the air mid-fight, calculating angles and energy output on the fly. It leans slightly toward aggression, finding combat solutions faster than opponents can adapt their defences.', ability:'Arcane Pact — gains +1 ATK per friendly Arcane summon currently stationed (recalculated each battle).' },
+  'Mana Weaver':    { role:'Vanguard',lore:'The Mana Weaver treats the battlefield like a loom, threading magical currents through everything it touches. A durable generalist with exceptional defensive depth, it holds positions long enough for the board to shift in your favour.', ability:'Mana Web — all other friendly stationed monsters gain +1✦ Gen per turn.' },
 
   // ── UNDEAD (new) ──
-  'Grave Specter':  { role:'Assailant',lore:'The Grave Specter phases through solid matter and hits from angles that shouldn\'t be possible. Its attack power is exceptional, its survivability almost nonexistent — a creature that decided dying was optional as long as it killed you first.', ability:'Haunt — automatically converts any unclaimed tile it passes through during movement (no deploy cost).' },
-  'Cursed Revenant':{ role:'Vanguard',lore:'Bound to the battlefield by a curse it cannot lift, the Cursed Revenant fights with the weight of unfinished business behind every strike. Slightly attack-forward, it applies steady pressure and is difficult to ignore even when other threats demand attention.', ability:'Soul Harvest — gains +3 DEF permanently each time it destroys an enemy summon (stacks).' },
-  'Plague Herald':  { role:'Vanguard',lore:'The Plague Herald doesn\'t fight clean. It layers debilitating pressure over time, weathering damage while making the fight increasingly miserable for whoever stands against it. Among the more durable Undead balanced units.', ability:'Hemorrhage — on winning a battle, all of the enemy\'s stationed summons lose 5 HP per turn for 3 turns (cannot kill).' },
+  'Grave Specter':  { role:'Assailant',lore:'The Grave Specter phases through solid matter and hits from angles that shouldn\'t be possible. Its attack power is exceptional, its survivability almost nonexistent — a creature that decided dying was optional as long as it killed you first.', ability:'Necrotic Claim — on winning a battle, the tile converts to Undead element.' },
+  'Cursed Revenant':{ role:'Vanguard',lore:'Bound to the battlefield by a curse it cannot lift, the Cursed Revenant fights with the weight of unfinished business behind every strike. Slightly attack-forward, it applies steady pressure and is difficult to ignore even when other threats demand attention.', ability:'Undead Resilience — gains +2 DEF permanently each time it survives a battle (stacks).' },
+  'Plague Herald':  { role:'Vanguard',lore:'The Plague Herald doesn\'t fight clean. It layers debilitating pressure over time, weathering damage while making the fight increasingly miserable for whoever stands against it. Among the more durable Undead balanced units.', ability:'Pestilence — adjacent enemy stationed monsters lose 3 HP per turn (passive aura).' },
 
   // ── BEAST (new) ──
-  'Feral Striker':  { role:'Assailant',lore:'Raw instinct weaponised. The Feral Striker doesn\'t strategise — it charges, claws, and hopes its ferocity lands before anything can hit back. Extremely high attack, a body that can barely absorb punishment, and zero regard for personal safety.', ability:'Frenzy — gains +4 ATK permanently each time you claim a tile (stacks, any summon claiming counts).' },
-  'Stormtalon':     { role:'Vanguard',lore:'Part eagle, part lion — built to strike from height and shred what it lands on. The Stormtalon dives hard and fast, trading finesse for raw aggression. Defenders rarely get a second pass to adjust.', ability:'Dive Bomb — first strike in each battle deals +20% bonus damage.' },
-  'Stoneback':      { role:'Vanguard',lore:'The Stoneback\'s hide has fossilised over decades of taking hits. Slower and tougher than most Beast units, it doesn\'t chase opponents — it stands in their way. Exceptional defensive stats for the archetype, trades raw damage for staying power.', ability:'Fortified — gains +3 DEF permanently each time you claim a tile (stacks, any summon claiming counts).' },
+  'Feral Striker':  { role:'Assailant',lore:'Raw instinct weaponised. The Feral Striker doesn\'t strategise — it charges, claws, and hopes its ferocity lands before anything can hit back. Extremely high attack, a body that can barely absorb punishment, and zero regard for personal safety.', ability:'Territorial — gains +2 ATK per tile currently owned (recalculated each battle).' },
+  'Stormtalon':     { role:'Vanguard',lore:'Part eagle, part lion — built to strike from height and shred what it lands on. The Stormtalon dives hard and fast, trading finesse for raw aggression. Defenders rarely get a second pass to adjust.', ability:'Lightning Strike — always attacks first; if the defender is killed by the initial strike, no counter-strike occurs.' },
+  'Stoneback':      { role:'Vanguard',lore:'The Stoneback\'s hide has fossilised over decades of taking hits. Slower and tougher than most Beast units, it doesn\'t chase opponents — it stands in their way. Exceptional defensive stats for the archetype, trades raw damage for staying power.', ability:'Granite Hide — gains +2 DEF per tile you currently own (recalculated each battle).' },
 
   // ── NATURE (new) ──
-  'Briar Sprite':   { role:'Assailant',lore:'A knot of razor thorns compressed into something almost the size of a small animal. The Briar Sprite launches itself at opponents with unnerving speed, shredding at the point of impact before anything can react. It doesn\'t survive long, but it doesn\'t need to.', ability:'Briar Aura — grants +5 ATK to all friendly Nature-type summons stationed anywhere on the board.' },
-  'Vine Stalker':   { role:'Vanguard',lore:'The Vine Stalker moves through terrain like water through cracks, arriving exactly where it\'s least expected. Attack-forward for a Nature unit, it combines mobility with enough toughness to hold what it takes.', ability:'Entangle — after 5 consecutive turns stationed on this tile, grants +3 ATK to all your stationed summons (board-wide aura).' },
-  'Moss Golem':     { role:'Vanguard',lore:'Built from centuries of accumulated forest material, the Moss Golem is slow but deeply difficult to remove from a tile it has claimed. Prioritises defensive durability above all — the kind of unit that is still standing long after the board around it has changed completely.', ability:'Overgrowth — after 5 consecutive turns stationed on this tile, grants +5 DEF to all your stationed summons (board-wide aura).' },
+  'Briar Sprite':   { role:'Assailant',lore:'A knot of razor thorns compressed into something almost the size of a small animal. The Briar Sprite launches itself at opponents with unnerving speed, shredding at the point of impact before anything can react. It doesn\'t survive long, but it doesn\'t need to.', ability:'Nature\'s Fury — grants +5 ATK to all friendly Nature-type summons stationed anywhere on the board.' },
+  'Vine Stalker':   { role:'Vanguard',lore:'The Vine Stalker moves through terrain like water through cracks, arriving exactly where it\'s least expected. Attack-forward for a Nature unit, it combines mobility with enough toughness to hold what it takes.', ability:'Verdant Surge — after 5 rounds stationed, permanently grants +3 ATK to all friendly stationed summons (clock resets if redeployed).' },
+  'Moss Golem':     { role:'Vanguard',lore:'Built from centuries of accumulated forest material, the Moss Golem is slow but deeply difficult to remove from a tile it has claimed. Prioritises defensive durability above all — the kind of unit that is still standing long after the board around it has changed completely.', ability:'Stone Skin — after 5 rounds stationed, permanently grants +5 DEF to all friendly stationed summons (clock resets if redeployed).' },
 
   // ── DUAL-ELEMENT RARES ──
   'Luminar Operative': { role:'Rare · Light / Arcane', lore:'The Luminar Operative exists at the intersection of divine radiance and arcane precision — a being that channels both orders of power without contradiction. Its Light unravels Undead bindings while its Arcane precision dismantles Dark sorcery. Enemies on either front find it an equally punishing opponent, with no easy angle of attack in return.', ability:'Dual Element: 2× vs Undead & Dark. Mutual weaknesses cancel — no weak side.\nLuminary Field — all friendly summons stationed on a Light or Arcane tile gain +2 ATK and +2 DEF.' },
@@ -1375,7 +1376,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.82</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.86</div>
     </div>
 
     <div class="room-code-group">
@@ -1479,7 +1480,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.82</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.86</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -2381,6 +2382,34 @@ function _stopBattleMusic() {
   }, step);
 }
 
+// ─── Lottie hit animation helpers (battle clash, player view) ────────────────
+function getHitAnim(monster) {
+  if (!monster) return null;
+  // Rare overrides
+  if (monster.id === 'hex_stalker')      return 'Hit_Claw';
+  if (monster.id === 'verdant_sorcerer') return 'Hit_Magic';
+  if (monster.id === 'seraphim')         return 'Hit_Magic';
+  // Element fallback
+  const map = { Beast:'Hit_Claw', Nature:'Hit_Claw', Dark:'Hit_Slash', Undead:'Hit_Slash', Light:'Hit_Magic', Arcane:'Hit_Magic' };
+  return map[monster.type] || null;
+}
+
+function playCardHitAnim(cardEl, animFile) {
+  if (!cardEl || !animFile || typeof lottie === 'undefined') return;
+  const container = document.createElement('div');
+  container.style.cssText = 'position:absolute;width:260px;height:260px;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:30;filter:brightness(0) invert(1);';
+  cardEl.style.position = 'relative';
+  cardEl.appendChild(container);
+  const anim = lottie.loadAnimation({
+    container,
+    renderer: 'svg',
+    loop: false,
+    autoplay: true,
+    path: `/animations/${animFile}.json`
+  });
+  anim.addEventListener('complete', () => { anim.destroy(); container.remove(); });
+}
+
 function renderBattleResult() {
   _stopBattleMusic(); // cut battle music as clash animation begins
   updateStatusBar(false);
@@ -2432,6 +2461,46 @@ function renderBattleResult() {
         </div>
       </div>
     </div>`;
+
+  // ── Lottie hit animations — fire after CSS slide-in (~1000ms = pClashHit delay) ──
+  // Stormtalon pre-emptive: when defending, defender strikes FIRST then attacker counter
+  const mc = document.getElementById('main-content');
+  if (mc && typeof lottie !== 'undefined') {
+    const attHitAnim = getHitAnim(lb.attM);
+    const defHitAnim = getHitAnim(lb.defM);
+    const stormtalonDefending = lb.defM && lb.defM.id === 'stormtalon';
+    if (stormtalonDefending) {
+      // Stormtalon pre-emptive: defender hits attacker card first at 1000ms
+      if (defHitAnim && lb.defDmg > 0) {
+        setTimeout(() => {
+          const attCardEl = mc.querySelector('.p-clash-side.left .p-clash-hit');
+          if (attCardEl) playCardHitAnim(attCardEl, defHitAnim);
+        }, 1000);
+      }
+      // Attacker counter-strikes defender card at 1400ms (only if they survived)
+      if (attHitAnim && lb.atkDmg > 0) {
+        setTimeout(() => {
+          const defCardEl = mc.querySelector('.p-clash-side.right .p-clash-hit');
+          if (defCardEl) playCardHitAnim(defCardEl, attHitAnim);
+        }, 1400);
+      }
+    } else {
+      // Normal order: attacker strikes defender card at 1000ms
+      if (attHitAnim) {
+        setTimeout(() => {
+          const defCardEl = mc.querySelector('.p-clash-side.right .p-clash-hit');
+          if (defCardEl) playCardHitAnim(defCardEl, attHitAnim);
+        }, 1000);
+      }
+      // Defender counter-strikes attacker card at 1400ms (staggered after attacker)
+      if (defHitAnim && lb.defDmg > 0) {
+        setTimeout(() => {
+          const attCardEl = mc.querySelector('.p-clash-side.left .p-clash-hit');
+          if (attCardEl) playCardHitAnim(attCardEl, defHitAnim);
+        }, 1400);
+      }
+    }
+  }
 
   // Phase 2: attacker/defender get a personal result screen after the animation peaks
   if (isAttacker || isDefender) {

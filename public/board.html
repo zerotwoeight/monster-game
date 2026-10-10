@@ -1007,7 +1007,8 @@ function playCardHitAnim(cardEl, animFile) {
 
 // ─── 5-beat battle animation ────────────────────────────────────────────────────────────────
 async function runBattleAnimation(lb, attPlayer, defPlayer, overlay) {
-  const hasCounter = lb.outcome === 'defender_wins' || lb.outcome === 'stalemate';
+  const stormtalonDefending = lb.defM && lb.defM.id === 'stormtalon';
+  const hasCounter = lb.outcome === 'defender_wins' || lb.outcome === 'stalemate' || (stormtalonDefending && lb.atkDmg > 0);
   const attCrumbles = lb.outcome === 'defender_wins' || lb.outcome === 'mutual';
   const defCrumbles = lb.outcome === 'attacker_wins' || lb.outcome === 'mutual';
   const isStalemate = lb.outcome === 'stalemate';
@@ -1094,19 +1095,9 @@ async function runBattleAnimation(lb, attPlayer, defPlayer, overlay) {
 
   await wait(380); if (skipped) return;
 
-  // Beat 2 — attacker strikes
-  attCard.animate([
-    {transform:'translateX(0) scale(1)'},
-    {transform:'translateX(44px) scale(1.07)',offset:.38},
-    {transform:'translateX(0) scale(1)'}
-  ],{duration:330,easing:'ease'});
-  shock('rgba(255,180,60,.75)');
-  setTimeout(()=>{ if (!skipped){ shake(defCard,-1); floatDmg(defDmg); playCardHitAnim(defCard, getHitAnim(lb.attM)); } },130);
-
-  await wait(hasCounter ? 390 : 330); if (skipped) return;
-
-  // Beat 3 — counter-strike (if defender survived)
-  if (hasCounter) {
+  // Beat 2 — first strike (Stormtalon defending = defender strikes first; else attacker strikes)
+  if (stormtalonDefending) {
+    // Stormtalon pre-emptive: DEFENDER lunges at attacker
     defCard.animate([
       {transform:'translateX(0) scale(1)'},
       {transform:'translateX(-44px) scale(1.07)',offset:.38},
@@ -1114,6 +1105,40 @@ async function runBattleAnimation(lb, attPlayer, defPlayer, overlay) {
     ],{duration:330,easing:'ease'});
     shock('rgba(100,140,255,.75)');
     setTimeout(()=>{ if (!skipped){ shake(attCard,1); floatDmg(attDmg); playCardHitAnim(attCard, getHitAnim(lb.defM)); } },130);
+  } else {
+    // Normal: ATTACKER lunges at defender
+    attCard.animate([
+      {transform:'translateX(0) scale(1)'},
+      {transform:'translateX(44px) scale(1.07)',offset:.38},
+      {transform:'translateX(0) scale(1)'}
+    ],{duration:330,easing:'ease'});
+    shock('rgba(255,180,60,.75)');
+    setTimeout(()=>{ if (!skipped){ shake(defCard,-1); floatDmg(defDmg); playCardHitAnim(defCard, getHitAnim(lb.attM)); } },130);
+  }
+
+  await wait(hasCounter ? 390 : 330); if (skipped) return;
+
+  // Beat 3 — counter-strike (if the first-struck survived)
+  if (hasCounter) {
+    if (stormtalonDefending) {
+      // Attacker counter (if they survived Stormtalon's pre-emptive)
+      attCard.animate([
+        {transform:'translateX(0) scale(1)'},
+        {transform:'translateX(44px) scale(1.07)',offset:.38},
+        {transform:'translateX(0) scale(1)'}
+      ],{duration:330,easing:'ease'});
+      shock('rgba(255,180,60,.75)');
+      setTimeout(()=>{ if (!skipped){ shake(defCard,-1); floatDmg(defDmg); playCardHitAnim(defCard, getHitAnim(lb.attM)); } },130);
+    } else {
+      // Normal: defender counter
+      defCard.animate([
+        {transform:'translateX(0) scale(1)'},
+        {transform:'translateX(-44px) scale(1.07)',offset:.38},
+        {transform:'translateX(0) scale(1)'}
+      ],{duration:330,easing:'ease'});
+      shock('rgba(100,140,255,.75)');
+      setTimeout(()=>{ if (!skipped){ shake(attCard,1); floatDmg(attDmg); playCardHitAnim(attCard, getHitAnim(lb.defM)); } },130);
+    }
     await wait(390); if (skipped) return;
   }
 
@@ -1283,6 +1308,7 @@ function renderLobby(app){
   const canStart = playerCount >= 2;
   const code = G.roomCode || '????';
   const playerURL = `${location.protocol}//${location.host}/player`;
+  const spectatorURL = `${location.protocol}//${location.host}/spectate`;
   const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Watch',E:'Divine Guard',F:'Chaos Legion'};
 
   // ── Brand
@@ -1290,7 +1316,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.76 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.4.82</div>`;
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.78 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.4.82</div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -1310,6 +1336,10 @@ function renderLobby(app){
     <div style="margin-top:18px;">
       <div class="lobby-url-lbl">Player URL</div>
       <div class="lobby-url-box">${playerURL}</div>
+    </div>
+    <div style="margin-top:10px;">
+      <div class="lobby-url-lbl" style="color:#9b8dc8;">Spectator URL</div>
+      <div class="lobby-url-box" style="color:#9b8dc8;border-color:#9b8dc8;">${spectatorURL}</div>
     </div>
     <div class="lobby-qr-wrap">
       <div class="lobby-qr-lbl">Scan to Join</div>
@@ -1464,7 +1494,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.76</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.78</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">

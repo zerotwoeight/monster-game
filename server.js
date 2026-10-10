@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.73';
+const SERVER_VERSION = 'v1.0.80';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -57,7 +57,7 @@ const ROSTER = [
   {id:'rune_priestess', type:'Arcane', name:'Rune Priestess', arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
   {id:'arch_mage',      type:'Arcane', name:'Arch Mage',      arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
   {id:'arcane_arbiter', type:'Arcane', name:'Arcane Arbiter', arch:'ascendant', hp:40, maxHp:40, atk:27, def:15, cost:20, gen:5, isSpecial:true,
-    special:'Chaos Flux', specialDesc:'After any battle or stalemate, one random tile you own changes to a random element',
+    special:'Chaos Flux', specialDesc:'After any battle or stalemate against it, one random attacker-owned tile changes to a random element',
     condition:'changed1Arcane', conditionDesc:'Changed 1+ tile to Arcane element this game'},
   // Arcane — new
   {id:'spell_wraith',   type:'Arcane', name:'Spell Wraith',   arch:'assailant', hp:22, maxHp:22, atk:38, def:5,  cost:8,  gen:2, isSpecial:false},
@@ -518,15 +518,34 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
   // Dusk Blade — Hemorrhage: on win, reduces defPlayer mana income next turn by 4✦ (handled in _applyBattleOutcome)
   // No pre-strike ATK boost for Dusk Blade
 
-  // Stormtalon — Lightning Strike: always attacks first; if defender dies on initial strike, no counter (handled below)
-  // No pre-strike ATK boost for Stormtalon
+  // Stormtalon — Lightning Strike: ALWAYS attacks first (even when defending).
+  // If defenderM IS Stormtalon, it pre-emptively strikes the attacker BEFORE the attacker strikes.
+  // If that pre-emptive strike kills the attacker, attacker cannot attack at all.
+  let stormtalonPreemptiveKilled = false;
+  let stormtalonPreemptiveDmg = 0;
+  if (defenderM.id === 'stormtalon') {
+    stormtalonPreemptiveDmg = doStrike(defenderM, attackerM, tile, nullify);
+    attackerM.hp -= stormtalonPreemptiveDmg;
+    log(`⚡ Lightning Strike (pre-emptive): Stormtalon strikes first! Deals ${stormtalonPreemptiveDmg} to ${attackerM.name} (now ${attackerM.hp}/${attackerM.maxHp} HP)`);
+    if (attackerM.hp <= 0) {
+      stormtalonPreemptiveKilled = true;
+      log(`⚡ Lightning Strike: Stormtalon's pre-emptive strike KILLED ${attackerM.name} — attacker cannot retaliate!`);
+    }
+  }
 
   // Shadow Paladin — Dark Pact: +1 ATK per friendly Dark summon stationed (handled in getEffectiveStats)
   // No pre-strike ATK boost for Shadow Paladin here
 
   // Arch Mage — Mana Infusion: +3✦/turn while stationed (handled in collectPassiveIncome, not pre-strike)
 
-  const atkDmg = doStrike(attackerM, defenderM, tile, nullify);
+  // Skip attacker's strike if Stormtalon (defender) pre-emptively killed the attacker
+  let atkDmg = 0;
+  if (!stormtalonPreemptiveKilled) {
+    atkDmg = doStrike(attackerM, defenderM, tile, nullify);
+  } else {
+    // attacker already dead from Stormtalon pre-emptive — no strike
+    atkDmg = 0;
+  }
 
   // Restore Piercing Light DEF reduction after attacker's strike
   if (piercingLightActive) defenderM.def = pierceRestore;
@@ -588,7 +607,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
   // Nightshard — Soul Siphon: on kill, steal 4✦ from defeated monster's owner (handled in _applyBattleOutcome)
   // No counter skip for Nightshard anymore
 
-  if (defenderM.hp > 0 && !stormtalonKilledDefender) {
+  if (defenderM.hp > 0 && !stormtalonKilledDefender && !stormtalonPreemptiveKilled) {
     const defBonus = bonusTileSet().has(tile.pos);
     const defMonoBuff = monoElementPlayerSet().has(tile.ownerId);
 
@@ -666,7 +685,10 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
   else if (defenderM.hp <= 0) outcome = 'attacker_wins';
   else outcome = 'stalemate';
 
-  return { atkDmg: actualAtkDmg, defDmg, outcome };
+  // When Stormtalon pre-emptively killed the attacker, defDmg (counter) is 0 but
+  // stormtalonPreemptiveDmg is the real damage Stormtalon dealt — include it so G.lastBattle shows correct UI.
+  const finalDefDmg = defDmg + (stormtalonPreemptiveKilled ? stormtalonPreemptiveDmg : 0);
+  return { atkDmg: actualAtkDmg, defDmg: finalDefDmg, outcome };
 }
 
 // ─── CONSECUTIVE TILE BONUS ───────────────────────────────────────────────────
@@ -767,6 +789,9 @@ function monoElementPlayerSet() {
  *  • Mana Weaver     — +1 GEN/turn to all friendly stationed summons (same owner)
  *  • Forge support   — +5 DEF per stationed Forge (existing, handled in resolveBattle;
  *                       included here for completeness via weaponSmithCount path)
+ *  • Luminar Operative (seraphim) — Luminary Field: +2 ATK/DEF to friendly summons on Light or Arcane tiles
+ *  • Hex Stalker      — Hex Dominion:    +2 ATK/DEF to friendly summons on Undead or Beast tiles
+ *  • Verdant Sorcerer — Verdant Surge:   +2 ATK/DEF to friendly summons on Arcane or Nature tiles
  */
 function getEffectiveStats(monster, tilePos, ownerIdx) {
   if (!G || !G.board) return { atk: monster.atk, def: monster.def, gen: monster.gen };
@@ -810,6 +835,33 @@ function getEffectiveStats(monster, tilePos, ownerIdx) {
       // Mana Weaver: +1 GEN/turn to all friendly stationed summons
       if (mi.id === 'mana_weaver') {
         genBonus += 1;
+      }
+
+      // ── Dual-Element Rare Auras ────────────────────────────────────────
+      // Luminar Operative (seraphim) — Luminary Field:
+      //   All friendly summons stationed on a Light or Arcane tile gain +2 ATK +2 DEF
+      // Hex Stalker — Hex Dominion:
+      //   All friendly summons stationed on an Undead or Beast tile gain +2 ATK +2 DEF
+      // Verdant Sorcerer — Verdant Surge:
+      //   All friendly summons stationed on an Arcane or Nature tile gain +2 ATK +2 DEF
+      const monsterTile = G.board.find(t => t.pos === tilePos);
+      const monsterTileElement = monsterTile ? monsterTile.element : null;
+      if (monsterTileElement) {
+        if (mi.id === 'seraphim' &&
+            (monsterTileElement === 'Light' || monsterTileElement === 'Arcane')) {
+          atkBonus += 2;
+          defBonus += 2;
+        }
+        if (mi.id === 'hex_stalker' &&
+            (monsterTileElement === 'Undead' || monsterTileElement === 'Beast')) {
+          atkBonus += 2;
+          defBonus += 2;
+        }
+        if (mi.id === 'verdant_sorcerer' &&
+            (monsterTileElement === 'Arcane' || monsterTileElement === 'Nature')) {
+          atkBonus += 2;
+          defBonus += 2;
+        }
       }
     }
   }
@@ -986,6 +1038,34 @@ function processTurnStartEffects(playerIdx) {
       }
     }
   }
+
+  // ── Spell Wraith — Mana Siphon: drain full Gen value from each adjacent ENEMY stationed monster per turn ──
+  // "Per turn, drain full Gen value from each adjacent enemy stationed monster"
+  // Spell Wraith steals the enemy's gen into the owner's income; enemy gen is NOT permanently reduced.
+  for (const tile of G.board) {
+    if (tile.ownerId !== playerIdx || !tile.summonInstance) continue;
+    if (tile.summonInstance.id !== 'spell_wraith') continue;
+    const swNeighbors = [(tile.pos + 1) % 28, (tile.pos + 27) % 28];
+    for (const np of swNeighbors) {
+      const nt = G.board[np];
+      if (nt && nt.ownerId !== playerIdx && nt.summonInstance) {
+        const stolen = nt.summonInstance.gen || 0;
+        if (stolen > 0) {
+          // Add stolen gen to Spell Wraith owner's turn income (tracked in abilityData)
+          tile.summonInstance.abilityData = tile.summonInstance.abilityData || {};
+          tile.summonInstance.abilityData.spellWraithDrainThisTurn = (tile.summonInstance.abilityData.spellWraithDrainThisTurn || 0) + stolen;
+          log(`✨ Mana Siphon: Spell Wraith drains ${stolen}✦ Gen from ${nt.summonInstance.name} (tile ${np})`);
+        }
+      }
+    }
+    // Apply all drain for this Spell Wraith instance to player income
+    if (tile.summonInstance.abilityData && tile.summonInstance.abilityData.spellWraithDrainThisTurn > 0) {
+      const totalDrain = tile.summonInstance.abilityData.spellWraithDrainThisTurn;
+      G.players[playerIdx].mana = (G.players[playerIdx].mana || 0) + totalDrain;
+      log(`✨ Mana Siphon: Spell Wraith grants ${totalDrain}✦ to ${G.players[playerIdx].name}`);
+      tile.summonInstance.abilityData.spellWraithDrainThisTurn = 0;
+    }
+  }
 }
 
 // ─── PASSIVE INCOME / SPECIALS ────────────────────────────────────────────────
@@ -1044,13 +1124,12 @@ function collectPassiveIncome(playerIdx) {
     }
   }
 
-  // Mana Refinery passive — +1✦ per friendly summon stationed on the board (any summon, stacks per Refinery)
+  // Mana Refinery passive — +1✦ per round per COPY stationed (per xlsx: stacks per Refinery copy, not per all summons)
   const manaRefineryCount = G.board.filter(t => t.ownerId === playerIdx && t.summonInstance && t.summonInstance.id === 'mana_refinery').length;
-  const friendlySummonCount = G.board.filter(t => t.ownerId === playerIdx && t.summonInstance).length;
-  const manaRefineryBonus = manaRefineryCount > 0 ? friendlySummonCount : 0; // +1✦ per stationed summon (requires at least 1 Refinery)
+  const manaRefineryBonus = manaRefineryCount; // +1✦ per stationed Refinery copy (affected by Windfall/Jinx)
   if (manaRefineryBonus > 0) {
     earned += manaRefineryBonus;
-    log(`🏭 Mana Refinery ×${manaRefineryCount}: ${p.name} earns +${manaRefineryBonus}✦ (${friendlySummonCount} friendly summons stationed)`);
+    log(`🏭 Mana Refinery ×${manaRefineryCount}: ${p.name} earns +${manaRefineryBonus}✦ (+1✦ per stationed copy)`);
   }
 
   // Field Medic passive — +2 HP/round to all stationed summons per copy (stacks)
@@ -1211,7 +1290,7 @@ function collectPassiveIncome(playerIdx) {
       const ap = [];
       if (ardentSaintCount > 0) ap.push({ id:'ardent_saint', label:`Ardent Saint ×${ardentSaintCount}`, desc:`Aura of Renewal: +${ardentSaintCount * 5} HP/turn to all friendly summons` });
       if (fieldMedicCount > 0) ap.push({ id:'field_medic', label:`Field Medic ×${fieldMedicCount}`, desc:`+${fieldMedicCount * 2} HP/turn to all friendly summons` });
-      if (manaRefineryCount > 0) ap.push({ id:'mana_refinery', label:`Mana Refinery ×${manaRefineryCount}`, desc:`+${manaRefineryBonus}✦ bonus income (1✦ per friendly summon stationed)` });
+      if (manaRefineryCount > 0) ap.push({ id:'mana_refinery', label:`Mana Refinery ×${manaRefineryCount}`, desc:`+${manaRefineryBonus}✦ bonus income (1✦ per stationed Refinery copy)` });
       if (weaponSmithCount > 0) ap.push({ id:'weapon_smith', label:`Weapon Smith ×${weaponSmithCount}`, desc:`+${weaponSmithCount * 5} ATK to your attacking summon (copies in hand)` });
       if (forgeCount > 0) ap.push({ id:'forge', label:`Forge ×${forgeCount}`, desc:`+${forgeCount * 5} DEF to all stationed summons` });
       return ap;
@@ -1405,8 +1484,6 @@ function startShopPhase() {
   const isRound1 = G.turnCount < G.players.length;
   if (!isRound1) {
     processTurnStartEffects(G.currentPlayer); // Phase 1 + 2: ability ticks before income
-    // Phase 2: clear Bone Wraith's "friendly died last turn" flag for this player
-    if (G._lastDestroyedFriendly) G._lastDestroyedFriendly[G.currentPlayer] = false;
     collectPassiveIncome(G.currentPlayer);
   } else {
     G.turnSummary = null; // no summary in round 1
@@ -2775,10 +2852,11 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
       attM.hp = Math.min(attM.maxHp, attM.hp + 8);
       log(`🌅 Soulmend: Dawn Striker heals ${healed} HP on win (now ${attM.hp}/${attM.maxHp})`);
     }
-    // Solar Knight — Radiant Strike: on claim (battle win), tile converts to Light element
+    // Solar Knight — Radiant Strike: on CLAIM and on BATTLE WIN (attacker wins)
+    // Tile conversion on claim handled in claim handler above; also fires here on battle win.
     if (attM.id === 'solar_knight') {
       tile.element = 'Light';
-      log(`☀️ Radiant Strike: Solar Knight converts tile ${tilePos} to Light element!`);
+      log(`☀️ Radiant Strike: Solar Knight converts tile to Light element on battle win!`);
     }
 
     // ── Dark attacker win abilities ───────────────────────────────────────────
@@ -2798,18 +2876,18 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     }
     // Dusk Blade — Hemorrhage: on win, target's Mana income next turn reduced by 4✦
     if (attM.id === 'dusk_blade') {
-      defPlayer.hemorrhageStacks = 1; // 1 turn of income reduction
-      defPlayer.hemorrhageAmt = 4;   // 4✦ income reduction (encoded as mana drain)
-      // Reuse hemorrhage system: will drain 4 from stationed summons next turn
-      // Actually: use a separate flag for income reduction
       defPlayer._hemorrhageIncomeReduction = (defPlayer._hemorrhageIncomeReduction || 0) + 4;
       log(`🗡️ Hemorrhage: Dusk Blade reduces ${defPlayer.name}'s Mana income by 4✦ next turn`);
     }
-    // Shade Walker — Cursed Touch: place a DoT curse on the defeated monster's tile
-    if (attM.id === 'shade_walker') {
-      tile.cursed = 3; // 3 turns of DoT
-      tile.genReduction = 0;
-      log(`🌑 Cursed Touch: Shade Walker curses tile ${tilePos} — next summon placed here takes DoT for 3 turns`);
+    // Shade Walker — Cursed Touch: curse the DEFEATED monster (follows it, per xlsx)
+    // "opposing monster loses 5 HP per turn for 2 turns (follows the monster, does not stack)"
+    if (attM.id === 'shade_walker' && defM) {
+      defM.abilityData = defM.abilityData || {};
+      if (!defM.abilityData.shadeWalkerCurse || defM.abilityData.shadeWalkerCurse <= 0) {
+        defM.abilityData.shadeWalkerCurse = 2;
+        defM.abilityData.shadeWalkerCurseAmt = 5;
+        log(`🌑 Cursed Touch: Shade Walker curses ${defM.name} — 5 HP DoT for 2 turns (follows monster)`);
+      }
     }
 
     // ── Arcane attacker win abilities ─────────────────────────────────────────
@@ -2819,12 +2897,7 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
       attM.abilityData.sorcererGenBonus = (attM.abilityData.sorcererGenBonus || 0) + 1;
       log(`✨ Arcane Ascent: Sorcerer permanently gains +1 ATK +1 Gen (total: +${attM.abilityData.sorcererAtkBonus} ATK, +${attM.abilityData.sorcererGenBonus} Gen)`);
     }
-    // Spell Wraith — Mana Siphon: steal 1 Mana Gen from the claimed tile
-    if (attM.id === 'spell_wraith' && tile.genReduction < 2) {
-      tile.genReduction = (tile.genReduction || 0) + 1;
-      if (attM.abilityData) attM.abilityData.extraGenPerTurn = (attM.abilityData.extraGenPerTurn || 0) + 1;
-      log(`✨ Mana Siphon: Spell Wraith siphons 1 Gen from tile ${tilePos} (tile genReduction: ${tile.genReduction})`);
-    }
+    // Spell Wraith — Mana Siphon: passive aura drain (handled in processTurnStartEffects; no on-win effect)
 
     // ── Undead attacker win abilities ─────────────────────────────────────────
     // Grave Specter — Necrotic Claim: on win, tile converts to Undead element
@@ -2866,7 +2939,8 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
       _trackBattleMana(defPlayer, -stolen);
       log(`🧛 Mana Drain: ${attPlayer.name} steals ${stolen}✦ from ${defPlayer.name}`);
     }
-    // Arcane Arbiter — Chaos Flux: scramble one attacker-owned tile
+    // Arcane Arbiter — Chaos Flux: defender-only reactive — fires only when Arbiter is stationed (defending)
+    // Scrambles one tile owned by the ATTACKER (punishment for attacking the Arbiter)
     if (defM.id === 'arcane_arbiter') _applyChaosFlux(attPlayer);
   } else if (outcome === 'defender_wins') {
     attPlayer.hand = attPlayer.hand.filter(m => m.iid !== attM.iid);
@@ -2909,9 +2983,11 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     }
     // Shade Walker — Cursed Touch: curse attacker's hand monster for 3-turn DoT
     if (defM.id === 'shade_walker' && attM.abilityData) {
-      attM.abilityData.shadeWalkerCurse = 3;
-      attM.abilityData.shadeWalkerCurseAmt = 5;
-      log(`🌑 Cursed Touch: Shade Walker curses ${attM.name} — 5 HP DoT for 3 turns`);
+      if (!attM.abilityData.shadeWalkerCurse || attM.abilityData.shadeWalkerCurse <= 0) {
+        attM.abilityData.shadeWalkerCurse = 2;
+        attM.abilityData.shadeWalkerCurseAmt = 5;
+        log(`🌑 Cursed Touch: Shade Walker curses ${attM.name} — 5 HP DoT for 2 turns (follows monster)`);
+      }
     }
 
     // ── Arcane defender win abilities ─────────────────────────────────────────
@@ -2936,11 +3012,7 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     // Thornling defending wins — Thorn Burst is not applicable (Thornling is the killer, not the killed)
     // (Thorn Burst only triggers when Thornling DIES — handled in attacker_wins when defM=thornling)
 
-    // Track that attPlayer's summon was destroyed (for Bone Wraith Death Surge next turn)
-    if (!G._lastDestroyedFriendly) G._lastDestroyedFriendly = {};
-    G._lastDestroyedFriendly[attPlayer.idx] = true;
-
-    // Arcane Arbiter — Chaos Flux on defender win too
+    // Arcane Arbiter — Chaos Flux: defender-only reactive — scrambles attacker's tile
     if (defM.id === 'arcane_arbiter') _applyChaosFlux(attPlayer);
   } else if (outcome === 'mutual') {
     attPlayer.hand = attPlayer.hand.filter(m => m.iid !== attM.iid);
@@ -2960,11 +3032,7 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     log(`✦ Battle mana: ${attPlayer.name} −8✦  ${defPlayer.name} +4✦`);
     checkManaElimination(attPlayer.idx);
     // (Solar Knight is destroyed; layOnHandsUsed reset not needed — fresh makeSummon on next buy)
-    // Track destroyed summons for Bone Wraith (both sides lost a summon)
-    if (!G._lastDestroyedFriendly) G._lastDestroyedFriendly = {};
-    G._lastDestroyedFriendly[attPlayer.idx] = true;
-    G._lastDestroyedFriendly[defPlayer.idx] = true;
-    // Arcane Arbiter — Chaos Flux on mutual too
+    // Arcane Arbiter — Chaos Flux on mutual: Arbiter is destroyed but still punishes attacker
     if (defM.id === 'arcane_arbiter') _applyChaosFlux(attPlayer);
   } else if (outcome === 'stalemate') {
     log(`🤝 Stalemate! Both survive`);
@@ -2999,14 +3067,16 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
       _trackBattleMana(defPlayer, -stolen);
       log(`🧛 Mana Drain: ${attPlayer.name} steals ${stolen}✦ from ${defPlayer.name} (stalemate)`);
     }
-    // Arcane Arbiter — Chaos Flux on stalemate
+    // Arcane Arbiter — Chaos Flux on stalemate: defender-only, scrambles attacker's tile
     if (defM.id === 'arcane_arbiter') _applyChaosFlux(attPlayer);
   }
 }
 
-// Arcane Arbiter — Chaos Flux: randomly change one attacker-owned tile to a random new element
-function _applyChaosFlux(attPlayer) {
-  const ownedElemTiles = G.board.filter(t => t.ownerId === attPlayer.idx && t.element);
+// Arcane Arbiter — Chaos Flux: scramble one random tile owned by the ATTACKER
+// Fires only when the Arbiter is the DEFENDER (stationed on a tile being attacked)
+// "After any battle or stalemate against it, one random attacker-owned tile changes to a random element"
+function _applyChaosFlux(attackingPlayer) {
+  const ownedElemTiles = G.board.filter(t => t.ownerId === attackingPlayer.idx && t.element);
   if (ownedElemTiles.length === 0) return;
   const target = ownedElemTiles[Math.floor(Math.random() * ownedElemTiles.length)];
   const otherTypes = TYPES.filter(t => t !== target.element);
@@ -3014,7 +3084,7 @@ function _applyChaosFlux(attPlayer) {
   const oldEl = target.element;
   target.element = newEl;
   target.label = newEl;
-  log(`🌀 Chaos Flux! ${attPlayer.name}'s tile ${target.pos} scrambled: ${oldEl} → ${newEl}`);
+  log(`🌀 Chaos Flux! ${attackingPlayer.name}'s tile ${target.pos} scrambled: ${oldEl} → ${newEl}`);
 }
 
 // Handle warp landing — position already set, just resolve the tile
