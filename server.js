@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.80';
+const SERVER_VERSION = 'v1.0.82';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -1473,6 +1473,72 @@ function checkLastStanding() {
 
 // ─── TURN MANAGEMENT ─────────────────────────────────────────────────────────
 
+// Builds the per-summon tally array for the pre-round animation.
+// Called after processTurnStartEffects + collectPassiveIncome have run, so
+// all HP changes and aura states are final.
+// hpSnapshot: { tilePos → hp } captured BEFORE processTurnStartEffects
+// milestoneSnapshot: { tilePos → { vineAuraActive, mossAuraActive, oakAtkBonus, oakDefBonus } }
+function computeRoundTally(playerIdx, hpSnapshot, milestoneSnapshot) {
+  const tally = [];
+  const N = G.board.length;
+
+  for (const tile of G.board) {
+    if (tile.ownerId !== playerIdx || !tile.summonInstance) continue;
+    const mi = tile.summonInstance;
+    const pos = tile.pos;
+
+    // Skip monsters that have all-zero beats AND no milestones (checked below)
+    const eff = getEffectiveStats(mi, pos, playerIdx);
+
+    // ── Beat 1: Net mana this turn ────────────────────────────────────────────
+    // Base effective gen, then subtract any adjacent enemy Spell Wraith drain.
+    let netMana = eff.gen;
+    const neighbors = [(pos + 1) % N, (pos + N - 1) % N];
+    for (const t2 of G.board) {
+      if (t2.ownerId === playerIdx || !t2.summonInstance) continue;
+      if (t2.summonInstance.id === 'spell_wraith' && neighbors.includes(t2.pos)) {
+        // Enemy Spell Wraith adjacent: it drains this summon's base gen
+        netMana -= mi.gen;
+      }
+    }
+
+    // ── Beat 2 & 3: Net ATK / DEF deltas from all auras ──────────────────────
+    const netAtk = eff.atk - mi.atk;
+    const netDef = eff.def - mi.def;
+
+    // ── Beat 4: Net HP change this turn ──────────────────────────────────────
+    const snapHp = hpSnapshot[pos] !== undefined ? hpSnapshot[pos] : mi.hp;
+    const netHp = mi.hp - snapHp;
+
+    // ── Beat 5: Milestones ────────────────────────────────────────────────────
+    const snap = milestoneSnapshot[pos] || {};
+    const milestones = [];
+    if (!snap.vineAuraActive && mi.abilityData?.vineAuraActive) milestones.push('vine_aura');
+    if (!snap.mossAuraActive && mi.abilityData?.mossAuraActive) milestones.push('moss_aura');
+    const newOakAtk = mi.abilityData?.atkBonus || 0;
+    const newOakDef = mi.abilityData?.defBonus || 0;
+    if (newOakAtk > (snap.oakAtkBonus || 0) || newOakDef > (snap.oakDefBonus || 0)) {
+      milestones.push('oak_overgrowth');
+    }
+
+    // Skip entirely if all zero and no milestones
+    if (netMana === 0 && netAtk === 0 && netDef === 0 && netHp === 0 && milestones.length === 0) continue;
+
+    tally.push({
+      tilePos: pos,
+      monsterId: mi.id,
+      monsterName: mi.name,
+      monsterType: mi.type,
+      netMana,
+      netAtk,
+      netDef,
+      netHp,
+      milestones,
+    });
+  }
+  return tally;
+}
+
 function startShopPhase() {
   const p = G.players[G.currentPlayer];
   p.lastDiceRoll = null;  // reset so stale roll values don't trigger false animations
@@ -1483,8 +1549,26 @@ function startShopPhase() {
   // mana generation starts from round 2 onward (turnCount >= playerCount)
   const isRound1 = G.turnCount < G.players.length;
   if (!isRound1) {
+    // Snapshot HP and milestone states BEFORE effects run so tally can compute deltas
+    const _hpSnapshot = {};
+    const _milestoneSnapshot = {};
+    for (const tile of G.board) {
+      if (tile.ownerId === G.currentPlayer && tile.summonInstance) {
+        _hpSnapshot[tile.pos] = tile.summonInstance.hp;
+        _milestoneSnapshot[tile.pos] = {
+          vineAuraActive: tile.summonInstance.abilityData?.vineAuraActive || false,
+          mossAuraActive: tile.summonInstance.abilityData?.mossAuraActive || false,
+          oakAtkBonus:    tile.summonInstance.abilityData?.atkBonus       || 0,
+          oakDefBonus:    tile.summonInstance.abilityData?.defBonus       || 0,
+        };
+      }
+    }
     processTurnStartEffects(G.currentPlayer); // Phase 1 + 2: ability ticks before income
     collectPassiveIncome(G.currentPlayer);
+    // Attach round tally for pre-round animation on the client
+    if (G.turnSummary) {
+      G.turnSummary.roundTally = computeRoundTally(G.currentPlayer, _hpSnapshot, _milestoneSnapshot);
+    }
   } else {
     G.turnSummary = null; // no summary in round 1
     log(`⏳ ${p.name} — income starts Round 2`);
@@ -1977,6 +2061,18 @@ const handlers = {
     if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
     G.turnSummary = null;
     _startActualTurn();
+  },
+
+  // Board signals players that the pre-round tally animation is done — players can now show their summary
+  tally_complete(ws, conn, data) {
+    if (!conn.isBoard) return; // only board can signal this
+    const roomCode = G ? G.roomCode : conn.roomCode;
+    for (const [socket, c] of clients) {
+      if (socket.destroyed) continue;
+      if (c.roomCode !== roomCode) continue;
+      if (c.isBoard || c.isSpectator) continue; // players only
+      wsSend(socket, { type: 'tally_complete' });
+    }
   },
 
   // ── Shop ───────────────────────────────────────────────────────────────────

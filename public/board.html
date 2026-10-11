@@ -284,6 +284,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 /* Turn summary overlay */
 @keyframes tsSlideIn{0%{opacity:0;transform:translate(-50%,-50%) translateY(14px)}100%{opacity:1;transform:translate(-50%,-50%) translateY(0)}}
 @keyframes tsSlideOut{0%{opacity:1;transform:translate(-50%,-50%) translateY(0)}100%{opacity:0;transform:translate(-50%,-50%) translateY(8px)}}
+/* ── Round tally animation ── */
+#tally-overlay{position:absolute;inset:0;z-index:25;pointer-events:none;}
+.tally-skip-btn{position:absolute;bottom:14px;right:14px;z-index:26;pointer-events:all;background:rgba(10,11,24,.88);border:1px solid rgba(145,132,217,.35);color:#c9c7e0;font-family:inherit;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:6px 16px;border-radius:20px;cursor:pointer;transition:background 140ms;}
+.tally-skip-btn:hover{background:rgba(30,28,60,.95);}
+.tally-summon-label{position:absolute;font-family:'Cinzel',serif;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(201,199,224,.75);pointer-events:none;white-space:nowrap;transform:translateX(-50%);}
 .ts-callout{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;display:flex;flex-direction:column;align-items:center;animation:tsSlideIn 550ms cubic-bezier(.22,.68,0,1.2) both;}
 .ts-callout-exit{animation:tsSlideOut 350ms ease-in forwards!important;}
 .ts-card{background:rgba(10,11,24,.9);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(145,132,217,.25);border-radius:14px;padding:18px 28px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;min-width:220px;box-shadow:0 8px 32px rgba(0,0,0,.6),0 0 0 1px rgba(145,132,217,.08) inset;}
@@ -1174,6 +1179,126 @@ async function runBattleAnimation(lb, attPlayer, defPlayer, overlay) {
   ],{duration:460,easing:'ease',fill:'both'});
 }
 
+// ─── Round tally animation ────────────────────────────────────────────────────────────────────
+let _tallyPlayedFor = null; // G.turnSummary reference we last animated for
+let _tallyRunning   = false;
+
+function runRoundTally(tally, boardArea, onDone) {
+  if (_tallyRunning) return;
+  _tallyRunning = true;
+
+  // Overlay (non-interactive) + skip button (interactive)
+  const ov = document.createElement('div');
+  ov.id = 'tally-overlay';
+  boardArea.appendChild(ov);
+
+  const skipBtn = document.createElement('button');
+  skipBtn.className = 'tally-skip-btn';
+  skipBtn.textContent = 'Skip ⏭';
+  boardArea.appendChild(skipBtn);
+
+  let skipped = false;
+  function cleanup() {
+    ov.remove();
+    skipBtn.remove();
+    _tallyRunning = false;
+  }
+  skipBtn.onclick = () => { skipped = true; cleanup(); onDone(); };
+
+  function playSound(file) {
+    try { const a = new Audio('/audio/' + file); a.volume = 0.6; a.play().catch(() => {}); } catch(e) {}
+  }
+
+  // getBoundingClientRect() returns screen (post-scale) coords, but overlay children use
+  // boardArea's local (pre-scale) coordinate space. Divide by scale to correct.
+  const areaRect = boardArea.getBoundingClientRect();
+  const scale = boardArea.offsetWidth > 0 ? areaRect.width / boardArea.offsetWidth : 1;
+
+  // Show a floating number/label over a tile; calls cb when animation finishes
+  function showBeat(tilePos, text, positive, milestone, cb) {
+    const cached = tileElCache.get(tilePos);
+    if (!cached) { setTimeout(cb, 0); return; }
+    const tileRect = cached.el.getBoundingClientRect();
+    const x = (tileRect.left - areaRect.left + tileRect.width  * 0.5) / scale;
+    const y = (tileRect.top  - areaRect.top  + tileRect.height * 0.42) / scale;
+
+    const el = document.createElement('div');
+    el.style.cssText = [
+      'position:absolute',
+      `left:${x}px`,
+      `top:${y}px`,
+      'transform:translate(-50%,-50%) scale(0.4)',
+      "font-family:'Cinzel',serif",
+      `font-size:${milestone ? '12px' : '24px'}`,
+      'font-weight:700',
+      `color:${milestone ? '#c89f50' : positive ? '#58e068' : '#e05252'}`,
+      `text-shadow:0 0 14px ${milestone ? '#c89f50aa' : positive ? '#58e068aa' : '#e05252aa'},0 2px 5px rgba(0,0,0,.85)`,
+      'pointer-events:none',
+      'z-index:26',
+      'white-space:nowrap',
+      'letter-spacing:.05em',
+    ].join(';');
+    el.textContent = text;
+    ov.appendChild(el);
+
+    const anim = el.animate([
+      { transform:'translate(-50%,-50%) scale(0.4)', opacity:0 },
+      { transform:'translate(-50%,-50%) scale(1.5)', opacity:1, offset:0.22 },
+      { transform:'translate(-50%,-60%) scale(1.2)', opacity:1, offset:0.55 },
+      { transform:'translate(-50%,-110%) scale(1.0)', opacity:0 },
+    ], { duration: 675, easing:'ease', fill:'both' });
+    anim.onfinish = () => { el.remove(); cb(); };
+  }
+
+  const BEATS = ['netMana','netAtk','netDef','netHp'];
+  const BEAT_SYMBOL = { netMana:'✦', netAtk:' ATK', netDef:' DEF', netHp:' HP' };
+  const SND_POS  = 'Positive.mp3';
+  const SND_NEG  = 'Negitive.mp3'; // preserve exact filename spelling
+  const SND_MILE = 'Milestone.mp3';
+
+  let si = 0;
+  function nextSummon() {
+    if (skipped || si >= tally.length) { if (!skipped) cleanup(); onDone(); return; }
+    const entry = tally[si++];
+    runBeats(entry, nextSummon);
+  }
+
+  function runBeats(entry, cb) {
+    const active = [];
+    for (const key of BEATS) {
+      const val = entry[key];
+      if (val !== 0) active.push({ key, val });
+    }
+    for (const ms of (entry.milestones || [])) active.push({ key:'milestone', val:ms });
+
+    let bi = 0;
+    function nextBeat() {
+      if (skipped || bi >= active.length) { cb(); return; }
+      const { key, val } = active[bi++];
+
+      let text, positive, milestone;
+      if (key === 'milestone') {
+        milestone = true; positive = true;
+        text = val === 'vine_aura'      ? '🌿 Vine Aura Active'
+             : val === 'moss_aura'      ? '🌱 Moss Aura Active'
+             : val === 'oak_overgrowth' ? '🌳 Overgrowth!'
+             : '✨ Milestone';
+        playSound(SND_MILE);
+      } else {
+        milestone = false;
+        positive  = val > 0;
+        const sign = val > 0 ? '+' : '';
+        text = sign + val + (BEAT_SYMBOL[key] || '');
+        playSound(positive ? SND_POS : SND_NEG);
+      }
+      showBeat(entry.tilePos, text, positive, milestone, nextBeat);
+    }
+    nextBeat();
+  }
+
+  nextSummon();
+}
+
 // ─── Render entry ───────────────────────────────────────────────────────────────────────────
 let _tsExiting = false; // guard to prevent re-entry during exit animation
 
@@ -1316,7 +1441,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.78 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.4.82</div>`;
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.86 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.4.87</div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -1494,7 +1619,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.78</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.86</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -1748,6 +1873,24 @@ function renderGame(app){
     boardArea.appendChild(wcBanner);
   }
 
+  // ── Right rail (must be appended before any early-return so it's visible during tally)
+  const rail = document.createElement('div');
+  rail.className = 'right-rail';
+  rail.appendChild(renderPaper());
+  main.appendChild(rail);
+
+  // ── Round tally animation (fires before turn summary callout)
+  if (G.phase === 'resolve:turn_summary' && G.turnSummary) {
+    const _rt = G.turnSummary.roundTally;
+    if (_rt && _rt.length > 0 && _tallyPlayedFor !== G.turnSummary && !_tallyRunning) {
+      _tallyPlayedFor = G.turnSummary; // mark immediately — prevents re-trigger on subsequent renders
+      scaleRoot(root);       // commit board to DOM before returning — overlay positions against in-tree tiles
+      app.appendChild(root); // fix: app.innerHTML='' cleared screen; root was never inserted before tally fired
+      requestAnimationFrame(() => runRoundTally(_rt, boardArea, () => { try { ws.send(JSON.stringify({ action: 'tally_complete' })); } catch(e) {} render(); }));
+      return; // board is now rendered; tally overlays it; ts-callout shows after
+    }
+  }
+
   // ── Turn summary callout (compact — player name + net mana + total)
   if (G.phase === 'resolve:turn_summary' && G.turnSummary) {
     const ts = G.turnSummary;
@@ -1864,12 +2007,6 @@ function renderGame(app){
       </div>`;
     boardArea.appendChild(wo);
   }
-
-  // ── Right rail
-  const rail = document.createElement('div');
-  rail.className = 'right-rail';
-  rail.appendChild(renderPaper());
-  main.appendChild(rail);
 
   scaleRoot(root);
   app.appendChild(root);

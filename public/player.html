@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.4.86</title>
+<title>Summoners Gambit — Player v0.4.87</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -676,6 +676,7 @@ let rollAnimating = false;
 let pendingGameState = null;
 let pendingRollValue = null;
 let rollShowCallback = null;
+let _tallyComplete = false; // gate: player summary waits for board tally_complete signal
 
 // ─── WEBSOCKET ─────────────────────────────────────────────────────────────
 const WS_URL = `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}`;
@@ -705,7 +706,17 @@ function connect() {
     } else if (msg.type === 'session') {
       mySessionKey = msg.sessionKey;
       try { localStorage.setItem('sg_session_key', mySessionKey); } catch(e){}
+    } else if (msg.type === 'tally_complete') {
+      // Board finished the pre-round tally animation — now show our turn summary
+      _tallyComplete = true;
+      render();
+      return;
     } else if (msg.type === 'state') {
+      // If we're entering turn_summary with a tally, reset the gate so we wait for tally_complete
+      if (msg.game && msg.game.phase === 'resolve:turn_summary' &&
+          msg.game.turnSummary && msg.game.turnSummary.roundTally && msg.game.turnSummary.roundTally.length > 0) {
+        _tallyComplete = false;
+      }
       if (rollAnimating) {
         const ng = msg.game, ni = msg.myIdx !== undefined ? msg.myIdx : myIdx, nh = msg.hand !== undefined ? msg.hand : myHand;
         pendingGameState = { game: ng, myIdx: ni, hand: nh };
@@ -1309,7 +1320,13 @@ function render() {
       console.log(`[SG] *** STALEMATE PHASE *** isMyTurn=${isMyTurn} stalemateData=`, G.stalemateData);
       isMyTurn ? renderStalemate() : renderWaiting();
       break;
-    case 'resolve:turn_summary': isMyTurn ? renderTurnSummary() : renderWaiting(); break;
+    case 'resolve:turn_summary': {
+      // Wait for board tally animation before showing summary (only if there's a tally to play)
+      const hasTally = G.turnSummary?.roundTally?.length > 0;
+      if (hasTally && !_tallyComplete) { renderWaiting(); break; }
+      isMyTurn ? renderTurnSummary() : renderWaiting();
+      break;
+    }
     case 'resolve:claim':    isMyTurn ? renderClaim() : renderWaiting(); break;
     case 'resolve:battle':        isMyTurn ? renderBattle() : renderWaiting(); break;
     case 'resolve:battle_result': renderBattleResult(); break;
@@ -1376,7 +1393,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.86</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.87</div>
     </div>
 
     <div class="room-code-group">
@@ -1480,7 +1497,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.86</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.87</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
