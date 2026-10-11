@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.4.87</title>
+<title>Summoners Gambit — Player v0.4.95</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 :root {
   --bg: #0d0e1c; --bg-deep: #09091a; --surface: #151627; --surface2: #1c1e2b;
@@ -293,6 +294,100 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .lc-hp-bar-wrap { height:4px; background:var(--border2); border-radius:2px; overflow:hidden; }
 .lc-hp-bar { height:100%; border-radius:2px; transition:width .3s; }
 @keyframes fadeSlideUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+/* Waiting / Setup carousel */
+.wc-wrap { display:flex; flex-direction:column; gap:0; }
+.wc-whose { display:flex; align-items:center; justify-content:center; gap:4px; font-size:13px; padding:6px 16px 0; }
+.wc-phase-hdr { font-family:'Cinzel',serif; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-mute); text-align:center; padding:14px 16px 6px; }
+.wc-carousel { display:flex; align-items:center; justify-content:center; gap:0; padding:6px 0 4px; position:relative; }
+.wc-arrow { width:32px; height:32px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.06); border:1px solid var(--border2); border-radius:50%; font-size:16px; color:var(--text-dim); cursor:pointer; flex-shrink:0; -webkit-tap-highlight-color:transparent; transition:background 120ms; user-select:none; }
+.wc-arrow:active { background:rgba(255,255,255,.14); }
+.wc-slots { display:flex; align-items:flex-start; gap:6px; overflow:hidden; padding:4px 2px 8px; }
+.wc-slot { display:flex; flex-direction:column; align-items:center; gap:4px; flex-shrink:0; }
+.wc-slot.side { opacity:1; }
+.wc-slot.center { opacity:1; }
+.wc-tile-num { font-family:'Cinzel',serif; font-size:10px; letter-spacing:.1em; color:var(--text-mute); }
+.wc-tile-card { width:106px; height:150px; border-radius:10px; border:2px solid; position:relative; overflow:visible; display:flex; align-items:flex-end; cursor:pointer; transition:box-shadow 120ms; -webkit-tap-highlight-color:transparent; }
+.wc-tile-card:active { filter:brightness(1.15); }
+.wc-slot.center .wc-tile-card { box-shadow:0 0 18px rgba(145,132,217,.45); border-width:2px; }
+.wc-tile-card-bg { position:absolute;inset:0;border-radius:9px;overflow:hidden;z-index:0;background-size:cover;background-position:center; }
+.wc-summon-mini { position:absolute;bottom:28px;left:50%;transform:translateX(-50%);pointer-events:none;z-index:2;filter:drop-shadow(0 3px 10px rgba(0,0,0,.85)); }
+.wc-summon-mini .summon-card.mini { width:66px; height:95px; }
+.wc-summon-mini .mc-art img, .wc-summon-mini .mc-art svg { width:100%; height:100%; }
+.wc-type-pill { position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-family:'Cinzel',serif;font-size:8px;letter-spacing:.06em;font-weight:700;padding:2px 7px;border-radius:20px;white-space:nowrap;border:1px solid;z-index:4;text-transform:uppercase; }
+.wc-el-label { width:100%;text-align:center;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.08em;padding:4px 0;background:rgba(0,0,0,.65);backdrop-filter:blur(2px);text-transform:capitalize;position:relative;z-index:3;border-radius:0 0 8px 8px; }
+.wc-status { font-size:11px;text-align:center;font-family:'Cinzel',serif;letter-spacing:.06em;max-width:106px; }
+.wc-status.unclaimed { color:var(--text-mute); }
+.wc-status.own { color:#4caf7d; }
+.wc-status.enemy { font-size:10px; }
+.wc-status.special { color:var(--gold); }
+.wc-mon-bar { background:var(--surface2);border-radius:6px;padding:4px 6px;width:106px; }
+.wc-mon-name { font-size:9px;color:var(--text-dim);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px; }
+.wc-hp-bar-wrap { height:4px;background:var(--border2);border-radius:2px;overflow:hidden; }
+.wc-hp-bar { height:100%;border-radius:2px;transition:width .3s; }
+.wc-tap-hint { font-size:10px;color:var(--text-mute);text-align:center;letter-spacing:.08em;padding:2px 0 6px;font-family:'Cinzel',serif; }
+.wc-player-tokens { position:absolute;top:6px;right:6px;display:flex;flex-direction:column;gap:3px;align-items:flex-end;z-index:5;pointer-events:none; }
+/* Claimed-so-far panel (setup waiting) */
+.wc-claimed-panel { margin:8px 14px 0; background:var(--surface);border-radius:10px;border:1px solid var(--border);overflow:hidden; }
+.wc-claimed-hdr { font-family:'Cinzel',serif;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-mute);padding:8px 12px 6px;border-bottom:1px solid var(--border); }
+.wc-claimed-row { display:grid;grid-template-columns:52px 62px 1fr 70px;align-items:center;padding:6px 12px;border-bottom:1px solid var(--border);font-size:12px;gap:4px; }
+.wc-claimed-row:last-child { border-bottom:none; }
+.wc-claimed-tile { font-family:'Cinzel',serif;font-size:10px;color:var(--text-mute); }
+.wc-claimed-owner { font-size:11px;font-weight:600;text-align:right; }
+/* Waiting players strip */
+.wc-players-strip { display:flex;gap:6px;padding:10px 14px 0;overflow-x:auto;scrollbar-width:none; }
+.wc-players-strip::-webkit-scrollbar { display:none; }
+.wc-player-chip { display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;background:var(--surface);border:1px solid var(--border);font-size:12px;white-space:nowrap; }
+.wc-player-chip.active { border-color:var(--accent);background:rgba(145,132,217,.08); }
+.wc-events { padding:10px 14px 0; }
+.wc-event-row { font-size:11px;color:var(--text-dim);padding:4px 0;border-bottom:1px solid var(--border); }
+.wc-event-row:last-child { border-bottom:none; }
+/* Tile Detail Modal */
+.tdm-overlay { position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.82);display:flex;align-items:flex-end;justify-content:center;animation:tdmIn .22s ease both; }
+@keyframes tdmIn { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+.tdm-sheet { width:100%;max-width:430px;background:var(--surface);border-radius:18px 18px 0 0;border-top:1px solid var(--border2);padding:0 0 28px;max-height:88vh;overflow-y:auto; }
+.tdm-drag { width:36px;height:4px;background:var(--border2);border-radius:2px;margin:10px auto 0; }
+.tdm-header { display:flex;align-items:center;gap:12px;padding:14px 16px 10px; }
+.tdm-tile-badge { width:48px;height:48px;border-radius:10px;border:2px solid;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:16px;font-weight:700;flex-shrink:0;background-size:cover;background-position:center; }
+.tdm-tile-info { flex:1; }
+.tdm-tile-name { font-family:'Cinzel',serif;font-size:15px;font-weight:700;letter-spacing:.06em; }
+.tdm-tile-sub { font-size:11px;color:var(--text-mute);margin-top:2px; }
+.tdm-close { width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text-mute);cursor:pointer;flex-shrink:0; }
+.tdm-divider { height:1px;background:var(--border);margin:0 16px; }
+.tdm-section-lbl { font-family:'Cinzel',serif;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);padding:12px 16px 6px; }
+.tdm-owner-row { display:flex;align-items:center;gap:8px;padding:4px 16px 10px;font-size:13px; }
+.tdm-no-summon { padding:14px 16px;font-size:13px;color:var(--text-mute);font-style:italic; }
+.tdm-monster-card-wrap { padding:4px 16px 12px;display:flex;gap:14px;align-items:flex-start; }
+.tdm-stats-grid { display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;flex:1; }
+.tdm-stat-box { background:var(--surface2);border-radius:8px;padding:7px 8px;text-align:center; }
+.tdm-stat-val { font-family:'Cinzel',serif;font-size:18px;font-weight:700;line-height:1; }
+.tdm-stat-lbl { font-size:9px;color:var(--text-mute);letter-spacing:.14em;text-transform:uppercase;margin-top:2px; }
+.tdm-hp-section { padding:0 16px 10px; }
+.tdm-hp-label { display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim);margin-bottom:4px; }
+.tdm-hp-track { height:8px;background:var(--border2);border-radius:4px;overflow:hidden; }
+.tdm-hp-fill { height:100%;border-radius:4px;transition:width .3s; }
+.tdm-type-row { display:flex;gap:8px;padding:0 16px 10px; }
+.tdm-type-chip { flex:1;padding:8px;border-radius:8px;text-align:center;font-size:11px; }
+.tdm-type-chip-lbl { font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-mute);margin-bottom:3px;font-family:'Cinzel',serif; }
+.tdm-type-chip-val { font-size:13px;font-weight:700; }
+.tdm-ability-box { margin:0 16px 4px;background:var(--surface2);border-radius:10px;padding:12px;border-left:3px solid var(--accent); }
+.tdm-ability-name { font-family:'Cinzel',serif;font-size:13px;font-weight:700;color:var(--accent-pale);margin-bottom:4px; }
+.tdm-ability-desc { font-size:12px;color:var(--text-dim);line-height:1.5; }
+.tdm-art-banner { width:100%;height:320px;position:relative;overflow:hidden;background:var(--bg-deep); }
+.tdm-art-banner img { width:100%;height:100%;object-fit:cover;object-position:top center;display:block; }
+.tdm-art-banner-fade { position:absolute;bottom:0;left:0;right:0;height:100px;background:linear-gradient(to bottom,transparent,var(--surface)); }
+.tdm-art-banner-name { position:absolute;bottom:12px;left:16px;right:16px;font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.08em;text-shadow:0 2px 8px rgba(0,0,0,.9); }
+.tdm-special-body { padding:0 16px 8px; }
+.tdm-special-flavor { font-style:italic;color:var(--text-mute);font-size:12px;margin:12px 0 10px;letter-spacing:.02em; }
+.tdm-special-para { font-size:13px;line-height:1.65;color:var(--text);margin-bottom:14px; }
+.tdm-special-callout { border-radius:10px;border:1px solid var(--border2);padding:12px 14px;margin-bottom:6px; }
+.tdm-special-callout-title { font-family:'Cinzel',serif;font-size:13px;font-weight:700;margin-bottom:6px; }
+.tdm-special-callout-body { font-size:12px;line-height:1.6;color:var(--text-mute); }
+.tdm-special-reward-row { display:flex;gap:10px;margin-bottom:10px;align-items:flex-start; }
+.tdm-special-pct { font-family:'Cinzel',serif;font-size:12px;font-weight:700;min-width:36px;padding-top:1px; }
+.tdm-special-reward-name { font-size:12px;font-weight:600;margin-bottom:2px; }
+.tdm-special-reward-desc { font-size:11px;color:var(--text-mute);line-height:1.5; }
+.tdm-special-step { font-size:12px;line-height:1.6;padding:5px 0 5px 14px;border-left:2px solid var(--border2);margin-bottom:6px;color:var(--text-mute); }
+.tdm-special-footer { font-size:11px;color:var(--text-mute);line-height:1.6;margin-top:10px;font-style:italic; }
 /* Summon cards */
 .summon-card { border-radius: 10px; border: 2px solid; cursor: pointer; transition: all 120ms; overflow: hidden; position: relative; flex-shrink: 0; user-select: none; }
 .summon-card:hover { filter: brightness(1.12); }
@@ -677,6 +772,8 @@ let pendingGameState = null;
 let pendingRollValue = null;
 let rollShowCallback = null;
 let _tallyComplete = false; // gate: player summary waits for board tally_complete signal
+let _waitCarouselIdx = 0;  // center tile index for regular waiting screen carousel
+let _setupCarouselIdx = 0; // center tile index for setup waiting screen carousel
 
 // ─── WEBSOCKET ─────────────────────────────────────────────────────────────
 const WS_URL = `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}`;
@@ -1349,12 +1446,25 @@ function renderConnecting() {
   document.getElementById('status-bar').style.display = 'none';
   document.getElementById('hand-area').classList.remove('visible');
   document.getElementById('action-bar').classList.remove('visible');
+  const playerUrl = `${location.protocol}//${location.host}/player`;
   document.getElementById('main-content').innerHTML = `
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;padding:32px">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;padding:32px">
       <div style="font-size:32px">🎮</div>
       <div style="font-family:'Cinzel',serif;font-size:16px;letter-spacing:.1em;color:var(--text-lo)">Connecting…</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for server</div>
+      <div style="margin-top:8px;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
+        <div style="font-size:10px;color:var(--text-mute);letter-spacing:.08em;text-transform:uppercase">Join this game</div>
+        <div id="reconnect-qr" style="background:#fff;padding:8px;border-radius:6px"></div>
+        <div style="font-size:11px;color:var(--text-dim);word-break:break-all;text-align:center;max-width:220px">${playerUrl}</div>
+      </div>
     </div>`;
+  try {
+    new QRCode(document.getElementById('reconnect-qr'), {
+      text: playerUrl, width: 140, height: 140,
+      colorDark: '#000000', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } catch(e) { /* QR lib not loaded yet — URL text still visible */ }
 }
 
 // ─── JOIN SCREEN ────────────────────────────────────────────────────────────
@@ -1393,7 +1503,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.87</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.95</div>
     </div>
 
     <div class="room-code-group">
@@ -1497,7 +1607,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.87</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.95</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -1528,8 +1638,35 @@ function renderTurnSummary() {
 
   // Income rows
   let incomeRows = `<div class="ts-p-row"><span class="ts-p-lbl">🏦 Baseline income</span><span class="ts-p-val" style="color:#a97b40">+${ts.baseline} ✦</span></div>`;
-  if (ts.summonGen > 0) incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">👹 Summon passive</span><span class="ts-p-val" style="color:#a97b40">+${ts.summonGen} ✦</span></div>`;
-  if ((ts.manaRefineryBonus||0) > 0) incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">🏭 Mana Refinery bonus</span><span class="ts-p-val" style="color:#a97b40">+${ts.manaRefineryBonus} ✦</span></div>`;
+  const _tally = G.turnSummary?.roundTally;
+  if (_tally && _tally.length > 0) {
+    // Per-summon income breakdown from roundTally
+    const summonTotal = _tally.reduce((s, e) => s + e.netMana, 0);
+    let tallyDetail = '';
+    for (const entry of _tally) {
+      if (entry.netMana === 0 && !entry.spellWraithDrain) continue;
+      const isNeg = entry.netMana < 0;
+      const sign = isNeg ? '' : '+';
+      const valCol = isNeg ? '#e05a5a' : '#b89448';
+      const icon = entry.isPlayerBonus ? '🏭' : '·';
+      let tags = '';
+      for (const bd of (entry.genBreakdown || [])) {
+        if (bd.bonus > 0) tags += `<span style="background:rgba(145,132,217,.18);color:#b09fe8;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:4px;">${bd.label}</span>`;
+      }
+      if (entry.spellWraithDrain > 0) tags += `<span style="background:rgba(224,90,90,.15);color:#e05a5a;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:4px;">⛧ −${entry.spellWraithDrain}✦ drained</span>`;
+      tallyDetail += `<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0 3px 14px;">
+        <span style="font-size:11px;color:#8a88a0;flex:1;min-width:0;line-height:1.4;">${icon} ${entry.monsterName}${tags}</span>
+        <span style="font-size:11px;color:${valCol};white-space:nowrap;margin-left:8px;">${sign}${entry.netMana} ✦</span>
+      </div>`;
+    }
+    if (summonTotal > 0 || tallyDetail) {
+      incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">👹 Summon income</span><span class="ts-p-val" style="color:#a97b40">+${summonTotal} ✦</span></div>`;
+      if (tallyDetail) incomeRows += `<div style="border-left:2px solid rgba(145,132,217,.2);margin:2px 0 6px 6px;">${tallyDetail}</div>`;
+    }
+  } else {
+    if (ts.summonGen > 0) incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">👹 Summon passive</span><span class="ts-p-val" style="color:#a97b40">+${ts.summonGen} ✦</span></div>`;
+    if ((ts.manaRefineryBonus||0) > 0) incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">🏭 Mana Refinery bonus</span><span class="ts-p-val" style="color:#a97b40">+${ts.manaRefineryBonus} ✦</span></div>`;
+  }
   if (ts.wellBonus > 0) incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">💎 Mana Well (last turn)</span><span class="ts-p-val" style="color:#4caf82">+${ts.wellBonus} ✦</span></div>`;
   if ((ts.battleManaGain||0) > 0) incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">⚔️ Battle outcomes</span><span class="ts-p-val" style="color:#4caf82">+${ts.battleManaGain} ✦</span></div>`;
   if (ts.windfallActive) incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">🃏 Windfall (×3 income)</span><span class="ts-p-val" style="color:#4caf82">active</span></div>`;
@@ -1628,6 +1765,322 @@ function renderTurnSummary() {
   ab.classList.add('visible');
 }
 
+// ─── TILE CAROUSEL HELPERS ───────────────────────────────────────────────────
+
+// Build a 3-tile carousel HTML string.
+// centerIdx: which board tile is in the center.
+// moveFn: global fn name to call with +1/-1 (string, no parens).
+// tapFn: global fn name to call with tilePos when center tapped (string).
+function buildTileCarousel(centerIdx, moveFn, tapFn) {
+  const total = G.board.length;
+  const slots = [
+    { pos: (centerIdx - 1 + total) % total, cls: 'side' },
+    { pos: centerIdx,                         cls: 'center' },
+    { pos: (centerIdx + 1) % total,           cls: 'side' },
+  ];
+
+  const slotHtml = slots.map(({ pos, cls }) => {
+    const tile = G.board[pos];
+    const elColor = tile.element ? (TYPE_COLOR[tile.element] || '#888') : '#888';
+    const tileImgSrc = TILE_IMG[tile.element] || TILE_IMG[tile.kind] || '';
+    const artStyle = tileImgSrc
+      ? `background:url('${tileImgSrc}') center/cover no-repeat;`
+      : `background:linear-gradient(160deg,${elColor}33 0%,${elColor}11 100%);`;
+
+    let summonMiniHtml = '';
+    if (tile.summon) {
+      const m = tile.summon;
+      const isSupM = m.rarity === 'support';
+      const typeCol = isSupM ? '#9aabbc' : (TYPE_COLOR[m.type] || '#9184d9');
+      const typeLabel = isSupM ? 'Support' : (m.type || 'Neutral');
+      const typePill = `<div class="wc-type-pill" style="color:${typeCol};border-color:${typeCol}88;background:rgba(0,0,0,.72)">${typeLabel}</div>`;
+      summonMiniHtml = `<div class="wc-summon-mini">${renderCard(m, {size:'mini', showCost:false})}${typePill}</div>`;
+    }
+
+    let statusHtml = '';
+    let monBarHtml = '';
+    if (tile.kind !== 'element') {
+      const specLabel = tile.kind === 'start' ? '✦ Mana Well' : tile.kind === 'chest' ? '📦 Chest' : tile.kind === 'temple' ? '🏛 Temple' : tile.kind === 'heal' ? '💚 Healing' : tile.label || tile.kind || '';
+      statusHtml = `<div class="wc-status special">${specLabel}</div>`;
+    } else if (tile.ownerId == null) {
+      statusHtml = `<div class="wc-status unclaimed">Unclaimed</div>`;
+    } else if (tile.ownerId === myIdx) {
+      if (tile.summon) {
+        const m = tile.summon;
+        const hpPct = Math.max(0, Math.round((m.hp / m.maxHp) * 100));
+        const hpCol = hpPct > 60 ? '#4caf7d' : hpPct > 30 ? '#e8a838' : '#e85555';
+        monBarHtml = `<div class="wc-mon-bar"><div class="wc-mon-name">${m.name}</div><div class="wc-hp-bar-wrap"><div class="wc-hp-bar" style="width:${hpPct}%;background:${hpCol}"></div></div></div>`;
+      }
+      statusHtml = `<div class="wc-status own">Your Tile</div>`;
+    } else {
+      const owner = G.players.find(p => p.idx === tile.ownerId);
+      const ownerColor = owner ? owner.color : '#888';
+      const ownerName = owner ? owner.name : 'Enemy';
+      if (tile.summon) {
+        const m = tile.summon;
+        const hpPct = Math.max(0, Math.round((m.hp / m.maxHp) * 100));
+        const hpCol = hpPct > 60 ? '#4caf7d' : hpPct > 30 ? '#e8a838' : '#e85555';
+        monBarHtml = `<div class="wc-mon-bar"><div class="wc-mon-name">${m.name}</div><div class="wc-hp-bar-wrap"><div class="wc-hp-bar" style="width:${hpPct}%;background:${hpCol}"></div></div></div>`;
+      }
+      statusHtml = `<div class="wc-status enemy" style="color:${ownerColor}">${ownerName}</div>`;
+    }
+
+    // Player token badges — show sigils of any players standing on this tile
+    const playersHere = G.players.filter(p => !p.eliminated && p.position === pos);
+    let playerTokensHtml = '';
+    if (playersHere.length) {
+      const badges = playersHere.map(p => {
+        const isMe = p.idx === myIdx;
+        const ring = isMe
+          ? `box-shadow:0 0 0 2px ${p.color},0 0 8px ${p.color}88;`
+          : `box-shadow:0 0 0 1.5px ${p.color}99;`;
+        return `<div class="wc-player-badge${isMe?' me':''}" style="background:rgba(0,0,0,.82);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;${ring}">
+          <svg width="14" height="14" viewBox="0 0 20 20">${sigilShape(p.idx,10,10,5,p.color)}</svg>
+        </div>`;
+      }).join('');
+      playerTokensHtml = `<div class="wc-player-tokens">${badges}</div>`;
+    }
+
+    const elLabel = tile.element || (tile.kind === 'start' ? 'Well' : tile.kind || '');
+    return `
+      <div class="wc-slot ${cls}">
+        <div class="wc-tile-num">${pos}</div>
+        <div class="wc-tile-card" style="border-color:${elColor}${cls === 'center' ? '' : '66'};" onclick="${tapFn}(${pos})">
+          <div class="wc-tile-card-bg" style="${artStyle}"></div>
+          ${playerTokensHtml}
+          ${summonMiniHtml}
+          <div class="wc-el-label" style="color:${elColor}">${elLabel}</div>
+        </div>
+        ${monBarHtml}
+        ${statusHtml}
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="wc-carousel">
+      <div class="wc-arrow" onclick="${moveFn}(-1)">‹</div>
+      <div class="wc-slots">${slotHtml}</div>
+      <div class="wc-arrow" onclick="${moveFn}(1)">›</div>
+    </div>
+    <div class="wc-tap-hint">Tap any tile for details</div>`;
+}
+
+function openTileDetail(tilePos) {
+  const tile = G.board[tilePos];
+  if (!tile) return;
+
+  // --- Special tile branch (chest / temple / heal / well) ---
+  if (tile.kind !== 'element') {
+    const SPECIAL = {
+      start: {
+        color:'#4fc3f7', imgKey:'start',
+        title:'Mana Well',
+        flavor:'An ancient source of power, older than the summoners who fight over it.',
+        body:'At the center of the board flows the Mana Well, a convergence of raw arcane energy that has drawn summoners to this arena for generations. Those who stand at its edge feel it immediately: a surge of power flooding through their veins and into their bound summons.',
+        callout:'Land here to claim +40 Mana.',
+        calloutBody:'No cost. No condition. Just power, freely given to whoever is bold enough to reach it first.',
+      },
+      chest: {
+        color:'#e8a838', imgKey:'chest',
+        title:'Treasure Chest',
+        flavor:'Not all battles are won with claws and spells.',
+        body:'Scattered across the land are ancient caches left behind by summoners long gone. Some contain potions brewed from forgotten recipes. Others hold charms crackling with stored battle energy, scrolls that bend the rules of distance, or creatures bound in stasis, waiting for a new master.',
+        callout:'Land here to draw a random reward, resolved immediately.',
+        rewards:[
+          {pct:'45%', name:'Healing Potion', desc:'Restore HP to one of your stationed summons. Minor (60%) +15 HP / Major (30%) restore 50% of missing HP / Full (10%) full heal.'},
+          {pct:'25%', name:'Battle Charm', desc:'Assign to any summon you own. Their next fight deals +25% damage, then the charm is consumed.'},
+          {pct:'15%', name:'Warp', desc:'Teleport to a random non-special tile. Or discard and stay put.'},
+          {pct:'15%', name:'Free Summon', desc:'A random summon added directly to your hand.'},
+        ],
+      },
+      temple: {
+        color:'#9b8dc8', imgKey:'temple',
+        title:'The Temple',
+        flavor:'Trade mortal power for something greater.',
+        body:'The Temple has stood since before the arena was built around it. Scholars argue about who constructed it and why, but summoners care only about what it offers: a direct exchange with forces beyond the ordinary. Bring the right tribute, pay the right price, and something extraordinary answers the call.',
+        callout:'Land here to trade a hand summon for an Ascendant.',
+        steps:[
+          "Your chosen hand summon's element must match the Ascendant.",
+          "Pay the Ascendant's Mana cost.",
+          "Your traded summon is surrendered permanently.",
+        ],
+        footer:'Each Ascendant has a special ability condition that must be met before it can be used on the board. Check the card for details.',
+      },
+      heal: {
+        color:'#4caf7d', imgKey:'heal',
+        title:'Healing Spring',
+        flavor:'The land itself remembers what it is to be whole.',
+        body:'There are places in this arena where the ground hums with restorative energy, where wounded summons instinctively pull toward and where even a brief rest can undo hours of punishment. Summoners who discover these springs quickly learn to route their movements through them.',
+        callout:'Land here to heal your entire army for 10 Mana.',
+        calloutBody:'All stationed summons and all hand summons are healed +10 HP each, up to their max HP. Can be used multiple times in a row. Each use costs 10 Mana. Skip to move on without paying.',
+      },
+    };
+    SPECIAL.well = SPECIAL.start;
+    SPECIAL.healing = SPECIAL.heal;
+
+    const cfg = SPECIAL[tile.kind] || { color:'#888', imgKey:tile.kind, title:tile.label || tile.kind, flavor:'', body:'', callout:'' };
+    const color = cfg.color;
+    const tileImgSrc = TILE_IMG[cfg.imgKey] || TILE_IMG[tile.kind] || '';
+
+    let rewardsHtml = '';
+    if (cfg.rewards) {
+      rewardsHtml = `<div class="tdm-divider" style="margin:10px 0"></div><div class="tdm-section-lbl" style="padding-left:0">Possible Rewards</div>` +
+        cfg.rewards.map(r => `
+          <div class="tdm-special-reward-row">
+            <div class="tdm-special-pct" style="color:${color}">${r.pct}</div>
+            <div>
+              <div class="tdm-special-reward-name">${r.name}</div>
+              <div class="tdm-special-reward-desc">${r.desc}</div>
+            </div>
+          </div>`).join('');
+    }
+
+    let stepsHtml = '';
+    if (cfg.steps) {
+      stepsHtml = `<div class="tdm-divider" style="margin:10px 0"></div><div class="tdm-section-lbl" style="padding-left:0">To accept an offer</div>` +
+        cfg.steps.map(s => `<div class="tdm-special-step">${s}</div>`).join('');
+    }
+
+    const footerHtml = cfg.footer ? `<div class="tdm-special-footer">${cfg.footer}</div>` : '';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'tdm-overlay';
+    overlay.id = 'tdm-overlay';
+    overlay.innerHTML = `
+      <div class="tdm-sheet">
+        <div class="tdm-drag"></div>
+        <div class="tdm-art-banner" style="border-bottom:2px solid ${color}44">
+          <img src="${tileImgSrc}" onerror="this.style.display='none'" alt="${cfg.title}" style="object-position:center center">
+          <div class="tdm-art-banner-fade"></div>
+          <div class="tdm-art-banner-name" style="color:${color}">${cfg.title}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 16px 0">
+          <div style="font-size:11px;color:var(--text-mute)">Tile #${tilePos} · Special</div>
+          <div class="tdm-close" onclick="closeTileDetail()">&#x2715;</div>
+        </div>
+        <div class="tdm-special-body">
+          <div class="tdm-special-flavor">${cfg.flavor}</div>
+          <div class="tdm-special-para">${cfg.body}</div>
+          <div class="tdm-special-callout" style="border-color:${color}44;background:${color}0d">
+            <div class="tdm-special-callout-title" style="color:${color}">${cfg.callout}</div>
+            ${cfg.calloutBody ? `<div class="tdm-special-callout-body">${cfg.calloutBody}</div>` : ''}
+          </div>
+          ${rewardsHtml}
+          ${stepsHtml}
+          ${footerHtml}
+        </div>
+      </div>`;
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeTileDetail(); });
+    document.getElementById('app').appendChild(overlay);
+    return;
+  }
+
+  // --- Elemental tile ---
+  const elColor = tile.element ? (TYPE_COLOR[tile.element] || '#888') : '#888';
+  const tileImgSrc = TILE_IMG[tile.element] || TILE_IMG[tile.kind] || '';
+  const bgStyle = tileImgSrc ? `background:url('${tileImgSrc}') center/cover no-repeat;` : `background:linear-gradient(145deg,${elColor}44,${elColor}11);`;
+
+  // Owner
+  let ownerHtml = '';
+  if (tile.ownerId != null) {
+    const owner = G.players.find(p => p.idx === tile.ownerId);
+    const ownerColor = owner ? owner.color : '#888';
+    const ownerName = owner ? owner.name : '?';
+    const youTag = tile.ownerId === myIdx ? ' <span style="color:#4caf7d;font-size:10px">(you)</span>' : '';
+    ownerHtml = `<div class="tdm-owner-row"><svg width="16" height="16" viewBox="0 0 20 20">${sigilShape(tile.ownerId,10,10,5,ownerColor)}</svg><span style="color:${ownerColor};font-weight:600">${ownerName}${youTag}</span></div>`;
+  } else if (tile.kind === 'element') {
+    ownerHtml = `<div class="tdm-owner-row" style="color:var(--text-mute)">Unclaimed</div>`;
+  }
+
+  // Summon detail
+  let summonHtml = '';
+  if (tile.summon) {
+    const m = tile.summon;
+    const hpPct = Math.max(0, Math.round((m.hp / m.maxHp) * 100));
+    const hpCol = hpPct > 60 ? '#4caf7d' : hpPct > 30 ? '#e8a838' : '#e85555';
+    const mTypeCol = TYPE_COLOR[m.type] || '#9184d9';
+
+    // Type matchup
+    const strongVs = TYPE_STRONG[m.type] || '—';
+    const weakTo = TYPE_WEAK[m.type] || '—';
+    const strongCol = TYPE_COLOR[strongVs] || '#888';
+    const weakCol = TYPE_COLOR[weakTo] || '#888';
+
+    // Ability
+    const lore = MONSTER_LORE[m.name] || {};
+    const abilityHtml = lore.ability ? `
+      <div class="tdm-ability-box">
+        <div class="tdm-ability-name">${lore.ability.split('—')[0].trim()}</div>
+        <div class="tdm-ability-desc">${lore.ability.includes('—') ? lore.ability.split('—').slice(1).join('—').trim() : lore.ability}</div>
+      </div>` : '';
+
+    const artPng = `/img/monsters/monster-${m.id}.png`;
+    const artGif = `/img/monsters/monster-${m.id}.gif`;
+    summonHtml = `
+      <div class="tdm-art-banner" style="border-bottom:2px solid ${mTypeCol}44">
+        <img src="${artGif}" onerror="this.src='${artPng}';this.onerror=function(){this.style.display='none'}" alt="${m.name}">
+        <div class="tdm-art-banner-fade"></div>
+        <div class="tdm-art-banner-name" style="color:${mTypeCol}">${m.name}</div>
+      </div>
+      <div class="tdm-section-lbl">Stationed Monster</div>
+      <div class="tdm-monster-card-wrap">
+        <div class="tdm-stats-grid" style="flex:1">
+          <div class="tdm-stat-box"><div class="tdm-stat-val">${m.atk}</div><div class="tdm-stat-lbl">ATK</div></div>
+          <div class="tdm-stat-box"><div class="tdm-stat-val">${m.def}</div><div class="tdm-stat-lbl">DEF</div></div>
+          <div class="tdm-stat-box"><div class="tdm-stat-val">${m.cost}</div><div class="tdm-stat-lbl">Cost</div></div>
+        </div>
+      </div>
+      <div class="tdm-hp-section">
+        <div class="tdm-hp-label"><span>HP</span><span style="font-weight:600;color:${hpCol}">${m.hp} / ${m.maxHp}</span></div>
+        <div class="tdm-hp-track"><div class="tdm-hp-fill" style="width:${hpPct}%;background:${hpCol}"></div></div>
+      </div>
+      <div class="tdm-divider"></div>
+      <div class="tdm-section-lbl">Type Matchup · <span style="color:${mTypeCol}">${m.type}</span></div>
+      <div class="tdm-type-row">
+        <div class="tdm-type-chip" style="background:${strongCol}18;border:1px solid ${strongCol}44">
+          <div class="tdm-type-chip-lbl">Strong vs</div>
+          <div class="tdm-type-chip-val" style="color:${strongCol}">${strongVs}</div>
+        </div>
+        <div class="tdm-type-chip" style="background:${weakCol}18;border:1px solid ${weakCol}44">
+          <div class="tdm-type-chip-lbl">Weak to</div>
+          <div class="tdm-type-chip-val" style="color:${weakCol}">${weakTo}</div>
+        </div>
+      </div>
+      ${abilityHtml ? `<div class="tdm-divider"></div><div class="tdm-section-lbl">Ability</div>${abilityHtml}` : ''}`;
+  } else {
+    summonHtml = `<div class="tdm-no-summon">No monster stationed on this tile.</div>`;
+  }
+
+  const tileKindLabel = tile.kind === 'element' ? tile.element : (tile.label || tile.kind || 'Tile');
+  const overlay = document.createElement('div');
+  overlay.className = 'tdm-overlay';
+  overlay.id = 'tdm-overlay';
+  overlay.innerHTML = `
+    <div class="tdm-sheet">
+      <div class="tdm-drag"></div>
+      <div class="tdm-header">
+        <div class="tdm-tile-badge" style="border-color:${elColor};${bgStyle}">
+          <span style="font-size:13px;text-shadow:0 1px 4px rgba(0,0,0,.9);color:${elColor}">${tilePos}</span>
+        </div>
+        <div class="tdm-tile-info">
+          <div class="tdm-tile-name" style="color:${elColor}">${tileKindLabel}</div>
+          <div class="tdm-tile-sub">Tile #${tilePos}</div>
+        </div>
+        <div class="tdm-close" onclick="closeTileDetail()">✕</div>
+      </div>
+      <div class="tdm-divider"></div>
+      ${ownerHtml}
+      ${summonHtml}
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeTileDetail(); });
+  document.getElementById('app').appendChild(overlay);
+}
+
+function closeTileDetail() {
+  const el = document.getElementById('tdm-overlay');
+  if (el) el.remove();
+}
+
 function renderWaiting() {
   const me = G.players[myIdx];
   updateStatusBar(true);
@@ -1635,28 +2088,40 @@ function renderWaiting() {
   document.getElementById('action-bar').classList.remove('visible');
   document.getElementById('main-content').classList.remove('no-hand');
 
+  // Seed carousel at viewer's current position on first render
+  if (_waitCarouselIdx === 0 && me && me.position !== undefined) {
+    _waitCarouselIdx = me.position;
+  }
+
   const currentP = G.players[G.currentPlayer];
-  const rows = G.players.map(p => `
-    <div class="waiting-player-row${p.idx===G.currentPlayer?' active':''}${p.idx===myIdx?' you':''}">
-      <svg width="20" height="20" viewBox="0 0 20 20">${sigilShape(p.idx,10,10,5,p.color)}</svg>
-      <span class="wp-name" style="color:${p.color}">${p.name}${p.idx===myIdx?' (you)':''}</span>
-      <span class="wp-stat"><strong>${p.tileCount}</strong> tiles · <strong>${p.mana}</strong> ✦</span>
+  const chips = G.players.map(p => `
+    <div class="wc-player-chip${p.idx===G.currentPlayer?' active':''}">
+      <svg width="14" height="14" viewBox="0 0 20 20">${sigilShape(p.idx,10,10,5,p.color)}</svg>
+      <span style="color:${p.color}">${p.name}${p.idx===myIdx?' (you)':''}</span>
+      <span style="color:var(--text-mute);font-size:11px">${p.tileCount}✦${p.mana}</span>
     </div>`).join('');
 
+  const events = G.events.slice(0,6).map(e =>
+    `<div class="wc-event-row">${e.text}</div>`).join('') ||
+    '<div class="wc-event-row" style="color:var(--text-mute)">No events yet</div>';
+
   document.getElementById('main-content').innerHTML = `
-    <div class="waiting-hero">
-      <div class="waiting-turn-info">
+    <div class="wc-wrap">
+      <div class="wc-whose">
         <div class="waiting-pulse"></div>
-        <span class="waiting-turn-text"><span class="waiting-turn-name" style="color:${currentP?.color}">${currentP?.name || '?'}</span>'s turn</span>
+        <span style="color:${currentP?.color};font-weight:600">${currentP?.name||'?'}</span>
+        <span style="color:var(--text-mute)">'s turn</span>
       </div>
-      <div class="mini-board-wrap">${miniBoardSVG()}</div>
-    </div>
-    <div class="waiting-players">${rows}</div>
-    ${synergyBannerHTML()}
-    <div style="padding:12px 16px">
-      <div class="screen-label" style="margin-bottom:8px">Recent Events</div>
-      ${G.events.slice(0,5).map(e=>`<div style="font-size:12px;color:var(--text-dim);padding:4px 0;border-bottom:1px solid var(--border)">${e.text}</div>`).join('')}
+      ${buildTileCarousel(_waitCarouselIdx, 'moveWaitCarousel', 'openTileDetail')}
+      <div class="wc-players-strip">${chips}</div>
+      ${synergyBannerHTML()}
+      <div class="wc-events"><div class="screen-label" style="margin-bottom:6px">Recent Events</div>${events}</div>
     </div>`;
+}
+
+function moveWaitCarousel(dir) {
+  _waitCarouselIdx = (_waitCarouselIdx + dir + G.board.length) % G.board.length;
+  renderWaiting();
 }
 
 // ─── SHOP ────────────────────────────────────────────────────────────────────
@@ -1872,8 +2337,10 @@ function renderLandingChoice() {
     let summonMiniHtml = '';
     if (tile.summon) {
       const m = tile.summon;
-      const typeCol = TYPE_COLOR[m.type] || '#9184d9';
-      const typePill = `<div class="lc-type-pill" style="color:${typeCol};border-color:${typeCol}88;background:rgba(0,0,0,.72)">${m.type}</div>`;
+      const isSupM = m.rarity === 'support';
+      const typeCol = isSupM ? '#9aabbc' : (TYPE_COLOR[m.type] || '#9184d9');
+      const typeLabel = isSupM ? 'Support' : (m.type || 'Neutral');
+      const typePill = `<div class="lc-type-pill" style="color:${typeCol};border-color:${typeCol}88;background:rgba(0,0,0,.72)">${typeLabel}</div>`;
       summonMiniHtml = `<div class="lc-summon-mini" style="position:absolute;bottom:28px;left:50%;transform:translateX(-50%);">${renderCard(m, {size:'mini', showCost:false})}${typePill}</div>`;
     }
 
@@ -2181,36 +2648,37 @@ function renderSetupWaiting() {
   document.getElementById('main-content').classList.remove('no-hand');
   document.getElementById('action-bar').classList.remove('visible');
 
-  const tileRows = G.board
-    .filter(t => t.ownerId !== null && t.ownerId !== undefined && t.summon)
-    .map(t => {
-      const owner = G.players.find(p => p.idx === t.ownerId);
-      return `<div class="setup-wait-row">
-        <span class="setup-wait-tile">Tile ${t.pos}</span>
-        <span class="setup-wait-elem" style="color:${TYPE_COLOR[t.element]||'var(--text)'}">${t.element}</span>
-        <span class="setup-wait-mon">${t.summon.name}</span>
-        <span class="setup-wait-owner" style="color:${owner?.color||'var(--text-mute)'}">${owner?.name||'?'}</span>
-      </div>`;
-    }).join('') || '<div style="color:var(--text-mute);font-size:12px;text-align:center;padding:12px 0;">No tiles claimed yet</div>';
+  const claimed = G.board.filter(t => t.ownerId !== null && t.ownerId !== undefined && t.summon);
+  const tileRows = claimed.map(t => {
+    const owner = G.players.find(p => p.idx === t.ownerId);
+    const elCol = TYPE_COLOR[t.element] || 'var(--text)';
+    return `<div class="wc-claimed-row">
+      <span class="wc-claimed-tile">Tile ${t.pos}</span>
+      <span style="color:${elCol};font-size:11px;font-weight:600">${t.element}</span>
+      <span style="font-size:11px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.summon.name}</span>
+      <span class="wc-claimed-owner" style="color:${owner?.color||'var(--text-mute)'}">${owner?.name||'?'}</span>
+    </div>`;
+  }).join('') || '<div style="color:var(--text-mute);font-size:12px;text-align:center;padding:12px 0;">No tiles claimed yet</div>';
 
   document.getElementById('main-content').innerHTML = `
-    <div class="waiting-hero">
-      <div class="waiting-icon">🌟</div>
-      <div class="waiting-title">Setup Phase</div>
-      <div class="waiting-sub">Round ${G.setupRound || 1} of 3${G.setupTotalTurns > 0 ? ` · Turn ${(G.setupTurnIdx||0)+1}/${G.setupTotalTurns}` : ''}</div>
-    </div>
-    <div class="waiting-whose">
-      <span style="color:${cp?.color||'var(--text)'}">⚔ ${cp?.name||'?'}</span>
-      <span style="color:var(--text-mute)"> is choosing…</span>
-    </div>
-    <div class="setup-standings">
-      <div class="setup-standings-title">Claimed so far</div>
-      ${tileRows}
-    </div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin:20px 0 8px;">
-      <button class="help-btn" onclick="toggleHelp()" title="How to Play" style="margin:0;">?</button>
-      <div style="font-size:10px;color:var(--text-mute);letter-spacing:.1em;text-transform:uppercase;">Rules &amp; Elements</div>
+    <div class="wc-wrap">
+      <div class="wc-phase-hdr">Setup Phase · Round ${G.setupRound||1} of 3${G.setupTotalTurns > 0 ? ` · Turn ${(G.setupTurnIdx||0)+1}/${G.setupTotalTurns}` : ''}</div>
+      <div class="wc-whose">
+        <div class="waiting-pulse"></div>
+        <span style="color:${cp?.color||'var(--text)'};font-weight:600">${cp?.name||'?'}</span>
+        <span style="color:var(--text-mute)"> is choosing…</span>
+      </div>
+      ${buildTileCarousel(_setupCarouselIdx, 'moveSetupCarousel', 'openTileDetail')}
+      <div class="wc-claimed-panel">
+        <div class="wc-claimed-hdr">Claimed So Far</div>
+        ${tileRows}
+      </div>
     </div>`;
+}
+
+function moveSetupCarousel(dir) {
+  _setupCarouselIdx = (_setupCarouselIdx + dir + G.board.length) % G.board.length;
+  renderSetupWaiting();
 }
 
 // Lightweight update for setup tile preview — avoids re-rendering the whole

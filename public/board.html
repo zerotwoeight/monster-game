@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Summon Board — Game View</title>
-<meta name="viewport" content="width=1440">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
 <style>
@@ -23,7 +23,7 @@
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;}
 
 /* Scale wrapper */
-#scale-root{width:1440px;height:900px;transform-origin:top left;position:absolute;top:0;left:0;display:flex;flex-direction:column;}
+#scale-root{width:1440px;height:900px;transform-origin:top left;position:fixed;top:0;left:0;display:flex;flex-direction:column;}
 
 /* Connection chip */
 #conn-chip{position:fixed;top:10px;right:10px;z-index:9999;font-size:11px;padding:4px 10px;border-radius:20px;font-weight:500;letter-spacing:.06em;transition:all .3s;}
@@ -207,30 +207,30 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .mini-card-insp{width:100%;height:140px;border-radius:8px;overflow:hidden;position:relative;}
 
 /* Lobby splash screen */
-.lobby-splash{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;}
-.lobby-brand{text-align:center;margin-bottom:36px;}
-.lobby-brand-title{font-family:'Cinzel',serif;font-size:52px;font-weight:700;letter-spacing:.14em;color:var(--gold-glow);text-shadow:0 0 50px rgba(201,160,90,.45);}
-.lobby-brand-sub{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--text-mute);margin-top:8px;font-family:'Cinzel',serif;}
+.lobby-splash{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 40px;}
+.lobby-brand{text-align:center;margin-bottom:14px;}
+.lobby-brand-title{font-family:'Cinzel',serif;font-size:40px;font-weight:700;letter-spacing:.14em;color:var(--gold-glow);text-shadow:0 0 50px rgba(201,160,90,.45);}
+.lobby-brand-sub{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--text-mute);margin-top:6px;font-family:'Cinzel',serif;}
 .lobby-panels{display:flex;gap:18px;align-items:stretch;width:100%;max-width:960px;}
-.lobby-panel{background:rgba(10,10,22,.86);border:1px solid rgba(169,123,64,.28);border-radius:14px;padding:26px 28px;backdrop-filter:blur(4px);}
-.lobby-panel-title{font-family:'Cinzel',serif;font-size:9px;letter-spacing:.32em;text-transform:uppercase;color:var(--text-mute);margin-bottom:18px;}
-.lobby-code-box{background:rgba(169,123,64,.07);border:2px solid rgba(169,123,64,.38);border-radius:10px;padding:18px 24px;text-align:center;margin-bottom:18px;overflow:hidden;}
-.lobby-code-value{font-family:'Cinzel',serif;font-size:46px;font-weight:700;letter-spacing:.16em;padding-right:.16em;color:var(--gold-glow);text-shadow:0 0 30px rgba(201,160,90,.5);line-height:1.1;display:block;text-align:center;}
-.lobby-code-hint{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);margin-top:6px;font-family:'Cinzel',serif;}
-.lobby-url-lbl{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);margin-bottom:6px;font-family:'Cinzel',serif;}
-.lobby-url-box{background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:10px 14px;font-family:monospace;font-size:12px;color:var(--accent-lit);letter-spacing:.03em;word-break:break-all;line-height:1.5;}
-.lobby-count-ring{display:flex;align-items:center;justify-content:center;flex-direction:column;padding:12px 0 4px;}
-.lobby-count-num{font-family:'Cinzel',serif;font-size:40px;font-weight:700;color:var(--gold-glow);line-height:1;}
+.lobby-panel{background:rgba(10,10,22,.86);border:1px solid rgba(169,123,64,.28);border-radius:14px;padding:14px 20px;backdrop-filter:blur(4px);}
+.lobby-panel-title{font-family:'Cinzel',serif;font-size:9px;letter-spacing:.32em;text-transform:uppercase;color:var(--text-mute);margin-bottom:8px;}
+.lobby-code-box{background:rgba(169,123,64,.07);border:2px solid rgba(169,123,64,.38);border-radius:10px;padding:8px 16px;text-align:center;margin-bottom:10px;overflow:hidden;}
+.lobby-code-value{font-family:'Cinzel',serif;font-size:36px;font-weight:700;letter-spacing:.16em;padding-right:.16em;color:var(--gold-glow);text-shadow:0 0 30px rgba(201,160,90,.5);line-height:1.1;display:block;text-align:center;}
+.lobby-code-hint{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);margin-top:4px;font-family:'Cinzel',serif;}
+.lobby-url-lbl{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);margin-bottom:4px;font-family:'Cinzel',serif;}
+.lobby-url-box{background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:7px 12px;font-family:monospace;font-size:12px;color:var(--accent-lit);letter-spacing:.03em;word-break:break-all;line-height:1.4;}
+.lobby-count-ring{display:flex;align-items:center;justify-content:center;flex-direction:column;padding:6px 0 2px;}
+.lobby-count-num{font-family:'Cinzel',serif;font-size:32px;font-weight:700;color:var(--gold-glow);line-height:1;}
 .lobby-count-sub{font-size:11px;color:var(--text-dim);margin-top:2px;}
-.lobby-slot-grid{display:flex;flex-direction:column;gap:7px;}
-.lobby-slot{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);transition:all .3s;}
+.lobby-slot-grid{display:flex;flex-direction:column;gap:5px;}
+.lobby-slot{display:flex;align-items:center;gap:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);transition:all .3s;}
 .lobby-slot.filled{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.14);}
 .lobby-slot.empty{opacity:.38;}
 .lobby-slot-name{font-size:14px;font-weight:500;flex:1;letter-spacing:.01em;}
 .lobby-slot-set{font-size:10px;color:var(--text-dim);font-family:'Cinzel',serif;letter-spacing:.1em;flex-shrink:0;}
 .lobby-slot-empty-text{font-size:11px;color:var(--text-mute);letter-spacing:.1em;font-family:'Cinzel',serif;}
-.lobby-start-wrap{margin-top:28px;display:flex;flex-direction:column;align-items:center;gap:8px;}
-.lobby-start-btn{font-family:'Cinzel',serif;font-size:15px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#0c0c1a;background:linear-gradient(135deg,var(--gold-glow),#b8862e);border:none;border-radius:10px;padding:15px 60px;cursor:pointer;box-shadow:0 0 28px rgba(201,160,90,.28);transition:all .2s;}
+.lobby-start-wrap{margin-top:10px;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.lobby-start-btn{font-family:'Cinzel',serif;font-size:15px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#0c0c1a;background:linear-gradient(135deg,var(--gold-glow),#b8862e);border:none;border-radius:10px;padding:12px 60px;cursor:pointer;box-shadow:0 0 28px rgba(201,160,90,.28);transition:all .2s;}
 .lobby-start-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 4px 44px rgba(201,160,90,.5);}
 .lobby-start-btn:disabled{opacity:.38;cursor:not-allowed;background:rgba(169,123,64,.3);color:var(--text-dim);}
 .lobby-start-hint{font-size:11px;color:var(--text-mute);}
@@ -256,7 +256,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .wt-award{font-size:8px;display:block;color:var(--gold-glow);letter-spacing:.1em;text-transform:uppercase;margin-top:2px;}
 
 /* Round limit selector */
-.round-limit-wrap{margin-top:20px;display:flex;flex-direction:column;align-items:center;gap:10px;position:relative;width:100%;max-width:960px;}
+.round-limit-wrap{margin-top:8px;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;width:100%;max-width:960px;}
 .round-limit-lbl{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;}
 .round-limit-btns{display:flex;gap:8px;}
 .round-limit-btn{font-family:'Cinzel',serif;font-size:13px;font-weight:700;letter-spacing:.1em;padding:10px 22px;border-radius:8px;border:2px solid rgba(169,123,64,.28);background:rgba(169,123,64,.05);color:var(--text-lo);cursor:pointer;transition:all .2s;}
@@ -315,13 +315,17 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .dco-icon{font-size:40px;margin-bottom:14px;}
 .dco-title{font-family:'Cinzel',serif;font-size:22px;font-weight:700;letter-spacing:.08em;margin-bottom:6px;}
 .dco-sub{font-size:13px;color:var(--text-lo);margin-bottom:20px;}
-.dco-code-wrap{display:inline-flex;flex-direction:column;align-items:center;gap:4px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:10px;padding:12px 28px;margin-bottom:28px;}
+.dco-code-wrap{display:inline-flex;flex-direction:column;align-items:center;gap:4px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:10px;padding:12px 28px;margin-bottom:20px;}
 .dco-code-lbl{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;}
 .dco-code{font-family:'Cinzel',serif;font-size:32px;font-weight:700;letter-spacing:.22em;padding-right:.22em;color:var(--accent-lit);}
 .dco-wait{font-size:12px;color:var(--text-mute);display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:28px;}
 .dco-spinner{width:12px;height:12px;border:2px solid rgba(145,132,217,.3);border-top-color:#9184d9;border-radius:50%;animation:spin .9s linear infinite;flex-shrink:0;}
 @keyframes spin{to{transform:rotate(360deg)}}
 .dco-btns{display:flex;gap:12px;justify-content:center;}
+.dco-qr-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:20px;}
+.dco-qr-lbl{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;}
+.dco-qr-box{background:#fff;padding:8px;border-radius:8px;line-height:0;}
+.dco-qr-url{font-size:10px;color:var(--text-mute);word-break:break-all;max-width:220px;text-align:center;}
 
 /* End Game confirmation modal */
 #end-game-modal{position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(6,6,16,.82);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .2s;}
@@ -341,7 +345,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .tb-end-btn:hover{background:rgba(180,60,60,.28);border-color:rgba(180,60,60,.6);box-shadow:0 0 12px rgba(180,60,60,.25);}
 
 /* QR Code lobby */
-.lobby-qr-wrap{margin-top:18px;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.lobby-qr-wrap{margin-top:10px;display:flex;flex-direction:column;align-items:center;gap:6px;}
 .lobby-qr-lbl{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;align-self:flex-start;}
 .lobby-qr-box{background:#fff;border-radius:8px;padding:8px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(201,160,90,.2);}
 .lobby-qr-hint{font-size:10px;color:var(--text-mute);letter-spacing:.08em;text-align:center;}
@@ -1269,15 +1273,30 @@ function runRoundTally(tally, boardArea, onDone) {
       const val = entry[key];
       if (val !== 0) active.push({ key, val });
     }
+    // Ability breakdown labels — shown as gold milestone-style beats after netMana
+    // These explain WHERE the mana total came from (Rune Priestess ×2, Arch Mage +3, etc.)
+    for (const bd of (entry.genBreakdown || [])) {
+      if (bd.bonus > 0) active.push({ key:'abilityLabel', text:`${bd.label} +${bd.bonus}✦`, positive: true });
+    }
+    // Spell Wraith drain explanation (separate from netMana which already subtracts it)
+    if (entry.spellWraithDrain > 0) {
+      active.push({ key:'abilityLabel', text:`⛧ Spell Wraith −${entry.spellWraithDrain}✦`, positive: false });
+    }
     for (const ms of (entry.milestones || [])) active.push({ key:'milestone', val:ms });
 
     let bi = 0;
     function nextBeat() {
       if (skipped || bi >= active.length) { cb(); return; }
-      const { key, val } = active[bi++];
+      const { key, val, text: preText, positive: prePositive } = active[bi++];
 
       let text, positive, milestone;
-      if (key === 'milestone') {
+      if (key === 'abilityLabel') {
+        // Gold info-label style (same sizing as milestone but positive/negative colours)
+        milestone = true;
+        positive  = prePositive;
+        text      = preText;
+        playSound(positive ? SND_MILE : SND_NEG);
+      } else if (key === 'milestone') {
         milestone = true; positive = true;
         text = val === 'vine_aura'      ? '🌿 Vine Aura Active'
              : val === 'moss_aura'      ? '🌱 Moss Aura Active'
@@ -1335,6 +1354,19 @@ function updateDisconnectOverlay(){
   ov.querySelector('.dco-title').innerHTML = `<span style="color:${pf.color}">${pf.name}</span> has left`;
   ov.querySelector('.dco-code').textContent = G.roomCode;
   ov.querySelector('.dco-wait span').textContent = `Waiting for ${pf.name} to rejoin…`;
+  // QR code pointing to /player
+  const playerUrl = `${location.protocol}//${location.host}/player`;
+  const qrUrlEl = document.getElementById('dco-qr-url');
+  if (qrUrlEl) qrUrlEl.textContent = playerUrl;
+  const qrEl = document.getElementById('dco-qr');
+  if (qrEl && !qrEl._qrDone) {
+    qrEl.innerHTML = '';
+    try {
+      new QRCode(qrEl, { text: playerUrl, width: 120, height: 120,
+        colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+      qrEl._qrDone = true;
+    } catch(e) { /* QR lib not ready */ }
+  }
   ov.classList.add('visible');
 }
 
@@ -1441,7 +1473,8 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.86 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.4.87</div>`;
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.94 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.4.95</div>
+    <div style="margin-top:6px;"><button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Toggle music" style="width:auto;padding:0 14px;gap:6px;display:inline-flex;align-items:center;font-size:14px;">${typeof _bgMuted !== 'undefined' && _bgMuted ? '🔇' : '🔊'}&nbsp;${typeof _bgMuted !== 'undefined' && _bgMuted ? 'Unmute Music' : 'Mute Music'}</button></div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -1458,11 +1491,11 @@ function renderLobby(app){
       <div class="lobby-code-value">${code}</div>
       <div class="lobby-code-hint">Share with players</div>
     </div>
-    <div style="margin-top:18px;">
+    <div style="margin-top:10px;">
       <div class="lobby-url-lbl">Player URL</div>
       <div class="lobby-url-box">${playerURL}</div>
     </div>
-    <div style="margin-top:10px;">
+    <div style="margin-top:6px;">
       <div class="lobby-url-lbl" style="color:#9b8dc8;">Spectator URL</div>
       <div class="lobby-url-box" style="color:#9b8dc8;border-color:#9b8dc8;">${spectatorURL}</div>
     </div>
@@ -1525,7 +1558,7 @@ function renderLobby(app){
 
   // ── Ko-fi link — flush under right panel
   const kofiRow = document.createElement('div');
-  kofiRow.style.cssText = 'width:100%;max-width:960px;display:flex;justify-content:flex-end;margin-top:6px;';
+  kofiRow.style.cssText = 'width:100%;max-width:960px;display:flex;justify-content:flex-end;margin-top:4px;';
   const kofiLink = document.createElement('a');
   kofiLink.className = 'kofi-corner';
   kofiLink.href = 'https://ko-fi.com/fortyonethoughts';
@@ -1586,8 +1619,8 @@ function renderLobby(app){
     try{
       new QRCode(qrEl, {
         text: playerURL,
-        width: 140,
-        height: 140,
+        width: 110,
+        height: 110,
         colorDark: '#000000',
         colorLight: '#ffffff',
         correctLevel: QRCode.CorrectLevel.M
@@ -1619,7 +1652,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.86</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.94</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -2133,12 +2166,15 @@ function renderPaper(){
 
 // ─── Scale root to viewport ──────────────────────────────────────────────────────────────────────────
 function scaleRoot(root){
-  const scaleX = window.innerWidth / 1440;
-  const scaleY = window.innerHeight / 900;
-  const s = Math.min(scaleX, scaleY);
+  // Use clientWidth/Height: excludes scrollbar gutter and is consistent across
+  // browsers even when the meta viewport width=1440 tag affects window.innerWidth.
+  const vw = document.documentElement.clientWidth  || window.innerWidth;
+  const vh = document.documentElement.clientHeight || window.innerHeight;
+  const s = Math.min(vw / 1440, vh / 900);
   root.style.transform = `scale(${s})`;
-  root.style.left = Math.max(0, (window.innerWidth - 1440 * s) / 2) + 'px';
-  root.style.top  = Math.max(0, (window.innerHeight - 900 * s) / 2) + 'px';
+  // Center horizontally and vertically within viewport
+  root.style.left = Math.max(0, (vw - 1440 * s) / 2) + 'px';
+  root.style.top  = Math.max(0, (vh - 900  * s) / 2) + 'px';
   document.body.style.background = '#0d0e1c';
 }
 
@@ -2206,7 +2242,15 @@ function toggleMute() {
   _sfxHitMagic.muted = _bgMuted;
   _sfxHitClaw.muted  = _bgMuted;
   const btn = document.getElementById('mute-btn');
-  if (btn) btn.textContent = _bgMuted ? '🔇' : '🔊';
+  if (btn) {
+    // Lobby button includes text label; gameplay button is icon-only
+    const hasLabel = btn.style.padding && btn.style.padding !== '';
+    if (hasLabel) {
+      btn.innerHTML = _bgMuted ? '🔇&nbsp;Unmute Music' : '🔊&nbsp;Mute Music';
+    } else {
+      btn.textContent = _bgMuted ? '🔇' : '🔊';
+    }
+  }
 }
 
 // Start music on first user interaction (browser autoplay policy)
@@ -2229,6 +2273,11 @@ connect();
     <div class="dco-code-wrap">
       <span class="dco-code-lbl">Room Code</span>
       <span class="dco-code">????</span>
+    </div>
+    <div class="dco-qr-wrap">
+      <div class="dco-qr-lbl">Rejoin this game</div>
+      <div class="dco-qr-box" id="dco-qr"></div>
+      <div class="dco-qr-url" id="dco-qr-url"></div>
     </div>
     <div class="dco-wait">
       <div class="dco-spinner"></div>

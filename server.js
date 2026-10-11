@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.82';
+const SERVER_VERSION = 'v1.0.86';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -32,7 +32,7 @@ const ROSTER = [
   {id:'solar_knight',   type:'Light',  name:'Solar Knight',   arch:'assailant', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
   {id:'dawnguard',      type:'Light',  name:'Dawnguard',      arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
   {id:'high_paladin',   type:'Light',  name:'High Paladin',   arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'ardent_saint',   type:'Light',  name:'Ardent Saint',   arch:'ascendant', hp:65, maxHp:65, atk:15, def:15, cost:20, gen:5, isSpecial:true,
+  {id:'ardent_saint',   type:'Light',  name:'Ardent Saint',   arch:'ascendant', hp:65, maxHp:65, atk:25, def:15, cost:20, gen:5, isSpecial:true,
     special:'Aura of Renewal',  specialDesc:'Heal all friendly stationed summons 5 HP/turn',
     condition:'healed2', conditionDesc:'Healed 2+ summons this game'},
   // Light — new
@@ -56,7 +56,7 @@ const ROSTER = [
   {id:'sorcerer',       type:'Arcane', name:'Sorcerer',       arch:'assailant', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
   {id:'rune_priestess', type:'Arcane', name:'Rune Priestess', arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
   {id:'arch_mage',      type:'Arcane', name:'Arch Mage',      arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'arcane_arbiter', type:'Arcane', name:'Arcane Arbiter', arch:'ascendant', hp:40, maxHp:40, atk:27, def:15, cost:20, gen:5, isSpecial:true,
+  {id:'arcane_arbiter', type:'Arcane', name:'Arcane Arbiter', arch:'ascendant', hp:40, maxHp:40, atk:40, def:15, cost:20, gen:5, isSpecial:true,
     special:'Chaos Flux', specialDesc:'After any battle or stalemate against it, one random attacker-owned tile changes to a random element',
     condition:'changed1Arcane', conditionDesc:'Changed 1+ tile to Arcane element this game'},
   // Arcane — new
@@ -68,7 +68,7 @@ const ROSTER = [
   {id:'bone_wraith',    type:'Undead', name:'Bone Wraith',    arch:'assailant', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
   {id:'death_knight',   type:'Undead', name:'Death Knight',   arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
   {id:'shade_walker',   type:'Undead', name:'Shade Walker',   arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'demon_lord',     type:'Undead', name:'Demon Lord',     arch:'ascendant', hp:85, maxHp:85, atk:17, def:8,  cost:20, gen:5, isSpecial:true,
+  {id:'demon_lord',     type:'Undead', name:'Demon Lord',     arch:'ascendant', hp:85, maxHp:85, atk:40, def:8,  cost:20, gen:5, isSpecial:true,
     special:'Last Rite', specialDesc:'When HP hits 0, survive at 15 HP instead (once per game)',
     condition:'lost2', conditionDesc:'Had 2+ summons destroyed in battle this game', lastRiteUsed:false},
   // Undead — new
@@ -80,7 +80,7 @@ const ROSTER = [
   {id:'razorclaw',      type:'Beast',  name:'Razorclaw',      arch:'assailant', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
   {id:'iron_hide',      type:'Beast',  name:'Iron Hide',      arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
   {id:'pack_hunter',    type:'Beast',  name:'Pack Hunter',    arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'red_dragon',     type:'Beast',  name:'Red Dragon',     arch:'ascendant', hp:35, maxHp:35, atk:40, def:9,  cost:20, gen:5, isSpecial:true,
+  {id:'red_dragon',     type:'Beast',  name:'Red Dragon',     arch:'ascendant', hp:40, maxHp:40, atk:50, def:9,  cost:20, gen:5, isSpecial:true,
     special:'Intimidate', specialDesc:'Adjacent enemy stationed summons cost their owner 5✦ at the start of each affected player\'s turn',
     condition:'stationed3', conditionDesc:'Have 3+ summons stationed on board'},
   // Beast — new
@@ -92,7 +92,7 @@ const ROSTER = [
   {id:'thornling',      type:'Nature', name:'Thornling',      arch:'assailant', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
   {id:'ancient_oak',    type:'Nature', name:'Ancient Oak',    arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
   {id:'grove_warden',   type:'Nature', name:'Grove Warden',   arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'world_tree',     type:'Nature', name:'World Tree',     arch:'ascendant', hp:55, maxHp:55, atk:22, def:13, cost:20, gen:5, isSpecial:true,
+  {id:'world_tree',     type:'Nature', name:'World Tree',     arch:'ascendant', hp:65, maxHp:65, atk:12, def:13, cost:20, gen:5, isSpecial:true,
     special:'Deep Roots', specialDesc:'+1 Mana Gen per Nature tile owned + per Nature summon stationed on any of your tiles',
     condition:'own2Nature', conditionDesc:'Own 2+ Nature tiles currently'},
   // Nature — new
@@ -106,24 +106,24 @@ const ROSTER = [
    hp:35, maxHp:35, atk:30, def:12, cost:26, gen:4, isSpecial:false,
    rareDesc:'2× vs Dark & Undead · No weaknesses'},
   {id:'hex_stalker',      type:'Undead', type2:'Beast',  name:'Hex Stalker',      arch:'rare', rarity:'rare',
-   hp:42, maxHp:42, atk:35, def:11, cost:25, gen:3, isSpecial:false,
+   hp:42, maxHp:42, atk:30, def:11, cost:25, gen:3, isSpecial:false,
    rareDesc:'2× vs Arcane & Nature · No weaknesses'},
   {id:'verdant_sorcerer', type:'Arcane', type2:'Nature', name:'Verdant Sorcerer', arch:'rare', rarity:'rare',
-   hp:30, maxHp:30, atk:40, def:12, cost:27, gen:4, isSpecial:false,
+   hp:30, maxHp:30, atk:30, def:12, cost:27, gen:4, isSpecial:false,
    rareDesc:'2× vs Dark & Light · No weaknesses'},
 
   // ── Support Cards — neutral (no element), passive aura while stationed ──
   {id:'mana_refinery', type:null, name:'Mana Refinery', arch:'support', rarity:'support',
-   hp:20, maxHp:20, atk:1, def:10, cost:12, gen:0, isSpecial:false,
+   hp:18, maxHp:18, atk:1, def:10, cost:12, gen:0, isSpecial:false,
    supportDesc:'+1✦/round per stationed tile (stacks)'},
   {id:'weapon_smith',  type:null, name:'Weapon Smith',  arch:'support', rarity:'support',
-   hp:20, maxHp:20, atk:1, def:10, cost:12, gen:0, isSpecial:false,
+   hp:18, maxHp:18, atk:1, def:10, cost:12, gen:0, isSpecial:false,
    supportDesc:'+5 ATK to all hand summons (stacks)'},
   {id:'forge',         type:null, name:'Forge',         arch:'support', rarity:'support',
-   hp:20, maxHp:20, atk:1, def:10, cost:12, gen:0, isSpecial:false,
+   hp:18, maxHp:18, atk:1, def:10, cost:12, gen:0, isSpecial:false,
    supportDesc:'+5 DEF to all stationed summons (stacks)'},
   {id:'field_medic',   type:null, name:'Field Medic',   arch:'support', rarity:'support',
-   hp:20, maxHp:20, atk:1, def:10, cost:12, gen:0, isSpecial:false,
+   hp:18, maxHp:18, atk:1, def:10, cost:12, gen:0, isSpecial:false,
    supportDesc:'+2 HP/round to all stationed summons (stacks)'},
 ];
 
@@ -1089,22 +1089,38 @@ function collectPassiveIncome(playerIdx) {
         (t.summonInstance.type === 'Nature' || t.summonInstance.type2 === 'Nature')).length;
       gen += natureTiles + natureMonsters;
     }
+    // Per-ability gen tracking for tally visualization
+    const _tallyBreakdown = [];
+
+    // World Tree special — gen bonus added earlier above; capture it now
+    if (mi.id === 'world_tree') {
+      const wtBonus = gen - mi.gen;
+      if (wtBonus > 0) _tallyBreakdown.push({ label: '🌳 Deep Roots', bonus: wtBonus });
+    }
+
     // Rune Priestess — Runic Amplification: gen doubled while stationed on an Arcane tile
     if (mi.id === 'rune_priestess' && tile.element === 'Arcane') {
+      _tallyBreakdown.push({ label: '🔮 Runic Amp ×2', bonus: mi.gen }); // extra = base gen (doubled)
       gen *= 2;
       log(`🔮 Runic Amplification: Rune Priestess on Arcane tile — gen doubled to ${gen}✦`);
     }
 
     // Arch Mage — Mana Infusion: +3✦ bonus income per turn while stationed
     if (mi.id === 'arch_mage') {
+      _tallyBreakdown.push({ label: '🔮 Mana Infusion', bonus: 3 });
       gen += 3;
       log(`🔮 Mana Infusion: Arch Mage grants +3✦ bonus income (total gen: ${gen})`);
     }
 
     // Sorcerer — Arcane Ascent: gen bonus from permanent sorcererGenBonus
     if (mi.id === 'sorcerer' && mi.abilityData && mi.abilityData.sorcererGenBonus) {
+      _tallyBreakdown.push({ label: '🔮 Arcane Ascent', bonus: mi.abilityData.sorcererGenBonus });
       gen += mi.abilityData.sorcererGenBonus;
     }
+
+    // Store actual gen for tally display (reflects all ability bonuses)
+    mi._tallyGen = gen;
+    mi._tallyGenBreakdown = _tallyBreakdown;
 
     earned += gen;
     summonGen += gen;
@@ -1235,7 +1251,7 @@ function collectPassiveIncome(playerIdx) {
   log(`✦ ${p.name} earns ${earned} Mana (now ${p.mana})`);
 
   // ── Build turn summary snapshot ───────────────────────────────────────────
-  const wellBonus = p.lastTurnLandedOnWell ? 10 : 0;
+  const wellBonus = p.lastTurnLandedOnWell ? 40 : 0;
   p.lastTurnLandedOnWell = false; // consume after reading
   const stationedCount = countStationedSummons(playerIdx);
   const tileCount = G.board.filter(t => t.ownerId === playerIdx).length;
@@ -1491,16 +1507,22 @@ function computeRoundTally(playerIdx, hpSnapshot, milestoneSnapshot) {
     const eff = getEffectiveStats(mi, pos, playerIdx);
 
     // ── Beat 1: Net mana this turn ────────────────────────────────────────────
-    // Base effective gen, then subtract any adjacent enemy Spell Wraith drain.
-    let netMana = eff.gen;
+    // Use actual gen from collectPassiveIncome (_tallyGen), which includes ability
+    // bonuses like Rune Priestess doubling and Arch Mage +3.  Falls back to eff.gen
+    // only if _tallyGen wasn't set (e.g. skipped collectPassiveIncome somehow).
+    const actualGen = mi._tallyGen !== undefined ? mi._tallyGen : eff.gen;
+    let netMana = actualGen;
+    let spellWraithDrain = 0;
     const neighbors = [(pos + 1) % N, (pos + N - 1) % N];
     for (const t2 of G.board) {
       if (t2.ownerId === playerIdx || !t2.summonInstance) continue;
       if (t2.summonInstance.id === 'spell_wraith' && neighbors.includes(t2.pos)) {
         // Enemy Spell Wraith adjacent: it drains this summon's base gen
+        spellWraithDrain += mi.gen;
         netMana -= mi.gen;
       }
     }
+    const genBreakdown = mi._tallyGenBreakdown || [];
 
     // ── Beat 2 & 3: Net ATK / DEF deltas from all auras ──────────────────────
     const netAtk = eff.atk - mi.atk;
@@ -1534,8 +1556,32 @@ function computeRoundTally(playerIdx, hpSnapshot, milestoneSnapshot) {
       netDef,
       netHp,
       milestones,
+      genBreakdown,        // ability labels explaining the mana total
+      spellWraithDrain,    // how much an adjacent Spell Wraith drained
     });
   }
+
+  // ── Player-level mana bonus entries — Mana Refinery ──────────────────────
+  // These are added after the per-summon loop because the refinery bonus is a
+  // flat per-copy bonus collected outside the gen loop in collectPassiveIncome.
+  const refineryTiles = G.board.filter(t =>
+    t.ownerId === playerIdx && t.summonInstance && t.summonInstance.id === 'mana_refinery'
+  );
+  for (const rt of refineryTiles) {
+    tally.push({
+      tilePos: rt.pos,
+      monsterId: 'mana_refinery',
+      monsterName: 'Mana Refinery',
+      monsterType: null,
+      netMana: 1,   // +1✦ per stationed copy
+      netAtk: 0, netDef: 0, netHp: 0,
+      milestones: [],
+      genBreakdown: [{ label: '🏭 Refinery Bonus', bonus: 1 }],
+      spellWraithDrain: 0,
+      isPlayerBonus: true,
+    });
+  }
+
   return tally;
 }
 
@@ -1804,8 +1850,8 @@ function resolveLandingTile(playerIdx) {
   const tile = G.board[newPos];
 
   if (tile.kind === 'start') {
-    p.mana += 10;
-    log(`✦ ${p.name} landed on Mana Well: +10 Mana`);
+    p.mana += 40;
+    log(`✦ ${p.name} landed on Mana Well: +40 Mana`);
     G.phase = 'resolve:well';
     broadcast();
     scheduleRoomAction(G.roomCode, advanceTurn, 1500);
@@ -3005,12 +3051,26 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     if (defM.id === 'bone_wraith') {
       attM.hp -= 12;
       log(`💀 Death Rattle: Bone Wraith's death deals 12 damage to ${attM.name} (now ${attM.hp}/${attM.maxHp})`);
+      if (attM.hp <= 0) {
+        // Attacker killed by Death Rattle — remove from tile, both summons destroyed
+        tile.ownerId = null; tile.summonId = null; tile.summonInstance = null;
+        attPlayer.battlesWon--; defPlayer.battlesLost--; // reverse the win credits
+        attPlayer.battlesLost++; attPlayer.destroyedCount++;
+        log(`💀 Death Rattle: ${attM.name} killed! Tile ${tilePos} goes unclaimed.`);
+      }
     }
     // Thornling — Thorn Burst: on death of DEFENDER Thornling, attacker loses 5 HP and tile converts to Nature
     if (defM.id === 'thornling') {
       attM.hp -= 5;
       tile.element = 'Nature';
       log(`🌿 Thorn Burst: Thornling's death deals 5 damage to ${attM.name} and tile ${tilePos} becomes Nature!`);
+      if (attM.hp <= 0) {
+        // Attacker killed by Thorn Burst — remove from tile, both summons destroyed
+        tile.ownerId = null; tile.summonId = null; tile.summonInstance = null;
+        attPlayer.battlesWon--; defPlayer.battlesLost--; // reverse the win credits
+        attPlayer.battlesLost++; attPlayer.destroyedCount++;
+        log(`🌿 Thorn Burst: ${attM.name} killed! Tile ${tilePos} goes unclaimed.`);
+      }
     }
     // Cursed Revenant — Undead Resilience: survival tracked separately; kill does NOT stack DEF
     // (DEF stacks only when Cursed Revenant itself SURVIVES — see survivor section below)
@@ -3104,6 +3164,13 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     if (attM.id === 'bone_wraith') {
       defM.hp -= 12;
       log(`💀 Death Rattle: Bone Wraith's death deals 12 damage to ${defM.name} (now ${defM.hp}/${defM.maxHp})`);
+      if (defM.hp <= 0) {
+        // Defender killed by Death Rattle — remove from tile, tile goes unclaimed
+        tile.ownerId = null; tile.summonId = null; tile.summonInstance = null;
+        defPlayer.battlesWon--; attPlayer.battlesLost--; // reverse the win credits
+        defPlayer.battlesLost++; defPlayer.destroyedCount++;
+        log(`💀 Death Rattle: ${defM.name} killed! Tile ${tilePos} goes unclaimed.`);
+      }
     }
     // Thornling defending wins — Thorn Burst is not applicable (Thornling is the killer, not the killed)
     // (Thorn Burst only triggers when Thornling DIES — handled in attacker_wins when defM=thornling)
