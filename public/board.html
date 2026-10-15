@@ -76,7 +76,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .chip-mono-label{font-size:8px;letter-spacing:.03em;opacity:.8;margin-left:2px;}
 .tile-inner{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:4px 3px 4px;position:relative;border-radius:6px;overflow:hidden;}
 .tile-badge{position:absolute;top:62%;left:50%;transform:translateX(-50%);pointer-events:none;z-index:1;}
-.tile-idx{position:absolute;top:-17px;left:50%;transform:translateX(-50%);font-size:10px;color:rgba(255,255,255,.85);line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.tile-idx{position:absolute;top:-24px;left:50%;transform:translateX(-50%);font-size:20px;color:rgba(255,255,255,.92);line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:700;text-shadow:0 1px 5px rgba(0,0,0,.95);}
 .tile-icon{font-size:17px;margin-top:2px;}
 .tile-name{font-size:10px;font-weight:500;letter-spacing:.03em;text-transform:uppercase;text-align:center;line-height:1.2;margin-top:3px;}
 .tile-summon-row{display:flex;align-items:center;justify-content:center;margin-top:4px;}
@@ -328,6 +328,29 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .dco-qr-url{font-size:10px;color:var(--text-mute);word-break:break-all;max-width:220px;text-align:center;}
 
 /* End Game confirmation modal */
+/* ── Round callout overlay (penultimate / final round) ─────────────────── */
+#round-callout-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .4s;overflow:hidden;}
+#round-callout-overlay.visible{opacity:1;}
+#round-callout-overlay.fade-out{opacity:0;transition:opacity .4s;}
+#round-callout-overlay.penultimate{background:radial-gradient(ellipse at center,rgba(146,80,0,.93) 0%,rgba(20,10,4,.96) 100%);}
+#round-callout-overlay.final{background:radial-gradient(ellipse at center,rgba(80,20,120,.96) 0%,rgba(8,4,24,.98) 100%);}
+.rco-content{position:relative;z-index:2;text-align:center;}
+.rco-icon{font-size:88px;margin-bottom:20px;display:block;}
+.rco-title{font-family:'Cinzel',serif;font-size:56px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;}
+#round-callout-overlay.penultimate .rco-title{color:#f59e0b;text-shadow:0 0 50px rgba(245,158,11,.6);}
+#round-callout-overlay.final .rco-title{color:#e879f9;text-shadow:0 0 50px rgba(232,121,249,.6);}
+.rco-sub{font-family:'Cinzel',serif;font-size:18px;letter-spacing:.25em;color:rgba(255,255,255,.5);margin-top:14px;}
+.rco-bg{position:absolute;inset:0;z-index:1;pointer-events:none;display:flex;align-items:center;justify-content:center;display:none;}
+.rco-bg img{width:auto;height:100%;object-fit:contain;opacity:.22;filter:saturate(0) brightness(1.4);mix-blend-mode:luminosity;}
+/* ── Game over fanfare overlay ─────────────────────────────────────────── */
+#go-fanfare-overlay{position:fixed;inset:0;z-index:600;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(55,18,90,.97) 0%,rgba(8,4,22,.99) 100%);opacity:0;pointer-events:none;transition:opacity 1.2s;}
+#go-fanfare-overlay.visible{opacity:1;pointer-events:all;}
+#go-fanfare-overlay.fade-out{opacity:0;pointer-events:none;}
+#go-fanfare-content{position:relative;z-index:2;text-align:center;}
+.gameover-bg{position:absolute;inset:0;z-index:1;pointer-events:none;}
+.gameover-bg img{width:100%;height:100%;object-fit:cover;object-position:center;opacity:.6;}
+#go-fanfare-title{font-family:'Cinzel',serif;font-size:64px;font-weight:700;letter-spacing:.18em;color:#f8c44a;text-shadow:0 0 60px rgba(248,196,74,.7),0 0 120px rgba(248,196,74,.25);text-transform:uppercase;}
+#go-fanfare-sub{font-family:'Cinzel',serif;font-size:20px;letter-spacing:.3em;color:rgba(255,255,255,.38);margin-top:18px;text-transform:uppercase;}
 #end-game-modal{position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(6,6,16,.82);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .2s;}
 #end-game-modal.visible{opacity:1;pointer-events:all;}
 .egm-box{background:var(--surface);border:1px solid rgba(180,60,60,.38);border-radius:14px;padding:36px 40px;text-align:center;max-width:380px;width:90%;box-shadow:0 8px 60px rgba(0,0,0,.7);}
@@ -520,7 +543,8 @@ const PHASE_LABELS = {
   'resolve:wildcard_shatter':'🃏 Shatter',
   'resolve:landing':'Choose Landing',
   'resolve:turn_summary':'Turn Summary',
-  'resolve:battle_result':'Battle Result'
+  'resolve:battle_result':'Battle Result',
+  'resolve:round_callout':'Round Callout'
 };
 
 // ─── State ────────────────────────────────────────────────────────────────────────────────
@@ -563,14 +587,15 @@ function summonImg(id,suffix=''){
   return `<img src="/img/monsters/monster-${id}${suffix}.gif" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.src='${png}';this.onerror=function(){this.style.display='none'}" alt="">`;
 }
 
-function renderBoardCard(m) {
+function renderBoardCard(m, hpOverride) {
   if (!m) return '';
   const isRare    = m.rarity === 'rare';
   const isSupport = m.rarity === 'support';
   const SUPPORT_COLOR = '#9aabbc';
   const c  = isSupport ? SUPPORT_COLOR : (TYPE_COLOR[m.type]  || '#9184d9');
   const c2 = m.type2 ? (TYPE_COLOR[m.type2] || '#9184d9') : null;
-  const pct = Math.max(0, Math.min(1, m.hp / m.maxHp));
+  const displayHp = (hpOverride !== undefined) ? Math.max(0, hpOverride) : m.hp;
+  const pct = Math.max(0, Math.min(1, displayHp / m.maxHp));
   const hpColor = pct < .35 ? '#b05050' : c;
   let border, shadow;
   if (isSupport) {
@@ -600,7 +625,7 @@ function renderBoardCard(m) {
     <div class="bmc-art">${art}</div>
     <div class="bmc-overlay">
       <div class="bmc-name" style="color:${c}">${m.name}</div>
-      <div class="bmc-hp-row"><div class="bmc-hp-track"><div class="bmc-hp-fill" style="width:${Math.round(pct*100)}%;background:${hpColor}"></div></div><span class="bmc-hp-num">${m.hp}/${m.maxHp}</span></div>
+      <div class="bmc-hp-row"><div class="bmc-hp-track"><div class="bmc-hp-fill" style="width:${Math.round(pct*100)}%;background:${hpColor};transition:width .5s ease,background .5s ease;"></div></div><span class="bmc-hp-num">${displayHp}/${m.maxHp}</span></div>
       ${isSupport && m.supportDesc ? `<div style="font-size:7.5px;color:${SUPPORT_COLOR};text-align:center;line-height:1.3;margin-top:2px;padding:0 2px;">${m.supportDesc}</div>` : `<div class="bmc-stats">
         <div class="bmc-stat"><span class="bmc-stat-lbl">ATK</span><span class="bmc-stat-val">${m.atk}</span></div>
         <div class="bmc-stat"><span class="bmc-stat-lbl">DEF</span><span class="bmc-stat-val">${m.def}</span></div>
@@ -960,6 +985,18 @@ function connect(){
           else if (oc === 'mutual')        SFX.battleMutual();
           else if (oc === 'stalemate')     SFX.battleStalemate();
         }
+        // ── Round callout / game-over fanfare ────────────────────────────
+        if (newG.phase === 'resolve:round_callout' && _roundCalloutTriggered !== newG.roundCallout) {
+          _roundCalloutTriggered = newG.roundCallout;
+          _fireRoundCallout(newG.roundCallout);
+        }
+        if (prevPhase === 'resolve:round_callout' && newG.phase !== 'resolve:round_callout') {
+          _roundCalloutTriggered = null;
+        }
+        if (newG.phase === 'game_over' && !_goFanfareTriggered) {
+          _goFanfareTriggered = true;
+          _fireGameOverFanfare();
+        }
         if (!startedHop) render();
       }
     }
@@ -1014,6 +1051,25 @@ function playCardHitAnim(cardEl, animFile) {
 }
 // ────────────────────────────────────────────────────────────────────────────────────────────
 
+// ─── HP bar animator (used in battle sequence) ───────────────────────────────────────────────
+function animateHpBar(cardEl, monster, newHp) {
+  const c = (monster.rarity === 'support') ? '#9aabbc' : (TYPE_COLOR[monster.type] || '#9184d9');
+  const hp = Math.max(0, newHp);
+  const pct = Math.max(0, Math.min(1, hp / monster.maxHp));
+  const hpColor = pct < .35 ? '#b05050' : c;
+  const fill = cardEl.querySelector('.bmc-hp-fill');
+  const num  = cardEl.querySelector('.bmc-hp-num');
+  if (fill) { fill.style.width = Math.round(pct * 100) + '%'; fill.style.background = hpColor; }
+  if (num)  { num.textContent = hp + '/' + monster.maxHp; }
+  // Flash the bar red briefly for drama
+  if (fill) {
+    fill.animate([
+      {filter:'brightness(2.5) saturate(.2)'},
+      {filter:'brightness(1) saturate(1)'}
+    ], {duration: 480, easing:'ease'});
+  }
+}
+
 // ─── 5-beat battle animation ────────────────────────────────────────────────────────────────
 async function runBattleAnimation(lb, attPlayer, defPlayer, overlay) {
   const stormtalonDefending = lb.defM && lb.defM.id === 'stormtalon';
@@ -1030,7 +1086,7 @@ async function runBattleAnimation(lb, attPlayer, defPlayer, overlay) {
     <div id="baArena" style="display:flex;align-items:center;gap:36px;position:relative;">
       <div id="baAttSide" style="display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;">
         <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-family:'Cinzel',serif;color:${attPlayer?.color||'var(--accent-lit)'};">${attPlayer?.name||'Attacker'}</div>
-        <div id="baAttCard" style="display:inline-block;position:relative;">${renderBoardCard(lb.attM)}</div>
+        <div id="baAttCard" style="display:inline-block;position:relative;">${renderBoardCard(lb.attM, lb.attM.hp + lb.defDmg)}</div>
         <div id="baAttDmg" style="position:absolute;top:14px;left:50%;font-size:22px;font-weight:900;font-family:'Cinzel',serif;color:#e84040;pointer-events:none;text-shadow:0 0 12px #e8404088;white-space:nowrap;opacity:0;transform:translateX(-50%);">-${lb.defDmg}</div>
       </div>
       <div id="baMid" style="display:flex;flex-direction:column;align-items:center;gap:10px;min-width:54px;">
@@ -1038,7 +1094,7 @@ async function runBattleAnimation(lb, attPlayer, defPlayer, overlay) {
       </div>
       <div id="baDefSide" style="display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;">
         <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-family:'Cinzel',serif;color:${defPlayer?.color||'var(--text-dim)'};">${defPlayer?.name||'Defender'}</div>
-        <div id="baDefCard" style="display:inline-block;position:relative;">${renderBoardCard(lb.defM)}</div>
+        <div id="baDefCard" style="display:inline-block;position:relative;">${renderBoardCard(lb.defM, lb.defM.hp + lb.atkDmg)}</div>
         <div id="baDefDmg" style="position:absolute;top:14px;left:50%;font-size:22px;font-weight:900;font-family:'Cinzel',serif;color:#e84040;pointer-events:none;text-shadow:0 0 12px #e8404088;white-space:nowrap;opacity:0;transform:translateX(-50%);">-${lb.atkDmg}</div>
       </div>
     </div>
@@ -1114,6 +1170,8 @@ async function runBattleAnimation(lb, attPlayer, defPlayer, overlay) {
     ],{duration:330,easing:'ease'});
     shock('rgba(100,140,255,.75)');
     setTimeout(()=>{ if (!skipped){ shake(attCard,1); floatDmg(attDmg); playCardHitAnim(attCard, getHitAnim(lb.defM)); } },130);
+    // HP bar: attacker takes damage from Stormtalon's pre-emptive (defDmg)
+    setTimeout(()=>{ if (!skipped) animateHpBar(attCard, lb.attM, lb.attM.hp); }, 320);
   } else {
     // Normal: ATTACKER lunges at defender
     attCard.animate([
@@ -1123,6 +1181,9 @@ async function runBattleAnimation(lb, attPlayer, defPlayer, overlay) {
     ],{duration:330,easing:'ease'});
     shock('rgba(255,180,60,.75)');
     setTimeout(()=>{ if (!skipped){ shake(defCard,-1); floatDmg(defDmg); playCardHitAnim(defCard, getHitAnim(lb.attM)); } },130);
+    // HP bar: defender takes atkDmg — if counter exists it survives to hasCounter HP, else final HP
+    const defHpAfterBeat2 = hasCounter ? lb.defM.hp : lb.defM.hp;
+    setTimeout(()=>{ if (!skipped) animateHpBar(defCard, lb.defM, defHpAfterBeat2); }, 320);
   }
 
   await wait(hasCounter ? 390 : 330); if (skipped) return;
@@ -1138,8 +1199,9 @@ async function runBattleAnimation(lb, attPlayer, defPlayer, overlay) {
       ],{duration:330,easing:'ease'});
       shock('rgba(255,180,60,.75)');
       setTimeout(()=>{ if (!skipped){ shake(defCard,-1); floatDmg(defDmg); playCardHitAnim(defCard, getHitAnim(lb.attM)); } },130);
+      setTimeout(()=>{ if (!skipped) animateHpBar(defCard, lb.defM, lb.defM.hp); }, 320);
     } else {
-      // Normal: defender counter
+      // Normal: defender counter — attacker takes defDmg
       defCard.animate([
         {transform:'translateX(0) scale(1)'},
         {transform:'translateX(-44px) scale(1.07)',offset:.38},
@@ -1147,6 +1209,7 @@ async function runBattleAnimation(lb, attPlayer, defPlayer, overlay) {
       ],{duration:330,easing:'ease'});
       shock('rgba(100,140,255,.75)');
       setTimeout(()=>{ if (!skipped){ shake(attCard,1); floatDmg(attDmg); playCardHitAnim(attCard, getHitAnim(lb.defM)); } },130);
+      setTimeout(()=>{ if (!skipped) animateHpBar(attCard, lb.attM, lb.attM.hp); }, 320);
     }
     await wait(390); if (skipped) return;
   }
@@ -1320,6 +1383,8 @@ function runRoundTally(tally, boardArea, onDone) {
 
 // ─── Render entry ───────────────────────────────────────────────────────────────────────────
 let _tsExiting = false; // guard to prevent re-entry during exit animation
+let _roundCalloutTriggered = null; // tracks which callout has been fired (prevents double-fire)
+let _goFanfareTriggered = false;   // tracks whether game-over fanfare has fired this session
 
 function render(){
   const app = document.getElementById('app');
@@ -1473,7 +1538,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.4.94 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.4.95</div>
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.5.01 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.01</div>
     <div style="margin-top:6px;"><button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Toggle music" style="width:auto;padding:0 14px;gap:6px;display:inline-flex;align-items:center;font-size:14px;">${typeof _bgMuted !== 'undefined' && _bgMuted ? '🔇' : '🔊'}&nbsp;${typeof _bgMuted !== 'undefined' && _bgMuted ? 'Unmute Music' : 'Mute Music'}</button></div>`;
   splash.appendChild(brand);
 
@@ -1652,7 +1717,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.4.94</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.5.01</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -2206,10 +2271,10 @@ function doNewGame(){
 // ─── Background Music ───────────────────────────────────────────────────────────────────────
 let _bgMuted = false;
 // ─── Hit / UI SFX ───────────────────────────────────────────────────────────────────────────
-const _sfxTitle    = new Audio('/audio/title-sound.mp3'); _sfxTitle.volume    = 0.6;
-const _sfxHitSlash = new Audio('/audio/Hit-Slash.mp3');   _sfxHitSlash.volume = 0.5;
-const _sfxHitMagic = new Audio('/audio/Hit-Magic.mp3');   _sfxHitMagic.volume = 0.5;
-const _sfxHitClaw  = new Audio('/audio/Hit-Claw.mp3');    _sfxHitClaw.volume  = 0.5;
+const _sfxTitle      = new Audio('/audio/title-sound.mp3');   _sfxTitle.volume      = 0.6;
+const _sfxHitSlash   = new Audio('/audio/Hit-Slash.mp3');     _sfxHitSlash.volume   = 0.5;
+const _sfxHitMagic   = new Audio('/audio/Hit-Magic.mp3');     _sfxHitMagic.volume   = 0.5;
+const _sfxHitClaw    = new Audio('/audio/Hit-Claw.mp3');      _sfxHitClaw.volume    = 0.5;
 function _playSfx(audio) { if (_bgMuted) return; audio.currentTime = 0; audio.play().catch(() => {}); }
 let _bgStarted = false;
 const _bgAudio = new Audio('/audio/main-theme.mp3');
@@ -2219,6 +2284,94 @@ _bgAudio.volume = 0.15;
 _bgAudio.addEventListener('ended', function() {
   if (!_bgMuted) { _bgAudio.currentTime = 0; _bgAudio.play().catch(() => {}); }
 });
+
+// ── Round callout + game-over audio ───────────────────────────────────────
+const _sfxWarnSting = new Audio('/audio/Warning-Sting.mp3'); _sfxWarnSting.volume = 0.7;
+const _bgFinal = new Audio('/audio/final-round.wav'); _bgFinal.loop = true; _bgFinal.volume = 0.15;
+_bgFinal.addEventListener('ended', function() {
+  if (!_bgMuted && _bgFinal.loop === false) { _bgFinal.currentTime = 0; _bgFinal.play().catch(()=>{}); }
+});
+
+function _fadeOutAudio(audio, ms, onDone) {
+  if (!audio.paused && audio.volume > 0) {
+    const sv = audio.volume; const steps = 30; let s = 0;
+    const iv = setInterval(() => {
+      s++; audio.volume = Math.max(0, sv * (1 - s / steps));
+      if (s >= steps) { audio.pause(); audio.currentTime = 0; clearInterval(iv); if (onDone) onDone(); }
+    }, ms / steps);
+  } else { audio.pause(); audio.currentTime = 0; if (onDone) onDone(); }
+}
+
+function _fadeInAudio(audio, target, ms) {
+  audio.volume = 0;
+  if (!_bgMuted) audio.play().catch(() => {});
+  const steps = 30; let s = 0;
+  const iv = setInterval(() => {
+    s++; audio.volume = Math.min(target, target * s / steps);
+    if (s >= steps) clearInterval(iv);
+  }, ms / steps);
+}
+
+function _crossfadeToFinal() {
+  _fadeOutAudio(_bgAudio, 1200, null);
+  setTimeout(() => { if (!_bgMuted) _fadeInAudio(_bgFinal, 0.15, 1200); }, 600);
+}
+
+function _fadeInBgMain() {
+  if (_bgMuted) return;
+  _bgFinal.pause(); _bgFinal.currentTime = 0;
+  _bgAudio.currentTime = 0;
+  _fadeInAudio(_bgAudio, 0.15, 1200);
+}
+
+function _fireRoundCallout(type) {
+  const ov = document.getElementById('round-callout-overlay');
+  if (!ov) return;
+  if (type === 'penultimate') {
+    ov.className = 'visible penultimate';
+    document.getElementById('rco-bg').style.display  = 'none';
+    document.getElementById('rco-icon').style.display = '';
+    document.getElementById('rco-icon').textContent  = '⚠️';
+    document.getElementById('rco-title').textContent = 'PENULTIMATE ROUND';
+    document.getElementById('rco-sub').textContent   = 'One more round after this!';
+  } else {
+    ov.className = 'visible final';
+    document.getElementById('rco-bg').style.display  = 'flex';
+    document.getElementById('rco-icon').style.display = 'none';
+    document.getElementById('rco-title').textContent = 'FINAL ROUND';
+    document.getElementById('rco-sub').textContent   = 'This is the last round!';
+  }
+  if (!_bgMuted) {
+    _sfxWarnSting.currentTime = 0; _sfxWarnSting.play().catch(() => {});
+    if (type === 'final') _crossfadeToFinal();
+  }
+  const holdMs = type === 'final' ? 2000 : 1500;
+  setTimeout(() => {
+    ov.classList.add('fade-out');
+    setTimeout(() => { ov.className = ''; }, 400);
+    try { ws.send(JSON.stringify({ action: 'round_callout_complete' })); } catch(e) {}
+  }, holdMs);
+}
+
+function _fireGameOverFanfare() {
+  _bgAudio.pause(); _bgFinal.pause();
+  const fo = document.getElementById('go-fanfare-overlay');
+  if (fo) {
+    fo.className = 'visible';
+    const holdMs = 4500;
+    setTimeout(() => {
+      fo.classList.add('fade-out');
+      setTimeout(() => { fo.className = ''; }, 1200);
+    }, holdMs);
+  }
+  if (_bgMuted) return;
+  setTimeout(() => {
+    _sfxWarnSting.currentTime = 0; _sfxWarnSting.play().catch(() => {});
+    setTimeout(() => {
+      _fadeOutAudio(_sfxWarnSting, 1200, () => { _fadeInBgMain(); });
+    }, 4500);
+  }, 300);
+}
 
 function _startBgMusic() {
   if (_bgStarted || _bgMuted) return;
@@ -2233,14 +2386,16 @@ function toggleMute() {
   _bgMuted = !_bgMuted;
   if (_bgMuted) {
     _bgAudio.pause();
+    _bgFinal.pause();
   } else {
     _bgAudio.play().catch(() => {});
   }
   // Sync all SFX to the same mute state
-  _sfxTitle.muted = _bgMuted;
-  _sfxHitSlash.muted = _bgMuted;
-  _sfxHitMagic.muted = _bgMuted;
-  _sfxHitClaw.muted  = _bgMuted;
+  _sfxTitle.muted      = _bgMuted;
+  _sfxHitSlash.muted   = _bgMuted;
+  _sfxHitMagic.muted   = _bgMuted;
+  _sfxHitClaw.muted    = _bgMuted;
+  _sfxWarnSting.muted  = _bgMuted;
   const btn = document.getElementById('mute-btn');
   if (btn) {
     // Lobby button includes text label; gameplay button is icon-only
@@ -2254,7 +2409,13 @@ function toggleMute() {
 }
 
 // Start music on first user interaction (browser autoplay policy)
-document.addEventListener('click', () => { _startBgMusic(); }, { once: true });
+document.addEventListener('click', () => {
+  _startBgMusic();
+  // Prime _sfxWarnSting so future non-gesture plays (WebSocket handlers) work
+  const v = _sfxWarnSting.volume;
+  _sfxWarnSting.volume = 0;
+  _sfxWarnSting.play().then(() => { _sfxWarnSting.pause(); _sfxWarnSting.currentTime = 0; _sfxWarnSting.volume = v; }).catch(() => {});
+}, { once: true });
 // Also try immediately (works if page was navigated to with user gesture)
 window.addEventListener('load', () => { setTimeout(_startBgMusic, 500); });
 
@@ -2290,6 +2451,23 @@ connect();
   </div>
 </div>
 
+<!-- Round callout overlay (penultimate / final round announcement) -->
+<div id="round-callout-overlay">
+  <div class="rco-bg" id="rco-bg"><img src="/img/scns/SummonHost.png" alt=""></div>
+  <div class="rco-content">
+    <span class="rco-icon" id="rco-icon">⚠️</span>
+    <div class="rco-title" id="rco-title">PENULTIMATE ROUND</div>
+    <div class="rco-sub" id="rco-sub">One more round after this!</div>
+  </div>
+</div>
+<!-- Game over fanfare overlay -->
+<div id="go-fanfare-overlay">
+  <div class="gameover-bg"><img src="/img/scns/GameOver.png" alt=""></div>
+  <div id="go-fanfare-content">
+    <div id="go-fanfare-title">GAME OVER</div>
+    <div id="go-fanfare-sub">Final Standings</div>
+  </div>
+</div>
 <!-- End Game confirmation modal (outside scale-root so it fills the real viewport) -->
 <div id="end-game-modal">
   <div class="egm-box">

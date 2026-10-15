@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.86';
+const SERVER_VERSION = 'v1.0.87';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -361,6 +361,7 @@ function freshGame(roomCode) {
     wildCardDrawn: null,     // { low: card, mid: card, high: card }
     wildCardPending: null,   // { cardId, step } for multi-step cards (coup/shatter)
     turnSummary: null,       // snapshot of this turn's income/effects for the summary screen
+    roundCallout: null,      // null | 'penultimate' | 'final' — set at round boundary, cleared after callout
     lastActivityAt: Date.now(), // timestamp of last broadcast — used for stale room cleanup
   };
 }
@@ -1140,12 +1141,13 @@ function collectPassiveIncome(playerIdx) {
     }
   }
 
-  // Mana Refinery passive — +1✦ per round per COPY stationed (per xlsx: stacks per Refinery copy, not per all summons)
+  // Mana Refinery passive — +1✦ per friendly stationed summon if player has ≥1 Refinery stationed
+  const friendlySummonCount = G.board.filter(t => t.ownerId === playerIdx && t.summonInstance).length;
   const manaRefineryCount = G.board.filter(t => t.ownerId === playerIdx && t.summonInstance && t.summonInstance.id === 'mana_refinery').length;
-  const manaRefineryBonus = manaRefineryCount; // +1✦ per stationed Refinery copy (affected by Windfall/Jinx)
+  const manaRefineryBonus = manaRefineryCount > 0 ? friendlySummonCount : 0;
   if (manaRefineryBonus > 0) {
     earned += manaRefineryBonus;
-    log(`🏭 Mana Refinery ×${manaRefineryCount}: ${p.name} earns +${manaRefineryBonus}✦ (+1✦ per stationed copy)`);
+    log(`🏭 Mana Refinery: ${p.name} earns +${manaRefineryBonus}✦ (${friendlySummonCount} stationed summons × 1✦)`);
   }
 
   // Field Medic passive — +2 HP/round to all stationed summons per copy (stacks)
@@ -1306,7 +1308,7 @@ function collectPassiveIncome(playerIdx) {
       const ap = [];
       if (ardentSaintCount > 0) ap.push({ id:'ardent_saint', label:`Ardent Saint ×${ardentSaintCount}`, desc:`Aura of Renewal: +${ardentSaintCount * 5} HP/turn to all friendly summons` });
       if (fieldMedicCount > 0) ap.push({ id:'field_medic', label:`Field Medic ×${fieldMedicCount}`, desc:`+${fieldMedicCount * 2} HP/turn to all friendly summons` });
-      if (manaRefineryCount > 0) ap.push({ id:'mana_refinery', label:`Mana Refinery ×${manaRefineryCount}`, desc:`+${manaRefineryBonus}✦ bonus income (1✦ per stationed Refinery copy)` });
+      if (manaRefineryCount > 0) ap.push({ id:'mana_refinery', label:`Mana Refinery ×${manaRefineryCount}`, desc:`+${manaRefineryBonus}✦ bonus income (1✦ per stationed summon)` });
       if (weaponSmithCount > 0) ap.push({ id:'weapon_smith', label:`Weapon Smith ×${weaponSmithCount}`, desc:`+${weaponSmithCount * 5} ATK to your attacking summon (copies in hand)` });
       if (forgeCount > 0) ap.push({ id:'forge', label:`Forge ×${forgeCount}`, desc:`+${forgeCount * 5} DEF to all stationed summons` });
       return ap;
@@ -1428,6 +1430,7 @@ function publicState() {
     bonusRuns: getBonusRuns(),
     monoElementBonus: getMonoElementBonus(),
     turnSummary: G.turnSummary || null,
+    roundCallout: G.roundCallout || null,
     serverVersion: SERVER_VERSION,
   };
 }
@@ -1759,6 +1762,24 @@ function advanceTurn() {
   } else if (!G.stalemateData) {
     // nothing to do
   }
+
+  // ── Round boundary callout ────────────────────────────────────────────────
+  // Fire before shop phase when we're crossing into a penultimate or final round.
+  // G.turnCount was just incremented; upcomingRound is the round we're entering.
+  if (G.turnCount % G.players.length === 0) {
+    const upcomingRound = Math.floor(G.turnCount / G.players.length) + 1;
+    if (upcomingRound === G.roundLimit) {
+      G.roundCallout = 'final';
+    } else if (upcomingRound === G.roundLimit - 1 && G.roundLimit > 1) {
+      G.roundCallout = 'penultimate';
+    }
+    if (G.roundCallout) {
+      G.phase = 'resolve:round_callout';
+      broadcast();
+      return; // board sends round_callout_complete to resume
+    }
+  }
+
   startShopPhase();
 }
 
@@ -2119,6 +2140,22 @@ const handlers = {
       if (c.isBoard || c.isSpectator) continue; // players only
       wsSend(socket, { type: 'tally_complete' });
     }
+  },
+
+  // Board signals that the round callout overlay animation is complete — resume to shop
+  round_callout_complete(ws, conn, data) {
+    if (!conn.isBoard) return; // only board can signal this
+    if (!G || G.phase !== 'resolve:round_callout') return;
+    const roomCode = G.roomCode;
+    // Relay to all player sockets (informational — triggers re-render via next state broadcast)
+    for (const [socket, c] of clients) {
+      if (socket.destroyed) continue;
+      if (c.roomCode !== roomCode) continue;
+      if (c.isBoard || c.isSpectator) continue;
+      wsSend(socket, { type: 'round_callout_complete' });
+    }
+    G.roundCallout = null;
+    startShopPhase();
   },
 
   // ── Shop ───────────────────────────────────────────────────────────────────

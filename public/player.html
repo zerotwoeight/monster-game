@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.4.95</title>
+<title>Summoners Gambit — Player v0.5.01</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -772,6 +772,8 @@ let pendingGameState = null;
 let pendingRollValue = null;
 let rollShowCallback = null;
 let _tallyComplete = false; // gate: player summary waits for board tally_complete signal
+let _tsPlayedFor = null;       // guard: play Player-turn.mp3 once per turn summary (active player only)
+let _setupTurnPlayedFor = null; // guard: play Player-turn.mp3 once per setup turn (active player only)
 let _waitCarouselIdx = 0;  // center tile index for regular waiting screen carousel
 let _setupCarouselIdx = 0; // center tile index for setup waiting screen carousel
 
@@ -1367,18 +1369,18 @@ function render() {
     return;
   }
 
+  // Clear battle result hold when server has moved past battle_result phase —
+  // but only if already dismissed (prevents auto-skipping the "Got it" screen)
+  if (_battleResultPending && G.phase !== 'resolve:battle_result' && _battleResultDismissed) {
+    _battleResultPending = false;
+    if (_battleResultTimer) { clearTimeout(_battleResultTimer); _battleResultTimer = null; }
+  }
+
   // Hold battle result screen until player explicitly dismisses it
   if (_battleResultPending) return;
 
   // Debug: log every phase change to console; play turn-notification sound
   if (render._lastPhase !== G.phase || render._lastPlayer !== G.currentPlayer) {
-    // Play sound when it becomes MY turn (guard: _lastPlayer set, not lobby/game_over)
-    if (render._lastPlayer !== undefined &&
-        G.currentPlayer === myIdx &&
-        render._lastPlayer !== myIdx &&
-        G.phase !== 'lobby' && G.phase !== 'game_over') {
-      try { new Audio('/audio/Player-turn.mp3').play().catch(()=>{}); } catch(e) {}
-    }
     console.log(`[SG] phase=${G.phase} currentPlayer=${G.currentPlayer} myIdx=${myIdx} isMyTurn=${isMyTurn}`);
     render._lastPhase = G.phase;
     render._lastPlayer = G.currentPlayer;
@@ -1436,6 +1438,7 @@ function render() {
     case 'resolve:wildcard_coup_tile':isMyTurn ? renderWildCardCoupTile() : renderWaiting(); break;
     case 'resolve:wildcard_coup_summon':isMyTurn ? renderWildCardCoupSummon() : renderWaiting(); break;
     case 'resolve:wildcard_shatter':  isMyTurn ? renderWildCardShatter() : renderWaiting(); break;
+    case 'resolve:round_callout': renderRoundCallout(); break;
     case 'game_over': renderGameOver(); break;
     default: renderWaiting();
   }
@@ -1503,7 +1506,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.4.95</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.01</div>
     </div>
 
     <div class="room-code-group">
@@ -1607,7 +1610,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.4.95</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.01</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -1625,6 +1628,8 @@ function renderLobby() {
 function renderTurnSummary() {
   const ts = G.turnSummary;
   if (!ts) { renderWaiting(); return; }
+  // Play Player-turn stinger once when THIS player's summary first renders (active player only)
+  if (_tsPlayedFor !== ts) { _tsPlayedFor = ts; try { new Audio('/audio/Player-turn.mp3').play().catch(()=>{}); } catch(e) {} }
 
   updateStatusBar(true);
   updateHandStrip(false);
@@ -2581,6 +2586,9 @@ function renderSetup() {
   const me = G.players[myIdx];
   updateStatusBar(true);
   updateHandStrip(true);
+  // Play Player-turn stinger once per setup turn (same guard pattern as turn summary)
+  const setupTurnKey = `${G.round}-${G.setupRound||1}-${G.setupTurnIdx||0}`;
+  if (_setupTurnPlayedFor !== setupTurnKey) { _setupTurnPlayedFor = setupTurnKey; try { new Audio('/audio/Player-turn.mp3').play().catch(()=>{}); } catch(e) {} }
   document.getElementById('main-content').classList.remove('no-hand');
   // Safety: clear stale selection if the selected summon is no longer in hand
   if (selectedIid !== null && !myHand.find(m => m.iid === selectedIid)) {
@@ -2989,6 +2997,7 @@ function renderBattleResult() {
 
   // Phase 2: attacker/defender get a personal result screen after the animation peaks
   if (isAttacker || isDefender) {
+    _battleResultPending = true; // block render() immediately so phase change can't skip us
     _battleResultTimer = setTimeout(() => {
       _battleResultTimer = null;
       _renderPersonalBattleResult(lb, isAttacker);
@@ -2998,7 +3007,7 @@ function renderBattleResult() {
 
 function _renderPersonalBattleResult(lb, isAttacker) {
   const mc = document.getElementById('main-content');
-  if (!mc || G.phase !== 'resolve:battle_result') return; // phase already moved on
+  if (!mc) return; // _battleResultPending already blocks render(), so phase check is unnecessary
 
   const attPlayer = G.players[lb.attackerIdx];
   const defPlayer = lb.defOwnerIdx != null ? G.players.find(p => p.idx === lb.defOwnerIdx) : null;
@@ -3033,8 +3042,7 @@ function _renderPersonalBattleResult(lb, isAttacker) {
   mc.style.transition = 'opacity .28s ease';
   mc.style.opacity = '0';
   setTimeout(() => {
-    if (G.phase !== 'resolve:battle_result') return;
-    _battleResultPending = true;
+    if (!mc.isConnected) return;
     mc.innerHTML = `
       <div style="display:flex;flex-direction:column;align-items:center;padding:18px 16px;gap:14px;text-align:center">
         <div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;">⚔ Battle Result</div>
@@ -3496,6 +3504,35 @@ function renderEliminated() {
       </div>
       <div style="font-size:11px;color:var(--text-mute)">
         ${currentP ? `${currentP.name}'s turn` : 'Watching game…'}
+      </div>
+    </div>`;
+}
+
+// ─── ROUND CALLOUT ────────────────────────────────────────────────────────────
+function renderRoundCallout() {
+  updateStatusBar(false);
+  document.getElementById('hand-area').classList.remove('visible');
+  document.getElementById('action-bar').classList.remove('visible');
+  document.getElementById('main-content').classList.add('no-hand');
+  const type = G.roundCallout || 'penultimate';
+  const isPenultimate = type === 'penultimate';
+  document.getElementById('main-content').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;padding:32px;
+      background:${isPenultimate ? 'linear-gradient(180deg,rgba(80,40,0,.5),transparent)' : 'linear-gradient(180deg,rgba(60,10,90,.6),transparent)'};
+      border-radius:16px;">
+      <div style="font-size:64px">${isPenultimate ? '⚠️' : '☠️'}</div>
+      <div style="font-family:'Cinzel',serif;font-size:22px;font-weight:700;letter-spacing:.12em;text-align:center;
+        color:${isPenultimate ? '#f59e0b' : '#e879f9'};
+        text-shadow:0 0 20px ${isPenultimate ? 'rgba(245,158,11,.5)' : 'rgba(232,121,249,.5)'};">
+        ${isPenultimate ? 'PENULTIMATE ROUND' : 'FINAL ROUND'}
+      </div>
+      <div style="font-size:14px;color:var(--text-muted,rgba(255,255,255,.45));letter-spacing:.08em;text-align:center;font-family:'Cinzel',serif;">
+        ${isPenultimate ? 'One more round after this!' : 'This is the last round!'}
+      </div>
+      <div style="margin-top:8px;display:flex;gap:6px;">
+        <div class="wait-dot" style="animation-delay:0s"></div>
+        <div class="wait-dot" style="animation-delay:.2s"></div>
+        <div class="wait-dot" style="animation-delay:.4s"></div>
       </div>
     </div>`;
 }
