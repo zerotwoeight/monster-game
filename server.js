@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.87';
+const SERVER_VERSION = 'v1.0.95';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -477,21 +477,47 @@ function doStrike(attacker, defender, tile, nullify = false, bonusRun = false, m
     dmg = Math.round(dmg * 1.25);
     attacker.charm = false;
     log(`⚡ Battle Charm activated on ${attacker.name}! +25% damage`);
+    fxM(attacker, 'Battle Charm', `${attacker.name} strikes with +25% damage`, '+25%', 'good');
   }
-  if (attacker._ambush) { dmg = Math.round(dmg * 1.40); attacker._ambush = false; log(`🃏 Ambush! +40% damage`); }
+  if (attacker._ambush) { dmg = Math.round(dmg * 1.40); attacker._ambush = false; log(`🃏 Ambush! +40% damage`); fxM(attacker, 'Ambush (Wild Card)', 'Strike deals +40% damage', '+40%', 'good'); }
   if (bonusRun) {
     dmg = Math.round(dmg * 1.20);
     log(`🔥 Tile Synergy! ${attacker.name} strikes for +20% damage`);
+    fxM(attacker, 'Tile Synergy', '3-tile element run: +20% damage', '+20%', 'good');
   }
   if (monoBuff) {
     dmg = Math.round(dmg * 1.20);
     log(`⭐ Mono-Element Mastery! ${attacker.name} strikes for +20% damage`);
+    fxM(attacker, 'Mono-Element Mastery', 'All one element: +20% damage', '+20%', 'good');
   }
   return Math.max(1, dmg);
 }
 
 // Returns { attackerHp, defenderHp, atkDmg, defDmg, outcome }
 // outcome: 'attacker_wins' | 'defender_wins' | 'mutual' | 'stalemate'
+// ─── v1.0.94: battle effect recorder + tile flash events ─────────────────────
+// During an attack, every ability/wild-card effect is recorded here and attached to
+// G.lastBattle.effects so the board (callouts) and phones (result list) can show them.
+// Entry: { side:'att'|'def', name, text, value, tone:'good'|'bad' } — side = whose monster it happened to/for.
+let _fx = null, _fxAttM = null, _fxDefM = null;
+function fx(side, name, text, value, tone) {
+  if (_fx) _fx.push({ side, name, text, value: value == null ? '' : String(value), tone: tone || 'good' });
+}
+// Record against whichever battle monster `m` is (works inside doStrike/resolveBattle)
+function fxM(m, name, text, value, tone) {
+  if (!_fx) return;
+  fx(m === _fxAttM ? 'att' : 'def', name, text, value, tone);
+}
+// Ability-driven tile element change → flash event for the board (battle or claim)
+function _convertTile(tile, newEl, label) {
+  const from = tile.element;
+  tile.element = newEl;
+  if (from === newEl) return from;
+  G.tileFlashSeq = (G.tileFlashSeq || 0) + 1;
+  G.tileFlashes = [...(G.tileFlashes || []).slice(-7), { id: G.tileFlashSeq, pos: tile.pos, from, to: newEl, label }];
+  return from;
+}
+
 function resolveBattle(attackerM, defenderM, tile, rattled = false) {
   const nullify = false; // Arcane Arbiter now has Chaos Flux instead of Nullify
 
@@ -508,6 +534,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
     pierceRestore = defenderM.def;
     defenderM.def = Math.max(0, defenderM.def - Math.round(defenderM.def * 0.3));
     log(`🔱 Piercing Light: ${defenderM.name} DEF reduced by 30% for this strike (${pierceRestore} → ${defenderM.def})`);
+    fxM(attackerM, 'Piercing Light', `Ignored 30% of ${defenderM.name}\'s DEF`, '−30% DEF', 'good');
   }
 
   // Void Sentinel — Last Darkness: reactive ATK boost when HP drops below 30% (checked post-damage)
@@ -528,9 +555,11 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
     stormtalonPreemptiveDmg = doStrike(defenderM, attackerM, tile, nullify);
     attackerM.hp -= stormtalonPreemptiveDmg;
     log(`⚡ Lightning Strike (pre-emptive): Stormtalon strikes first! Deals ${stormtalonPreemptiveDmg} to ${attackerM.name} (now ${attackerM.hp}/${attackerM.maxHp} HP)`);
+    fxM(defenderM, 'Lightning Strike', `Struck first for ${stormtalonPreemptiveDmg} damage`, `${stormtalonPreemptiveDmg} dmg`, 'good');
     if (attackerM.hp <= 0) {
       stormtalonPreemptiveKilled = true;
       log(`⚡ Lightning Strike: Stormtalon's pre-emptive strike KILLED ${attackerM.name} — attacker cannot retaliate!`);
+      fxM(defenderM, 'Lightning Strike', `Killed ${attackerM.name} before it could strike`, 'KO', 'good');
     }
   }
 
@@ -559,6 +588,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
     if (Math.random() < 0.10) {
       defenderM.hp = 0;
       log(`💀 Death Sentence: Death Knight instant kill triggers! ${defenderM.name} slain!`);
+      fxM(attackerM, 'Death Sentence', `Instantly slew ${defenderM.name}`, 'KO', 'good');
     }
   }
 
@@ -568,6 +598,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
     if (defenderM.hp <= threshold30 && defenderM.hp > 0) {
       defenderM.atk = 36;
       log(`🌑 Last Darkness: Void Sentinel HP critical — ATK surges to 36!`);
+      fxM(defenderM, 'Last Darkness', 'HP critical — ATK surged to 36', 'ATK 36', 'good');
     }
   }
 
@@ -579,6 +610,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
       defenderM.hp = Math.min(defenderM.maxHp, defenderM.hp + 15);
       defenderM.abilityData.layOnHandsUsed = true;
       log(`✝️ Lay on Hands: High Paladin heals ${healed} HP (triggered below 30% HP, now ${defenderM.hp}/${defenderM.maxHp})`);
+      fxM(defenderM, 'Lay on Hands', `Healed ${healed} HP below 30%`, `+${healed} HP`, 'good');
     }
   }
   // High Paladin as attacker — Lay on Hands reactive
@@ -589,6 +621,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
       attackerM.hp = Math.min(attackerM.maxHp, attackerM.hp + 15);
       attackerM.abilityData.layOnHandsUsed = true;
       log(`✝️ Lay on Hands: High Paladin heals ${healed} HP (triggered below 30% HP, now ${attackerM.hp}/${attackerM.maxHp})`);
+      fxM(attackerM, 'Lay on Hands', `Healed ${healed} HP below 30%`, `+${healed} HP`, 'good');
     }
   }
 
@@ -597,6 +630,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
     defenderM.hp = 15;
     defenderM.lastRiteUsed = true;
     log('💀 Last Rite triggers! Demon Lord survives at 15 HP!');
+    fxM(defenderM, 'Last Rite', 'Survived a lethal blow at 15 HP', '15 HP', 'good');
   }
 
   let defDmg = 0;
@@ -604,6 +638,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
   const stormtalonKilledDefender = (attackerM.id === 'stormtalon' && defenderM.hp <= 0);
   if (stormtalonKilledDefender) {
     log(`⚡ Lightning Strike: Stormtalon killed ${defenderM.name} — no counter-strike!`);
+    fxM(attackerM, 'Lightning Strike', `Killed ${defenderM.name} — no counter-strike`, 'KO', 'good');
   }
   // Nightshard — Soul Siphon: on kill, steal 4✦ from defeated monster's owner (handled in _applyBattleOutcome)
   // No counter skip for Nightshard anymore
@@ -618,6 +653,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
       counterPierceRestore = attackerM.def;
       attackerM.def = Math.max(0, attackerM.def - Math.round(attackerM.def * 0.3));
       log(`🔱 Piercing Light: ${attackerM.name} DEF reduced by 30% for counter-strike (${counterPierceRestore} → ${attackerM.def})`);
+      fxM(defenderM, 'Piercing Light', `Ignored 30% of ${attackerM.name}\'s DEF`, '−30% DEF', 'good');
     }
 
     if (rattled) {
@@ -626,6 +662,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
       defDmg = doStrike(defenderM, attackerM, tile, nullify, defBonus, defMonoBuff);
       defenderM.atk = savedAtk;
       log(`🃏 Rattle! ${defenderM.name} fights at half ATK`);
+      fxM(defenderM, 'Rattle (Wild Card)', `${defenderM.name} countered at half ATK`, '½ ATK', 'bad');
     } else {
       defDmg = doStrike(defenderM, attackerM, tile, nullify, defBonus, defMonoBuff);
     }
@@ -636,7 +673,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
     // High Paladin defending — no more Divine Retribution; Lay on Hands is reactive above
 
     // Fortify: reduce damage dealt to the attacker
-    if (attackerM._fortify) { defDmg = Math.round(defDmg * 0.60); attackerM._fortify = false; log(`🃏 Fortify! damage reduced 40%`); }
+    if (attackerM._fortify) { defDmg = Math.round(defDmg * 0.60); attackerM._fortify = false; log(`🃏 Fortify! damage reduced 40%`); fxM(attackerM, 'Fortify (Wild Card)', 'Counter damage reduced 40%', '−40%', 'good'); }
     attackerM.hp -= defDmg;
 
     // Death Knight — Death Sentence on counter-strike: 10% chance to instantly kill attacker
@@ -644,6 +681,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
       if (Math.random() < 0.10) {
         attackerM.hp = 0;
         log(`💀 Death Sentence: Death Knight counter instant kill triggers! ${attackerM.name} slain!`);
+        fxM(defenderM, 'Death Sentence', `Instantly slew ${attackerM.name}`, 'KO', 'good');
       }
     }
 
@@ -653,6 +691,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
       if (attackerM.hp <= threshold30 && attackerM.hp > 0) {
         attackerM.atk = 36;
         log(`🌑 Last Darkness: Void Sentinel HP critical — ATK surges to 36!`);
+        fxM(attackerM, 'Last Darkness', 'HP critical — ATK surged to 36', 'ATK 36', 'good');
       }
     }
 
@@ -664,6 +703,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
         attackerM.hp = Math.min(attackerM.maxHp, attackerM.hp + 15);
         attackerM.abilityData.layOnHandsUsed = true;
         log(`✝️ Lay on Hands: High Paladin heals ${healed} HP after counter (now ${attackerM.hp}/${attackerM.maxHp})`);
+        fxM(attackerM, 'Lay on Hands', `Healed ${healed} HP below 30%`, `+${healed} HP`, 'good');
       }
     }
 
@@ -671,6 +711,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
       attackerM.hp = 15;
       attackerM.lastRiteUsed = true;
       log('💀 Last Rite triggers! Demon Lord survives at 15 HP!');
+      fxM(attackerM, 'Last Rite', 'Survived a lethal blow at 15 HP', '15 HP', 'good');
     }
   }
 
@@ -678,6 +719,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
   if (defenderM.id === 'ancient_oak' && defenderM.abilityData) {
     defenderM.abilityData.stationedTurns = 0;
     log(`🌳 Overgrowth: Ancient Oak was attacked — stationedTurns reset to 0`);
+    fxM(defenderM, 'Overgrowth', 'Growth timer reset by the attack', 'reset', 'bad');
   }
 
   let outcome;
@@ -796,138 +838,71 @@ function monoElementPlayerSet() {
  */
 function getEffectiveStats(monster, tilePos, ownerIdx) {
   if (!G || !G.board) return { atk: monster.atk, def: monster.def, gen: monster.gen };
+  // v1.0.92: single pass over the board (was 2 full loops + up to 5 filters + a
+  // find() inside the loop). Rules unchanged — verified against v1.0.91 output.
+  const N = G.board.length;
+  const left = (tilePos + 1) % N, right = (tilePos + N - 1) % N;
+  const ownTile = G.board.find(t => t.pos === tilePos);
+  const tileEl = ownTile ? ownTile.element : null;
+  const onLightArcane  = tileEl === 'Light'  || tileEl === 'Arcane';
+  const onUndeadBeast  = tileEl === 'Undead' || tileEl === 'Beast';
+  const onArcaneNature = tileEl === 'Arcane' || tileEl === 'Nature';
+  const isNature = monster.type === 'Nature';
 
-  let atkBonus = 0;
-  let defBonus = 0;
-  let genBonus = 0;
-
-  const neighbors = [(tilePos + 1) % 28, (tilePos + 27) % 28];
+  let atkBonus = 0, defBonus = 0, genBonus = 0;
+  let tilesOwned = 0, arcaneCount = 0, darkCount = 0, otherBeastCount = 0;
 
   for (const tile of G.board) {
+    const friendly = tile.ownerId === ownerIdx;
+    if (friendly) tilesOwned++;
     const mi = tile.summonInstance;
     if (!mi) continue;
+    const isSelfTile = tile.pos === tilePos;
 
-    // ── Adjacent auras (only affect neighboring tiles) ─────────────────────
-    if (neighbors.includes(tile.pos)) {
-      // Dawnguard: +5 DEF to adjacent FRIENDLY summons (not self)
-      if (mi.id === 'dawnguard' && tile.ownerId === ownerIdx && tile.pos !== tilePos) {
-        defBonus += 5;
-      }
-      // Sunfire Herald: +5 ATK to adjacent FRIENDLY summons (not self)
-      if (mi.id === 'sunfire_herald' && tile.ownerId === ownerIdx && tile.pos !== tilePos) {
-        atkBonus += 5;
-      }
-      // Umbral Stalker: −5 DEF to adjacent ENEMY summons
-      if (mi.id === 'umbral_stalker' && tile.ownerId !== ownerIdx) {
-        defBonus -= 5;
-      }
+    // Friendly element counts (self included except Pack Hunter)
+    if (friendly) {
+      if (mi.type === 'Arcane') arcaneCount++;
+      if (mi.type === 'Dark')   darkCount++;
+      if (mi.type === 'Beast' && !isSelfTile) otherBeastCount++;
     }
 
-    // ── Board-wide auras (affect all friendly stationed summons) ───────────
-    if (tile.ownerId === ownerIdx && tile.pos !== tilePos) {
-      // Briar Sprite: +5 ATK to all friendly Nature summons
-      if (mi.id === 'briar_sprite' && monster.type === 'Nature') {
-        atkBonus += 5;
+    // Adjacent auras
+    if (tile.pos === left || tile.pos === right) {
+      if (friendly && !isSelfTile) {
+        if (mi.id === 'dawnguard')      defBonus += 5;  // Guardian Shield
+        if (mi.id === 'sunfire_herald') atkBonus += 5;  // Radiant Aura
       }
-      // Grove Warden: +5 DEF to all friendly Nature summons
-      if (mi.id === 'grove_warden' && monster.type === 'Nature') {
-        defBonus += 5;
-      }
-      // Mana Weaver: +1 GEN/turn to all friendly stationed summons
-      if (mi.id === 'mana_weaver') {
-        genBonus += 1;
-      }
+      if (!friendly && mi.id === 'umbral_stalker') defBonus -= 5; // Shadow Veil
+    }
 
-      // ── Dual-Element Rare Auras ────────────────────────────────────────
-      // Luminar Operative (seraphim) — Luminary Field:
-      //   All friendly summons stationed on a Light or Arcane tile gain +2 ATK +2 DEF
-      // Hex Stalker — Hex Dominion:
-      //   All friendly summons stationed on an Undead or Beast tile gain +2 ATK +2 DEF
-      // Verdant Sorcerer — Verdant Surge:
-      //   All friendly summons stationed on an Arcane or Nature tile gain +2 ATK +2 DEF
-      const monsterTile = G.board.find(t => t.pos === tilePos);
-      const monsterTileElement = monsterTile ? monsterTile.element : null;
-      if (monsterTileElement) {
-        if (mi.id === 'seraphim' &&
-            (monsterTileElement === 'Light' || monsterTileElement === 'Arcane')) {
-          atkBonus += 2;
-          defBonus += 2;
-        }
-        if (mi.id === 'hex_stalker' &&
-            (monsterTileElement === 'Undead' || monsterTileElement === 'Beast')) {
-          atkBonus += 2;
-          defBonus += 2;
-        }
-        if (mi.id === 'verdant_sorcerer' &&
-            (monsterTileElement === 'Arcane' || monsterTileElement === 'Nature')) {
-          atkBonus += 2;
-          defBonus += 2;
-        }
-      }
+    // Board-wide friendly auras (never from self)
+    if (friendly && !isSelfTile) {
+      if (isNature && mi.id === 'briar_sprite') atkBonus += 5;
+      if (isNature && mi.id === 'grove_warden') defBonus += 5;
+      if (mi.id === 'mana_weaver') genBonus += 1;
+      if (mi.id === 'seraphim'         && onLightArcane)  { atkBonus += 2; defBonus += 2; } // Luminary Field
+      if (mi.id === 'hex_stalker'      && onUndeadBeast)  { atkBonus += 2; defBonus += 2; } // Hex Dominion
+      if (mi.id === 'verdant_sorcerer' && onArcaneNature) { atkBonus += 2; defBonus += 2; } // Verdant Surge
+      if (mi.id === 'vine_stalker' && mi.abilityData && mi.abilityData.vineAuraActive) atkBonus += 3;
+      if (mi.id === 'moss_golem'   && mi.abilityData && mi.abilityData.mossAuraActive) defBonus += 5;
     }
   }
 
-  // Vine Stalker / Moss Golem: board-wide buff once aura is active
-  // These are applied here so getEffectiveStats captures them at battle time
-  for (const tile of G.board) {
-    const mi = tile.summonInstance;
-    if (!mi || tile.ownerId !== ownerIdx || tile.pos === tilePos) continue;
-    if (mi.id === 'vine_stalker' && mi.abilityData && mi.abilityData.vineAuraActive) {
-      atkBonus += 3; // +3 ATK to all friendly stationed monsters
+  // Per-monster self stacks / scaling
+  const ad = monster.abilityData;
+  if (ad) {
+    switch (monster.id) {
+      case 'void_reaper':     atkBonus += ad.voidHungerBonus || 0; break;
+      case 'sorcerer':        atkBonus += ad.sorcererAtkBonus || 0; break;
+      case 'runic_duelist':   atkBonus += arcaneCount; break;
+      case 'cursed_revenant': defBonus += (ad.cursedRevenantSurvivals || 0) * 2; break;
+      case 'shadow_paladin':  atkBonus += darkCount; break;
+      case 'razorclaw':       atkBonus += tilesOwned + (ad.apexPredatorBattleWins || 0); break;
+      case 'feral_striker':   atkBonus += tilesOwned * 2; break;
+      case 'stoneback':       defBonus += tilesOwned * 2; break;
+      case 'pack_hunter':     atkBonus += otherBeastCount * 3; break;
+      case 'ancient_oak':     atkBonus += ad.oakOvergrowthAtk || 0; defBonus += ad.oakOvergrowthDef || 0; break;
     }
-    if (mi.id === 'moss_golem' && mi.abilityData && mi.abilityData.mossAuraActive) {
-      defBonus += 5; // +5 DEF to all friendly stationed monsters
-    }
-  }
-
-  // ── Per-monster self-buff stacks ──────────────────────────────────────────
-  if (monster.abilityData) {
-    const ad = monster.abilityData;
-
-    // Undead — Bone Wraith: Death Rattle is on-death (handled in _applyBattleOutcome); no stat mod here
-    // Dark — Void Reaper: Void Hunger +2 ATK per win (stacks)
-    if (monster.id === 'void_reaper') atkBonus += ad.voidHungerBonus || 0;
-    // Arcane — Sorcerer: Arcane Ascent permanent +1 ATK and +1 Gen per win
-    if (monster.id === 'sorcerer') atkBonus += ad.sorcererAtkBonus || 0;
-    if (monster.id === 'runic_duelist') {
-      // Arcane Pact: +1 ATK per friendly Arcane-type summon stationed
-      const arcaneCount = G.board.filter(t => t.ownerId === ownerIdx && t.summonInstance && t.summonInstance.type === 'Arcane').length;
-      atkBonus += arcaneCount;
-    }
-    // Undead — Cursed Revenant: Undead Resilience +2 DEF per SURVIVAL (not per kill)
-    if (monster.id === 'cursed_revenant') defBonus += (ad.cursedRevenantSurvivals || 0) * 2;
-    // Dark — Shadow Paladin: Dark Pact +1 ATK per friendly Dark summon stationed
-    if (monster.id === 'shadow_paladin') {
-      const darkCount = G.board.filter(t => t.ownerId === ownerIdx && t.summonInstance && t.summonInstance.type === 'Dark').length;
-      atkBonus += darkCount;
-    }
-    // Beast — Razorclaw: Apex Predator +1 ATK per tile owned + +1 ATK per battle won
-    if (monster.id === 'razorclaw') {
-      const tilesOwned = G.board.filter(t => t.ownerId === ownerIdx).length;
-      const battleWins = ad.apexPredatorBattleWins || 0;
-      atkBonus += tilesOwned + battleWins;
-    }
-    // Beast — Feral Striker: Territorial +2 ATK per tile currently owned (dynamic)
-    if (monster.id === 'feral_striker') {
-      const tilesOwned = G.board.filter(t => t.ownerId === ownerIdx).length;
-      atkBonus += tilesOwned * 2;
-    }
-    // Nature — Stoneback: Granite Hide +2 DEF per tile currently owned (dynamic)
-    if (monster.id === 'stoneback') {
-      const tilesOwned = G.board.filter(t => t.ownerId === ownerIdx).length;
-      defBonus += tilesOwned * 2;
-    }
-    // Beast — Pack Hunter: Pack Tactics +3 ATK per other Beast summon stationed
-    if (monster.id === 'pack_hunter') {
-      const beastCount = G.board.filter(t => t.ownerId === ownerIdx && t.summonInstance && t.summonInstance.type === 'Beast' && t.pos !== tilePos).length;
-      atkBonus += beastCount * 3;
-    }
-    // Nature — Ancient Oak: Overgrowth permanent ATK/DEF stacks
-    if (monster.id === 'ancient_oak') {
-      atkBonus += ad.oakOvergrowthAtk || 0;
-      defBonus += ad.oakOvergrowthDef || 0;
-    }
-    // Iron Hide: Hardened Shell — +3 HP permanently each time it survives (maxHp increased; no stat mod here)
   }
 
   return {
@@ -1352,17 +1327,46 @@ function drawChestReward() {
 
 // ─── STATE BROADCASTING ───────────────────────────────────────────────────────
 
+// ─── v1.0.91: shared helpers ──────────────────────────────────────────────────
+// guardTurn: standard "right phase + your turn" check for player action handlers.
+// Sends the same error messages the inline checks used; returns false if blocked.
+function guardTurn(ws, conn, phases, phaseMsg = 'Wrong phase') {
+  if (!G || !phases.includes(G.phase)) { sendError(ws, phaseMsg); return false; }
+  if (conn.playerIdx !== G.currentPlayer) { sendError(ws, 'Not your turn'); return false; }
+  return true;
+}
+
+// Monster → client serialization (was hand-written 4×: hand, board, shop, temple)
+function monCore(m) {
+  return { iid:m.iid, id:m.id, name:m.name, type:m.type,
+           hp:m.hp, maxHp:m.maxHp, atk:m.atk, def:m.def,
+           cost:m.cost, gen:m.gen, isSpecial:m.isSpecial, charm:m.charm };
+}
+function monExt(m) {
+  return { type2:m.type2||null, rarity:m.rarity||null, arch:m.arch||null, supportDesc:m.supportDesc||null };
+}
+function monSpecial(m) {
+  return { special:m.special||null, specialDesc:m.specialDesc||null,
+           condition:m.condition||null, conditionDesc:m.conditionDesc||null };
+}
+// Board tile occupant
+function serializeBoardMonster(m) { return { ...monCore(m), ...monExt(m) }; }
+// Player's own hand card
+function serializeHandMonster(m, playerIdx) {
+  return { ...monCore(m), ...monExt(m), ...monSpecial(m), canUse: canUseSpecial(playerIdx, m) };
+}
+// Shop offer (never special, never charmed)
+function serializeShopMonster(m) { return { ...monCore(m), ...monExt(m), isSpecial:false, charm:false }; }
+// Temple offer (always special)
+function serializeTempleMonster(m) { return { ...monCore(m), ...monSpecial(m), isSpecial:true, charm:false }; }
+
 function publicState() {
   // Safe copy of board (summonInstance as summary)
   const board = G.board.map(t => {
     const ti = { ...t };
     if (t.summonInstance) {
       const m = t.summonInstance;
-      ti.summon = { iid:m.iid, id:m.id, name:m.name, type:m.type, type2:m.type2||null,
-                     hp:m.hp, maxHp:m.maxHp, atk:m.atk, def:m.def,
-                     cost:m.cost, gen:m.gen, isSpecial:m.isSpecial, charm:m.charm,
-                     rarity:m.rarity||null, arch:m.arch||null,
-                     supportDesc:m.supportDesc||null };
+      ti.summon = serializeBoardMonster(m);
     } else {
       ti.summon = null;
     }
@@ -1370,12 +1374,19 @@ function publicState() {
     return ti;
   });
 
+  // v1.0.92: tile + stationed counts for all players in one board pass
+  const tileCounts = {}, stationedCounts = {};
+  for (const t of G.board) {
+    if (t.ownerId == null) continue;
+    tileCounts[t.ownerId] = (tileCounts[t.ownerId] || 0) + 1;
+    if (t.summonInstance) stationedCounts[t.ownerId] = (stationedCounts[t.ownerId] || 0) + 1;
+  }
   const players = G.players.map(p => ({
     idx: p.idx, name: p.name, color: p.color, starterSet: p.starterSet,
     mana: p.mana, position: p.position,
     handSize: p.hand.length,
-    tileCount: G.board.filter(t => t.ownerId === p.idx).length,
-    stationedCount: countStationedSummons(p.idx),
+    tileCount: tileCounts[p.idx] || 0,
+    stationedCount: stationedCounts[p.idx] || 0,
     healCount: p.healCount,
     destroyedCount: p.destroyedCount,
     elementChangeCount: p.elementChangeCount,
@@ -1404,20 +1415,9 @@ function publicState() {
     stalemateData: G.stalemateData,
     pendingChest: G.pendingChest,
     pendingTemple: G.pendingTemple ? {
-      offers: G.pendingTemple.offers.map(m => ({
-        iid:m.iid, id:m.id, name:m.name, type:m.type,
-        hp:m.hp, maxHp:m.maxHp, atk:m.atk, def:m.def,
-        cost:m.cost, gen:m.gen, isSpecial:true, charm:false,
-        special:m.special, specialDesc:m.specialDesc,
-        condition:m.condition, conditionDesc:m.conditionDesc
-      }))
+      offers: G.pendingTemple.offers.map(serializeTempleMonster)
     } : null,
-    shopOffers: G.shopOffers.map(m => ({
-      iid:m.iid, id:m.id, name:m.name, type:m.type, type2:m.type2||null,
-      hp:m.hp, maxHp:m.maxHp, atk:m.atk, def:m.def,
-      cost:m.cost, gen:m.gen, isSpecial:false, charm:false,
-      rarity:m.rarity||null, arch:m.arch||null, supportDesc:m.supportDesc||null
-    })),
+    shopOffers: G.shopOffers.map(serializeShopMonster),
     lastBattle: G.lastBattle || null,
     pendingAttackerSummon: G.pendingAttackerSummon || null,
     pendingLanding: G.pendingLanding || null,
@@ -1431,6 +1431,7 @@ function publicState() {
     monoElementBonus: getMonoElementBonus(),
     turnSummary: G.turnSummary || null,
     roundCallout: G.roundCallout || null,
+    tileFlashes: G.tileFlashes || [],
     serverVersion: SERVER_VERSION,
   };
 }
@@ -2075,6 +2076,7 @@ const handlers = {
 
   start_game(ws, conn, data) {
     if (!G || G.phase !== 'lobby') return sendError(ws, 'Not in lobby');
+    if (!conn.isBoard) return sendError(ws, 'Only the host can start the game'); // v1.0.89
     // Remove lobby slots that disconnected and never came back before game start
     const before = G.players.length;
     G.players = G.players.filter(p => p.isConnected);
@@ -2098,6 +2100,8 @@ const handlers = {
 
   end_game(ws, conn, data) {
     if (!G) return;
+    // v1.0.89: host (board) only — phones cannot reset a game in progress
+    if (!conn.isBoard) return sendError(ws, 'Only the host can end the game');
     const code = G.roomCode;
     log(`🔄 Game ended by host — returning to lobby`);
     G = freshGame(code);
@@ -2107,6 +2111,8 @@ const handlers = {
 
   new_game(ws, conn, data) {
     if (!G) return;
+    // v1.0.89: host (board) only — player view has no new-game control
+    if (!conn.isBoard) return sendError(ws, 'Only the host can start a new game');
     const code = G.roomCode;
     log(`🔄 New game — returning to lobby`);
     G = freshGame(code);
@@ -2124,8 +2130,7 @@ const handlers = {
   // ── Turn Summary ───────────────────────────────────────────────────────────
 
   dismiss_turn_summary(ws, conn, data) {
-    if (G.phase !== 'resolve:turn_summary') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:turn_summary'])) return;
     G.turnSummary = null;
     _startActualTurn();
   },
@@ -2161,8 +2166,7 @@ const handlers = {
   // ── Shop ───────────────────────────────────────────────────────────────────
 
   buy(ws, conn, data) {
-    if (G.phase !== 'shop') return sendError(ws, 'Not shop phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['shop'], 'Not shop phase')) return;
     const p = G.players[G.currentPlayer];
     if (p.hand.length >= 5) return sendError(ws, 'Hand full');
     const offer = G.shopOffers.find(o => o.iid === data.iid);
@@ -2178,8 +2182,7 @@ const handlers = {
   },
 
   sell(ws, conn, data) {
-    if (G.phase !== 'shop') return sendError(ws, 'Not shop phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['shop'], 'Not shop phase')) return;
     const p = G.players[G.currentPlayer];
     const idx = p.hand.findIndex(m => m.iid === data.iid);
     if (idx === -1) return sendError(ws, 'Summon not in hand');
@@ -2193,8 +2196,7 @@ const handlers = {
   },
 
   skip_shop(ws, conn, data) {
-    if (G.phase !== 'shop') return sendError(ws, 'Not shop phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['shop'], 'Not shop phase')) return;
     G.phase = 'roll';
     broadcast();
   },
@@ -2203,8 +2205,7 @@ const handlers = {
 
   // Player chooses to fight — enters normal resolve:battle so they pick attacker via select_attacker/attack
   stalemate_fight(ws, conn, data) {
-    if (G.phase !== 'stalemate') return sendError(ws, 'Not stalemate phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['stalemate'], 'Not stalemate phase')) return;
     const p = G.players[G.currentPlayer];
     if (!p.hand || p.hand.length === 0) return sendError(ws, 'No summons in hand');
     const sd = G.stalemateData;
@@ -2225,8 +2226,7 @@ const handlers = {
 
   // Player retreats from stalemate — pays 5 Mana, skips rolling, goes straight to shop
   stalemate_continue(ws, conn, data) {
-    if (G.phase !== 'stalemate') return sendError(ws, 'Not stalemate phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['stalemate'], 'Not stalemate phase')) return;
     const p = G.players[G.currentPlayer];
     const RETREAT_COST = 8;
     const paid = Math.min(p.mana, RETREAT_COST);
@@ -2251,8 +2251,7 @@ const handlers = {
   // ── Setup phase ────────────────────────────────────────────────────────────
 
   setup_claim(ws, conn, data) {
-    if (G.phase !== 'setup') return sendError(ws, 'Not setup phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['setup'], 'Not setup phase')) return;
     const p = G.players[G.currentPlayer];
     const tilePos = parseInt(data.tilePos, 10);
     if (isNaN(tilePos) || tilePos < 0 || tilePos >= 28) return sendError(ws, 'Invalid tile number (0–27)');
@@ -2275,15 +2274,14 @@ const handlers = {
     // Stoneback: Granite Hide is now dynamic (tile count) — no per-claim stack
     // Solar Knight — Radiant Strike: on claim, tile converts to Light element
     if (m.id === 'solar_knight') {
-      tile.element = 'Light';
+      _convertTile(tile, 'Light', 'Radiant Strike');
       log(`☀️ Radiant Strike: Solar Knight converts tile ${tilePos} to Light element (setup)!`);
     }
     advanceSetupTurn();
   },
 
   setup_pass(ws, conn, data) {
-    if (G.phase !== 'setup') return sendError(ws, 'Not setup phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['setup'], 'Not setup phase')) return;
     log(`⏭ ${G.players[G.currentPlayer].name} passed setup turn`);
     advanceSetupTurn();
   },
@@ -2291,16 +2289,14 @@ const handlers = {
   // ── Roll ───────────────────────────────────────────────────────────────────
 
   roll(ws, conn, data) {
-    if (G.phase !== 'roll') return sendError(ws, 'Not roll phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['roll'], 'Not roll phase')) return;
     resolveRoll(G.currentPlayer);
   },
 
   // ── Landing tile choice ────────────────────────────────────────────────────
 
   choose_landing(ws, conn, data) {
-    if (G.phase !== 'resolve:landing') return sendError(ws, 'Not landing phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:landing'], 'Not landing phase')) return;
     const tilePos = parseInt(data.tilePos);
     if (!Number.isInteger(tilePos) || !G.pendingLanding || !G.pendingLanding.options.includes(tilePos)) {
       return sendError(ws, 'Invalid landing choice');
@@ -2319,8 +2315,7 @@ const handlers = {
   // ── Claim empty tile ───────────────────────────────────────────────────────
 
   claim(ws, conn, data) {
-    if (G.phase !== 'resolve:claim') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:claim'])) return;
     const p = G.players[G.currentPlayer];
     const tile = G.board[p.position];
     const m = p.hand.find(h => h.iid === data.iid);
@@ -2342,7 +2337,7 @@ const handlers = {
     // Grave Specter: Necrotic Claim — tile converts to Undead on BATTLE WIN only (not free claim)
     // Solar Knight — Radiant Strike: on claim, tile converts to Light element
     if (m.id === 'solar_knight') {
-      tile.element = 'Light';
+      _convertTile(tile, 'Light', 'Radiant Strike');
       log(`☀️ Radiant Strike: Solar Knight converts tile ${p.position} to Light element!`);
     }
 
@@ -2350,16 +2345,14 @@ const handlers = {
   },
 
   skip_claim(ws, conn, data) {
-    if (G.phase !== 'resolve:claim') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:claim'])) return;
     advanceTurn();
   },
 
   // ── Battle ─────────────────────────────────────────────────────────────────
 
   attack(ws, conn, data) {
-    if (G.phase !== 'resolve:battle') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:battle'])) return;
     const p = G.players[G.currentPlayer];
     const tile = G.board[p.position];
     const defOwner = G.players[tile.ownerId];
@@ -2368,6 +2361,9 @@ const handlers = {
     const attM = p.hand.find(m => m.iid === data.iid);
     if (!attM) return sendError(ws, 'Summon not in hand');
     // Note: Ascendants can always be used in battle — condition only gates tile claiming
+
+    // v1.0.94: start recording battle effects
+    _fx = []; _fxAttM = attM; _fxDefM = defM;
 
     // Wild card effects before battle
     if (p.wcEffects.ambush) { p.wcEffects.ambush = false; attM._ambush = true; }
@@ -2385,8 +2381,8 @@ const handlers = {
     const origAttDef = attM.def;
     attM.atk = attEffective.atk;
     attM.def = attEffective.def;
-    if (attEffective.atk !== origAttAtk) log(`✨ Aura: ${attM.name} ATK ${origAttAtk} → ${attEffective.atk}`);
-    if (attEffective.def !== origAttDef) log(`✨ Aura: ${attM.name} DEF ${origAttDef} → ${attEffective.def}`);
+    if (attEffective.atk !== origAttAtk) { log(`✨ Aura: ${attM.name} ATK ${origAttAtk} → ${attEffective.atk}`); fx('att', 'Auras', `ATK ${origAttAtk} → ${attEffective.atk}`, `${attEffective.atk > origAttAtk ? '+' : '−'}${Math.abs(attEffective.atk - origAttAtk)} ATK`, attEffective.atk > origAttAtk ? 'good' : 'bad'); }
+    if (attEffective.def !== origAttDef) { log(`✨ Aura: ${attM.name} DEF ${origAttDef} → ${attEffective.def}`); fx('att', 'Auras', `DEF ${origAttDef} → ${attEffective.def}`, `${attEffective.def > origAttDef ? '+' : '−'}${Math.abs(attEffective.def - origAttDef)} DEF`, attEffective.def > origAttDef ? 'good' : 'bad'); }
 
     // Defender: apply aura modifiers (Dawnguard +DEF, Umbral Stalker −DEF, etc.)
     const defTilePos = tile.pos;
@@ -2395,14 +2391,15 @@ const handlers = {
     const origDefDef = defM.def;
     defM.atk = defEffective.atk;
     defM.def = defEffective.def;
-    if (defEffective.atk !== origDefAtk) log(`✨ Aura: ${defM.name} ATK ${origDefAtk} → ${defEffective.atk}`);
-    if (defEffective.def !== origDefDef) log(`✨ Aura: ${defM.name} DEF ${origDefDef} → ${defEffective.def}`);
+    if (defEffective.atk !== origDefAtk) { log(`✨ Aura: ${defM.name} ATK ${origDefAtk} → ${defEffective.atk}`); fx('def', 'Auras', `ATK ${origDefAtk} → ${defEffective.atk}`, `${defEffective.atk > origDefAtk ? '+' : '−'}${Math.abs(defEffective.atk - origDefAtk)} ATK`, defEffective.atk > origDefAtk ? 'good' : 'bad'); }
+    if (defEffective.def !== origDefDef) { log(`✨ Aura: ${defM.name} DEF ${origDefDef} → ${defEffective.def}`); fx('def', 'Auras', `DEF ${origDefDef} → ${defEffective.def}`, `${defEffective.def > origDefDef ? '+' : '−'}${Math.abs(defEffective.def - origDefDef)} DEF`, defEffective.def > origDefDef ? 'good' : 'bad'); }
 
     // Weapon Smith aura — +5 ATK to attacker per copy IN HAND of attacker (stacks, per xlsx)
     const weaponSmithCount = p.hand.filter(m => m.id === 'weapon_smith').length;
     if (weaponSmithCount > 0) {
       attM.atk += weaponSmithCount * 5;
       log(`⚒️ Weapon Smith ×${weaponSmithCount}: ${attM.name} ATK → ${attM.atk}`);
+      fx('att', 'Weapon Smith', `${weaponSmithCount} in hand: +${weaponSmithCount * 5} ATK`, `+${weaponSmithCount * 5} ATK`, 'good');
     }
 
     // Forge aura — +5 DEF to defender per copy stationed by defending player (stacks)
@@ -2410,6 +2407,7 @@ const handlers = {
     if (forgeCount > 0) {
       defM.def += forgeCount * 5;
       log(`🔩 Forge ×${forgeCount}: ${defM.name} DEF → ${defM.def}`);
+      fx('def', 'Forge', `${forgeCount} stationed: +${forgeCount * 5} DEF`, `+${forgeCount * 5} DEF`, 'good');
     }
 
     const { atkDmg, defDmg, outcome } = resolveBattle(attM, defM, tile, rattled);
@@ -2437,6 +2435,8 @@ const handlers = {
       defManaDelta: _defDelta,
     };
     _applyBattleOutcome(outcome, p, attM, defOwner, defM, tile, p.position);
+    G.lastBattle.effects = _fx || [];
+    _fx = null; _fxAttM = null; _fxDefM = null;
     G.pendingAttackerSummon = null;
     // Track stalemate — resolved on this player's next turn
     if (outcome === 'stalemate') {
@@ -2444,7 +2444,9 @@ const handlers = {
     }
     G.phase = 'resolve:battle_result';
     broadcast();
-    scheduleRoomAction(G.roomCode, advanceTurn, 3500);
+    // v1.0.94: hold the result a little longer so the board can show effect callouts
+    const _nFx = Math.min(8, G.lastBattle.effects.length);
+    scheduleRoomAction(G.roomCode, advanceTurn, _nFx ? 5500 + _nFx * 600 : 3500);
   },
 
   // Preview which attacker the player is hovering — broadcasts to board in real-time
@@ -2464,8 +2466,7 @@ const handlers = {
   },
 
   retreat(ws, conn, data) {
-    if (G.phase !== 'resolve:battle') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:battle'])) return;
     const p = G.players[G.currentPlayer];
     const penalty = Math.min(p.mana, MANA_PENALTY);
     p.mana -= penalty;
@@ -2479,8 +2480,7 @@ const handlers = {
   // ── Own tile ───────────────────────────────────────────────────────────────
 
   swap(ws, conn, data) {
-    if (G.phase !== 'resolve:own') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:own'])) return;
     const p = G.players[G.currentPlayer];
     // Hand-full check removed: swap is net-zero (stationed comes back to hand),
     // so a full hand of 5 is always valid for a swap.
@@ -2503,8 +2503,7 @@ const handlers = {
 
   // Flat heal: 5✦ → +20 HP (capped at maxHp)
   heal_stationed(ws, conn, data) {
-    if (G.phase !== 'resolve:own') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:own'])) return;
     const p = G.players[G.currentPlayer];
     const tile = G.board[p.position];
     const m = tile.summonInstance;
@@ -2522,8 +2521,7 @@ const handlers = {
 
   // Sacrifice stationed summon for +15✦ — tile goes neutral
   sacrifice_tile(ws, conn, data) {
-    if (G.phase !== 'resolve:own') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:own'])) return;
     const p = G.players[G.currentPlayer];
     const tile = G.board[p.position];
     if (!tile.summonInstance) return sendError(ws, 'No summon to sacrifice');
@@ -2538,8 +2536,7 @@ const handlers = {
   },
 
   change_element(ws, conn, data) {
-    if (G.phase !== 'resolve:own') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:own'])) return;
     const p = G.players[G.currentPlayer];
     if (p.mana < CHANGE_ELEMENT_COST) return sendError(ws, `Need ${CHANGE_ELEMENT_COST}✦`);
     if (!TYPES.includes(data.element)) return sendError(ws, 'Invalid element');
@@ -2555,16 +2552,14 @@ const handlers = {
   },
 
   skip_own(ws, conn, data) {
-    if (G.phase !== 'resolve:own') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:own'])) return;
     advanceTurn();
   },
 
   // ── Temple ─────────────────────────────────────────────────────────────────
 
   temple_trade(ws, conn, data) {
-    if (G.phase !== 'resolve:temple') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:temple'])) return;
     const p = G.players[G.currentPlayer];
     const special = G.pendingTemple.offers.find(o => o.iid === data.specialIid);
     if (!special) return sendError(ws, 'Invalid special offer');
@@ -2583,8 +2578,7 @@ const handlers = {
   },
 
   temple_leave(ws, conn, data) {
-    if (G.phase !== 'resolve:temple') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:temple'])) return;
     G.pendingTemple = null;
     log(`${G.players[G.currentPlayer].name} left the Temple`);
     advanceTurn();
@@ -2593,8 +2587,7 @@ const handlers = {
   // ── Heal tile ──────────────────────────────────────────────────────────────
 
   heal_tile_apply(ws, conn, data) {
-    if (G.phase !== 'resolve:heal_tile') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:heal_tile'])) return;
     const p = G.players[G.currentPlayer];
     const SHRINE_COST = 10;
     const SHRINE_HEAL = 10;
@@ -2623,16 +2616,14 @@ const handlers = {
   },
 
   heal_tile_skip(ws, conn, data) {
-    if (G.phase !== 'resolve:heal_tile') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:heal_tile'])) return;
     advanceTurn();
   },
 
   // ── Chest ──────────────────────────────────────────────────────────────────
 
   chest_apply_potion(ws, conn, data) {
-    if (G.phase !== 'resolve:chest') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:chest'])) return;
     if (!G.pendingChest || G.pendingChest.kind !== 'potion') return sendError(ws, 'No potion');
     const p = G.players[G.currentPlayer];
     // Find by iid in hand OR stationed tiles (supports hand + stationed monsters)
@@ -2657,8 +2648,7 @@ const handlers = {
   },
 
   chest_assign_charm(ws, conn, data) {
-    if (G.phase !== 'resolve:chest') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:chest'])) return;
     if (!G.pendingChest || G.pendingChest.kind !== 'charm') return sendError(ws, 'No charm');
     const p = G.players[G.currentPlayer];
     // data.iid = hand monster, data.tilePos = stationed monster's tile
@@ -2676,8 +2666,7 @@ const handlers = {
   },
 
   chest_warp(ws, conn, data) {
-    if (G.phase !== 'resolve:chest') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:chest'])) return;
     if (!G.pendingChest || G.pendingChest.kind !== 'warp') return sendError(ws, 'No warp');
     G.pendingChest = null;
     // Warp to random non-special tile
@@ -2690,16 +2679,14 @@ const handlers = {
   },
 
   chest_discard(ws, conn, data) {
-    if (G.phase !== 'resolve:chest') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:chest'])) return;
     G.pendingChest = null;
     log(`${G.players[G.currentPlayer].name} skipped chest reward`);
     advanceTurn();
   },
 
   chest_skip(ws, conn, data) {
-    if (G.phase !== 'resolve:chest') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:chest'])) return;
     const p = G.players[G.currentPlayer];
     const chest = G.pendingChest;
     if (chest && chest.kind === 'potion') {
@@ -2715,16 +2702,14 @@ const handlers = {
   // ── Wild Card ──────────────────────────────────────────────────────────────
 
   wildcard_skip(ws, conn, data) {
-    if (G.phase !== 'resolve:wildcard_cards') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:wildcard_cards'])) return;
     G.wildCardDrawn = null;
     log(`🃏 ${G.players[G.currentPlayer].name} skipped the Wild Card`);
     advanceTurn();
   },
 
   wildcard_select(ws, conn, data) {
-    if (G.phase !== 'resolve:wildcard_cards') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:wildcard_cards'])) return;
     const p = G.players[G.currentPlayer];
     const { tier, cardId } = data;
     const drawn = G.wildCardDrawn;
@@ -2789,8 +2774,7 @@ const handlers = {
   },
 
   wildcard_target(ws, conn, data) {
-    if (G.phase !== 'resolve:wildcard_target') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:wildcard_target'])) return;
     const p = G.players[G.currentPlayer];
     const pending = G.wildCardPending;
     if (!pending) return sendError(ws, 'No pending wild card');
@@ -2877,8 +2861,7 @@ const handlers = {
   },
 
   wildcard_coup_cancel(ws, conn, data) {
-    if (G.phase !== 'resolve:wildcard_coup_tile' && G.phase !== 'resolve:wildcard_coup_summon') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:wildcard_coup_tile', 'resolve:wildcard_coup_summon'])) return;
     const p = G.players[G.currentPlayer];
     // 50% refund — escape hatch when game forces a dead-end (no valid target tiles)
     const coupCard = (WILD_CARD_POOLS.high || []).find(c => c.id === 'coup');
@@ -2890,8 +2873,7 @@ const handlers = {
   },
 
   wildcard_coup_tile(ws, conn, data) {
-    if (G.phase !== 'resolve:wildcard_coup_tile') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:wildcard_coup_tile'])) return;
     const p = G.players[G.currentPlayer];
     const tilePos = parseInt(data.tilePos, 10);
     if (isNaN(tilePos)) return sendError(ws, 'Invalid tile');
@@ -2905,8 +2887,7 @@ const handlers = {
   },
 
   wildcard_coup_summon(ws, conn, data) {
-    if (G.phase !== 'resolve:wildcard_coup_summon') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:wildcard_coup_summon'])) return;
     const p = G.players[G.currentPlayer];
     const sacrifice = p.hand.find(h => h.iid === data.iid);
     if (!sacrifice) return sendError(ws, 'Summon not in hand');
@@ -2939,8 +2920,7 @@ const handlers = {
   },
 
   wildcard_shatter(ws, conn, data) {
-    if (G.phase !== 'resolve:wildcard_shatter') return sendError(ws, 'Wrong phase');
-    if (conn.playerIdx !== G.currentPlayer) return sendError(ws, 'Not your turn');
+    if (!guardTurn(ws, conn, ['resolve:wildcard_shatter'])) return;
     const p = G.players[G.currentPlayer];
     const picks = G.wildCardPending.picks || [];
     const tilePos = parseInt(data.tilePos, 10);
@@ -3002,275 +2982,218 @@ function _trackBattleMana(player, delta) {
   else if (delta < 0) player.lastTurnBattleManaLoss += Math.abs(delta);
 }
 
+// ─── v1.0.93: battle-outcome helpers ─────────────────────────────────────────
+function _fmtMana(d) { return d >= 0 ? `+${d}` : `−${-d}`; }
+
+// Standard battle mana swing. Negative deltas clamp at 0; tracking records nominal delta.
+function _battleMana(attPlayer, attDelta, defPlayer, defDelta) {
+  for (const [p, d] of [[attPlayer, attDelta], [defPlayer, defDelta]]) {
+    p.mana = d < 0 ? Math.max(0, p.mana + d) : p.mana + d;
+    _trackBattleMana(p, d);
+  }
+  log(`✦ Battle mana: ${attPlayer.name} ${_fmtMana(attDelta)}✦  ${defPlayer.name} ${_fmtMana(defDelta)}✦`);
+}
+
+// Steal up to `amt` Mana (Nightshard Soul Siphon, Succubus Mana Drain)
+function _stealMana(thief, victim, amt) {
+  const stolen = Math.min(victim.mana, amt);
+  victim.mana -= stolen;
+  thief.mana += stolen;
+  _trackBattleMana(thief, +stolen);
+  _trackBattleMana(victim, -stolen);
+  return stolen;
+}
+
+function _clearTile(tile) {
+  tile.ownerId = null; tile.summonId = null; tile.summonInstance = null;
+}
+
+// Per-monster stacks that fire whenever a monster WINS a battle (attacking or defending)
+function _onBattleWin(m, ctx) {
+  const ad = m.abilityData;
+  const side = ctx === 'attack' ? 'att' : 'def';
+  if (m.id === 'dawn_striker') {                       // Soulmend
+    const healed = Math.min(8, m.maxHp - m.hp);
+    m.hp = Math.min(m.maxHp, m.hp + 8);
+    log(`🌅 Soulmend: Dawn Striker heals ${healed} HP on ${ctx} win (now ${m.hp}/${m.maxHp})`);
+    fx(side, 'Soulmend', `Healed ${healed} HP after winning`, `+${healed} HP`, 'good');
+  }
+  if (m.id === 'void_reaper' && ad) {                  // Void Hunger
+    ad.voidHungerBonus = (ad.voidHungerBonus || 0) + 2;
+    log(`👁️ Void Hunger: Void Reaper ATK stack +2 on ${ctx} win (total bonus: +${ad.voidHungerBonus})`);
+    fx(side, 'Void Hunger', `+2 ATK permanently (total +${ad.voidHungerBonus})`, '+2 ATK', 'good');
+  }
+  if (m.id === 'sorcerer' && ad) {                     // Arcane Ascent
+    ad.sorcererAtkBonus = (ad.sorcererAtkBonus || 0) + 1;
+    ad.sorcererGenBonus = (ad.sorcererGenBonus || 0) + 1;
+    log(`✨ Arcane Ascent: Sorcerer permanently gains +1 ATK +1 Gen on ${ctx} win (total: +${ad.sorcererAtkBonus} ATK, +${ad.sorcererGenBonus} Gen)`);
+    fx(side, 'Arcane Ascent', `+1 ATK and +1 Gen permanently (total +${ad.sorcererAtkBonus})`, '+1/+1', 'good');
+  }
+  if (m.id === 'razorclaw' && ad) {                    // Apex Predator
+    ad.apexPredatorBattleWins = (ad.apexPredatorBattleWins || 0) + 1;
+    log(`🦁 Apex Predator: Razorclaw battle wins: ${ad.apexPredatorBattleWins}`);
+    fx(side, 'Apex Predator', `+1 ATK per win (${ad.apexPredatorBattleWins} wins)`, '+1 ATK', 'good');
+  }
+}
+
+// Per-monster stacks that fire whenever a STATIONED/fighting monster SURVIVES (defense win or stalemate)
+function _onSurvive(m, ctx, side) {
+  if (m.id === 'cursed_revenant' && m.abilityData) {   // Undead Resilience
+    m.abilityData.cursedRevenantSurvivals = (m.abilityData.cursedRevenantSurvivals || 0) + 1;
+    log(`💀 Undead Resilience: Cursed Revenant survives ${ctx} — +2 DEF (survivals: ${m.abilityData.cursedRevenantSurvivals})`);
+    fx(side, 'Undead Resilience', `Survived: +2 DEF permanently (${m.abilityData.cursedRevenantSurvivals} survivals)`, '+2 DEF', 'good');
+  }
+  if (m.id === 'iron_hide') {                          // Hardened Shell
+    m.maxHp += 3; m.hp += 3;
+    log(`🦏 Hardened Shell: Iron Hide survives ${ctx}! +3 maxHp permanently (now ${m.hp}/${m.maxHp})`);
+    fx(side, 'Hardened Shell', `Survived: +3 max HP permanently (now ${m.maxHp})`, '+3 max HP', 'good');
+  }
+}
+
+// Death Rattle / Thorn Burst: on-death damage to the winner. If it kills the winner,
+// the tile goes unclaimed and the win/loss credits flip.
+function _deathEffectDamage(winnerM, winnerP, loserP, tile, tilePos, dmg, label, winnerSide, abilityName, sourceName) {
+  winnerM.hp -= dmg;
+  fx(winnerSide, abilityName, `Took ${dmg} damage from ${sourceName} as it died`, `−${dmg} HP`, 'bad');
+  if (winnerM.hp <= 0) {
+    _clearTile(tile);
+    winnerP.battlesWon--; loserP.battlesLost--;   // reverse the win credits
+    winnerP.battlesLost++; winnerP.destroyedCount++;
+    log(`${label}: ${winnerM.name} killed! Tile ${tilePos} goes unclaimed.`);
+    fx(winnerSide, abilityName, `${winnerM.name} was killed — tile ${tilePos} goes unclaimed`, 'KO', 'bad');
+  }
+}
+
 function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, tilePos) {
   if (outcome === 'attacker_wins') {
-    // Remove attacker from hand, place on tile
     attPlayer.hand = attPlayer.hand.filter(m => m.iid !== attM.iid);
     tile.ownerId = attPlayer.idx;
     tile.summonId = attM.iid;
     tile.summonInstance = attM;
-    tile.neverOwned = false; // Phase 1: mark tile as ever-claimed
-    // Stats
+    tile.neverOwned = false;
     attPlayer.battlesWon++;
     defPlayer.battlesLost++;
     defPlayer.destroyedCount++;
     _updatePeakTiles(attPlayer.idx);
     log(`🏆 ${attPlayer.name} wins! ${defM.name} destroyed, ${tile.pos} claimed`);
-    // Mana swings — attacker wins: +4✦ / defender −4✦
-    attPlayer.mana += 4;
-    defPlayer.mana = Math.max(0, defPlayer.mana - 4);
-    _trackBattleMana(attPlayer, +4);
-    _trackBattleMana(defPlayer, -4);
-    log(`✦ Battle mana: ${attPlayer.name} +4✦  ${defPlayer.name} −4✦`);
+    _battleMana(attPlayer, +4, defPlayer, -4);
     checkManaElimination(defPlayer.idx);
 
-    // ── Light attacker win abilities ──────────────────────────────────────────
-    // Dawn Striker — Soulmend: heals 8 HP after winning a battle
-    if (attM.id === 'dawn_striker') {
-      const healed = Math.min(8, attM.maxHp - attM.hp);
-      attM.hp = Math.min(attM.maxHp, attM.hp + 8);
-      log(`🌅 Soulmend: Dawn Striker heals ${healed} HP on win (now ${attM.hp}/${attM.maxHp})`);
-    }
-    // Solar Knight — Radiant Strike: on CLAIM and on BATTLE WIN (attacker wins)
-    // Tile conversion on claim handled in claim handler above; also fires here on battle win.
-    if (attM.id === 'solar_knight') {
-      tile.element = 'Light';
-      log(`☀️ Radiant Strike: Solar Knight converts tile to Light element on battle win!`);
-    }
+    _onBattleWin(attM, 'attack');
 
-    // ── Dark attacker win abilities ───────────────────────────────────────────
-    // Void Reaper — Void Hunger: +2 ATK per win (stacks)
-    if (attM.id === 'void_reaper' && attM.abilityData) {
-      attM.abilityData.voidHungerBonus = (attM.abilityData.voidHungerBonus || 0) + 2;
-      log(`👁️ Void Hunger: Void Reaper ATK stack +2 (total bonus: +${attM.abilityData.voidHungerBonus})`);
+    // Attacker on-kill effects
+    if (attM.id === 'solar_knight') {                  // Radiant Strike
+      _convertTile(tile, 'Light', 'Radiant Strike');
+      log(`☀️ Radiant Strike: Solar Knight converts tile to Light element on battle win!`);
+      fx('att', 'Radiant Strike', `Tile ${tilePos} became Light`, '→ Light', 'good');
     }
-    // Nightshard — Soul Siphon: on kill, steal 4✦ from defeated monster's owner
-    if (attM.id === 'nightshard') {
-      const stolen = Math.min(defPlayer.mana, 4);
-      defPlayer.mana -= stolen;
-      attPlayer.mana += stolen;
-      _trackBattleMana(attPlayer, +stolen);
-      _trackBattleMana(defPlayer, -stolen);
+    if (attM.id === 'nightshard') {                    // Soul Siphon
+      const stolen = _stealMana(attPlayer, defPlayer, 4);
       log(`🌑 Soul Siphon: Nightshard steals ${stolen}✦ from ${defPlayer.name} on kill`);
+      fx('att', 'Soul Siphon', `Stole ${stolen}✦ from ${defPlayer.name}`, `+${stolen}✦`, 'good');
+      fx('def', 'Soul Siphon', `${attPlayer.name}\'s Nightshard stole ${stolen}✦`, `−${stolen}✦`, 'bad');
     }
-    // Dusk Blade — Hemorrhage: on win, target's Mana income next turn reduced by 4✦
-    if (attM.id === 'dusk_blade') {
+    if (attM.id === 'dusk_blade') {                    // Hemorrhage (income cut)
       defPlayer._hemorrhageIncomeReduction = (defPlayer._hemorrhageIncomeReduction || 0) + 4;
       log(`🗡️ Hemorrhage: Dusk Blade reduces ${defPlayer.name}'s Mana income by 4✦ next turn`);
+      fx('att', 'Hemorrhage', `${defPlayer.name}\'s income −4✦ next turn`, '−4✦', 'good');
+      fx('def', 'Hemorrhage', 'Your Mana income is −4✦ next turn', '−4✦', 'bad');
     }
-    // Shade Walker — Cursed Touch: curse the DEFEATED monster (follows it, per xlsx)
-    // "opposing monster loses 5 HP per turn for 2 turns (follows the monster, does not stack)"
-    if (attM.id === 'shade_walker' && defM) {
+    if (attM.id === 'shade_walker' && defM) {          // Cursed Touch (follows defeated monster)
       defM.abilityData = defM.abilityData || {};
       if (!defM.abilityData.shadeWalkerCurse || defM.abilityData.shadeWalkerCurse <= 0) {
         defM.abilityData.shadeWalkerCurse = 2;
         defM.abilityData.shadeWalkerCurseAmt = 5;
         log(`🌑 Cursed Touch: Shade Walker curses ${defM.name} — 5 HP DoT for 2 turns (follows monster)`);
+        fx('att', 'Cursed Touch', `Cursed ${defM.name}: 5 HP per turn for 2 turns`, 'curse', 'good');
       }
     }
-
-    // ── Arcane attacker win abilities ─────────────────────────────────────────
-    // Sorcerer — Arcane Ascent: permanently gain +1 ATK and +1 Gen per win
-    if (attM.id === 'sorcerer' && attM.abilityData) {
-      attM.abilityData.sorcererAtkBonus = (attM.abilityData.sorcererAtkBonus || 0) + 1;
-      attM.abilityData.sorcererGenBonus = (attM.abilityData.sorcererGenBonus || 0) + 1;
-      log(`✨ Arcane Ascent: Sorcerer permanently gains +1 ATK +1 Gen (total: +${attM.abilityData.sorcererAtkBonus} ATK, +${attM.abilityData.sorcererGenBonus} Gen)`);
-    }
-    // Spell Wraith — Mana Siphon: passive aura drain (handled in processTurnStartEffects; no on-win effect)
-
-    // ── Undead attacker win abilities ─────────────────────────────────────────
-    // Grave Specter — Necrotic Claim: on win, tile converts to Undead element
-    if (attM.id === 'grave_specter') {
-      tile.element = 'Undead';
+    if (attM.id === 'grave_specter') {                 // Necrotic Claim
+      _convertTile(tile, 'Undead', 'Necrotic Claim');
+      fx('att', 'Necrotic Claim', `Tile ${tilePos} became Undead`, '→ Undead', 'good');
       log(`👻 Necrotic Claim: Grave Specter converts tile ${tilePos} to Undead element!`);
     }
-    // Bone Wraith — Death Rattle: on death of DEFENDER Bone Wraith, deals 12 damage to killer
-    if (defM.id === 'bone_wraith') {
-      attM.hp -= 12;
-      log(`💀 Death Rattle: Bone Wraith's death deals 12 damage to ${attM.name} (now ${attM.hp}/${attM.maxHp})`);
-      if (attM.hp <= 0) {
-        // Attacker killed by Death Rattle — remove from tile, both summons destroyed
-        tile.ownerId = null; tile.summonId = null; tile.summonInstance = null;
-        attPlayer.battlesWon--; defPlayer.battlesLost--; // reverse the win credits
-        attPlayer.battlesLost++; attPlayer.destroyedCount++;
-        log(`💀 Death Rattle: ${attM.name} killed! Tile ${tilePos} goes unclaimed.`);
-      }
-    }
-    // Thornling — Thorn Burst: on death of DEFENDER Thornling, attacker loses 5 HP and tile converts to Nature
-    if (defM.id === 'thornling') {
-      attM.hp -= 5;
-      tile.element = 'Nature';
-      log(`🌿 Thorn Burst: Thornling's death deals 5 damage to ${attM.name} and tile ${tilePos} becomes Nature!`);
-      if (attM.hp <= 0) {
-        // Attacker killed by Thorn Burst — remove from tile, both summons destroyed
-        tile.ownerId = null; tile.summonId = null; tile.summonInstance = null;
-        attPlayer.battlesWon--; defPlayer.battlesLost--; // reverse the win credits
-        attPlayer.battlesLost++; attPlayer.destroyedCount++;
-        log(`🌿 Thorn Burst: ${attM.name} killed! Tile ${tilePos} goes unclaimed.`);
-      }
-    }
-    // Cursed Revenant — Undead Resilience: survival tracked separately; kill does NOT stack DEF
-    // (DEF stacks only when Cursed Revenant itself SURVIVES — see survivor section below)
 
-    // ── Beast attacker win abilities ──────────────────────────────────────────
-    // Razorclaw — Apex Predator: count battle wins (+1 ATK per win, tracked)
-    if (attM.id === 'razorclaw' && attM.abilityData) {
-      attM.abilityData.apexPredatorBattleWins = (attM.abilityData.apexPredatorBattleWins || 0) + 1;
-      log(`🦁 Apex Predator: Razorclaw battle wins: ${attM.abilityData.apexPredatorBattleWins}`);
+    // Defender on-death effects (hit the attacker)
+    if (defM.id === 'bone_wraith') {                   // Death Rattle
+      log(`💀 Death Rattle: Bone Wraith's death deals 12 damage to ${attM.name} (now ${attM.hp - 12}/${attM.maxHp})`);
+      fx('def', 'Death Rattle', `Dealt 12 damage to ${attM.name} on death`, '12 dmg', 'good');
+      _deathEffectDamage(attM, attPlayer, defPlayer, tile, tilePos, 12, '💀 Death Rattle', 'att', 'Death Rattle', defM.name);
     }
-    // Feral Striker: Territorial is dynamic (tile count) — no per-win stack needed
-    // Stoneback: Granite Hide is dynamic (tile count) — no per-win stack needed
+    if (defM.id === 'thornling') {                     // Thorn Burst
+      _convertTile(tile, 'Nature', 'Thorn Burst');
+      fx('def', 'Thorn Burst', `Tile ${tilePos} became Nature`, '→ Nature', 'good');
+      log(`🌿 Thorn Burst: Thornling's death deals 8 damage to ${attM.name} and tile ${tilePos} becomes Nature!`);
+      fx('def', 'Thorn Burst', `Dealt 8 damage to ${attM.name} on death`, '8 dmg', 'good');
+      _deathEffectDamage(attM, attPlayer, defPlayer, tile, tilePos, 8, '🌿 Thorn Burst', 'att', 'Thorn Burst', defM.name);
+    }
 
-    // Plague Herald — Pestilence: aura handled in processTurnStartEffects (not on-win)
-
-    // Succubus — Mana Drain on win
-    if (attM.id === 'succubus') {
-      const stolen = Math.min(defPlayer.mana, 10);
-      defPlayer.mana -= stolen;
-      attPlayer.mana += stolen;
-      _trackBattleMana(attPlayer, +stolen);
-      _trackBattleMana(defPlayer, -stolen);
+    if (attM.id === 'succubus') {                      // Mana Drain
+      const stolen = _stealMana(attPlayer, defPlayer, 10);
       log(`🧛 Mana Drain: ${attPlayer.name} steals ${stolen}✦ from ${defPlayer.name}`);
+      fx('att', 'Mana Drain', `Stole ${stolen}✦ from ${defPlayer.name}`, `+${stolen}✦`, 'good');
+      fx('def', 'Mana Drain', `${attPlayer.name}\'s Succubus stole ${stolen}✦`, `−${stolen}✦`, 'bad');
     }
-    // Arcane Arbiter — Chaos Flux: defender-only reactive — fires only when Arbiter is stationed (defending)
-    // Scrambles one tile owned by the ATTACKER (punishment for attacking the Arbiter)
-    if (defM.id === 'arcane_arbiter') _applyChaosFlux(attPlayer);
   } else if (outcome === 'defender_wins') {
     attPlayer.hand = attPlayer.hand.filter(m => m.iid !== attM.iid);
     attPlayer.battlesLost++;
     defPlayer.battlesWon++;
     attPlayer.destroyedCount++;
     log(`🛡️ ${defPlayer.name} defends! ${attM.name} destroyed`);
-    // Mana swings — attacker loses: −8✦ / defender +4✦
-    attPlayer.mana = Math.max(0, attPlayer.mana - 8);
-    defPlayer.mana += 4;
-    _trackBattleMana(attPlayer, -8);
-    _trackBattleMana(defPlayer, +4);
-    log(`✦ Battle mana: ${attPlayer.name} −8✦  ${defPlayer.name} +4✦`);
+    _battleMana(attPlayer, -8, defPlayer, +4);
     checkManaElimination(attPlayer.idx);
 
-    // ── Light defender win abilities ──────────────────────────────────────────
-    // Dawn Striker defending — Soulmend: heals 8 HP after winning
-    if (defM.id === 'dawn_striker') {
-      const healed = Math.min(8, defM.maxHp - defM.hp);
-      defM.hp = Math.min(defM.maxHp, defM.hp + 8);
-      log(`🌅 Soulmend: Dawn Striker heals ${healed} HP on defensive win (now ${defM.hp}/${defM.maxHp})`);
-    }
-    // Cursed Revenant — Undead Resilience: gains +2 DEF each time it SURVIVES a battle (as defender)
-    if (defM.id === 'cursed_revenant' && defM.abilityData) {
-      defM.abilityData.cursedRevenantSurvivals = (defM.abilityData.cursedRevenantSurvivals || 0) + 1;
-      log(`💀 Undead Resilience: Cursed Revenant survives — +2 DEF (survivals: ${defM.abilityData.cursedRevenantSurvivals})`);
-    }
-    // Iron Hide — Hardened Shell: gains +3 maxHp permanently each time it SURVIVES
-    if (defM.id === 'iron_hide') {
-      defM.maxHp += 3;
-      defM.hp += 3; // also restore the extra HP
-      log(`🦏 Hardened Shell: Iron Hide survives! +3 maxHp permanently (now ${defM.hp}/${defM.maxHp})`);
-    }
+    // Survival + win stacks fire before Death Rattle (e.g. Iron Hide +3 HP lands first)
+    _onSurvive(defM, 'battle', 'def');
+    _onBattleWin(defM, 'defense');
 
-    // ── Dark defender win abilities ───────────────────────────────────────────
-    // Void Reaper — Void Hunger: +2 ATK per win (stacks, even when defending)
-    if (defM.id === 'void_reaper' && defM.abilityData) {
-      defM.abilityData.voidHungerBonus = (defM.abilityData.voidHungerBonus || 0) + 2;
-      log(`👁️ Void Hunger: Void Reaper ATK stack +2 on defense win (total bonus: +${defM.abilityData.voidHungerBonus})`);
-    }
-    // Shade Walker — Cursed Touch: curse attacker's hand monster for 3-turn DoT
-    if (defM.id === 'shade_walker' && attM.abilityData) {
+    if (defM.id === 'shade_walker' && attM.abilityData) {  // Cursed Touch on attacker
       if (!attM.abilityData.shadeWalkerCurse || attM.abilityData.shadeWalkerCurse <= 0) {
         attM.abilityData.shadeWalkerCurse = 2;
         attM.abilityData.shadeWalkerCurseAmt = 5;
         log(`🌑 Cursed Touch: Shade Walker curses ${attM.name} — 5 HP DoT for 2 turns (follows monster)`);
+        fx('def', 'Cursed Touch', `Cursed ${attM.name}: 5 HP per turn for 2 turns`, 'curse', 'good');
       }
     }
 
-    // ── Arcane defender win abilities ─────────────────────────────────────────
-    // Sorcerer — Arcane Ascent on defense win: permanently gain +1 ATK and +1 Gen
-    if (defM.id === 'sorcerer' && defM.abilityData) {
-      defM.abilityData.sorcererAtkBonus = (defM.abilityData.sorcererAtkBonus || 0) + 1;
-      defM.abilityData.sorcererGenBonus = (defM.abilityData.sorcererGenBonus || 0) + 1;
-      log(`✨ Arcane Ascent: Sorcerer permanently gains +1 ATK +1 Gen on defense win`);
+    if (attM.id === 'bone_wraith') {                   // Death Rattle hits the defender
+      log(`💀 Death Rattle: Bone Wraith's death deals 12 damage to ${defM.name} (now ${defM.hp - 12}/${defM.maxHp})`);
+      fx('att', 'Death Rattle', `Dealt 12 damage to ${defM.name} on death`, '12 dmg', 'good');
+      _deathEffectDamage(defM, defPlayer, attPlayer, tile, tilePos, 12, '💀 Death Rattle', 'def', 'Death Rattle', attM.name);
     }
-
-    // ── Beast defender win abilities ──────────────────────────────────────────
-    // Razorclaw — Apex Predator: battle wins count on defense too
-    if (defM.id === 'razorclaw' && defM.abilityData) {
-      defM.abilityData.apexPredatorBattleWins = (defM.abilityData.apexPredatorBattleWins || 0) + 1;
-      log(`🦁 Apex Predator: Razorclaw defense battle wins: ${defM.abilityData.apexPredatorBattleWins}`);
-    }
-    // Bone Wraith — Death Rattle: on death of ATTACKER Bone Wraith when defending wins
-    if (attM.id === 'bone_wraith') {
-      defM.hp -= 12;
-      log(`💀 Death Rattle: Bone Wraith's death deals 12 damage to ${defM.name} (now ${defM.hp}/${defM.maxHp})`);
-      if (defM.hp <= 0) {
-        // Defender killed by Death Rattle — remove from tile, tile goes unclaimed
-        tile.ownerId = null; tile.summonId = null; tile.summonInstance = null;
-        defPlayer.battlesWon--; attPlayer.battlesLost--; // reverse the win credits
-        defPlayer.battlesLost++; defPlayer.destroyedCount++;
-        log(`💀 Death Rattle: ${defM.name} killed! Tile ${tilePos} goes unclaimed.`);
-      }
-    }
-    // Thornling defending wins — Thorn Burst is not applicable (Thornling is the killer, not the killed)
-    // (Thorn Burst only triggers when Thornling DIES — handled in attacker_wins when defM=thornling)
-
-    // Arcane Arbiter — Chaos Flux: defender-only reactive — scrambles attacker's tile
-    if (defM.id === 'arcane_arbiter') _applyChaosFlux(attPlayer);
   } else if (outcome === 'mutual') {
     attPlayer.hand = attPlayer.hand.filter(m => m.iid !== attM.iid);
     attPlayer.battlesLost++;
     defPlayer.battlesLost++;
     attPlayer.destroyedCount++;
     defPlayer.destroyedCount++;
-    tile.ownerId = null;
-    tile.summonId = null;
-    tile.summonInstance = null;
+    _clearTile(tile);
     log(`💥 Mutual destruction! Tile ${tilePos} unclaimed`);
-    // Mana swings — mutual (treated as attacker loss): attacker −8✦, defender +4✦
-    attPlayer.mana = Math.max(0, attPlayer.mana - 8);
-    defPlayer.mana += 4;
-    _trackBattleMana(attPlayer, -8);
-    _trackBattleMana(defPlayer, +4);
-    log(`✦ Battle mana: ${attPlayer.name} −8✦  ${defPlayer.name} +4✦`);
+    _battleMana(attPlayer, -8, defPlayer, +4);
     checkManaElimination(attPlayer.idx);
-    // (Solar Knight is destroyed; layOnHandsUsed reset not needed — fresh makeSummon on next buy)
-    // Arcane Arbiter — Chaos Flux on mutual: Arbiter is destroyed but still punishes attacker
-    if (defM.id === 'arcane_arbiter') _applyChaosFlux(attPlayer);
   } else if (outcome === 'stalemate') {
     log(`🤝 Stalemate! Both survive`);
-    // Mana swings — stalemate: attacker −4✦, defender +4✦
-    attPlayer.mana = Math.max(0, attPlayer.mana - 4);
-    defPlayer.mana += 4;
-    _trackBattleMana(attPlayer, -4);
-    _trackBattleMana(defPlayer, +4);
-    log(`✦ Battle mana: ${attPlayer.name} −4✦  ${defPlayer.name} +4✦`);
+    _battleMana(attPlayer, -4, defPlayer, +4);
     checkManaElimination(attPlayer.idx);
 
-    // Sorcerer — Arcane Ascent: permanent gains (no streak to reset; stalemate gives no bonus)
-    // Cursed Revenant — Undead Resilience: gains +2 DEF each time it SURVIVES (stalemate = survival)
-    if (attM.id === 'cursed_revenant' && attM.abilityData) {
-      attM.abilityData.cursedRevenantSurvivals = (attM.abilityData.cursedRevenantSurvivals || 0) + 1;
-      log(`💀 Undead Resilience: Cursed Revenant survives stalemate — +2 DEF (survivals: ${attM.abilityData.cursedRevenantSurvivals})`);
-    }
-    if (defM.id === 'cursed_revenant' && defM.abilityData) {
-      defM.abilityData.cursedRevenantSurvivals = (defM.abilityData.cursedRevenantSurvivals || 0) + 1;
-      log(`💀 Undead Resilience: Cursed Revenant survives stalemate — +2 DEF (survivals: ${defM.abilityData.cursedRevenantSurvivals})`);
-    }
-    // Iron Hide — Hardened Shell: both survive in stalemate
-    if (attM.id === 'iron_hide') { attM.maxHp += 3; attM.hp += 3; log(`🦏 Hardened Shell: Iron Hide survives stalemate! +3 maxHp`); }
-    if (defM.id === 'iron_hide') { defM.maxHp += 3; defM.hp += 3; log(`🦏 Hardened Shell: Iron Hide survives stalemate! +3 maxHp`); }
+    _onSurvive(attM, 'stalemate', 'att');
+    _onSurvive(defM, 'stalemate', 'def');
 
-    // Succubus — Mana Drain on stalemate too
-    if (attM.id === 'succubus') {
-      const stolen = Math.min(defPlayer.mana, 10);
-      defPlayer.mana -= stolen;
-      attPlayer.mana += stolen;
-      _trackBattleMana(attPlayer, +stolen);
-      _trackBattleMana(defPlayer, -stolen);
+    if (attM.id === 'succubus') {                      // Mana Drain (stalemate too)
+      const stolen = _stealMana(attPlayer, defPlayer, 10);
       log(`🧛 Mana Drain: ${attPlayer.name} steals ${stolen}✦ from ${defPlayer.name} (stalemate)`);
+      fx('att', 'Mana Drain', `Stole ${stolen}✦ from ${defPlayer.name}`, `+${stolen}✦`, 'good');
+      fx('def', 'Mana Drain', `${attPlayer.name}\'s Succubus stole ${stolen}✦`, `−${stolen}✦`, 'bad');
     }
-    // Arcane Arbiter — Chaos Flux on stalemate: defender-only, scrambles attacker's tile
-    if (defM.id === 'arcane_arbiter') _applyChaosFlux(attPlayer);
+  } else {
+    return;
   }
+
+  // Arcane Arbiter — Chaos Flux: defender-only, fires after ANY outcome against it
+  // (scrambles one attacker-owned tile). Always the final effect.
+  if (defM.id === 'arcane_arbiter') _applyChaosFlux(attPlayer);
 }
+
 
 // Arcane Arbiter — Chaos Flux: scramble one random tile owned by the ATTACKER
 // Fires only when the Arbiter is the DEFENDER (stationed on a tile being attacked)
@@ -3282,8 +3205,10 @@ function _applyChaosFlux(attackingPlayer) {
   const otherTypes = TYPES.filter(t => t !== target.element);
   const newEl = otherTypes[Math.floor(Math.random() * otherTypes.length)];
   const oldEl = target.element;
-  target.element = newEl;
+  _convertTile(target, newEl, 'Chaos Flux');
   target.label = newEl;
+  fx('def', 'Chaos Flux', `Scrambled ${attackingPlayer.name}\'s tile ${target.pos}: ${oldEl} → ${newEl}`, 'scramble', 'good');
+  fx('att', 'Chaos Flux', `Your tile ${target.pos} changed ${oldEl} → ${newEl}`, `→ ${newEl}`, 'bad');
   log(`🌀 Chaos Flux! ${attackingPlayer.name}'s tile ${target.pos} scrambled: ${oldEl} → ${newEl}`);
 }
 
@@ -3333,7 +3258,8 @@ function wsHandshake(socket, req) {
 
 function wsSend(socket, data) {
   if (socket.destroyed) return;
-  const payload = Buffer.from(JSON.stringify(data));
+  // v1.0.90: accepts a pre-serialized JSON string (broadcast builds shared state once)
+  const payload = Buffer.from(typeof data === 'string' ? data : JSON.stringify(data));
   const len = payload.length;
   let header;
   if (len < 126) {
@@ -3547,13 +3473,28 @@ function sendError(socket, msg) {
 // Note: Railway's ephemeral filesystem persists within a running container but
 // is wiped on redeploy — this protects against crashes/restarts, not redeploys.
 
+// v1.0.90: debounced — broadcasts mark state dirty; disk write happens at most
+// once per SAVE_DEBOUNCE_MS instead of a synchronous full write on every broadcast.
+const SAVE_DEBOUNCE_MS = 2000;
+let _saveTimer = null;
 function saveState() {
+  if (_saveTimer) return;
+  _saveTimer = setTimeout(() => { _saveTimer = null; saveStateNow(); }, SAVE_DEBOUNCE_MS);
+}
+
+function saveStateNow() {
+  if (_saveTimer) { clearTimeout(_saveTimer); _saveTimer = null; }
   try {
     const data = JSON.stringify([...rooms.entries()]);
     fs.writeFileSync(STATE_FILE, data, 'utf8');
   } catch (e) {
     console.error('[persist] save failed:', e.message);
   }
+}
+
+// Flush pending save on shutdown (Ctrl+C locally, SIGTERM on Railway redeploy/restart)
+for (const sig of ['SIGINT', 'SIGTERM']) {
+  process.on(sig, () => { saveStateNow(); process.exit(0); });
 }
 
 function loadState() {
@@ -3578,29 +3519,20 @@ function broadcast(extra = {}) {
   if (!G) return;
   G.lastActivityAt = Date.now();
   const roomCode = G.roomCode;
-  const gs = publicState();
+  // v1.0.90: serialize shared game state ONCE per broadcast; per-player messages
+  // only add their own myIdx + hand on top.
+  const head = JSON.stringify({ type:'state', ...extra }).slice(0, -1);
+  const sharedJson = head + ',"game":' + JSON.stringify(publicState());
+  const spectatorMsg = sharedJson + '}';
   for (const [socket, conn] of clients) {
     if (socket.destroyed) continue;
     if (conn.roomCode !== roomCode) continue;
-    const msg = { type:'state', game: gs, ...extra };
-    if (conn.playerIdx !== null && conn.playerIdx !== undefined) {
-      const p = G && G.players[conn.playerIdx];
-      if (p) {
-        msg.myIdx = conn.playerIdx;
-        msg.hand = p.hand.map(m => ({
-          iid:m.iid, id:m.id, name:m.name, type:m.type, type2:m.type2||null,
-          hp:m.hp, maxHp:m.maxHp, atk:m.atk, def:m.def,
-          cost:m.cost, gen:m.gen, isSpecial:m.isSpecial, charm:m.charm,
-          special:m.special||null, specialDesc:m.specialDesc||null,
-          condition:m.condition||null, conditionDesc:m.conditionDesc||null,
-          rarity:m.rarity||null, arch:m.arch||null, supportDesc:m.supportDesc||null,
-          canUse: canUseSpecial(conn.playerIdx, m),
-        }));
-      }
-    }
-    wsSend(socket, msg);
+    const p = (conn.playerIdx !== null && conn.playerIdx !== undefined) ? G.players[conn.playerIdx] : null;
+    if (!p) { wsSend(socket, spectatorMsg); continue; }
+    const hand = p.hand.map(m => serializeHandMonster(m, conn.playerIdx));
+    wsSend(socket, sharedJson + ',"myIdx":' + conn.playerIdx + ',"hand":' + JSON.stringify(hand) + '}');
   }
-  // Persist state after every broadcast
+  // Persist (debounced)
   saveState();
 }
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.5.01</title>
+<title>Summoners Gambit — Player v0.5.05</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -504,6 +504,19 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .wc-target-row { background: var(--surface); border-radius: 8px; padding: 12px 14px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
 .wc-target-row:active { opacity: 0.7; }
 .wc-picked { opacity: 0.85; }
+
+/* v0.5.05: battle effects list on result screen (same look as board callouts) */
+.bfx-list{display:flex;flex-direction:column;gap:8px;width:100%;max-width:340px;text-align:left;}
+.bfx-list-title{font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;color:var(--gold-glow);text-transform:uppercase;}
+.bfx{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;}
+.bfx.good{background:#15281a;border:1px solid #3a7a48;}
+.bfx.bad{background:#2a1618;border:1px solid #7a3434;}
+.bfx-main{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
+.bfx-name{font-size:14px;font-weight:700;}
+.bfx.good .bfx-name,.bfx.good .bfx-val{color:#8fe0a2;}
+.bfx.bad .bfx-name,.bfx.bad .bfx-val{color:#f0a0a0;}
+.bfx-text{font-size:12px;color:#b2b6ca;line-height:1.3;}
+.bfx-val{font-size:13px;font-weight:700;white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -616,22 +629,11 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
   </div>
 </div>
 
+<script src="/common.js"></script>
 <script>
 // ─── CONSTANTS ─────────────────────────────────────────────────────────────
-const TYPE_COLOR = { Light:'#e0c07a', Dark:'#6b6b7a', Arcane:'#7f92e8', Undead:'#5fb3a4', Beast:'#d98a5a', Nature:'#3aaa5c', Support:'#9aabbc' };
-const TYPE_STRONG = {Light:'Undead',Dark:'Beast',Arcane:'Dark',Undead:'Arcane',Beast:'Nature',Nature:'Light'};
 const TYPE_WEAK   = {Light:'Nature',Dark:'Arcane',Arcane:'Undead',Undead:'Light',Beast:'Dark',Nature:'Beast'};
 const TYPE_ICON   = {Light:'✦',Dark:'◉',Arcane:'✶',Undead:'☠',Beast:'⚔',Nature:'❧'};
-const SPECIAL_ICONS = {start:'✦',temple:'❖',chest:'❖',heal:'❖',healing:'❖',mana:'❖','mana well':'❖',well:'❖'};
-const TILE_IMG = {
-  Light:'/img/tiles/tile-light.png', Dark:'/img/tiles/tile-dark.png',
-  Arcane:'/img/tiles/tile-arcane.png', Undead:'/img/tiles/tile-undead.png',
-  Beast:'/img/tiles/tile-beast.png', Nature:'/img/tiles/tile-nature.png',
-  chest:'/img/tiles/tile-chest.png', heal:'/img/tiles/tile-heal.png',
-  healing:'/img/tiles/tile-heal.png', temple:'/img/tiles/tile-temple.png',
-  start:'/img/tiles/tile-well.png', well:'/img/tiles/tile-well.png',
-  mana:'/img/tiles/tile-well.png', 'mana well':'/img/tiles/tile-well.png'
-};
 const PLAYER_COLORS = ['#e05252','#5ca8e0','#5dc97d','#e0b050','#c07fd8','#60cdc0'];
 
 // ─── SFX (Web Audio API — procedural, no external files) ────────────────────
@@ -772,8 +774,13 @@ let pendingGameState = null;
 let pendingRollValue = null;
 let rollShowCallback = null;
 let _tallyComplete = false; // gate: player summary waits for board tally_complete signal
-let _tsPlayedFor = null;       // guard: play Player-turn.mp3 once per turn summary (active player only)
-let _setupTurnPlayedFor = null; // guard: play Player-turn.mp3 once per setup turn (active player only)
+// v0.5.03: play a sound once per (slot, key) — replaces per-sound _xxxPlayedFor flags
+const _soundPlayedFor = {};
+function playSoundOnce(slot, key, src) {
+  if (_soundPlayedFor[slot] === key) return;
+  _soundPlayedFor[slot] = key;
+  try { new Audio(src).play().catch(()=>{}); } catch(e) {}
+}
 let _waitCarouselIdx = 0;  // center tile index for regular waiting screen carousel
 let _setupCarouselIdx = 0; // center tile index for setup waiting screen carousel
 
@@ -855,20 +862,12 @@ function send(action, data = {}) {
 }
 
 // ─── SVG ART ───────────────────────────────────────────────────────────────
-let _uid = 0;
-function uid() { return 'u' + (++_uid); }
 
-function svgLight(c,w,h){const id=uid(),cx=w/2,cy=h*.43;const rays=Array.from({length:8},(_,i)=>{const a=i*45*Math.PI/180,sp=.055,L=w*1.5;return`<polygon points="${cx},${cy} ${cx+Math.cos(a-sp)*L},${cy+Math.sin(a-sp)*L} ${cx+Math.cos(a+sp)*L},${cy+Math.sin(a+sp)*L}" fill="${c}" opacity=".065"/>`;}).join('');return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="43%" r="80%"><stop offset="0%" stop-color="#221c4a"/><stop offset="100%" stop-color="#0c0a1e"/></radialGradient><radialGradient id="g${id}" cx="50%" cy="43%" r="44%"><stop offset="0%" stop-color="${c}" stop-opacity=".5"/><stop offset="100%" stop-color="${c}" stop-opacity="0"/></radialGradient><filter id="f${id}"><feGaussianBlur stdDeviation="2.5"/></filter></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/>${rays}<ellipse cx="${cx}" cy="${cy}" rx="${w*.38}" ry="${h*.3}" fill="url(#g${id})"/><circle cx="${cx}" cy="${cy}" r="${w*.23}" fill="none" stroke="${c}" stroke-width=".8" opacity=".3"/><circle cx="${cx}" cy="${cy}" r="${w*.12}" fill="none" stroke="${c}" stroke-width="1.2" opacity=".5"/><g filter="url(#f${id})" fill="${c}" opacity=".55"><ellipse cx="${cx}" cy="${cy-h*.16}" rx="5.5" ry="6"/><rect x="${cx-6}" y="${cy-h*.09}" width="12" height="${h*.32}" rx="2"/><polygon points="${cx-6},${cy-h*.05} ${cx-12},${cy+h*.2} ${cx-8},${cy+h*.2}"/><polygon points="${cx+6},${cy-h*.05} ${cx+12},${cy+h*.2} ${cx+8},${cy+h*.2}"/></g><g fill="${c}" opacity=".8"><ellipse cx="${cx}" cy="${cy-h*.16}" rx="4" ry="4.5"/><rect x="${cx-5}" y="${cy-h*.09}" width="10" height="${h*.32}" rx="1.5"/><rect x="${cx-8}" y="${cy-h*.02}" width="16" height="3.5" rx="1" opacity=".85"/><polygon points="${cx-5},${cy-h*.05} ${cx-10},${cy+h*.2} ${cx-7},${cy+h*.2}"/><polygon points="${cx+5},${cy-h*.05} ${cx+10},${cy+h*.2} ${cx+7},${cy+h*.2}"/></g></svg>`;}
 
-function svgDark(c,w,h){const id=uid(),cx=w/2,cy=h*.45;const tendrils=Array.from({length:6},(_,i)=>{const a=i*60*Math.PI/180,L=w*(.5+i*.06);const sx=cx+Math.cos(a)*7,sy=cy+Math.sin(a)*7;const ex=cx+Math.cos(a)*L,ey=cy+Math.sin(a)*L;const mx=(sx+ex)/2+Math.cos(a+Math.PI/2)*9,my=(sy+ey)/2+Math.sin(a+Math.PI/2)*9;return`<path d="M${sx},${sy} Q${mx},${my} ${ex},${ey}" stroke="${c}" stroke-width="${1.3-i*.08}" fill="none" opacity="${.55-i*.06}"/>`;}).join('');return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="40%" cy="60%" r="80%"><stop offset="0%" stop-color="#1e0a2e"/><stop offset="100%" stop-color="#07060e"/></radialGradient><radialGradient id="v${id}" cx="50%" cy="48%" r="38%"><stop offset="0%" stop-color="#080510" stop-opacity=".92"/><stop offset="100%" stop-color="${c}" stop-opacity=".14"/></radialGradient><filter id="f${id}"><feGaussianBlur stdDeviation="2"/></filter></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><ellipse cx="${cx}" cy="${cy}" rx="${w*.4}" ry="${h*.38}" fill="url(#v${id})"/>${tendrils}<g fill="${c}" opacity=".6" filter="url(#f${id})"><ellipse cx="${cx}" cy="${cy-h*.16}" rx="5" ry="5.5"/><path d="M${cx-5},${cy-h*.09} Q${cx-16},${cy-h*.04} ${cx-18},${cy+h*.12} Q${cx-10},${cy+h*.07} ${cx-4},${cy+h*.2} L${cx+4},${cy+h*.2} Q${cx+10},${cy+h*.07} ${cx+18},${cy+h*.12} Q${cx+16},${cy-h*.04} ${cx+5},${cy-h*.09} Z"/><path d="M${cx-5},${cy-h*.09} Q${cx-20},${cy-h*.18} ${cx-22},${cy} Q${cx-14},${cy-h*.07} ${cx-5},${cy+h*.02}" opacity=".5"/><path d="M${cx+5},${cy-h*.09} Q${cx+20},${cy-h*.18} ${cx+22},${cy} Q${cx+14},${cy-h*.07} ${cx+5},${cy+h*.02}" opacity=".5"/></g><g fill="${c}" opacity=".85"><ellipse cx="${cx}" cy="${cy-h*.16}" rx="3.5" ry="4"/><path d="M${cx-4},${cy-h*.09} Q${cx-14},${cy-h*.04} ${cx-15},${cy+h*.1} Q${cx-9},${cy+h*.06} ${cx-3},${cy+h*.18} L${cx+3},${cy+h*.18} Q${cx+9},${cy+h*.06} ${cx+15},${cy+h*.1} Q${cx+14},${cy-h*.04} ${cx+4},${cy-h*.09} Z" opacity=".9"/></g></svg>`;}
 
-function svgArcane(c,w,h){const id=uid(),cx=w/2,cy=h*.45;const r1=w*.34,r2=w*.21;const hex=Array.from({length:6},(_,i)=>{const a=i*60*Math.PI/180-Math.PI/2;return[cx+Math.cos(a)*r1,cy+Math.sin(a)*r1];});const tri=Array.from({length:3},(_,i)=>{const a=i*120*Math.PI/180-Math.PI/2;return[cx+Math.cos(a)*r2,cy+Math.sin(a)*r2];});const lines=hex.map((p,i)=>`<line x1="${p[0]}" y1="${p[1]}" x2="${hex[(i+3)%6][0]}" y2="${hex[(i+3)%6][1]}" stroke="${c}" stroke-width=".5" opacity=".38"/>`).join('');const dots=hex.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="2.2" fill="${c}" opacity=".7"/>`).join('');return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="45%" r="78%"><stop offset="0%" stop-color="#111a42"/><stop offset="100%" stop-color="#080b1e"/></radialGradient><filter id="f${id}"><feGaussianBlur stdDeviation="2"/></filter></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><polygon points="${hex.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${c}" stroke-width=".7" opacity=".45"/><polygon points="${tri.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${c}" stroke-width=".9" opacity=".55"/>${lines}${dots}<circle cx="${cx}" cy="${cy}" r="${w*.1}" fill="none" stroke="${c}" stroke-width="1.4" opacity=".45"/><circle cx="${cx}" cy="${cy}" r="3" fill="${c}" opacity=".8"/><g fill="${c}" filter="url(#f${id})" opacity=".5"><ellipse cx="${cx}" cy="${cy-h*.2}" rx="4" ry="4.5"/><path d="M${cx-4},${cy-h*.14} L${cx-9},${cy+h*.18} L${cx+9},${cy+h*.18} L${cx+4},${cy-h*.14} Z" opacity=".85"/><line x1="${cx+4}" y1="${cy-h*.07}" x2="${cx+14}" y2="${cy+h*.05}" stroke="${c}" stroke-width="2.5" stroke-linecap="round"/><circle cx="${cx+14}" cy="${cy+h*.05}" r="3"/></g><g fill="${c}" opacity=".82"><ellipse cx="${cx}" cy="${cy-h*.2}" rx="3" ry="3.5"/><path d="M${cx-3.5},${cy-h*.14} L${cx-8},${cy+h*.18} L${cx+8},${cy+h*.18} L${cx+3.5},${cy-h*.14} Z" opacity=".85"/><line x1="${cx+3.5}" y1="${cy-h*.07}" x2="${cx+13}" y2="${cy+h*.05}" stroke="${c}" stroke-width="2" stroke-linecap="round"/><circle cx="${cx+13}" cy="${cy+h*.05}" r="2.5"/></g></svg>`;}
 
-function svgUndead(c,w,h){const id=uid(),cx=w/2,cy=h*.35;return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="70%" r="80%"><stop offset="0%" stop-color="#0b1e1a"/><stop offset="100%" stop-color="#060c0b"/></radialGradient><radialGradient id="m${id}" cx="50%" cy="85%" r="65%"><stop offset="0%" stop-color="${c}" stop-opacity=".22"/><stop offset="100%" stop-color="${c}" stop-opacity="0"/></radialGradient></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><ellipse cx="${cx}" cy="${h*.88}" rx="${w*.65}" ry="${h*.3}" fill="url(#m${id})"/>${Array.from({length:5},(_,i)=>{const x=w*(.1+i*.2),y=h*(.58+Math.sin(i*1.9)*.1),rot=i*38;return`<rect x="${x}" y="${y}" width="${5+i%3*2}" height="2.2" rx="1" fill="${c}" opacity="${.28+i*.07}" transform="rotate(${rot} ${x+3} ${y+1})"/>`;}).join('')}<g fill="${c}" opacity=".78"><ellipse cx="${cx}" cy="${cy}" rx="11.5" ry="12.5"/><rect x="${cx-9}" y="${cy+h*.08}" width="18" height="6.5" rx="1.2"/><rect x="${cx-3}" y="${cy+h*.1}" width="2" height="5" rx=".5" fill="#07100e"/><rect x="${cx+1}" y="${cy+h*.1}" width="2" height="5" rx=".5" fill="#07100e"/><ellipse cx="${cx-4.5}" cy="${cy-.5}" rx="3.8" ry="3.8" fill="#07100e"/><ellipse cx="${cx+4.5}" cy="${cy-.5}" rx="3.8" ry="3.8" fill="#07100e"/><ellipse cx="${cx-4.5}" cy="${cy-.5}" rx="2.2" ry="2.2" fill="${c}" opacity=".92"/><ellipse cx="${cx+4.5}" cy="${cy-.5}" rx="2.2" ry="2.2" fill="${c}" opacity=".92"/><path d="M${cx-8},${cy+h*.14} L${cx-11},${cy+h*.42} L${cx+11},${cy+h*.42} L${cx+8},${cy+h*.14} Z" opacity=".7"/>${Array.from({length:3},(_,i)=>`<path d="M${cx-6.5},${cy+h*(.2+i*.06)} Q${cx},${cy+h*(.22+i*.06)} ${cx+6.5},${cy+h*(.2+i*.06)}" stroke="#07100e" stroke-width="1.2" fill="none" opacity=".55"/>`).join('')}</g></svg>`;}
 
-function svgBeast(c,w,h){const id=uid(),cx=w/2,cy=h*.42;return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="38%" r="80%"><stop offset="0%" stop-color="#2c1205"/><stop offset="100%" stop-color="#0e0705"/></radialGradient><radialGradient id="fi${id}" cx="50%" cy="82%" r="62%"><stop offset="0%" stop-color="${c}" stop-opacity=".42"/><stop offset="100%" stop-color="#c03010" stop-opacity="0"/></radialGradient><filter id="f${id}"><feGaussianBlur stdDeviation="3"/></filter></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><ellipse cx="${cx}" cy="${h*.82}" rx="${w*.58}" ry="${h*.28}" fill="url(#fi${id})"/>${Array.from({length:3},(_,i)=>{const xo=(i-1)*8;return`<line x1="${w*.28+xo}" y1="${h*.08}" x2="${w*.62+xo+5}" y2="${h*.72}" stroke="${c}" stroke-width="${2.8-i*.4}" stroke-linecap="round" opacity="${.32+i*.07}"/>`;}).join('')}<g fill="${c}" opacity=".58" filter="url(#f${id})"><ellipse cx="${cx-.06*w}" cy="${cy-.06*h}" rx="15" ry="11"/><ellipse cx="${cx-.16*w}" cy="${cy-.18*h}" rx="6" ry="8"/><polygon points="${cx-.22*w},${cy-.26*h} ${cx-.3*w},${cy-.38*h} ${cx-.24*w},${cy-.24*h}"/><ellipse cx="${cx}" cy="${cy+.1*h}" rx="19" ry="12.5"/></g><g fill="${c}" opacity=".88"><ellipse cx="${cx-.06*w}" cy="${cy-.06*h}" rx="13" ry="9.5"/><ellipse cx="${cx-.16*w}" cy="${cy-.18*h}" rx="5" ry="7"/><polygon points="${cx-.22*w},${cy-.26*h} ${cx-.3*w},${cy-.38*h} ${cx-.24*w},${cy-.24*h}"/></g></svg>`;}
 
-function svgNature(c,w,h){const id=uid(),cx=w/2;const branches=[[cx,h*.52,cx-.18*w,h*.38,cx-.28*w,h*.28],[cx,h*.5,cx+.18*w,h*.36,cx+.28*w,h*.26],[cx,h*.56,cx-.3*w,h*.5,cx-.36*w,h*.5],[cx,h*.56,cx+.3*w,h*.5,cx+.36*w,h*.5]];const leaves=[[cx-.28*w,h*.28],[cx+.28*w,h*.26],[cx-.36*w,h*.5],[cx+.36*w,h*.5],[cx-.18*w,h*.26],[cx+.18*w,h*.24]];return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="b${id}" cx="50%" cy="45%" r="80%"><stop offset="0%" stop-color="#0c1f0b"/><stop offset="100%" stop-color="#060e06"/></radialGradient><radialGradient id="ca${id}" cx="50%" cy="28%" r="55%"><stop offset="0%" stop-color="${c}" stop-opacity=".18"/><stop offset="100%" stop-color="${c}" stop-opacity="0"/></radialGradient></defs><rect width="${w}" height="${h}" fill="url(#b${id})"/><ellipse cx="${cx}" cy="${h*.3}" rx="${w*.55}" ry="${h*.32}" fill="url(#ca${id})"/>${Array.from({length:4},(_,i)=>{const xo=(i-1.5)*w*.1;return`<path d="M${cx},${h*.68} Q${cx+xo},${h*.8} ${cx+xo*1.5},${h}" stroke="${c}" stroke-width="${2-i*.15}" fill="none" opacity="${.48-i*.05}"/>`;}).join('')}<rect x="${cx-4}" y="${h*.45}" width="8" height="${h*.27}" rx="2.5" fill="${c}" opacity=".7"/>${branches.map(([x1,y1,mx,my,x2,y2])=>`<path d="M${x1},${y1} Q${mx},${my} ${x2},${y2}" stroke="${c}" stroke-width="2.5" fill="none" opacity=".62"/>`).join('')}${leaves.map(([lx,ly],i)=>{const ang=Math.atan2(ly-h*.55,lx-cx)*180/Math.PI+90;return`<ellipse cx="${lx}" cy="${ly}" rx="6.5" ry="4.2" fill="${c}" opacity=".68" transform="rotate(${ang} ${lx} ${ly})"/>`;}).join('')}</svg>`;}
 
 function artSVG(type, w, h) {
   const c = TYPE_COLOR[type] || '#9184d9';
@@ -876,10 +875,6 @@ function artSVG(type, w, h) {
   return (fns[type] || svgLight)(c, w, h);
 }
 
-function summonImg(id, suffix='') {
-  const png = `/img/monsters/monster-${id}${suffix}.png`;
-  return `<img src="/img/monsters/monster-${id}${suffix}.gif" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.src='${png}';this.onerror=function(){this.style.display='none'}" alt="">`;
-}
 
 // ─── CARD RENDERER ─────────────────────────────────────────────────────────
 function renderCard(m, {size='full', selected=false, showCost=true, dim=false, onclick='', typeAdvantage=false}={}) {
@@ -1141,7 +1136,7 @@ const MONSTER_LORE = {
   'Red Dragon':     { role:'Ascendant · Temple Only',lore:'A dragon that has claimed a territory burns that claim into the land itself. Neighboring tile owners feel the heat every time someone new tries to stake a claim — the Red Dragon\'s intimidating presence costs them Mana even before the battle starts.', ability:'Intimidate — at the start of each affected player\'s turn, they pay 5✦ per stationed summon adjacent to the Red Dragon.' },
 
   // ── NATURE ──
-  'Thornling':      { role:'Assailant',lore:'A creature made of compressed briar and thorns, launched at problems. The Thornling explodes with violent speed from a standing position, impaling anything in range before the target has time to react. Its fragility is the cost of being mostly made of spikes.', ability:'Thorn Burst — on death, the attacker loses 5 HP and the tile converts to Nature element.' },
+  'Thornling':      { role:'Assailant',lore:'A creature made of compressed briar and thorns, launched at problems. The Thornling explodes with violent speed from a standing position, impaling anything in range before the target has time to react. Its fragility is the cost of being mostly made of spikes.', ability:'Thorn Burst — while stationed on a tile: if she is destroyed, the attacker loses 8 HP and the tile converts to Nature element. Does not trigger when she attacks.' },
   'Ancient Oak':    { role:'Guardian',lore:'Older than the kingdom it now defends, the Ancient Oak moves slowly and doesn\'t need to move quickly. Its roots stabilize in every tile it stands on, making it extraordinarily difficult to dislodge. It has simply outlasted everything that has ever challenged it.', ability:'Overgrowth — every 3 turns stationed without being attacked, permanently gains +3 ATK and +3 DEF (resets on attack).' },
   'Grove Warden':   { role:'Vanguard',lore:'The Grove Warden tends the living battlefield with as much care as it fights on it. Neither the most aggressive nor the most defensive of the Nature roster, but adaptable — capable of holding tiles or applying pressure depending on what the board demands.', ability:'Nature\'s Bulwark — grants +5 DEF to all friendly Nature-type summons stationed anywhere on the board.' },
   'World Tree':     { role:'Ascendant · Temple Only',lore:'The World Tree\'s roots run under every Nature tile on the board. The more Nature territory your team controls, the faster it grows — feeding Mana back into your reserves with every passing round through the network it maintains beneath the surface.', ability:'Deep Roots — generates +1 bonus Mana Gen for each Nature tile you currently own, and +1 for each Nature-type summon you have stationed.' },
@@ -1506,7 +1501,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.01</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.05</div>
     </div>
 
     <div class="room-code-group">
@@ -1586,10 +1581,6 @@ function setupDesktopLayout(code) {
   rightPane.appendChild(app);
 }
 
-function doStartGame() {
-  send('start_game');
-}
-
 // ─── LOBBY (post-join, waiting for start) ───────────────────────────────────
 function renderLobby() {
   updateStatusBar(false);
@@ -1610,7 +1601,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.01</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.05</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -1629,7 +1620,8 @@ function renderTurnSummary() {
   const ts = G.turnSummary;
   if (!ts) { renderWaiting(); return; }
   // Play Player-turn stinger once when THIS player's summary first renders (active player only)
-  if (_tsPlayedFor !== ts) { _tsPlayedFor = ts; try { new Audio('/audio/Player-turn.mp3').play().catch(()=>{}); } catch(e) {} }
+  const _tsKey = `${G.turnCount}-${G.currentPlayer}`; // v0.5.05: key on turn, not object ref (new object every broadcast)
+  playSoundOnce('turnSummary', _tsKey, '/audio/Player-turn.mp3');
 
   updateStatusBar(true);
   updateHandStrip(false);
@@ -2588,7 +2580,7 @@ function renderSetup() {
   updateHandStrip(true);
   // Play Player-turn stinger once per setup turn (same guard pattern as turn summary)
   const setupTurnKey = `${G.round}-${G.setupRound||1}-${G.setupTurnIdx||0}`;
-  if (_setupTurnPlayedFor !== setupTurnKey) { _setupTurnPlayedFor = setupTurnKey; try { new Audio('/audio/Player-turn.mp3').play().catch(()=>{}); } catch(e) {} }
+  playSoundOnce('setupTurn', setupTurnKey, '/audio/Player-turn.mp3');
   document.getElementById('main-content').classList.remove('no-hand');
   // Safety: clear stale selection if the selected summon is no longer in hand
   if (selectedIid !== null && !myHand.find(m => m.iid === selectedIid)) {
@@ -2876,16 +2868,6 @@ function _stopBattleMusic() {
 }
 
 // ─── Lottie hit animation helpers (battle clash, player view) ────────────────
-function getHitAnim(monster) {
-  if (!monster) return null;
-  // Rare overrides
-  if (monster.id === 'hex_stalker')      return 'Hit_Claw';
-  if (monster.id === 'verdant_sorcerer') return 'Hit_Magic';
-  if (monster.id === 'seraphim')         return 'Hit_Magic';
-  // Element fallback
-  const map = { Beast:'Hit_Claw', Nature:'Hit_Claw', Dark:'Hit_Slash', Undead:'Hit_Slash', Light:'Hit_Magic', Arcane:'Hit_Magic' };
-  return map[monster.type] || null;
-}
 
 function playCardHitAnim(cardEl, animFile) {
   if (!cardEl || !animFile || typeof lottie === 'undefined') return;
@@ -3031,6 +3013,10 @@ function _renderPersonalBattleResult(lb, isAttacker) {
     mutual:    { icon:'💥', headline:'Mutual!',   accent:'#e0b050', glow:'rgba(224,176,80,0.15)',  sub:'Both summons were destroyed.' },
   }[personalOutcome];
 
+  // v0.5.05: effects that happened to/for MY side (my abilities + things done to me)
+  const mySide = isAttacker ? 'att' : 'def';
+  const myFx = (Array.isArray(lb.effects) ? lb.effects : []).filter(e => e.side === mySide);
+  const fxHtml = myFx.length ? `<div class="bfx-list"><div class="bfx-list-title">Abilities triggered</div>${myFx.map(battleFxRow).join('')}</div>` : '';
   const myManaDelta   = isAttacker ? (lb.attManaDelta ?? null) : (lb.defManaDelta ?? null);
   const manaLine = myManaDelta == null ? '' : (() => {
     const sign = myManaDelta >= 0 ? '+' : '';
@@ -3069,6 +3055,7 @@ function _renderPersonalBattleResult(lb, isAttacker) {
             ${theirDmgTaken > 0 ? `<div style="font-size:13px;color:#e05252;font-weight:700">-${theirDmgTaken} HP</div>` : `<div style="font-size:11px;color:var(--text-mute)">No damage</div>`}
           </div>
         </div>
+        ${fxHtml}
         <button class="action-btn primary" style="min-width:180px;margin-top:4px"
           onclick="dismissBattleResult()">Got it</button>
       </div>`;
@@ -3570,15 +3557,6 @@ function renderGameOver() {
     </div>
     <div class="standings-list">${rows}</div>
     <div style="padding:24px 16px 48px;text-align:center;color:var(--muted);font-size:12px">Game over — check the board for final results!</div>`;
-}
-
-// ─── New Game ────────────────────────────────────────────────────────────────
-function doNewGame() {
-  myIdx = null; myHand = []; G = null;
-  try { localStorage.removeItem('sg_session_key'); } catch(e){}
-  mySessionKey = null;
-  if (ws && ws.readyState === WebSocket.OPEN) send('new_game');
-  else location.reload();
 }
 
 // ─── Help overlay ────────────────────────────────────────────────────────────
