@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.5.05</title>
+<title>Summoners Gambit — Player v0.5.13</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -396,7 +396,19 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .summon-card.type-advantage { border-color: #d4a843 !important; box-shadow: 0 0 0 2px #d4a84388, 0 0 18px #d4a84366, 0 0 32px #d4a84333 !important; animation: adv-pulse 2s ease-in-out infinite; }
 .summon-card.type-advantage.selected { box-shadow: 0 0 0 2px white, 0 0 0 4px #d4a843, 0 0 24px #d4a84388 !important; animation: none; }
 @keyframes adv-pulse { 0%,100% { box-shadow: 0 0 0 2px #d4a84388, 0 0 18px #d4a84366, 0 0 32px #d4a84333; } 50% { box-shadow: 0 0 0 2px #d4a843cc, 0 0 26px #d4a84399, 0 0 44px #d4a84355; } }
-.adv-badge { position: absolute; bottom: 30px; left: 4px; z-index: 5; background: rgba(140,95,20,0.92); border: 1px solid #d4a843; border-radius: 4px; padding: 1px 5px; font-size: 9px; font-weight: 700; color: #fff8d0; letter-spacing: .03em; pointer-events: none; line-height: 1.5; }
+.adv-badge { position: absolute; top: 34%; left: 50%; transform: translateX(-50%) rotate(-6deg); z-index: 6; background: linear-gradient(180deg,#f2c94c,#c08a1e); border: 1.5px solid #fff0b0; border-radius: 6px; padding: 3px 9px; font-size: 12px; font-weight: 800; color: #2a1800; letter-spacing: .06em; white-space: nowrap; pointer-events: none; line-height: 1.3; box-shadow: 0 2px 10px rgba(242,201,76,.55); text-shadow: 0 1px 0 rgba(255,255,255,.35); }
+/* v0.5.09: weak matchup — red tint + ribbon */
+.summon-card.type-weak { border-color: #c0392b !important; box-shadow: 0 0 0 2px #c0392b66, 0 0 14px #c0392b44 !important; }
+.summon-card.type-weak::after { content:''; position:absolute; inset:0; border-radius:inherit; background: linear-gradient(180deg, rgba(150,30,30,.38), rgba(90,10,10,.48)); pointer-events:none; z-index:4; }
+.weak-badge { position: absolute; top: 34%; left: 50%; transform: translateX(-50%) rotate(-6deg); z-index: 6; background: linear-gradient(180deg,#d9534f,#8e1f1f); border: 1.5px solid #ffb3b0; border-radius: 6px; padding: 3px 9px; font-size: 12px; font-weight: 800; color: #fff; letter-spacing: .06em; white-space: nowrap; pointer-events: none; line-height: 1.3; box-shadow: 0 2px 10px rgba(217,83,79,.5); }
+.summon-card.mini .adv-badge, .summon-card.mini .weak-badge { font-size: 8px; padding: 1px 4px; }
+/* matchup banner inside the battle detail sheet */
+.mu-banner { display:flex; align-items:center; justify-content:center; gap:10px; margin:0 0 14px; padding:10px 12px; border-radius:12px; font-family:'Cinzel',serif; font-weight:800; letter-spacing:.08em; }
+.mu-banner .mu-big { font-size:20px; white-space:nowrap; }
+.mu-banner .mu-sub { font-family:inherit; font-weight:600; font-size:11px; letter-spacing:.04em; opacity:.9; text-transform:none; }
+.mu-banner.strong { background:linear-gradient(180deg,#f2c94c,#b07a14); color:#2a1800; box-shadow:0 0 22px rgba(242,201,76,.45); animation: adv-pulse 2s ease-in-out infinite; }
+.mu-banner.weak { background:linear-gradient(180deg,#c0392b,#6e1414); color:#fff; box-shadow:0 0 18px rgba(192,57,43,.4); }
+.mu-banner.neutral { background:var(--surface2); color:var(--text-dim); border:1px solid var(--border2); }
 .summon-card.full { width: 130px; height: 186px; }
 .mc-art { position: absolute; inset: 0; width: 100%; height: 100%; }
 .mc-art svg { display: block; width: 100%; height: 100%; }
@@ -441,6 +453,70 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .el-btn.selected { color: #fff; }
 .el-btn:hover:not(.selected) { background: rgba(255,255,255,.05); }
 @keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+/* v0.5.06: shared detail sheet */
+.ds-overlay{position:fixed;inset:0;z-index:9999;background:rgba(8,7,22,.99);display:flex;flex-direction:column;animation:fadeIn .18s ease;}
+.ds-top{display:flex;align-items:center;gap:10px;padding:14px 18px 8px;flex-shrink:0;}
+.ds-title{font-family:'Cinzel',serif;font-size:10px;letter-spacing:.2em;text-transform:uppercase;flex:1;}
+.ds-count{font-size:11px;color:var(--text-mute);font-variant-numeric:tabular-nums;letter-spacing:.08em;}
+.ds-x{background:none;border:none;color:var(--text-mute);font-size:24px;cursor:pointer;line-height:1;padding:4px 6px;}
+.ds-viewport{position:relative;flex:1;min-height:0;overflow:hidden;touch-action:pan-y;}
+.ds-track{display:flex;height:100%;will-change:transform;}
+.ds-slide{flex-shrink:0;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;opacity:.45;transition:opacity .2s;}
+.ds-slide.active{opacity:1;}
+.ds-slide-inner{max-width:360px;margin:0 auto;padding:8px 2px 20px;}
+.ds-arrow{position:absolute;top:38%;width:34px;height:52px;border-radius:10px;border:1px solid var(--border2);background:rgba(20,18,40,.85);color:var(--text);font-size:26px;line-height:1;cursor:pointer;z-index:2;transition:opacity .15s;}
+.ds-arrow-l{left:4px;} .ds-arrow-r{right:4px;}
+.ds-arrow.hidden{opacity:0;pointer-events:none;}
+.ds-dots{display:flex;justify-content:center;gap:7px;padding:8px 0 4px;flex-shrink:0;}
+.ds-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.22);cursor:pointer;transition:all .2s;}
+.ds-dot.on{background:var(--text);width:18px;border-radius:4px;}
+.ds-actions{padding:8px 18px calc(16px + env(safe-area-inset-bottom));flex-shrink:0;display:flex;flex-direction:column;gap:6px;}
+.ds-act-btn{width:100%;min-height:52px;font-size:15px;}
+.ds-act-btn:disabled{opacity:1;filter:grayscale(.7) brightness(.55);cursor:not-allowed;}
+.ds-reason{text-align:center;font-size:12px;color:#e08888;}
+.ds-hint{text-align:center;font-size:11px;color:var(--text-mute);}
+
+/* v0.5.11: waiting board ring */
+.br-follow-row{display:flex;justify-content:center;padding:6px 0 0}
+.br-follow{font:600 11px inherit;font-family:inherit;padding:4px 11px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text-mute);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.br-follow.on{color:#e8c060;border-color:#e8c06066;background:#e8c06014}
+.br-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.br-box{position:relative;width:min(360px,100%);aspect-ratio:1;margin:2px auto 0;touch-action:none;user-select:none;-webkit-user-select:none}
+.br-svg{position:absolute;inset:0;width:100%;height:100%}
+.br-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:132px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.br-card{width:118px;height:150px;border-radius:12px;border:2px solid var(--c);background:linear-gradient(165deg,color-mix(in srgb,var(--c) 45%,#000) 0%,#12121f 80%);position:relative;cursor:pointer;overflow:hidden;box-shadow:0 0 22px color-mix(in srgb,var(--c) 30%,transparent);transition:transform .15s}
+.br-card:active{transform:scale(.97)}
+.br-art{position:absolute;inset:0}
+.br-art img{width:100%;height:100%;object-fit:cover;display:block}
+.br-num{position:absolute;top:5px;left:7px;font:700 12px 'Cinzel',serif;color:#fff;text-shadow:0 1px 4px #000}
+.br-who{position:absolute;top:5px;right:5px;display:flex;flex-direction:column;gap:3px}
+.br-who i{width:14px;height:14px;border-radius:50%;background:#000c;display:block;box-shadow:0 0 0 2px var(--p)}
+.br-el{position:absolute;bottom:0;left:0;right:0;padding:14px 0 6px;text-align:center;font:700 11px 'Cinzel',serif;letter-spacing:.12em;text-transform:uppercase;background:linear-gradient(0deg,#000d,transparent);color:var(--c)}
+.br-cap{font-size:11px;color:var(--text-dim);text-align:center;line-height:1.3;min-height:28px;max-width:150px}
+.br-cap b{color:var(--text);font-weight:600}
+.br-hp{display:block;width:90px;height:3px;border-radius:2px;background:rgba(255,255,255,.1);margin:4px auto 0;overflow:hidden}
+.br-hp i{display:block;height:100%}
+.br-arrow{position:absolute;top:calc(50% - 16px);transform:translateY(-50%);width:34px;height:34px;border-radius:50%;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-size:20px;line-height:1;cursor:pointer;z-index:3;padding:0}
+.br-arrow.l{left:calc(50% - 104px)}.br-arrow.r{right:calc(50% - 104px)}
+.br-hint{text-align:center;font-size:10px;color:var(--text-mute);letter-spacing:.05em;padding:0 16px 4px}
+.setup-compact #main-content{padding-bottom:4px}
+.setup-compact .setup-status-line{margin:6px 16px 2px}
+.setup-compact .br-hint{padding-bottom:0}
+.setup-compact #hand-area{padding-top:2px}
+.setup-compact #hand-label{margin-bottom:0}
+.setup-compact #hand-scroll .scroll-inner{padding:10px 24px 8px}
+.setup-compact #action-bar{padding:4px 16px 8px;align-items:center}
+.setup-compact #action-bar .action-btn.secondary{flex:0 0 auto;padding:9px 18px;font-size:12px}
+.hand-label-cta{color:var(--text) !important;font-size:10px !important;letter-spacing:.14em !important}
+.hand-label-cta b{color:#e8c060}
+.ds-k-battle{background:#8e2f2f !important;border-color:#e05555 !important;color:#fff !important;}
+.ds-k-claim{background:#2c6e45 !important;border-color:#4caf7d !important;color:#fff !important;}
+.ds-tile-sheet{max-width:none;max-height:none;overflow:visible;border-radius:14px;border:1px solid var(--border2);padding-bottom:14px;}
+.lc-tap-hint{text-align:center;font-size:12px;color:var(--text-mute);margin-top:10px;}
+.lc-tap-hint b{color:var(--text);}
+.shop-tap-hint{flex:1;font-size:12px;color:var(--text-mute);align-self:center;}
+.shop-tap-hint b{color:var(--text);}
 
 /* ── Help button ── */
 .help-btn { margin-left:auto; width:30px; height:30px; border-radius:50%; border:1px solid var(--border2); background:rgba(145,132,217,.1); color:var(--accent-pale); font-family:'Cinzel',serif; font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .15s,border-color .15s; }
@@ -756,7 +832,8 @@ let myIdx = null;     // my player index
 let myHand = [];      // my hand from server
 let selectedIid = null; // currently selected card iid
 let tradeIid = null;    // temple sacrifice iid
-let setupTileStr = '';  // typed tile number during setup phase
+let setupTileStr = '';
+let _setupClaimTurnKey = null; // v0.5.12: open on an empty tile once per setup turn  // typed tile number during setup phase
 
 // Join form values (pre-fill code from last session if available)
 let joinCode = (() => { try { return localStorage.getItem('sg_last_code') || ''; } catch(e){ return ''; } })();
@@ -877,7 +954,7 @@ function artSVG(type, w, h) {
 
 
 // ─── CARD RENDERER ─────────────────────────────────────────────────────────
-function renderCard(m, {size='full', selected=false, showCost=true, dim=false, onclick='', typeAdvantage=false}={}) {
+function renderCard(m, {size='full', selected=false, showCost=true, dim=false, onclick='', typeAdvantage=false, typeWeak=false}={}) {
   const isRare    = m.rarity === 'rare';
   const isSupport = m.rarity === 'support';
   const SUPC = '#9aabbc';
@@ -900,7 +977,7 @@ function renderCard(m, {size='full', selected=false, showCost=true, dim=false, o
     borderColor = `${c}88`;
     glowShadow = `box-shadow:0 0 14px ${c}28`;
   }
-  const classes = `summon-card ${size}${selected?' selected':''}${dim?' unaffordable':''}${m.isSpecial?' special-card':''}${isRare?' rare-card':''}${isSupport?' support-card':''}${typeAdvantage?' type-advantage':''}`;
+  const classes = `summon-card ${size}${selected?' selected':''}${dim?' unaffordable':''}${m.isSpecial?' special-card':''}${isRare?' rare-card':''}${isSupport?' support-card':''}${typeAdvantage?' type-advantage':''}${typeWeak?' type-weak':''}`;
   const art = m.id ? summonImg(m.id, size === 'mini' ? '-mini' : '') : artSVG(m.type, size==='mini'?70:130, size==='mini'?100:186);
   const clickAttr = onclick ? ` onclick="${onclick}"` : '';
   // Dual-element type dots (not shown for support)
@@ -930,7 +1007,7 @@ function renderCard(m, {size='full', selected=false, showCost=true, dim=false, o
     ${m.charm ? `<svg class="charm-badge" width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" aria-label="Battle Charm"><circle cx="14" cy="14" r="12" fill="rgba(150,100,30,0.92)" stroke="#d4a843" stroke-width="1.8"/><path d="M15.5 6.5L9.5 15.5h5.5L13 22l6.5-9.5h-5.5z" fill="#fff8d0" stroke="#e8c060" stroke-width="0.6" stroke-linejoin="round"/></svg>` : ''}
     ${elemBadgeLabel ? `<div class="mc-element-badge" style="background:${elemBadgeBg}">${elemBadgeLabel}</div>` : ''}
     ${m.isSpecial && dim && m.conditionDesc ? `<div class="special-lock-overlay"><span class="special-lock-icon">🔒</span><div class="special-lock-text">${m.conditionDesc}</div></div>` : ''}
-    ${typeAdvantage ? `<div class="adv-badge">⚔ 2×</div>` : ''}
+    <!-- v0.5.10: matchup shown by border/tint + sheet banner only (no on-card ribbon) -->
     ${showCost ? `<div class="mc-cost-strip"><span class="mc-cost-val" style="color:${c}">${m.cost}</span><span class="mc-cost-lbl">Mana</span></div>` : ''}
     <div class="mc-art">${art}</div>
     <div class="mc-overlay">
@@ -1091,16 +1168,28 @@ function updateStatusBar(showIt = true) {
   document.getElementById('sb-sigil-svg').innerHTML = sigilShape(myIdx, 15, 15, 6, me.color);
 }
 
-function updateHandStrip(show = true) {
+// v0.5.12: optional mode → { label, tap:'fnName' (called with hand index), opts:(m)=>renderCard opts }
+function updateHandStrip(show = true, mode = null) {
   const ha = document.getElementById('hand-area');
   const hs = document.getElementById('hand-scroll');
+  const lbl = document.getElementById('hand-label');
+  if (lbl) { lbl.innerHTML = mode ? mode.label : 'Your Hand'; lbl.classList.toggle('hand-label-cta', !!mode); }
   if (!show || !myHand.length) { ha.classList.remove('visible'); return; }
   ha.classList.add('visible');
-  hs.innerHTML = `<div class="scroll-inner">${myHand.map(m => {
-    const card = renderCard(m, {size:'mini'});
-    // Wrap in a clickable container for detail view
-    return `<div onclick="showCardDetail(${m.iid})" style="cursor:pointer;position:relative;flex-shrink:0;">${card}</div>`;
+  hs.innerHTML = `<div class="scroll-inner">${myHand.map((m, i) => {
+    const card = renderCard(m, Object.assign({size:'mini'}, mode && mode.opts ? mode.opts(m) : {}));
+    const tap = mode ? `${mode.tap}(${i})` : `showCardDetail(${m.iid})`;
+    return `<div onclick="${tap}" style="cursor:pointer;position:relative;flex-shrink:0;">${card}</div>`;
   }).join('')}</div>`;
+}
+
+// v0.5.12: home-field effect of a tile element on a summon (defender boost/debuff rule)
+function homeField(m, el) {
+  if (!m || !el || m.rarity === 'support' || !m.type) return 'neutral';
+  const types = [m.type, m.type2].filter(Boolean);
+  if (types.includes(el)) return 'boost';
+  if (!m.type2 && TYPE_STRONG[el] === m.type) return 'weak';   // mirrors server tileEffectOnDefender (no debuff for dual-element)
+  return 'neutral';
 }
 
 // ─── MONSTER LORE ───────────────────────────────────────────────────────────
@@ -1178,9 +1267,22 @@ const MONSTER_LORE = {
 };
 
 // ─── CARD DETAIL OVERLAY ────────────────────────────────────────────────────
-function showCardDetail(iid) {
-  const m = myHand.find(x => x.iid === iid);
-  if (!m) return;
+// v0.5.06: SHARED DETAIL SHEET — one swipeable detail view for every card picker.
+// openDetailSheet(items, startIdx, actionFor, opts)
+//   items     : array of monster objects (swipe order)
+//   startIdx  : index of the tapped card (sheet opens on it)
+//   actionFor : (m) => { label, kind:'primary'|'gold', disabled, reason, hint, run } | null (read-only)
+//   opts.title: header label
+// Swipe left/right (stops at the ends), arrows for desktop, dots + "n / N" counter,
+// next card peeks at the edge. Action taps are ignored for 250ms after a swipe settles.
+let _ds = null;
+const DS_SLIDE_GAP = 12, DS_PEEK = 22, DS_SWIPE_MS = 260, DS_TAP_LOCK_MS = 250;
+
+function _dsContextKey() {
+  return G ? `${G.phase}|${G.currentPlayer}|${G.turnCount}` : '';
+}
+
+function _cardDetailBody(m) {
   const isSupport = m.rarity === 'support';
   const SUPC = '#9aabbc';
   const lore = MONSTER_LORE[m.name] || { role: isSupport ? 'Support Card' : (m.archetype || ''), lore: isSupport ? 'A neutral support card with no elemental affiliation. Station it on any tile to activate its passive aura. The effect persists as long as it remains stationed, and stacks with additional copies.' : 'A mysterious creature of unknown origin.', ability: isSupport ? (m.supportDesc || null) : null };
@@ -1189,25 +1291,7 @@ function showCardDetail(iid) {
   const strongType = TYPE_STRONG[m.type];
   const weakType   = TYPE_WEAK[m.type];
 
-  const overlay = document.createElement('div');
-  overlay.id = 'card-detail-overlay';
-  overlay.style.cssText = `
-    position:fixed;inset:0;z-index:9999;
-    background:rgba(6,5,20,.92);
-    display:flex;flex-direction:column;align-items:center;
-    padding:20px 20px 32px;overflow-y:auto;
-    -webkit-overflow-scrolling:touch;
-    animation:fadeIn .18s ease;
-  `;
-  overlay.onclick = (e) => { if (e.target === overlay) closeCardDetail(); };
-
-  overlay.innerHTML = `
-    <div style="width:100%;max-width:360px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:${elColor};">Card Detail</div>
-        <button onclick="closeCardDetail()" style="background:none;border:none;color:var(--text-mute);font-size:22px;cursor:pointer;line-height:1;padding:0 4px;">✕</button>
-      </div>
-
+  return `
       <!-- Large card centered -->
       <div style="display:flex;justify-content:center;margin-bottom:20px;">
         <div style="transform:scale(1.5);transform-origin:top center;margin-bottom:100px;">
@@ -1277,8 +1361,8 @@ function showCardDetail(iid) {
 
         ${lore.ability ? `
         <!-- Special/Rare ability -->
-        <div style="margin-bottom:14px;padding:10px 12px;background:${m.rarity==='rare'?'rgba(145,132,217,.12)':'rgba(169,123,64,.12)'};border:1px solid ${m.rarity==='rare'?'rgba(145,132,217,.3)':'rgba(169,123,64,.3)'};border-radius:10px;">
-          <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:${m.rarity==='rare'?'#c8aaff':'var(--gold-glow)'};font-family:'Cinzel',serif;margin-bottom:5px;">${m.rarity==='rare'?'★ Rare Ability':'✦ Ascendant Ability'}</div>
+        <div style="margin-bottom:14px;padding:10px 12px;background:${m.rarity==='rare'?'rgba(145,132,217,.12)':m.isSpecial?'rgba(169,123,64,.12)':'var(--surface2)'};border:1px solid ${m.rarity==='rare'?'rgba(145,132,217,.3)':m.isSpecial?'rgba(169,123,64,.3)':elColor+'44'};border-radius:10px;">
+          <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:${m.rarity==='rare'?'#c8aaff':m.isSpecial?'var(--gold-glow)':elColor};font-family:'Cinzel',serif;margin-bottom:5px;">${m.rarity==='rare'?'★ Rare Ability':m.isSpecial?'✦ Ascendant Ability':'◆ Ability'}</div>
           <div style="font-size:12px;color:var(--text);line-height:1.5;">${lore.ability}</div>
         </div>` : ''}
 
@@ -1289,16 +1373,195 @@ function showCardDetail(iid) {
         </div>
       </div>
 
-      <button onclick="closeCardDetail()" style="margin-top:20px;width:100%;padding:14px;background:var(--surface);border:1px solid var(--border2);border-radius:10px;color:var(--text-mute);font-size:13px;font-family:'Cinzel',serif;cursor:pointer;letter-spacing:.08em;">Close</button>
-    </div>
   `;
+}
 
+function openDetailSheet(items, startIdx, actionFor, opts = {}) {
+  closeCardDetail();
+  if (!items || !items.length) return;
+  _ds = {
+    items, actionFor: actionFor || null,
+    idx: Math.max(0, Math.min(startIdx || 0, items.length - 1)),
+    title: opts.title || 'Card Detail',
+    renderItem: opts.renderItem || _cardDetailBody,
+    onChange: opts.onChange || null,
+    onClose: opts.onClose || null,
+    colorOf: opts.colorOf || (m => (m.rarity === 'support') ? '#9aabbc' : (TYPE_COLOR[m.type] || 'var(--accent)')),
+    keyFn: opts.keyFn || _dsContextKey,
+    key: (opts.keyFn || _dsContextKey)(),
+    lockUntil: 0,
+  };
+
+  const overlay = document.createElement('div');
+  overlay.id = 'card-detail-overlay';
+  overlay.className = 'ds-overlay';
+  overlay.innerHTML = `
+    <div class="ds-top">
+      <div class="ds-title" id="ds-title">${_ds.title}</div>
+      <div class="ds-count" id="ds-count"></div>
+      <button class="ds-x" onclick="closeCardDetail()" aria-label="Close">✕</button>
+    </div>
+    <div class="ds-viewport" id="ds-viewport">
+      <div class="ds-track" id="ds-track">
+        ${items.map(m => `<div class="ds-slide"><div class="ds-slide-inner">${_ds.renderItem(m)}</div></div>`).join('')}
+      </div>
+      ${items.length > 1 ? `
+      <button class="ds-arrow ds-arrow-l" id="ds-arrow-l" onclick="dsGo(-1)" aria-label="Previous">‹</button>
+      <button class="ds-arrow ds-arrow-r" id="ds-arrow-r" onclick="dsGo(1)" aria-label="Next">›</button>` : ''}
+    </div>
+    ${items.length > 1 && items.length <= 12 ? `<div class="ds-dots" id="ds-dots">${items.map((_, i) => `<span class="ds-dot" onclick="dsGoTo(${i})"></span>`).join('')}</div>` : ''}
+    ${_ds.actionFor ? `<div class="ds-actions" id="ds-actions"></div>` : ''}
+  `;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeCardDetail(); });
   document.body.appendChild(overlay);
+
+  _dsAttachSwipe();
+  window.addEventListener('resize', _dsLayout);
+  document.addEventListener('keydown', _dsKey);
+  _dsLayout(false);
+  _dsUpdateChrome();
+}
+
+function _dsSlideW() {
+  const vp = document.getElementById('ds-viewport');
+  return vp ? vp.clientWidth - DS_PEEK * 2 : 300;
+}
+
+function _dsLayout(animate = true, dragPx = 0) {
+  const track = document.getElementById('ds-track');
+  if (!track || !_ds) return;
+  const w = _dsSlideW();
+  track.querySelectorAll('.ds-slide').forEach(sl => { sl.style.width = w + 'px'; sl.style.marginRight = DS_SLIDE_GAP + 'px'; });
+  const x = DS_PEEK - _ds.idx * (w + DS_SLIDE_GAP) + dragPx;
+  track.style.transition = animate ? `transform ${DS_SWIPE_MS}ms cubic-bezier(.2,.8,.2,1)` : 'none';
+  track.style.transform = `translateX(${x}px)`;
+}
+
+function _dsUpdateChrome() {
+  if (!_ds) return;
+  const n = _ds.items.length, i = _ds.idx, m = _ds.items[i];
+  const cnt = document.getElementById('ds-count');
+  if (cnt) cnt.textContent = n > 1 ? `${i + 1} / ${n}` : '';
+  const title = document.getElementById('ds-title');
+  if (title) title.style.color = _ds.colorOf(m);
+  if (_ds.onChange && _ds._lastChanged !== m) { _ds._lastChanged = m; try { _ds.onChange(m); } catch (e) {} }
+  document.querySelectorAll('#ds-dots .ds-dot').forEach((d, k) => d.classList.toggle('on', k === i));
+  const l = document.getElementById('ds-arrow-l'), r = document.getElementById('ds-arrow-r');
+  if (l) l.classList.toggle('hidden', i === 0);
+  if (r) r.classList.toggle('hidden', i === n - 1);
+  document.querySelectorAll('#ds-track .ds-slide').forEach((sl, k) => sl.classList.toggle('active', k === i));
+
+  const box = document.getElementById('ds-actions');
+  if (box && _ds.actionFor) {
+    const act = _ds.actionFor(m);
+    if (!act) { box.innerHTML = ''; return; }
+    box.innerHTML = `
+      ${act.reason ? `<div class="ds-reason">${act.reason}</div>` : act.hint ? `<div class="ds-hint">${act.hint}</div>` : ''}
+      <button class="action-btn ${act.kind === 'gold' ? 'gold-btn' : 'primary'} ds-act-btn ds-k-${act.kind || 'primary'}"
+        ${act.disabled ? 'disabled' : ''} onclick="_dsAction()">${act.label}</button>`;
+  }
+}
+
+function dsGoTo(i) {
+  if (!_ds) return;
+  const n = Math.max(0, Math.min(i, _ds.items.length - 1));   // stop at ends, no wrap
+  _ds.idx = n;
+  _ds.lockUntil = Date.now() + DS_SWIPE_MS + DS_TAP_LOCK_MS;
+  _dsLayout(true);
+  _dsUpdateChrome();
+}
+function dsGo(dir) { if (_ds) dsGoTo(_ds.idx + dir); }
+
+function _dsKey(e) {
+  if (!_ds) return;
+  if (e.key === 'ArrowLeft') dsGo(-1);
+  else if (e.key === 'ArrowRight') dsGo(1);
+  else if (e.key === 'Escape') closeCardDetail();
+}
+
+function _dsAttachSwipe() {
+  const vp = document.getElementById('ds-viewport');
+  if (!vp) return;
+  let sx = 0, sy = 0, axis = null, dx = 0, t0 = 0, active = false;
+  vp.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+    axis = null; dx = 0; t0 = Date.now(); active = true;
+  }, { passive: true });
+  vp.addEventListener('touchmove', (e) => {
+    if (!active || !_ds) return;
+    const mx = e.touches[0].clientX - sx, my = e.touches[0].clientY - sy;
+    if (!axis) {
+      if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
+      axis = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
+    }
+    if (axis !== 'x') return;
+    e.preventDefault();
+    dx = mx;
+    const atEnd = (_ds.idx === 0 && dx > 0) || (_ds.idx === _ds.items.length - 1 && dx < 0);
+    _dsLayout(false, atEnd ? dx * 0.3 : dx);   // rubber-band at the ends
+    _ds.lockUntil = Date.now() + 10000;        // block taps mid-drag
+  }, { passive: false });
+  const end = () => {
+    if (!active || !_ds) return;
+    active = false;
+    if (axis !== 'x') return;
+    const fast = Math.abs(dx) > 25 && (Date.now() - t0) < 250;
+    if (Math.abs(dx) > _dsSlideW() * 0.22 || fast) dsGoTo(_ds.idx + (dx < 0 ? 1 : -1));
+    else dsGoTo(_ds.idx);
+  };
+  vp.addEventListener('touchend', end);
+  vp.addEventListener('touchcancel', end);
+}
+
+function _dsAction() {
+  if (!_ds || !_ds.actionFor) return;
+  if (Date.now() < _ds.lockUntil) return;     // accidental tap right after a swipe
+  const m = _ds.items[_ds.idx];
+  const act = _ds.actionFor(m);
+  if (!act || act.disabled) return;
+  _ds.onClose = null;          // acted — not a dismissal
+  closeCardDetail();
+  act.run(m);
+}
+
+// Hand strip tap. During my shop phase it opens in Sell mode; otherwise read-only browse.
+function showCardDetail(iid) {
+  const i = myHand.findIndex(x => x.iid === iid);
+  if (i < 0) return;
+  if (G && G.phase === 'shop' && G.currentPlayer === myIdx) { openShopDetail('sell', i); return; }
+  openDetailSheet(myHand, i, null, { title: 'Your Hand' });
 }
 
 function closeCardDetail() {
   const el = document.getElementById('card-detail-overlay');
   if (el) el.remove();
+  if (_ds && _ds.onClose) { const f = _ds.onClose; _ds.onClose = null; try { f(); } catch (e) {} }
+  window.removeEventListener('resize', _dsLayout);
+  document.removeEventListener('keydown', _dsKey);
+  _ds = null;
+}
+
+// ─── SHOP DETAIL CONTEXTS (v0.5.06) ─────────────────────────────────────────
+function _sellValue(m) { return Math.round(m.cost * (m.hp / m.maxHp)); }
+
+function _shopBuyAction(m) {
+  const me = G.players[myIdx];
+  const label = `Buy · ${m.cost} ✦`;
+  if (myHand.length >= 5) return { label, kind:'primary', disabled:true, reason:'Hand full (5/5) — sell a summon first' };
+  if (me.mana < m.cost)  return { label, kind:'primary', disabled:true, reason:`Need ${m.cost - me.mana} more ✦ (you have ${me.mana})` };
+  return { label, kind:'primary', run: (mm) => { selectedIid = mm.iid; doBuy(); } };
+}
+
+function _shopSellAction(m) {
+  const sv = _sellValue(m);
+  const hint = m.hp < m.maxHp ? `Value scales with HP (${m.hp}/${m.maxHp})` : '';
+  return { label: `Sell · +${sv} ✦`, kind:'gold', hint, run: (mm) => { selectedIid = mm.iid; doSell(); } };
+}
+
+function openShopDetail(mode, idx) {
+  if (mode === 'sell') openDetailSheet(myHand, idx, _shopSellAction, { title: 'Selling from Hand' });
+  else openDetailSheet(G.shopOffers, idx, _shopBuyAction, { title: 'Shop' });
 }
 
 // ─── SCROLL NAVIGATION HELPERS ──────────────────────────────────────────────
@@ -1342,6 +1605,13 @@ function render() {
   if (!me) { renderJoin(); return; }
 
   const isMyTurn = G.currentPlayer === myIdx;
+
+  document.body.classList.remove('setup-compact');   // v0.5.13: only renderSetup turns this on
+  // v0.5.11: each new waiting stretch starts in follow mode
+  if (isMyTurn) _ringFollow = true;
+
+  // v0.5.06: shared detail sheet closes itself if the phase/turn moved on underneath it
+  if (_ds && _ds.key !== _ds.keyFn()) closeCardDetail();
 
   // Reset setup instruction flag and panel when a new game returns to lobby
   if (G.phase === 'lobby') { _setupClaimSeen = false; _setupPanelIdx = 0; }
@@ -1501,7 +1771,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.05</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.13</div>
     </div>
 
     <div class="room-code-group">
@@ -1601,7 +1871,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.05</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.13</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -1862,6 +2132,46 @@ function buildTileCarousel(centerIdx, moveFn, tapFn) {
     <div class="wc-tap-hint">Tap any tile for details</div>`;
 }
 
+// v0.5.07: when _tdCapture is set, openTileDetail returns its sheet HTML instead of opening an overlay
+let _tdCapture = null;
+function _tdFinish(overlay) {
+  if (!_tdCapture) return false;
+  const sheet = overlay.querySelector('.tdm-sheet');
+  sheet.querySelectorAll('.tdm-close,.tdm-drag').forEach(el => el.remove());
+  _tdCapture.html = sheet.innerHTML;
+  return true;
+}
+function _tileDetailBody(tilePos) {
+  _tdCapture = {};
+  try { openTileDetail(tilePos); } finally {}
+  const h = _tdCapture.html || '';
+  _tdCapture = null;
+  return `<div class="tdm-sheet ds-tile-sheet">${h}</div>`;
+}
+function _tileColor(tilePos) {
+  const t = G.board[tilePos];
+  if (!t) return 'var(--accent)';
+  if (t.kind !== 'element') return ({start:'#4fc3f7',well:'#4fc3f7',chest:'#e8a838',temple:'#9b8dc8',heal:'#4caf7d',healing:'#4caf7d'})[t.kind] || '#888';
+  return TYPE_COLOR[t.element] || '#888';
+}
+
+// v0.5.10: waiting-screen tile browser — read-only shared sheet over the whole board.
+// Stays open while other players act; closes when it becomes your turn (or the game ends).
+function openBoardDetail(tilePos) {
+  const positions = G.board.map((_, i) => i);
+  openDetailSheet(positions, tilePos, null, {
+    title: 'Board',
+    renderItem: _tileDetailBody,
+    colorOf: _tileColor,
+    keyFn: () => `board|${G && G.currentPlayer === myIdx}|${G && G.phase === 'game_over'}`,
+    onChange: (pos) => {   // keep the ring underneath in sync with what you browsed to
+      if (pos !== tilePos) _ringFollow = false;
+      if (G.phase === 'setup') _setupCarouselIdx = pos; else _waitCarouselIdx = pos;
+    },
+    onClose: () => { if (G && G.currentPlayer !== myIdx) setTimeout(render, 0); },
+  });
+}
+
 function openTileDetail(tilePos) {
   const tile = G.board[tilePos];
   if (!tile) return;
@@ -1967,6 +2277,7 @@ function openTileDetail(tilePos) {
           ${footerHtml}
         </div>
       </div>`;
+    if (_tdFinish(overlay)) return;
     overlay.addEventListener('click', e => { if (e.target === overlay) closeTileDetail(); });
     document.getElementById('app').appendChild(overlay);
     return;
@@ -2069,6 +2380,7 @@ function openTileDetail(tilePos) {
       ${ownerHtml}
       ${summonHtml}
     </div>`;
+  if (_tdFinish(overlay)) return;
   overlay.addEventListener('click', e => { if (e.target === overlay) closeTileDetail(); });
   document.getElementById('app').appendChild(overlay);
 }
@@ -2078,6 +2390,153 @@ function closeTileDetail() {
   if (el) el.remove();
 }
 
+// ─── WAITING BOARD RING (v0.5.11) ───────────────────────────────────────────
+// Whole board as a ring of 28 element-colored tiles around a center tile card.
+// Fill = element (unclaimed = soft fill, no outline) · thick outline = owner color ·
+// dark center dot = summon stationed · diamond = special tile · player sigils sit just
+// outside the ring. Center auto-follows the active player (setup: the newest claim)
+// until the viewer browses; the Follow pill resumes it. Tap center card → board sheet.
+let _ringFollow = true;
+let _ringOwnedSnap = null;      // setup follow: detect the newest claim
+const RING = { VB:360, C:180, R:148, TOK:167 };
+function _ringAng(i, n) { return (i / n) * Math.PI * 2; }               // tile 0 top, clockwise (matches board)
+function _ringPt(i, n, r) { const a = _ringAng(i, n); return [RING.C + r * Math.sin(a), RING.C - r * Math.cos(a)]; }
+
+function _ringFollowTarget(setup) {
+  if (!setup) { const cp = G.players[G.currentPlayer]; return cp ? cp.position : null; }
+  const owned = G.board.map(t => t.ownerId);
+  let target = null;
+  if (_ringOwnedSnap) owned.forEach((o, i) => { if (o != null && o !== _ringOwnedSnap[i]) target = i; });
+  _ringOwnedSnap = owned;
+  return target;
+}
+
+function _isFreeTile(i) { const t = G.board[i]; return t && t.kind === 'element' && t.ownerId == null; }
+function _nextFreeTile(from, dir) {
+  const n = G.board.length;
+  for (let k = 1; k <= n; k++) { const i = ((from + dir * k) % n + n) % n; if (_isFreeTile(i)) return i; }
+  return from;
+}
+function buildBoardRing(selIdx, setup, claimMode) {
+  const n = G.board.length, { C, R, TOK } = RING;
+  const selTile = G.board[selIdx];
+  const selCol = _tileColor(selIdx);
+  let svg = `<circle cx="${C}" cy="${C}" r="${R}" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="22"/>`;
+  const [ax, ay] = _ringPt(selIdx, n, R - 18), [bx, by] = _ringPt(selIdx, n, R - 34);
+  svg += `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="${selCol}" stroke-width="3" stroke-linecap="round"/>`;
+  G.board.forEach((t, i) => {
+    const [x, y] = _ringPt(i, n, R);
+    const c = _tileColor(i);
+    if (i === selIdx) svg += `<circle cx="${x}" cy="${y}" r="15.5" fill="none" stroke="#fff" stroke-width="2"/>`;
+    if (t.kind !== 'element') {
+      svg += `<rect x="${x-9}" y="${y-9}" width="18" height="18" rx="3" transform="rotate(45 ${x} ${y})" fill="${c}" stroke="#0d0e1c" stroke-width="2"/>`;
+    } else if (t.ownerId != null) {
+      const owner = G.players.find(p => p.idx === t.ownerId);
+      svg += `<circle cx="${x}" cy="${y}" r="10.5" fill="${c}" stroke="${owner ? owner.color : '#888'}" stroke-width="3"/>`;
+    } else {
+      svg += `<circle cx="${x}" cy="${y}" r="10.5" fill="${c}" fill-opacity=".55"/>`;
+    }
+    if (t.summon) svg += `<circle cx="${x}" cy="${y}" r="3.4" fill="#0d0e1c"/>`;
+  });
+  // player sigils just outside the ring, fanned when sharing a tile
+  const byPos = {};
+  G.players.filter(p => !p.eliminated && p.position != null).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
+  Object.entries(byPos).forEach(([pos, ps]) => ps.forEach((p, k) => {
+    const a = _ringAng(+pos, n) + (k - (ps.length - 1) / 2) * 0.13;
+    const x = C + TOK * Math.sin(a), y = C - TOK * Math.cos(a);
+    if (p.idx === G.currentPlayer) svg += `<circle cx="${x}" cy="${y}" r="11.5" fill="none" stroke="${p.color}" stroke-opacity=".45" stroke-width="5"/>`;
+    svg += `<circle cx="${x}" cy="${y}" r="8.5" fill="#0d0e1c" stroke="${p.color}" stroke-width="1.5"/>`;
+    svg += `<g transform="translate(${x-6} ${y-6}) scale(.6)">${sigilShape(p.idx, 10, 10, 5, p.color)}</g>`;
+    if (p.idx === myIdx) svg += `<circle cx="${x}" cy="${y}" r="10.5" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1"/>`;
+  }));
+
+  // center card — summon art when stationed, otherwise the tile art
+  const m = selTile.summon;
+  const tileImg = TILE_IMG[selTile.element] || TILE_IMG[selTile.kind] || '';
+  const art = m
+    ? `<img src="/img/monsters/monster-${m.id}.png" alt="${m.name}" onerror="this.style.display='none'">`
+    : (tileImg ? `<img src="${tileImg}" alt="" onerror="this.style.display='none'">` : '');
+  const here = G.players.filter(p => !p.eliminated && p.position === selIdx);
+  const elLabel = selTile.kind !== 'element'
+    ? ({start:'Mana Well',well:'Mana Well',chest:'Chest',temple:'Temple',heal:'Healing',healing:'Healing'})[selTile.kind] || selTile.kind
+    : selTile.element;
+  let cap;
+  if (m) {
+    const owner = G.players.find(p => p.idx === selTile.ownerId);
+    const pct = Math.max(0, Math.min(1, m.hp / m.maxHp));
+    const hc = pct > .6 ? '#4caf7d' : pct > .3 ? '#e8a838' : '#e85555';
+    cap = `<b>${m.name}</b>${owner ? ` · <span style="color:${owner.color}">${owner.name}</span>` : ''}<span class="br-hp"><i style="width:${Math.round(pct*100)}%;background:${hc}"></i></span>`;
+  } else if (selTile.kind !== 'element') cap = `<b>${elLabel}</b><br>Special tile`;
+  else if (selTile.ownerId != null) { const o = G.players.find(p => p.idx === selTile.ownerId); cap = `<b style="color:${o?.color}">${o?.name || '?'}</b><br>${selTile.element} tile`; }
+  else cap = `<b>Unclaimed</b><br>${selTile.element} tile`;
+
+  if (claimMode) {
+    if (_isFreeTile(selIdx)) cap = `<b style="color:#7dd99a">✓ Open tile</b><br>${selTile.element} · pick a summon below`;
+    else if (selTile.kind !== 'element') cap = `<b style="color:#e08888">Can't claim</b><br>${elLabel} is a special tile`;
+    else { const o = G.players.find(p => p.idx === selTile.ownerId); cap = `<b style="color:#e08888">Can't claim</b><br>Owned by <span style="color:${o?.color}">${o?.name || '?'}</span>`; }
+  }
+  const cp = G.players[G.currentPlayer];
+  const followLbl = _ringFollow ? 'Following' : (setup ? 'Follow claims' : `Follow ${cp ? cp.name : ''}`);
+  return `
+    ${claimMode ? '' : `<div class="br-follow-row"><button class="br-follow${_ringFollow ? ' on' : ''}" onclick="ringSetFollow(${!_ringFollow})"><span class="br-dot"></span>${followLbl}</button></div>`}
+    <div class="br-box" id="br-box">
+      <svg class="br-svg" viewBox="0 0 ${RING.VB} ${RING.VB}" aria-label="Board">${svg}</svg>
+      <button class="br-arrow l" onclick="ringStep(-1)" aria-label="Previous tile">‹</button>
+      <button class="br-arrow r" onclick="ringStep(1)" aria-label="Next tile">›</button>
+      <div class="br-center">
+        <div class="br-card" style="--c:${selCol}" onclick="openBoardDetail(${selIdx})" role="button" aria-label="Tile details">
+          <div class="br-art">${art}</div>
+          <div class="br-num">${selIdx}</div>
+          <div class="br-who">${here.map(p => `<i style="--p:${p.color}"></i>`).join('')}</div>
+          <div class="br-el">${elLabel}</div>
+        </div>
+        <div class="br-cap">${cap}</div>
+      </div>
+    </div>
+    <div class="br-hint">${claimMode ? 'Tap the ring to pick an open tile · arrows jump to the next one' : 'Tap the ring to look around · tap the card for details'}</div>`;
+}
+
+function _ringIsSetup() { return G && G.phase === 'setup'; }
+function _ringGetSel() { return _ringIsSetup() ? _setupCarouselIdx : _waitCarouselIdx; }
+function _ringSetSel(i) { const n = G.board.length; i = ((i % n) + n) % n; if (_ringIsSetup()) _setupCarouselIdx = i; else _waitCarouselIdx = i; }
+function _ringClaimMode() { return _ringIsSetup() && G.currentPlayer === myIdx; }
+function _ringRerender() { _ringClaimMode() ? renderSetup() : (_ringIsSetup() ? renderSetupWaiting() : renderWaiting()); }
+function ringStep(dir) {
+  _ringFollow = false;
+  _ringSetSel(_ringClaimMode() ? _nextFreeTile(_ringGetSel(), dir) : _ringGetSel() + dir);
+  _ringRerender();
+}
+function ringSetFollow(on) {
+  _ringFollow = on;
+  if (on && !_ringIsSetup()) { const cp = G.players[G.currentPlayer]; if (cp) _ringSetSel(cp.position); }
+  _ringRerender();
+}
+// Forgiving input: anywhere in the ring band picks the nearest tile by angle; drag scrubs.
+function attachBoardRing() {
+  const box = document.getElementById('br-box');
+  if (!box) return;
+  const n = G.board.length;
+  const idxAt = (e) => {
+    const r = box.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width * RING.VB - RING.C, y = (e.clientY - r.top) / r.height * RING.VB - RING.C;
+    const d = Math.hypot(x, y);
+    if (d < RING.R - 34 || d > RING.R + 34) return null;
+    let a = Math.atan2(x, -y); if (a < 0) a += Math.PI * 2;
+    return Math.round(a / (Math.PI * 2) * n) % n;
+  };
+  let drag = false;
+  const pick = (i) => { if (i == null || i === _ringGetSel()) return; _ringFollow = false; _ringSetSel(i); _ringRerender(); };
+  box.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.br-card,.br-arrow')) return;
+    const i = idxAt(e); if (i == null) return;
+    drag = true; try { box.setPointerCapture(e.pointerId); } catch (_) {}
+    e.preventDefault(); pick(i);
+  });
+  box.addEventListener('pointermove', (e) => { if (drag) pick(idxAt(e)); });
+  box.addEventListener('pointerup', () => { drag = false; });
+  box.addEventListener('pointercancel', () => { drag = false; });
+}
+
 function renderWaiting() {
   const me = G.players[myIdx];
   updateStatusBar(true);
@@ -2085,10 +2544,8 @@ function renderWaiting() {
   document.getElementById('action-bar').classList.remove('visible');
   document.getElementById('main-content').classList.remove('no-hand');
 
-  // Seed carousel at viewer's current position on first render
-  if (_waitCarouselIdx === 0 && me && me.position !== undefined) {
-    _waitCarouselIdx = me.position;
-  }
+  // v0.5.11: ring auto-follows the active player until the viewer browses
+  if (_ringFollow) { const t = _ringFollowTarget(false); if (t != null) _waitCarouselIdx = t; }
 
   const currentP = G.players[G.currentPlayer];
   const chips = G.players.map(p => `
@@ -2109,11 +2566,12 @@ function renderWaiting() {
         <span style="color:${currentP?.color};font-weight:600">${currentP?.name||'?'}</span>
         <span style="color:var(--text-mute)">'s turn</span>
       </div>
-      ${buildTileCarousel(_waitCarouselIdx, 'moveWaitCarousel', 'openTileDetail')}
+      ${buildBoardRing(_waitCarouselIdx, false)}
       <div class="wc-players-strip">${chips}</div>
       ${synergyBannerHTML()}
       <div class="wc-events"><div class="screen-label" style="margin-bottom:6px">Recent Events</div>${events}</div>
     </div>`;
+  attachBoardRing();
 }
 
 function moveWaitCarousel(dir) {
@@ -2125,22 +2583,23 @@ function moveWaitCarousel(dir) {
 function renderShop() {
   const me = G.players[myIdx];
   updateStatusBar(true);
-  updateHandStrip(true);
-  document.getElementById('main-content').classList.remove('no-hand');
+  updateHandStrip(false);   // v0.5.07: Sell row already shows the hand
+  document.getElementById('main-content').classList.add('no-hand');
 
   const canAfford = (m) => me.mana >= m.cost && myHand.length < 5;
 
-  const buyCards = G.shopOffers.map(m => renderCard(m, {
-    size:'full', selected: selectedIid===m.iid, dim: !canAfford(m),
-    onclick: `selectCard(${m.iid})`
+  // v0.5.06: tapping a card opens the shared detail sheet (Buy lives there)
+  const buyCards = G.shopOffers.map((m, i) => renderCard(m, {
+    size:'full', dim: !canAfford(m),
+    onclick: `openShopDetail('buy', ${i})`
   })).join('');
 
   const sellCards = myHand.length === 0
     ? `<div style="padding:14px 0;color:var(--text-mute);font-size:13px">Hand is empty</div>`
-    : myHand.map(m => {
-        const sv = Math.round(m.cost * (m.hp / m.maxHp));
+    : myHand.map((m, i) => {
+        const sv = _sellValue(m);
         return `<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:3px">
-          ${renderCard(m, {size:'full', selected: selectedIid===m.iid, showCost:false, onclick:`selectCard(${m.iid})`})}
+          ${renderCard(m, {size:'full', showCost:false, onclick:`openShopDetail('sell', ${i})`})}
           <div style="font-size:11px;color:var(--gold-glow);font-weight:600">+${sv} ✦</div>
         </div>`;
       }).join('');
@@ -2169,23 +2628,12 @@ function renderShop() {
   attachShopScrollListener('shop-buy-scroll','shop-buy-dot',G.shopOffers.length);
   attachShopScrollListener('shop-sell-scroll','shop-sell-dot',myHand.length);
 
-  const selShop = G.shopOffers.find(m => m.iid === selectedIid);
-  const selHand = myHand.find(m => m.iid === selectedIid);
+  // v0.5.06: no Select/Buy button here — Buy/Sell live in the detail sheet. Skip stays.
+  selectedIid = null;
   const ab = document.getElementById('action-bar');
   ab.classList.add('visible');
-
-  if (selShop) {
-    const ok = canAfford(selShop);
-    ab.innerHTML = `<button class="action-btn secondary" onclick="selectCard(null)">Cancel</button>
-      <button class="action-btn primary"${ok?'':' disabled style="opacity:.4"'} onclick="${ok?'doBuy()':''}">Buy · ${selShop.cost} ✦</button>`;
-  } else if (selHand) {
-    const sv = Math.round(selHand.cost * (selHand.hp / selHand.maxHp));
-    ab.innerHTML = `<button class="action-btn secondary" onclick="selectCard(null)">Cancel</button>
-      <button class="action-btn gold-btn" onclick="doSell()">Sell · +${sv} ✦</button>`;
-  } else {
-    ab.innerHTML = `<button class="action-btn secondary" onclick="send('skip_shop')">Skip Shop</button>
-      <button class="action-btn primary" disabled style="opacity:.4">Select Card</button>`;
-  }
+  ab.innerHTML = `<div class="shop-tap-hint">Tap a card above to <b>buy</b> or <b>sell</b></div>
+    <button class="action-btn secondary" onclick="send('skip_shop')">Skip Shop</button>`;
 }
 
 // ─── ROLL ─────────────────────────────────────────────────────────────────
@@ -2387,7 +2835,7 @@ function renderLandingChoice() {
     const elLabel = tile.element || (tile.kind === 'start' ? 'Well' : tile.kind || '');
 
     return `
-      <div class="lc-opt" style="animation-delay:${i * 80}ms" onclick="doChooseLanding(${pos})">
+      <div class="lc-opt" style="animation-delay:${i * 80}ms" onclick="openLandingDetail(${i})">
         <div class="lc-tile-num">${pos}</div>
         <div class="lc-tile-card" style="border-color:${elColor}88;">
           <div class="lc-tile-card-bg" style="${artStyle}"></div>
@@ -2411,8 +2859,34 @@ function renderLandingChoice() {
     <div class="lc-section">
       <div class="lc-header">Choose Your Destination</div>
       <div class="lc-opts">${optCards}</div>
+      <div class="lc-tap-hint">Tap a tile to see details, then confirm with <b>Land here</b></div>
     </div>
     ${synergyBannerHTML()}`;
+}
+
+// v0.5.07: landing goes through the shared detail sheet — a tap previews, only "Land here" commits
+function _landingAction(pos) {
+  const t = G.board[pos];
+  const names = { start:'Mana Well', well:'Mana Well', chest:'Treasure Chest', temple:'Temple', heal:'Healing Spring', healing:'Healing Spring' };
+  const run = () => doChooseLanding(pos);
+  if (t.kind !== 'element') return { label:`Land here · ${names[t.kind] || t.label || t.kind}`, kind:'primary', run };
+  if (t.ownerId == null)    return { label:'Land here · Claim', kind:'claim', hint:'Empty tile — you can station a summon here', run };
+  if (t.ownerId === myIdx)  return { label:'Land here · Your tile', kind:'primary', hint:'Swap, heal, or change element', run };
+  const owner = G.players.find(p => p.idx === t.ownerId);
+  const m = t.summon;
+  if (!m) return { label:'Land here · Enemy tile', kind:'battle', hint:`Owned by ${owner ? owner.name : 'an opponent'}`, run };
+  const noHand = myHand.length === 0;
+  return { label:'Land here · Battle', kind:'battle',
+    hint: `vs ${m.name} (${m.hp}/${m.maxHp} HP)` + (noHand ? ' — empty hand: 8✦ retreat penalty' : ''), run };
+}
+function openLandingDetail(i) {
+  const pl = G.pendingLanding;
+  if (!pl) return;
+  openDetailSheet(pl.options, i, _landingAction, {
+    title: 'Choose Destination',
+    renderItem: _tileDetailBody,
+    colorOf: _tileColor,
+  });
 }
 
 function doChooseLanding(tilePos) {
@@ -2532,7 +3006,7 @@ function renderSetupInstructions(isMyTurn) {
     `<div class="setup-instr-title">Setup &amp; Game Play</div>
      <div class="setup-instr-body">
        <p>Before the first roll, each player stations up to 3 summons on unclaimed elemental tiles, completely free.</p>
-       <p>Check the board for open tiles, pick a summon, and enter the tile number to claim it.</p>
+       <p>On your turn, tap an open tile on the board ring, then pick a summon from your hand and tap <b>Claim</b>. A gold glow means that summon gets a home boost on the tile; red means weak ground.</p>
        <p>Once setup is done, you'll roll to move each turn. Landing on a free tile lets you claim it. Landing on an enemy tile picks a fight.</p>
      </div>`,
 
@@ -2575,70 +3049,73 @@ function dismissSetupInstructions() {
 }
 
 function renderSetup() {
-  const me = G.players[myIdx];
+  // v0.5.12: ring-based setup — pick an open tile on the ring, then a summon from the hand strip
   updateStatusBar(true);
-  updateHandStrip(true);
-  // Play Player-turn stinger once per setup turn (same guard pattern as turn summary)
   const setupTurnKey = `${G.round}-${G.setupRound||1}-${G.setupTurnIdx||0}`;
   playSoundOnce('setupTurn', setupTurnKey, '/audio/Player-turn.mp3');
+  // open on an empty tile at the start of each setup turn
+  if (_setupClaimTurnKey !== setupTurnKey) {
+    _setupClaimTurnKey = setupTurnKey;
+    if (!_isFreeTile(_setupCarouselIdx)) _setupCarouselIdx = _nextFreeTile(_setupCarouselIdx, 1);
+  }
+  const sel = _setupCarouselIdx;
+  const free = _isFreeTile(sel);
+  const el = G.board[sel] && G.board[sel].element;
+
+  updateHandStrip(true, {
+    label: !myHand.length ? 'Your Hand' : free
+      ? `Pick a summon for <b>Tile ${sel}</b> · <span style="color:${TYPE_COLOR[el]}">${el}</span>`
+      : 'Pick an open tile first',
+    tap: 'openSetupClaimDetail',
+    opts: (m) => {
+      if (!free) return { dim: true };
+      const hf = homeField(m, el);
+      return { typeAdvantage: hf === 'boost', typeWeak: hf === 'weak' };
+    },
+  });
   document.getElementById('main-content').classList.remove('no-hand');
-  // Safety: clear stale selection if the selected summon is no longer in hand
-  if (selectedIid !== null && !myHand.find(m => m.iid === selectedIid)) {
-    selectedIid = null;
-    setupTileStr = '';
-  }
-
-  const pickerCards = myHand.map(m => renderCard(m, {
-    size: 'full', selected: selectedIid === m.iid,
-    onclick: `selectCard(${m.iid})`
-  })).join('');
-
-  const tileNum = parseInt(setupTileStr, 10);
-  const tileValid = !isNaN(tileNum) && tileNum >= 0 && tileNum <= 27;
-  const tile = tileValid ? G.board[tileNum] : null;
-  const tileIsElemental = tile && tile.kind === 'element';
-  const tileIsFree = tileIsElemental && (tile.ownerId === null || tile.ownerId === undefined);
-  const canClaim = selectedIid && tileIsFree;
-
-  let tilePreview = '';
-  if (tileValid && tile) {
-    if (!tileIsElemental) {
-      tilePreview = `<div class="setup-tile-msg error">⚠ Tile ${tileNum} is a special tile — pick an elemental tile (not chest, temple, heal, or start).</div>`;
-    } else if (!tileIsFree) {
-      const owner = G.players.find(p => p.idx === tile.ownerId);
-      tilePreview = `<div class="setup-tile-msg error">⚠ Tile ${tileNum} is already claimed${owner ? ' by ' + owner.name : ''}.</div>`;
-    } else {
-      tilePreview = `<div class="setup-tile-msg ok">✓ Tile ${tileNum} · <span style="color:${TYPE_COLOR[tile.element]||'var(--text)'}">${tile.element}</span></div>`;
-    }
-  }
+  document.body.classList.add('setup-compact');   // v0.5.13: tighter layout so the full ring fits on phones
 
   document.getElementById('main-content').innerHTML = `
-    <div class="setup-status-line">Round ${G.setupRound || 1} of 3${G.setupTotalTurns > 0 ? ` · Turn ${(G.setupTurnIdx||0)+1}/${G.setupTotalTurns}` : ''}</div>
-    <div class="setup-tile-row">
-      <label class="setup-tile-label">Tile number (0–27)</label>
-      <form onsubmit="event.preventDefault();doSetupClaim();" style="margin:0">
-        <input id="setup-tile-input" class="setup-tile-input" type="number" min="0" max="27"
-          inputmode="numeric" placeholder="e.g. 14"
-          value="${setupTileStr}"
-          oninput="setupTileStr=this.value.trim();updateSetupTilePreview();"
-        />
-      </form>
-      <div id="setup-tile-preview">${tilePreview}</div>
-    </div>
-    <div class="picker-label">Choose a summon to station</div>
-    <div class="picker-scroll" id="setup-picker-scroll"><div class="scroll-inner">${myHand.length > 0 ? pickerCards : '<div style="text-align:center;padding:24px 0;color:var(--text-mute);font-size:13px;">No summons in hand — you must pass.</div>'}</div></div>
-    ${myHand.length > 0 ? scrollNavHTML('setup-picker-scroll','setup-dot',myHand.length) : ''}`;
+    <div class="wc-wrap">
+      <div class="setup-status-line">Round ${G.setupRound || 1} of 3${G.setupTotalTurns > 0 ? ` · Turn ${(G.setupTurnIdx||0)+1}/${G.setupTotalTurns}` : ''}</div>
+      <div class="wc-whose" style="padding-bottom:2px"><span style="font-weight:600">Your turn</span><span style="color:var(--text-mute)">&nbsp;— claim a tile for free</span></div>
+      ${buildBoardRing(sel, true, true)}
+      ${!myHand.length ? '<div style="text-align:center;padding:12px 16px;color:var(--text-mute);font-size:13px;">No summons in hand — you must pass.</div>' : ''}
+    </div>`;
+  attachBoardRing();
 
-  if (myHand.length > 0) {
-    attachShopScrollListener('setup-picker-scroll','setup-dot',myHand.length);
-  }
+  selectedIid = null;
+  _pickerBar(free && myHand.length ? 'Tap a summon below to <b>claim</b>' : 'Tap the ring to pick an open tile',
+    `<button class="action-btn secondary" onclick="doSetupPass()">Pass</button>`);
+}
 
-  const ab = document.getElementById('action-bar');
-  ab.classList.add('visible');
-  const setupHint = !canClaim ? `<div class="action-hint">${!selectedIid ? '↑ Pick a summon above first' : !tileValid ? '↑ Enter a tile number (0–27)' : !tileIsElemental ? 'That tile is special — pick an elemental tile' : 'That tile is already claimed'}</div>` : '';
-  ab.innerHTML = `${setupHint}
-    <button class="action-btn secondary" onclick="doSetupPass()">Pass</button>
-    <button class="action-btn primary" onclick="doSetupClaim()" ${canClaim ? '' : 'disabled style="opacity:.4"'}>Claim Free ✦0</button>`;
+function _setupClaimAction(m) {
+  const pos = _setupCarouselIdx;
+  if (!_isFreeTile(pos)) return { label:'Claim', kind:'claim', disabled:true, reason:'Pick an open tile on the board first' };
+  if (m.canUse === false) return { label:`Claim Tile ${pos}`, kind:'claim', disabled:true, reason:`🔒 Locked${m.conditionDesc ? ' — ' + m.conditionDesc : ''}` };
+  return { label:`Claim Tile ${pos} · Free`, kind:'claim', run: (mm) => doSetupClaimTile(pos, mm.iid) };
+}
+function _setupClaimSlide(m) {
+  const el = G.board[_setupCarouselIdx]?.element;
+  const hf = homeField(m, el);
+  const banner = !_isFreeTile(_setupCarouselIdx) ? '' : hf === 'boost'
+    ? `<div class="mu-banner strong"><span class="mu-big">▲ HOME BOOST</span><span class="mu-sub">${el} tile · +15% ATK &amp; DEF defending</span></div>`
+    : hf === 'weak'
+    ? `<div class="mu-banner weak"><span class="mu-big">▼ WEAK GROUND</span><span class="mu-sub">${el} tile · −15% ATK &amp; DEF defending</span></div>`
+    : `<div class="mu-banner neutral"><span class="mu-big" style="font-size:15px">NEUTRAL GROUND</span><span class="mu-sub">${el || ''} tile · no modifier</span></div>`;
+  const body = _cardDetailBody(m).replace(renderCard(m, {size:'full', showCost:true}),
+    renderCard(m, {size:'full', showCost:true, typeAdvantage: hf === 'boost', typeWeak: hf === 'weak'}));
+  return banner + body;
+}
+function openSetupClaimDetail(i) {
+  if (!_isFreeTile(_setupCarouselIdx)) return;   // hand is greyed until an open tile is picked
+  openDetailSheet(myHand, i, _setupClaimAction, { title:`Claim Tile ${_setupCarouselIdx}`, renderItem: _setupClaimSlide });
+}
+function doSetupClaimTile(pos, iid) {
+  SFX.claim && SFX.claim();
+  send('setup_claim', { iid, tilePos: pos });
+  selectedIid = null;
 }
 
 function renderSetupWaiting() {
@@ -2648,6 +3125,8 @@ function renderSetupWaiting() {
   document.getElementById('main-content').classList.remove('no-hand');
   document.getElementById('action-bar').classList.remove('visible');
 
+  // v0.5.11: ring follows the newest claim during setup until the viewer browses
+  { const t = _ringFollowTarget(true); if (_ringFollow && t != null) _setupCarouselIdx = t; }
   const claimed = G.board.filter(t => t.ownerId !== null && t.ownerId !== undefined && t.summon);
   const tileRows = claimed.map(t => {
     const owner = G.players.find(p => p.idx === t.ownerId);
@@ -2668,12 +3147,13 @@ function renderSetupWaiting() {
         <span style="color:${cp?.color||'var(--text)'};font-weight:600">${cp?.name||'?'}</span>
         <span style="color:var(--text-mute)"> is choosing…</span>
       </div>
-      ${buildTileCarousel(_setupCarouselIdx, 'moveSetupCarousel', 'openTileDetail')}
+      ${buildBoardRing(_setupCarouselIdx, true)}
       <div class="wc-claimed-panel">
         <div class="wc-claimed-hdr">Claimed So Far</div>
         ${tileRows}
       </div>
     </div>`;
+  attachBoardRing();
 }
 
 function moveSetupCarousel(dir) {
@@ -2736,14 +3216,14 @@ function doSetupPass() {
 function renderClaim() {
   const me = G.players[myIdx];
   updateStatusBar(true);
-  updateHandStrip(true);
-  document.getElementById('main-content').classList.remove('no-hand');
+  updateHandStrip(false);   // v0.5.09: picker row already shows the hand
+  document.getElementById('main-content').classList.add('no-hand');
 
   const tile = G.board[me.position];
-  const pickerCards = myHand.map(m => renderCard(m, {
-    size:'full', selected: selectedIid===m.iid,
+  const pickerCards = myHand.map((m, i) => renderCard(m, {
+    size:'full',
     dim: me.mana < m.cost || !(m.canUse ?? true),
-    onclick: `selectCard(${m.iid})`
+    onclick: `openClaimDetail(${i})`
   })).join('');
 
   document.getElementById('main-content').innerHTML = `
@@ -2762,17 +3242,85 @@ function renderClaim() {
     </div>`;
 
   attachShopScrollListener('claim-picker-scroll','claim-dot',myHand.length);
+  selectedIid = null;
+  _pickerBar(myHand.length ? 'Tap a summon to view and <b>claim</b>' : 'No summons in hand',
+    `<button class="action-btn secondary" onclick="send('skip_claim')">Skip</button>`);
+}
 
+// ─── PICKER CONTEXTS ON THE SHARED SHEET (v0.5.08) ──────────────────────────
+function _pickerBar(hintHtml, buttonsHtml) {
   const ab = document.getElementById('action-bar');
   ab.classList.add('visible');
-  const selM = myHand.find(m => m.iid === selectedIid);
-  if (selM && me.mana >= selM.cost) {
-    ab.innerHTML = `<button class="action-btn secondary" onclick="send('skip_claim')">Skip</button>
-      <button class="action-btn primary" onclick="doClaim()">Claim · ${selM.cost} ✦</button>`;
-  } else {
-    ab.innerHTML = `<button class="action-btn secondary" onclick="send('skip_claim')">Skip</button>
-      <button class="action-btn primary" disabled style="opacity:.4">${selM?'Not enough Mana':'Pick Summon'}</button>`;
-  }
+  ab.innerHTML = `<div class="shop-tap-hint">${hintHtml}</div>${buttonsHtml}`;
+}
+
+// CLAIM
+function _claimAction(m) {
+  const me = G.players[myIdx];
+  const label = `Claim · ${m.cost} ✦`;
+  if (m.canUse === false) return { label, kind:'claim', disabled:true, reason:`🔒 Locked${m.conditionDesc ? ' — ' + m.conditionDesc : ''}` };
+  if (me.mana < m.cost)  return { label, kind:'claim', disabled:true, reason:`Need ${m.cost - me.mana} more ✦ (you have ${me.mana})` };
+  const t = G.board[me.position];
+  return { label, kind:'claim', hint: t && t.element ? `Station on Tile ${me.position} · ${t.element}` : '', run: (mm) => { selectedIid = mm.iid; doClaim(); } };
+}
+function openClaimDetail(i) { openDetailSheet(myHand, i, _claimAction, { title:'Claim Tile' }); }
+
+// BATTLE — viewing a card previews it on the board; dismissing clears the preview
+function _battleDefender() { const me = G.players[myIdx]; const t = G.board[me.position]; return t ? t.summon : null; }
+function _battleAction(m) {
+  const d = _battleDefender();
+  let hint = '';
+  if (d) { const e = typeEff(m, d.type); hint = `${e.label} vs ${d.name} (${d.hp}/${d.maxHp} HP)`; }
+  return { label:'Attack!', kind:'battle', hint, run: (mm) => { selectedIid = mm.iid; doAttack(); } };
+}
+function _battleSlide(m) {
+  const d = _battleDefender();
+  if (!d) return _cardDetailBody(m);
+  const e = typeEff(m, d.type);
+  const banner = e.cls === 'strong'
+    ? `<div class="mu-banner strong"><span class="mu-big">▲ 2× STRONG</span><span class="mu-sub">vs ${d.name} (${d.type})</span></div>`
+    : e.cls === 'weak'
+    ? `<div class="mu-banner weak"><span class="mu-big">▼ ½× WEAK</span><span class="mu-sub">vs ${d.name} (${d.type})</span></div>`
+    : `<div class="mu-banner neutral"><span class="mu-big" style="font-size:15px">1× NEUTRAL</span><span class="mu-sub">vs ${d.name} (${d.type})</span></div>`;
+  // swap the plain card for one carrying the glow / tint
+  const body = _cardDetailBody(m).replace(renderCard(m, {size:'full', showCost:true}),
+    renderCard(m, {size:'full', showCost:true, typeAdvantage: e.cls==='strong', typeWeak: e.cls==='weak'}));
+  return banner + body;
+}
+function openBattleDetail(i) {
+  openDetailSheet(myHand, i, _battleAction, {
+    title:'Choose Attacker',
+    renderItem: _battleSlide,
+    onChange: (m) => { selectedIid = m.iid; send('preview_attacker', { iid: m.iid }); },
+    onClose:  () => {
+      selectedIid = null;
+      if (G && G.phase === 'resolve:battle' && G.currentPlayer === myIdx) { send('preview_attacker', { iid: null }); setTimeout(render, 0); }
+    },
+  });
+}
+
+// TEMPLE — step 1: choose Ascendant; step 2: choose matching sacrifice
+function _templeOfferAction(o) {
+  const me = G.players[myIdx];
+  const label = `Choose · ${o.cost} ✦`;
+  if (!myHand.some(m => m.type === o.type && !m.isSpecial)) return { label, kind:'primary', disabled:true, reason:`Needs ${/^[AEIOU]/.test(o.type)?'an':'a'} ${o.type} summon in your hand to trade` };
+  if (me.mana < o.cost) return { label, kind:'primary', disabled:true, reason:`Need ${o.cost - me.mana} more ✦ (you have ${me.mana})` };
+  return { label, kind:'primary', hint:'Next: pick which summon to give up', run: (oo) => { selectedIid = oo.iid; tradeIid = null; render(); } };
+}
+function openTempleOfferDetail(i) { openDetailSheet(G.pendingTemple.offers, i, _templeOfferAction, { title:'Temple · Ascendants' }); }
+function _templeSacAction(m) {
+  const me = G.players[myIdx];
+  const sp = G.pendingTemple.offers.find(o => o.iid === selectedIid);
+  if (!sp) return null;
+  const label = `Trade for ${sp.name} · ${sp.cost} ✦`;
+  if (me.mana < sp.cost) return { label, kind:'gold', disabled:true, reason:`Need ${sp.cost - me.mana} more ✦ (you have ${me.mana})` };
+  return { label, kind:'gold', hint:`${m.name} is given up permanently`, run: (mm) => { tradeIid = mm.iid; doTempleTrade(); } };
+}
+function openTempleSacDetail(i) {
+  const sp = G.pendingTemple.offers.find(o => o.iid === selectedIid);
+  if (!sp) return;
+  const list = myHand.filter(m => m.type === sp.type && !m.isSpecial);
+  openDetailSheet(list, i, _templeSacAction, { title:'Give Up a Summon' });
 }
 
 // ─── NOTIFICATION OVERLAY ────────────────────────────────────────────────────
@@ -3083,8 +3631,8 @@ function renderBattle() {
   _tryPlayBattleMusic(); // play battle music for the attacker only
   const me = G.players[myIdx];
   updateStatusBar(true);
-  updateHandStrip(true);
-  document.getElementById('main-content').classList.remove('no-hand');
+  updateHandStrip(false);   // v0.5.09: picker row already shows the hand
+  document.getElementById('main-content').classList.add('no-hand');
 
   const tile = G.board[me.position];
   const defM = tile?.summon;
@@ -3105,11 +3653,12 @@ function renderBattle() {
     return strong1 || strong2;
   }
 
-  const pickerCards = myHand.map(m => renderCard(m, {
-    size:'full', selected: selectedIid===m.iid,
+  const pickerCards = myHand.map((m, i) => renderCard(m, {
+    size:'full',
     dim: false,  // Ascendants always usable in battle; condition only gates tile claiming
-    onclick: `selectCard(${m.iid})`,
-    typeAdvantage: hasTypeAdvantage(m, defM)
+    onclick: `openBattleDetail(${i})`,
+    typeAdvantage: !!defM && typeEff(m, defM.type).cls === 'strong',
+    typeWeak:      !!defM && typeEff(m, defM.type).cls === 'weak',
   })).join('');
 
   document.getElementById('main-content').innerHTML = `
@@ -3123,7 +3672,7 @@ function renderBattle() {
     ${defM ? `<div class="battle-matchup">
       <div class="battle-slot"><div class="battle-slot-label">Defending</div>${renderCard(defM,{size:'full',showCost:false})}</div>
       <div class="vs-badge">VS</div>
-      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div class="battle-slot-label">Your Attacker</div>${selM ? renderCard(selM,{size:'full',showCost:false}) : `<div style="width:130px;height:186px;border-radius:10px;border:2px dashed var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-mute)">Pick below</div>`}</div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div class="battle-slot-label">Your Attacker</div>${selM ? renderCard(selM,{size:'full',showCost:false, typeAdvantage: typeEff(selM, defM.type).cls==='strong', typeWeak: typeEff(selM, defM.type).cls==='weak'}) : `<div style="width:130px;height:186px;border-radius:10px;border:2px dashed var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-mute);text-align:center;padding:8px">Tap a card below</div>`}</div>
     </div>
     ${effBadge}` : ''}
     <div class="picker-label">Choose your attacker</div>
@@ -3132,24 +3681,16 @@ function renderBattle() {
 
   attachShopScrollListener('battle-picker-scroll','battle-dot',myHand.length);
 
-  const ab = document.getElementById('action-bar');
-  ab.classList.add('visible');
-  if (selM) {
-    // Ascendants are always usable in battle — condition only gates tile claiming
-    ab.innerHTML = `<button class="action-btn danger-btn" onclick="doRetreat()">Retreat (−8 ✦)</button>
-      <button class="action-btn primary" onclick="doAttack()">Attack!</button>`;
-  } else {
-    ab.innerHTML = `<button class="action-btn danger-btn" onclick="doRetreat()">Retreat (−8 ✦)</button>
-      <button class="action-btn primary" disabled style="opacity:.4">Pick Summon</button>`;
-  }
+  _pickerBar(myHand.length ? 'Tap a summon to view and <b>attack</b>' : 'No summons in hand',
+    `<button class="action-btn danger-btn" onclick="doRetreat()">Retreat (−8 ✦)</button>`);
 }
 
 // ─── OWN TILE ────────────────────────────────────────────────────────────────
 function renderOwn() {
   const me = G.players[myIdx];
   updateStatusBar(true);
-  updateHandStrip(true);
-  document.getElementById('main-content').classList.remove('no-hand');
+  updateHandStrip(false);   // v0.5.09: swap row already shows the hand
+  document.getElementById('main-content').classList.add('no-hand');
 
   const tile = G.board[me.position];
   const stationed = tile?.summon;
@@ -3158,10 +3699,10 @@ function renderOwn() {
   const canSwap = myHand.length > 0; // Swap is net-zero (stationed returns to hand) — full hand is always valid
   const CHANGE_COST = 18;
 
-  const swapCards = myHand.map(m => renderCard(m, {
-    size:'full', selected: selectedIid===m.iid,
+  const swapCards = myHand.map((m, i) => renderCard(m, {
+    size:'full',
     dim: me.mana < m.cost || !(m.canUse ?? true),
-    onclick: `selectCard(${m.iid})`
+    onclick: `openSwapDetail(${i})`
   })).join('');
 
   const elBtns = ['Light','Dark','Arcane','Undead','Beast','Nature'].map(el =>
@@ -3195,23 +3736,28 @@ function renderOwn() {
         <span class="own-tile-opt-cost" style="color:#e07070">+15 ✦</span>
       </div>
     </div>
-    ${canSwap ? `<div class="picker-label">Swap stationed summon</div><div class="picker-scroll" id="own-swap-scroll"><div class="scroll-inner">${swapCards}</div></div>${scrollNavHTML('own-swap-scroll','own-swap-dot',myHand.length)}` : ''}` : ''}
+    ${canSwap ? `<div class="picker-label">Swap stationed summon <span style="text-transform:none;letter-spacing:0;color:var(--text-mute);font-weight:400">· tap a card</span></div><div class="picker-scroll" id="own-swap-scroll"><div class="scroll-inner">${swapCards}</div></div>${scrollNavHTML('own-swap-scroll','own-swap-dot',myHand.length)}` : ''}` : ''}
     <div style="padding:12px 16px 4px"><div class="picker-label" style="padding:0;margin-bottom:8px">Change tile element (${CHANGE_COST} ✦)</div>
     <div class="element-pick">${elBtns}</div></div>`;
 
   if (canSwap && myHand.length > 1) attachShopScrollListener('own-swap-scroll','own-swap-dot',myHand.length);
 
-  const ab = document.getElementById('action-bar');
-  ab.classList.add('visible');
-  const selM = myHand.find(m => m.iid === selectedIid);
-  if (selM && canSwap && me.mana >= selM.cost) {
-    ab.innerHTML = `<button class="action-btn secondary" onclick="selectCard(null)">Cancel</button>
-      <button class="action-btn primary" onclick="doSwap()">Swap · ${selM.cost} ✦</button>`;
-  } else {
-    ab.innerHTML = `<button class="action-btn secondary" onclick="send('skip_own')">Leave</button>
-      <button class="action-btn primary" disabled style="opacity:.4">${selM?'Not enough Mana':'Select action above'}</button>`;
-  }
+  selectedIid = null;
+  _pickerBar(stationed && canSwap ? 'Heal, sacrifice, change element, or tap a card to <b>swap</b>' : 'Choose an action above',
+    `<button class="action-btn secondary" onclick="send('skip_own')">Leave</button>`);
 }
+
+// v0.5.09: own-tile swap on the shared sheet
+function _swapAction(m) {
+  const me = G.players[myIdx];
+  const t = G.board[me.position];
+  const st = t && t.summon;
+  const label = `Swap in · ${m.cost} ✦`;
+  if (m.canUse === false) return { label, kind:'primary', disabled:true, reason:`🔒 Locked${m.conditionDesc ? ' — ' + m.conditionDesc : ''}` };
+  if (me.mana < m.cost)  return { label, kind:'primary', disabled:true, reason:`Need ${m.cost - me.mana} more ✦ (you have ${me.mana})` };
+  return { label, kind:'primary', hint: st ? `${st.name} returns to your hand (${st.hp}/${st.maxHp} HP)` : '', run: (mm) => { selectedIid = mm.iid; doSwap(); } };
+}
+function openSwapDetail(i) { openDetailSheet(myHand, i, _swapAction, { title:'Swap Summon' }); }
 
 function doSacrificeTile() {
   if (!confirm('Sacrifice this summon for +15✦? The tile will go neutral.')) return;
@@ -3337,19 +3883,19 @@ function renderTemple() {
   const selSpecial = G.pendingTemple.offers.find(o => o.iid === selectedIid);
   const selSacrifice = selSpecial ? myHand.find(m => m.iid === tradeIid) : null;
 
-  const specialCards = G.pendingTemple.offers.map(o => {
+  const specialCards = G.pendingTemple.offers.map((o, oi) => {
     const canTrade = myHand.some(m => m.type === o.type) && me.mana >= o.cost;
     return `<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px">
-      ${renderCard(o, {size:'full', selected: selectedIid===o.iid, dim: !canTrade, onclick:`selectTempleSpecial(${o.iid})`})}
+      ${renderCard(o, {size:'full', selected: selectedIid===o.iid, dim: !canTrade, onclick:`openTempleOfferDetail(${oi})`})}
       <div style="font-size:10px;color:var(--text-mute);font-family:'Cinzel',serif;letter-spacing:.08em">${o.type}</div>
     </div>`;
   }).join('');
 
   const sacrificeable = selSpecial
-    ? myHand.filter(m => m.type === selSpecial.type)
+    ? myHand.filter(m => m.type === selSpecial.type && !m.isSpecial)
     : myHand.filter(m => G.pendingTemple.offers.some(o => o.type === m.type));
-  const sacrificeCards = sacrificeable.map(m =>
-    renderCard(m, {size:'full', selected: tradeIid===m.iid, showCost:false, onclick:`selectTemplatSacrifice(${m.iid})`})
+  const sacrificeCards = sacrificeable.map((m, si) =>
+    renderCard(m, {size:'full', showCost:false, onclick:`openTempleSacDetail(${si})`})
   ).join('');
 
   document.getElementById('main-content').innerHTML = `
@@ -3364,20 +3910,13 @@ function renderTemple() {
     <div class="picker-scroll" id="temple-special-scroll"><div class="scroll-inner">${specialCards}</div></div>
     ${scrollNavHTML('temple-special-scroll','temple-sp-dot',G.pendingTemple.offers.length)}
     <div style="height:12px"></div>
-    ${selSpecial ? `<div class="picker-label">Sacrifice a ${selSpecial.type} summon (${selSpecial.cost} ✦)</div><div class="picker-scroll" id="temple-sac-scroll"><div class="scroll-inner">${sacrificeCards}</div></div>${scrollNavHTML('temple-sac-scroll','temple-sac-dot',sacrificeable.length)}` : `<div style="padding:0 16px 16px;font-size:12px;color:var(--text-mute)">Select a Special above to see matching sacrifices.</div>`}`;
+    ${selSpecial ? `<div class="picker-label">Sacrifice a ${selSpecial.type} summon (${selSpecial.cost} ✦)</div><div class="picker-scroll" id="temple-sac-scroll"><div class="scroll-inner">${sacrificeCards}</div></div>${scrollNavHTML('temple-sac-scroll','temple-sac-dot',sacrificeable.length)}` : `<div style="padding:0 16px 16px;font-size:12px;color:var(--text-mute)">Tap an Ascendant above to see details and choose it.</div>`}`;
 
   attachShopScrollListener('temple-special-scroll','temple-sp-dot',G.pendingTemple.offers.length);
   if (selSpecial) attachShopScrollListener('temple-sac-scroll','temple-sac-dot',sacrificeable.length);
 
-  const ab = document.getElementById('action-bar');
-  ab.classList.add('visible');
-  if (selSpecial && selSacrifice && me.mana >= selSpecial.cost) {
-    ab.innerHTML = `<button class="action-btn secondary" onclick="send('temple_leave')">Leave</button>
-      <button class="action-btn primary" onclick="doTempleTrade()">Confirm Trade · ${selSpecial.cost} ✦</button>`;
-  } else {
-    ab.innerHTML = `<button class="action-btn secondary" onclick="send('temple_leave')">Leave</button>
-      <button class="action-btn primary" disabled style="opacity:.4">${selSpecial&&!selSacrifice?'Pick sacrifice':selSpecial&&me.mana<selSpecial.cost?'Not enough Mana':'Pick Special'}</button>`;
-  }
+  _pickerBar(selSpecial ? `Tap a <b>${selSpecial.type}</b> summon to give up` : 'Tap an Ascendant to view and <b>choose</b>',
+    `${selSpecial ? `<button class="action-btn secondary" onclick="selectedIid=null;tradeIid=null;render()">Back</button>` : ''}<button class="action-btn secondary" onclick="send('temple_leave')">Leave</button>`);
 }
 
 // ─── HEAL TILE ───────────────────────────────────────────────────────────────
