@@ -57,6 +57,8 @@ select option{background:#1c1e35}
 .buff-row input[type=checkbox]{width:14px;height:14px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
 .buff-lbl{font-size:12px;flex:1}
 .buff-mod{font-size:10px;color:var(--accent);white-space:nowrap}
+.buff-mod-gold{font-size:10px;color:var(--gold);white-space:nowrap}
+.buff-mod-red{font-size:10px;color:var(--red);white-space:nowrap}
 .spin-row{display:flex;align-items:center;gap:6px;padding:3px 0}
 .spin-btn{width:22px;height:22px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;cursor:pointer;font-size:14px;line-height:1;flex-shrink:0}
 .spin-btn:hover{border-color:var(--accent)}
@@ -88,8 +90,8 @@ select option{background:#1c1e35}
 .ob-def-win{display:block!important;background:rgba(145,132,217,.14);color:var(--accent);border:1px solid rgba(145,132,217,.4)}
 .ob-stalemate{display:block!important;background:rgba(156,39,176,.14);color:#ce93d8;border:1px solid rgba(156,39,176,.3)}
 .ob-mutual{display:block!important;background:rgba(107,110,144,.14);color:var(--muted);border:1px solid rgba(107,110,144,.3)}
-.log-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;min-height:72px;max-height:210px;overflow-y:auto;font-family:monospace;font-size:12px;line-height:1.75}
-.le{display:block}.le-dmg{color:#ff7043}.le-cdmg{color:#b06fe8}.le-buff{color:var(--accent)}.le-info{color:var(--muted)}.le-win{color:var(--gold);font-weight:600}.le-lose{color:var(--red)}.le-draw{color:#ce93d8}.le-dead{color:var(--muted)}
+.log-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;min-height:72px;max-height:260px;overflow-y:auto;font-family:monospace;font-size:12px;line-height:1.75}
+.le{display:block}.le-dmg{color:#ff7043}.le-cdmg{color:#b06fe8}.le-buff{color:var(--accent)}.le-info{color:var(--muted)}.le-win{color:var(--gold);font-weight:600}.le-lose{color:var(--red)}.le-draw{color:#ce93d8}.le-dead{color:var(--muted)}.le-ability{color:#d4a843}
 /* ── NOTES ── */
 .notes-section{max-width:1140px;margin:0 auto 40px;padding:0 24px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px}
@@ -104,6 +106,8 @@ textarea:focus{border-color:var(--accent)}
 .no-chg{color:var(--muted);font-style:italic;font-size:12px}
 .btn-clr{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:2px 6px}
 .btn-clr:hover{color:var(--red)}
+/* ── ABILITY NOTE ── */
+.ability-note{font-size:10px;color:var(--gold);background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.25);border-radius:4px;padding:3px 7px;margin-top:2px;display:none}
 /* ── ANIMATIONS ── */
 @keyframes dmgPop{0%{transform:translate(-50%,-40%) scale(1.5);opacity:1}60%{transform:translate(-50%,-110%) scale(1);opacity:1}100%{transform:translate(-50%,-150%) scale(.8);opacity:0}}
 .dmg-float{position:absolute;top:50%;left:50%;font-family:'Cinzel',serif;font-size:26px;font-weight:700;pointer-events:none;z-index:20;animation:dmgPop 1s ease-out forwards;white-space:nowrap;text-shadow:0 2px 8px rgba(0,0,0,.8)}
@@ -124,7 +128,7 @@ textarea:focus{border-color:var(--accent)}
   <div class="topbar-right">
     <span id="topbar-matchup">Select both summons</span>
     <a href="/board">← Board</a>
-    <span style="font-family:monospace">v1.0.0</span>
+    <span style="font-family:monospace">v1.0.99</span>
   </div>
 </div>
 
@@ -149,6 +153,7 @@ textarea:focus{border-color:var(--accent)}
       <div class="fl">SUMMON</div>
       <select id="att-sel" onchange="pickMonster('att')"></select>
     </div>
+    <div class="ability-note" id="att-ability-note"></div>
 
     <div class="stats-grid">
       <div class="stat-field">
@@ -172,7 +177,7 @@ textarea:focus{border-color:var(--accent)}
       <input type="number" id="att-mhp" min="1" oninput="statEdit('att','mhp')">
     </div>
 
-    <div class="buffs-hdr">Attacker Buffs</div>
+    <div class="buffs-hdr">Attacker Buffs / Abilities</div>
     <div class="buff-row">
       <input type="checkbox" id="att-charm" onchange="refreshPreview()">
       <span class="buff-lbl">⚡ Battle Charm</span><span class="buff-mod">+25% dmg</span>
@@ -183,7 +188,28 @@ textarea:focus{border-color:var(--accent)}
     </div>
     <div class="buff-row">
       <input type="checkbox" id="att-fortify" onchange="refreshPreview()">
-      <span class="buff-lbl">🛡 Fortify</span><span class="buff-mod">−40% counter received</span>
+      <span class="buff-lbl">🛡 Fortify</span><span class="buff-mod">−40% counter</span>
+    </div>
+    <!-- Attacker ability toggles -->
+    <div class="buff-row">
+      <input type="checkbox" id="att-stormtalon" onchange="refreshPreview()">
+      <span class="buff-lbl">⚡ Stormtalon kills → no counter</span><span class="buff-mod-gold">ability</span>
+    </div>
+    <div class="buff-row">
+      <input type="checkbox" id="att-deathsentence" onchange="refreshPreview()">
+      <span class="buff-lbl">💀 Death Knight: Death Sentence</span><span class="buff-mod-gold">10% instakill</span>
+    </div>
+    <div class="buff-row">
+      <input type="checkbox" id="att-layonhands" onchange="refreshPreview()">
+      <span class="buff-lbl">✨ High Paladin: Lay on Hands</span><span class="buff-mod-gold">heal 15 if ≤30%</span>
+    </div>
+    <div class="buff-row">
+      <input type="checkbox" id="att-lastrip" onchange="refreshPreview()">
+      <span class="buff-lbl">💀 Demon Lord: Last Rite</span><span class="buff-mod-gold">survive at 15 HP</span>
+    </div>
+    <div class="buff-row">
+      <input type="checkbox" id="att-bonewraith" onchange="refreshPreview()">
+      <span class="buff-lbl">💀 Bone Wraith: Death Rattle</span><span class="buff-mod-red">12 dmg to defender if it dies</span>
     </div>
     <div class="spin-row">
       <span class="spin-lbl">⚒ Weapon Smith</span>
@@ -191,6 +217,13 @@ textarea:focus{border-color:var(--accent)}
       <span class="spin-val" id="att-ws">0</span>
       <button class="spin-btn" onclick="spin('att-ws',1)">+</button>
       <span class="spin-mod" id="att-ws-lbl">+0 ATK</span>
+    </div>
+    <div class="spin-row">
+      <span class="spin-lbl">⚡ Void Hunger bonus ATK</span>
+      <button class="spin-btn" onclick="spin('att-vh',-2)">−</button>
+      <span class="spin-val" id="att-vh">0</span>
+      <button class="spin-btn" onclick="spin('att-vh',2)">+</button>
+      <span class="spin-mod" id="att-vh-lbl">+0 ATK</span>
     </div>
   </div>
 
@@ -232,6 +265,7 @@ textarea:focus{border-color:var(--accent)}
       <div class="fl">SUMMON</div>
       <select id="def-sel" onchange="pickMonster('def')"></select>
     </div>
+    <div class="ability-note" id="def-ability-note"></div>
 
     <div>
       <div class="fl">DEFENDER TILE</div>
@@ -269,7 +303,7 @@ textarea:focus{border-color:var(--accent)}
       <input type="number" id="def-mhp" min="1" oninput="statEdit('def','mhp')">
     </div>
 
-    <div class="buffs-hdr">Defender Buffs</div>
+    <div class="buffs-hdr">Defender Buffs / Abilities</div>
     <div class="buff-row">
       <input type="checkbox" id="def-tilesynergy" onchange="refreshPreview()">
       <span class="buff-lbl">🔥 Tile Synergy (defender's tile)</span><span class="buff-mod">+20% counter</span>
@@ -282,12 +316,52 @@ textarea:focus{border-color:var(--accent)}
       <input type="checkbox" id="def-rattle" onchange="refreshPreview()">
       <span class="buff-lbl">🃏 Rattle applied</span><span class="buff-mod">½ ATK counter</span>
     </div>
+    <div class="buff-row">
+      <input type="checkbox" id="def-charm" onchange="refreshPreview()">
+      <span class="buff-lbl">⚡ Battle Charm (defender)</span><span class="buff-mod">+25% first strike</span>
+    </div>
+    <div class="buff-row">
+      <input type="checkbox" id="def-stormtalon" onchange="refreshPreview()">
+      <span class="buff-lbl">⚡ Stormtalon: strikes first</span><span class="buff-mod-gold">pre-emptive</span>
+    </div>
+    <!-- Defender ability toggles -->
+    <div class="buff-row">
+      <input type="checkbox" id="def-deathsentence" onchange="refreshPreview()">
+      <span class="buff-lbl">💀 Death Knight: Death Sentence</span><span class="buff-mod-gold">10% instakill</span>
+    </div>
+    <div class="buff-row">
+      <input type="checkbox" id="def-lastdarkness" onchange="refreshPreview()">
+      <span class="buff-lbl">🌑 Void Sentinel: Last Darkness</span><span class="buff-mod-gold">ATK→36 if ≤30% HP</span>
+    </div>
+    <div class="buff-row">
+      <input type="checkbox" id="def-layonhands" onchange="refreshPreview()">
+      <span class="buff-lbl">✨ High Paladin: Lay on Hands</span><span class="buff-mod-gold">heal 15 if ≤30%</span>
+    </div>
+    <div class="buff-row">
+      <input type="checkbox" id="def-bonewraith" onchange="refreshPreview()">
+      <span class="buff-lbl">💀 Bone Wraith: Death Rattle</span><span class="buff-mod-red">12 dmg to killer</span>
+    </div>
+    <div class="buff-row">
+      <input type="checkbox" id="def-thornling" onchange="refreshPreview()">
+      <span class="buff-lbl">🌿 Thornling: Thorn Burst</span><span class="buff-mod-red">8 dmg to killer</span>
+    </div>
+    <div class="buff-row">
+      <input type="checkbox" id="def-lastrip" onchange="refreshPreview()">
+      <span class="buff-lbl">💀 Demon Lord: Last Rite</span><span class="buff-mod-gold">survive at 15 HP</span>
+    </div>
     <div class="spin-row">
-      <span class="spin-lbl">🔨 Forge copies</span>
+      <span class="spin-lbl">🔨 Forge copies (def)</span>
       <button class="spin-btn" onclick="spin('def-fg',-1)">−</button>
       <span class="spin-val" id="def-fg">0</span>
       <button class="spin-btn" onclick="spin('def-fg',1)">+</button>
       <span class="spin-mod" id="def-fg-lbl">+0 DEF</span>
+    </div>
+    <div class="spin-row">
+      <span class="spin-lbl">⚡ Void Hunger bonus ATK</span>
+      <button class="spin-btn" onclick="spin('def-vh',-2)">−</button>
+      <span class="spin-val" id="def-vh">0</span>
+      <button class="spin-btn" onclick="spin('def-vh',2)">+</button>
+      <span class="spin-mod" id="def-vh-lbl">+0 ATK</span>
     </div>
   </div>
 
@@ -318,12 +392,61 @@ textarea:focus{border-color:var(--accent)}
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════
-// DATA  (mirrors server.js ROSTER exactly)
+// DATA  (mirrors server.js ROSTER exactly — synced to v1.0.96, incl. v1.0.85 balance pass)
 // ═══════════════════════════════════════════════════════════════════════
 const TYPE_STRONG={Light:'Undead',Dark:'Beast',Arcane:'Dark',Undead:'Arcane',Beast:'Nature',Nature:'Light'};
 const TYPE_WEAK  ={Light:'Nature',Dark:'Arcane',Arcane:'Undead',Undead:'Light',Beast:'Dark',Nature:'Beast'};
 
 const EL_CLR={Light:'#e0c07a',Dark:'#b56fd0',Arcane:'#7f92e8',Undead:'#5fb3a4',Beast:'#d98a5a',Nature:'#7fb36a',null:'#9aabbc'};
+
+// Ability notes shown under the card selector
+const ABILITY_NOTES = {
+  solar_knight:    '☀ Radiant Strike — tile converts to Light on win/claim',
+  dawn_striker:    '✨ Soulmend — heals 8 HP after winning a battle (attack or defense)',
+  dawnguard:       '🛡 Bulwark Aura — +5 DEF to adjacent friendly',
+  high_paladin:    '✨ Lay on Hands — reactive: if HP drops to ≤30%, heal 15 once',
+  radiant_lancer:  '⚔ Piercing Light — ignores 30% of target DEF (attack AND counter-strike)',
+  sunfire_herald:  '⚔ Battle Cry — +5 ATK aura to adjacent friendly',
+  ardent_saint:    '✨ Aura of Renewal — heal all friendly 5 HP/turn',
+  nightshard:      '✦ Soul Siphon — steal 4✦ from opponent on kill',
+  void_reaper:     '⚡ Void Hunger — +2 ATK per battle win (use spinner)',
+  void_sentinel:   '🌑 Last Darkness — if HP drops to ≤30% maxHp, ATK becomes 36',
+  shadow_paladin:  '🌑 Dark Pact — +1 ATK per friendly Dark stationed',
+  dusk_blade:      '💸 Hemorrhage — opponent income −4✦ per round after win',
+  umbral_stalker:  '🌑 Umbral Aura — −5 DEF to adjacent enemies',
+  succubus:        '✦ Mana Drain — attacking: steal 10✦ on win or stalemate',
+  sorcerer:        '⚡ Arcane Ascent — +1 ATK +1 Gen per win (use stat editor)',
+  spell_wraith:    '✦ Mana Siphon — steal 1 GEN from tile on win',
+  rune_priestess:  '✦ Runic Amplification — double Gen income on Arcane tile',
+  arch_mage:       '✦ Mana Infusion — +3 Gen income per turn',
+  runic_duelist:   '⚡ Arcane Edge — +1 ATK per friendly Arcane stationed',
+  mana_weaver:     '✦ Mana Web — +1 GEN to all friendly stationed',
+  arcane_arbiter:  '✦ Chaos Flux — defending only: after any battle, one attacker tile gets a random element',
+  bone_wraith:     '💀 Death Rattle — on death (attacking or defending), deals 12 to its killer',
+  grave_specter:   '💀 Necrotic Claim — tile converts to Undead on win',
+  death_knight:    '💀 Death Sentence — 10% chance: instant kill on any damage',
+  shade_walker:    '💀 Cursed Touch — after a stalemate, the opponent loses 5 HP/turn for 2 turns',
+  cursed_revenant: '🛡 Undead Resilience — +2 DEF per survival',
+  plague_herald:   '☠ Pestilence — adjacent enemies take 3 HP/turn',
+  demon_lord:      '💀 Last Rite — survive at 15 HP once per game',
+  razorclaw:       '⚡ Apex Predator — +1 ATK per tile owned + per battle win',
+  feral_striker:   '⚡ Feral Leap — +2 ATK per tile owned (dynamic)',
+  iron_hide:       '🛡 Hardened Shell — +3 maxHp per survival',
+  pack_hunter:     '⚡ Pack Tactics — +3 ATK per other Beast stationed',
+  stormtalon:      '⚡ Lightning Strike — always strikes first (even defending); no counter if it kills',
+  stoneback:       '🛡 Stone Armor — +2 DEF per tile owned (dynamic)',
+  red_dragon:      '⚔ Intimidate — adjacent players pay 5✦/stationed each turn',
+  thornling:       '🌿 Thorn Burst — stationed only (defending): on death, 8 dmg to killer + tile → Nature',
+  briar_sprite:    '🌿 Nature\'s Fury — +5 ATK to all friendly Nature',
+  ancient_oak:     '🌿 Overgrowth — every 3 turns stationed: +3 ATK +3 DEF',
+  grove_warden:    '🌿 Nature\'s Bulwark — +5 DEF to all friendly Nature',
+  vine_stalker:    '🌿 Vine Aura — after 5 turns: +3 ATK to all friendly',
+  moss_golem:      '🌿 Moss Aura — after 5 turns: +5 DEF to all friendly',
+  world_tree:      '🌿 Deep Roots — +1 Gen per Nature tile + Nature summon stationed',
+  luminar_operative:'★ Dual: Light/Arcane — 2× vs Undead & Dark',
+  hex_stalker:     '★ Dual: Undead/Beast — 2× vs Arcane & Nature',
+  verdant_sorcerer:'★ Dual: Arcane/Nature — 2× vs Dark & Light',
+};
 
 const ROSTER=[
   // ── Light ──
@@ -333,7 +456,7 @@ const ROSTER=[
   {id:'high_paladin',   type:'Light',  name:'High Paladin',    arch:'vanguard', hp:35, maxHp:35, atk:25,def:9,  gen:2,cost:10},
   {id:'radiant_lancer', type:'Light',  name:'Radiant Lancer',  arch:'vanguard', hp:30, maxHp:30, atk:28,def:10, gen:2,cost:10},
   {id:'sunfire_herald', type:'Light',  name:'Sunfire Herald',  arch:'vanguard', hp:40, maxHp:40, atk:22,def:11, gen:2,cost:10},
-  {id:'ardent_saint',   type:'Light',  name:'Ardent Saint',    arch:'ascendant',hp:65, maxHp:65, atk:15,def:15, gen:5,cost:20,special:'Aura of Renewal'},
+  {id:'ardent_saint',   type:'Light',  name:'Ardent Saint',    arch:'ascendant',hp:65, maxHp:65, atk:25,def:15, gen:5,cost:20,special:'Aura of Renewal'},
   // ── Dark ──
   {id:'nightshard',     type:'Dark',   name:'Nightshard',      arch:'assailant',hp:20, maxHp:20, atk:40,def:5,  gen:2,cost:8},
   {id:'void_reaper',    type:'Dark',   name:'Void Reaper',     arch:'assailant',hp:18, maxHp:18, atk:42,def:4,  gen:2,cost:8},
@@ -349,7 +472,7 @@ const ROSTER=[
   {id:'arch_mage',      type:'Arcane', name:'Arch Mage',       arch:'vanguard', hp:35, maxHp:35, atk:25,def:9,  gen:2,cost:10},
   {id:'runic_duelist',  type:'Arcane', name:'Runic Duelist',   arch:'vanguard', hp:32, maxHp:32, atk:27,def:9,  gen:2,cost:10},
   {id:'mana_weaver',    type:'Arcane', name:'Mana Weaver',     arch:'vanguard', hp:38, maxHp:38, atk:23,def:12, gen:2,cost:10},
-  {id:'arcane_arbiter', type:'Arcane', name:'Arcane Arbiter',  arch:'ascendant',hp:40, maxHp:40, atk:27,def:15, gen:5,cost:20,special:'Chaos Flux'},
+  {id:'arcane_arbiter', type:'Arcane', name:'Arcane Arbiter',  arch:'ascendant',hp:40, maxHp:40, atk:40,def:15, gen:5,cost:20,special:'Chaos Flux'},
   // ── Undead ──
   {id:'bone_wraith',    type:'Undead', name:'Bone Wraith',     arch:'assailant',hp:20, maxHp:20, atk:40,def:5,  gen:2,cost:8},
   {id:'grave_specter',  type:'Undead', name:'Grave Specter',   arch:'assailant',hp:18, maxHp:18, atk:42,def:4,  gen:2,cost:8},
@@ -357,7 +480,7 @@ const ROSTER=[
   {id:'shade_walker',   type:'Undead', name:'Shade Walker',    arch:'vanguard', hp:35, maxHp:35, atk:25,def:9,  gen:2,cost:10},
   {id:'cursed_revenant',type:'Undead', name:'Cursed Revenant', arch:'vanguard', hp:33, maxHp:33, atk:26,def:10, gen:2,cost:10},
   {id:'plague_herald',  type:'Undead', name:'Plague Herald',   arch:'vanguard', hp:40, maxHp:40, atk:22,def:11, gen:2,cost:10},
-  {id:'demon_lord',     type:'Undead', name:'Demon Lord',      arch:'ascendant',hp:85, maxHp:85, atk:17,def:8,  gen:5,cost:20,special:'Last Rite'},
+  {id:'demon_lord',     type:'Undead', name:'Demon Lord',      arch:'ascendant',hp:85, maxHp:85, atk:40,def:8,  gen:5,cost:20,special:'Last Rite'},
   // ── Beast ──
   {id:'razorclaw',      type:'Beast',  name:'Razorclaw',       arch:'assailant',hp:20, maxHp:20, atk:40,def:5,  gen:2,cost:8},
   {id:'feral_striker',  type:'Beast',  name:'Feral Striker',   arch:'assailant',hp:22, maxHp:22, atk:38,def:5,  gen:2,cost:8},
@@ -365,7 +488,7 @@ const ROSTER=[
   {id:'pack_hunter',    type:'Beast',  name:'Pack Hunter',     arch:'vanguard', hp:35, maxHp:35, atk:25,def:9,  gen:2,cost:10},
   {id:'stormtalon',     type:'Beast',  name:'Stormtalon',      arch:'vanguard', hp:32, maxHp:32, atk:28,def:9,  gen:2,cost:10},
   {id:'stoneback',      type:'Beast',  name:'Stoneback',       arch:'vanguard', hp:42, maxHp:42, atk:20,def:12, gen:2,cost:10},
-  {id:'red_dragon',     type:'Beast',  name:'Red Dragon',      arch:'ascendant',hp:35, maxHp:35, atk:40,def:9,  gen:5,cost:20,special:'Intimidate'},
+  {id:'red_dragon',     type:'Beast',  name:'Red Dragon',      arch:'ascendant',hp:40, maxHp:40, atk:50,def:9,  gen:5,cost:20,special:'Intimidate'},
   // ── Nature ──
   {id:'thornling',      type:'Nature', name:'Thornling',       arch:'assailant',hp:20, maxHp:20, atk:40,def:5,  gen:2,cost:8},
   {id:'briar_sprite',   type:'Nature', name:'Briar Sprite',    arch:'assailant',hp:22, maxHp:22, atk:37,def:6,  gen:2,cost:8},
@@ -373,16 +496,16 @@ const ROSTER=[
   {id:'grove_warden',   type:'Nature', name:'Grove Warden',    arch:'vanguard', hp:35, maxHp:35, atk:25,def:9,  gen:2,cost:10},
   {id:'vine_stalker',   type:'Nature', name:'Vine Stalker',    arch:'vanguard', hp:33, maxHp:33, atk:26,def:10, gen:2,cost:10},
   {id:'moss_golem',     type:'Nature', name:'Moss Golem',      arch:'vanguard', hp:42, maxHp:42, atk:20,def:12, gen:2,cost:10},
-  {id:'world_tree',     type:'Nature', name:'World Tree',      arch:'ascendant',hp:55, maxHp:55, atk:22,def:13, gen:5,cost:20,special:'Deep Roots'},
+  {id:'world_tree',     type:'Nature', name:'World Tree',      arch:'ascendant',hp:65, maxHp:65, atk:12,def:13, gen:5,cost:20,special:'Deep Roots'},
   // ── Dual-Element Rares ──
-  {id:'seraphim',         type:'Light',  type2:'Arcane', name:'Luminar Operative',arch:'rare',hp:35,maxHp:35,atk:22,def:12,gen:4,cost:26},
-  {id:'hex_stalker',      type:'Undead', type2:'Beast',  name:'Hex Stalker',      arch:'rare',hp:42,maxHp:42,atk:20,def:11,gen:3,cost:25},
-  {id:'verdant_sorcerer', type:'Arcane', type2:'Nature', name:'Verdant Sorcerer', arch:'rare',hp:30,maxHp:30,atk:24,def:12,gen:4,cost:27},
+  {id:'luminar_operative',         type:'Light',  type2:'Arcane', name:'Luminar Operative',arch:'rare',hp:35,maxHp:35,atk:30,def:12,gen:4,cost:26},
+  {id:'hex_stalker',      type:'Undead', type2:'Beast',  name:'Hex Stalker',      arch:'rare',hp:42,maxHp:42,atk:30,def:11,gen:3,cost:25},
+  {id:'verdant_sorcerer', type:'Arcane', type2:'Nature', name:'Verdant Sorcerer', arch:'rare',hp:30,maxHp:30,atk:30,def:12,gen:4,cost:27},
   // ── Support ──
-  {id:'mana_refinery',type:null,name:'Mana Refinery',arch:'support',hp:20,maxHp:20,atk:1,def:10,gen:0,cost:12,supportDesc:'+1✦/round per stationed tile'},
-  {id:'weapon_smith', type:null,name:'Weapon Smith', arch:'support',hp:20,maxHp:20,atk:1,def:10,gen:0,cost:12,supportDesc:'+5 ATK to attacker per copy in hand'},
-  {id:'forge',        type:null,name:'Forge',        arch:'support',hp:20,maxHp:20,atk:1,def:10,gen:0,cost:12,supportDesc:'+5 DEF to defender per stationed copy'},
-  {id:'field_medic',  type:null,name:'Field Medic',  arch:'support',hp:20,maxHp:20,atk:1,def:10,gen:0,cost:12,supportDesc:'+2 HP/round to stationed summons'},
+  {id:'mana_refinery',type:null,name:'Mana Refinery',arch:'support',hp:18,maxHp:18,atk:1,def:10,gen:0,cost:12},
+  {id:'weapon_smith', type:null,name:'Weapon Smith', arch:'support',hp:18,maxHp:18,atk:1,def:10,gen:0,cost:12},
+  {id:'forge',        type:null,name:'Forge',        arch:'support',hp:18,maxHp:18,atk:1,def:10,gen:0,cost:12},
+  {id:'field_medic',  type:null,name:'Field Medic',  arch:'support',hp:18,maxHp:18,atk:1,def:10,gen:0,cost:12},
 ];
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -395,7 +518,7 @@ let speedMode='normal', rollMode='rand';
 const SPD={normal:1, fast:.3};
 
 // ═══════════════════════════════════════════════════════════════════════
-// COMBAT LOGIC  (mirrors server.js exactly)
+// COMBAT LOGIC  (mirrors server.js v1.0.96 resolveBattle + _applyBattleOutcome)
 // ═══════════════════════════════════════════════════════════════════════
 function rand(min,max){
   if(rollMode==='avg') return Math.round((min+max)/2);
@@ -418,19 +541,23 @@ function typeMultiplier(att, def){
   return _typeMod1(att.type, def.type);
 }
 
-// doStrike mirrors server signature: (attacker, defender, tileEl, charm, ambush, bonusRun, monoBuff, forgeBonus)
-// Returns {dmg, steps[]}
-function doStrike(att, def, tileEl, charm, ambush, bonusRun, monoBuff, forgeBonus=0){
+// doStrike mirrors server v1.0.71 signature
+function doStrike(att, def, tileEl, charm, ambush, bonusRun, monoBuff, forgeBonus=0, attIsRadiantLancer=false){
   const steps=[];
   const tileEff=tileEffectOnDefender(tileEl, def);
   const rawDef=def.def+forgeBonus;
-  const effDef=Math.round(rawDef*tileEff);
+  // Radiant Lancer: Piercing Light — 30% DEF reduction
+  const piercedDef = attIsRadiantLancer ? Math.max(0, rawDef - Math.round(rawDef * 0.3)) : rawDef;
+  const effDef=Math.round(piercedDef*tileEff);
   const baseDmg=Math.max(1, att.atk - effDef);
   const typeMod=typeMultiplier(att, def);
   const roll=rand(0,3);
   let dmg=Math.round(baseDmg*typeMod)+roll;
 
-  let defStr=`DEF ${rawDef}${forgeBonus?` (+${forgeBonus}🔨)`:''}`;
+  if(attIsRadiantLancer && rawDef !== piercedDef){
+    steps.push({cls:'le-ability',t:`  ⚔ Piercing Light! DEF reduced 30% (${rawDef} → ${piercedDef})`});
+  }
+  let defStr=`DEF ${piercedDef}${forgeBonus?` (+${forgeBonus}🔨)`:''}`;
   if(tileEff!==1) defStr+=` ×${tileEff} tile → ${effDef}`;
   steps.push({cls:'le-info',t:`  ATK ${att.atk} − ${defStr} = base ${baseDmg} × ${typeMod}× type + roll ${roll} → ${dmg}`});
   if(tileEff>1)  steps.push({cls:'le-buff',t:`  🗺 Tile bonus: defender's ${tileEl} tile +15% DEF`});
@@ -456,86 +583,158 @@ function doStrike(att, def, tileEl, charm, ambush, bonusRun, monoBuff, forgeBonu
 }
 
 function calcBattle(){
-  const tileEl=document.getElementById('def-tile').value||null;
-  const ws=parseInt(document.getElementById('att-ws').textContent)||0;
-  const fg=parseInt(document.getElementById('def-fg').textContent)||0;
-  const charm=document.getElementById('att-charm').checked;
-  const ambush=document.getElementById('att-ambush').checked;
-  const fortify=document.getElementById('att-fortify').checked;
-  const defTS=document.getElementById('def-tilesynergy').checked;
-  const mono=document.getElementById('def-mono').checked;
-  const rattle=document.getElementById('def-rattle').checked;
+  const $=id=>document.getElementById(id);
+  const tileEl=$('def-tile').value||null;
+  const ws=parseInt($('att-ws').textContent)||0;
+  const fg=parseInt($('def-fg').textContent)||0;
+  const attVH=parseInt($('att-vh').textContent)||0;
+  const defVH=parseInt($('def-vh').textContent)||0;
+  let attCharm=$('att-charm').checked, defCharm=$('def-charm').checked;
+  let ambush=$('att-ambush').checked;
+  const fortify=$('att-fortify').checked;
+  const defTS=$('def-tilesynergy').checked, mono=$('def-mono').checked, rattle=$('def-rattle').checked;
+  const attStormtalon=$('att-stormtalon').checked, attDeathSentence=$('att-deathsentence').checked;
+  const attLayOnHands=$('att-layonhands').checked, attLastRite=$('att-lastrip').checked, attBoneWraith=$('att-bonewraith').checked;
+  const defStormtalon=$('def-stormtalon').checked, defDeathSentence=$('def-deathsentence').checked;
+  const defLastDarkness=$('def-lastdarkness').checked, defLayOnHands=$('def-layonhands').checked;
+  const defBoneWraith=$('def-bonewraith').checked, defThornling=$('def-thornling').checked, defLastRite=$('def-lastrip').checked;
+  const attLancer = attM.id==='radiant_lancer', defLancer = defM.id==='radiant_lancer';
 
-  const att={...attM, atk:attM.atk+ws*5, lastRiteUsed:false};
-  const def={...defM, lastRiteUsed:false};
+  // Same pre-battle stat prep as server attack handler: Weapon Smith → att ATK, Forge → def DEF
+  const att={...attM, atk:attM.atk + ws*5 + attVH};
+  const def={...defM, atk:defM.atk + defVH, def:defM.def + fg*5};
+  let attLoH=false, defLoH=false, attRite=false, defRite=false;
+  const T30=m=>Math.floor(m.maxHp*0.30);
+  const log=[]; const L=(cls,t)=>log.push({cls,t});
+  const strike=(a,d,isAtt,bonusRun,monoB)=>{
+    const charm = isAtt ? attCharm : defCharm;
+    const amb = isAtt ? ambush : false;
+    const pierce = isAtt ? attLancer : defLancer;
+    const r=doStrike(a,d,tileEl,charm,amb,bonusRun,monoB,0,pierce);
+    if(isAtt){ attCharm=false; ambush=false; } else defCharm=false;   // consumed on first strike
+    r.steps.forEach(x=>log.push(x)); return r.dmg;
+  };
 
-  const log=[];
   const typeMod=typeMultiplier(att,def);
-  const typeLabel=typeMod===2?'2× STRONG (⚡)':typeMod===0.5?'0.5× WEAK (💧)':'1× Neutral';
-  log.push({cls:'le-info',t:`⚔ ${att.name} [${att.type||'Support'}${att.type2?'/'+att.type2:''}] vs ${def.name} [${def.type||'Support'}]`});
-  log.push({cls:'le-info',t:`   Type modifier: ${typeLabel}`});
-  if(ws) log.push({cls:'le-buff',t:`   ⚒ Weapon Smith ×${ws}: +${ws*5} ATK on attacker (${attM.atk} → ${att.atk})`});
-  if(fg) log.push({cls:'le-buff',t:`   🔨 Forge ×${fg}: +${fg*5} DEF on defender (${defM.def} → ${defM.def+fg*5})`});
-  log.push({cls:'le-info',t:``});
+  L('le-info',`⚔ ${att.name} [${att.type||'Support'}${att.type2?'/'+att.type2:''}] vs ${def.name} [${def.type||'Support'}${def.type2?'/'+def.type2:''}]`);
+  L('le-info',`   Type modifier: ${typeMod===2?'2× STRONG (⚡)':typeMod===0.5?'0.5× WEAK (💧)':'1× Neutral'}`);
+  if(ws)    L('le-buff',`   ⚒ Weapon Smith ×${ws}: +${ws*5} ATK on attacker`);
+  if(attVH) L('le-buff',`   ⚡ Void Hunger: +${attVH} ATK on attacker`);
+  if(fg)    L('le-buff',`   🔨 Forge ×${fg}: +${fg*5} DEF on defender (${defM.def} → ${def.def})`);
+  if(defVH) L('le-buff',`   ⚡ Void Hunger: +${defVH} ATK on defender`);
+  L('le-info','');
 
-  // ─ Attacker strikes ─
-  log.push({cls:'le-info',t:`🗡 ${att.name} strikes ${def.name}…`});
-  const {dmg:atkDmg, steps:s1}=doStrike(att, def, tileEl, charm, ambush, false, false, fg*5);
-  s1.forEach(s=>log.push(s));
+  let attHp=att.hp, defHp=def.hp, preDmg=0, atkDmg=0, ctrDmg=0, preKilled=false;
 
-  let defHp=def.hp-atkDmg;
-  log.push({cls:'le-dmg',t:`→ ${def.name} takes ${atkDmg} damage  (${def.hp} → ${Math.max(0,defHp)} HP)`});
-
-  // Last Rite (Demon Lord defending)
-  if(defHp<=0 && def.id==='demon_lord' && !def.lastRiteUsed){
-    def.lastRiteUsed=true; defHp=15;
-    log.push({cls:'le-buff',t:`💀 Last Rite! Demon Lord survives at 15 HP!`});
+  // ─ Stormtalon defending: pre-emptive strike ─
+  if(defStormtalon){
+    L('le-info',`⚡ ${def.name} strikes FIRST (Lightning Strike)…`);
+    preDmg=strike(def,att,false,false,false);
+    attHp-=preDmg;
+    L('le-cdmg',`→ ${att.name} takes ${preDmg} damage  (${att.hp} → ${Math.max(0,attHp)} HP)`);
+    if(attHp<=0){ preKilled=true; L('le-ability',`⚡ Lightning Strike killed ${att.name} — it never gets to strike!`); }
+    L('le-info','');
   }
 
-  let ctrDmg=0, attHp=att.hp;
+  // ─ Attacker strikes ─
+  if(!preKilled){
+    L('le-info',`🗡 ${att.name} strikes ${def.name}…`);
+    atkDmg=strike(att,def,true,false,false);
+    defHp-=atkDmg;
+    L('le-dmg',`→ ${def.name} takes ${atkDmg} damage  (${def.hp} → ${Math.max(0,defHp)} HP)`);
+  }
+  if(attDeathSentence && atkDmg>0 && defHp>0){
+    const r=rollMode==='avg'?0.5:Math.random();
+    if(r<0.10){ defHp=0; L('le-ability','💀 Death Sentence! Instant kill (10%)'); }
+    else L('le-info',`   💀 Death Sentence: rolled ${(r*100).toFixed(0)}% — no proc`);
+  }
+  if(defLastDarkness && defHp>0 && defHp<=T30(def)){ def.atk=36; L('le-ability',`🌑 Last Darkness! ${def.name} HP ≤30% — ATK set to 36`); }
+  if(defLayOnHands && !defLoH && defHp>0 && defHp<=T30(def)){ defLoH=true; const h=Math.min(15,def.maxHp-defHp); defHp+=h; L('le-ability',`✨ Lay on Hands! ${def.name} heals ${h} HP (→ ${defHp})`); }
+  if(attLayOnHands && !attLoH && attHp>0 && attHp<=T30(att)){ attLoH=true; const h=Math.min(15,att.maxHp-attHp); attHp+=h; L('le-ability',`✨ Lay on Hands! ${att.name} heals ${h} HP (→ ${attHp})`); }
+  if(defHp<=0 && defLastRite && !defRite){ defRite=true; defHp=15; L('le-ability',`💀 Last Rite! ${def.name} survives at 15 HP!`); }
+
+  const stormKill = attStormtalon && defHp<=0;
+  if(stormKill) L('le-ability','⚡ Lightning Strike! Stormtalon killed on first strike — no counter');
+
   // ─ Counter-strike ─
-  if(defHp>0){
-    log.push({cls:'le-info',t:``});
-    log.push({cls:'le-info',t:`🔄 ${def.name} counter-strikes…`});
-    let defAtk=def.atk;
-    if(rattle){
-      defAtk=Math.floor(def.atk*0.5);
-      log.push({cls:'le-buff',t:`  🃏 Rattle! ATK halved (${def.atk} → ${defAtk})`});
+  if(defHp>0 && !stormKill && !preKilled){
+    L('le-info','');
+    L('le-info',`🔄 ${def.name} counter-strikes…`);
+    const savedAtk=def.atk;
+    if(rattle){ def.atk=Math.floor(def.atk*0.5); L('le-buff',`  🃏 Rattle! ATK halved (${savedAtk} → ${def.atk})`); }
+    ctrDmg=strike(def,att,false,defTS,mono);
+    def.atk=savedAtk;
+    if(fortify){ ctrDmg=Math.round(ctrDmg*0.60); L('le-buff',`  🛡 Fortify! Counter reduced 40% → ${ctrDmg}`); }
+    const before=attHp; attHp-=ctrDmg;
+    L('le-cdmg',`→ ${att.name} takes ${ctrDmg} counter-damage  (${before} → ${Math.max(0,attHp)} HP)`);
+    if(defDeathSentence && ctrDmg>0 && attHp>0){
+      const r=rollMode==='avg'?0.5:Math.random();
+      if(r<0.10){ attHp=0; L('le-ability','💀 Death Sentence (counter)! Instant kill'); }
+      else L('le-info',`   💀 Death Sentence (counter): rolled ${(r*100).toFixed(0)}% — no proc`);
     }
-    const defForStrike={...def, atk:defAtk};
-    // Counter uses defender's tile element; forge/ws don't apply here
-    const {dmg:raw, steps:s2}=doStrike(defForStrike, att, tileEl, false, false, defTS, mono, 0);
-    s2.forEach(s=>log.push(s));
-    ctrDmg=raw;
-    if(fortify){
-      ctrDmg=Math.round(ctrDmg*0.60);
-      log.push({cls:'le-buff',t:`  🛡 Fortify! Counter reduced 40% → ${ctrDmg}`});
-    }
-    attHp=att.hp-ctrDmg;
-    log.push({cls:'le-cdmg',t:`→ ${att.name} takes ${ctrDmg} counter-damage  (${att.hp} → ${Math.max(0,attHp)} HP)`});
-    // Last Rite (Demon Lord attacking)
-    if(attHp<=0 && att.id==='demon_lord' && !att.lastRiteUsed){
-      att.lastRiteUsed=true; attHp=15;
-      log.push({cls:'le-buff',t:`💀 Last Rite! Demon Lord (attacker) survives at 15 HP!`});
-    }
+    if(attLayOnHands && !attLoH && attHp>0 && attHp<=T30(att)){ attLoH=true; const h=Math.min(15,att.maxHp-attHp); attHp+=h; L('le-ability',`✨ Lay on Hands! ${att.name} heals ${h} HP (→ ${attHp})`); }
+    if(attHp<=0 && attLastRite && !attRite){ attRite=true; attHp=15; L('le-ability',`💀 Last Rite! ${att.name} survives at 15 HP!`); }
   }
 
   let outcome;
-  if(attHp<=0&&defHp<=0) outcome='mutual';
-  else if(attHp<=0)       outcome='def_wins';
-  else if(defHp<=0)       outcome='att_wins';
-  else                    outcome='stalemate';
+  if(attHp<=0 && defHp<=0) outcome='mutual';
+  else if(attHp<=0)        outcome='def_wins';
+  else if(defHp<=0)        outcome='att_wins';
+  else                     outcome='stalemate';
 
-  log.push({cls:'le-info',t:``});
+  // ─ Post-battle effects (server _applyBattleOutcome order) ─
+  L('le-info','');
+  let unclaimed=false;
+  const deathHit=(who,dmg,label)=>{
+    if(who==='att'){ attHp-=dmg; L('le-dmg',`${label}: ${att.name} takes ${dmg}  (→ ${Math.max(0,attHp)} HP)`); if(attHp<=0){unclaimed=true; L('le-ability',`   ${att.name} dies too — tile goes UNCLAIMED`);} }
+    else           { defHp-=dmg; L('le-dmg',`${label}: ${def.name} takes ${dmg}  (→ ${Math.max(0,defHp)} HP)`); if(defHp<=0){unclaimed=true; L('le-ability',`   ${def.name} dies too — tile goes UNCLAIMED`);} }
+  };
+  if(outcome==='att_wins'){
+    if(attM.id==='dawn_striker'){ const h=Math.min(8,att.maxHp-attHp); attHp+=h; L('le-ability',`✨ Soulmend: ${att.name} heals ${h} HP`); }
+    if(attM.id==='void_reaper') L('le-ability','   ⚡ Void Hunger: +2 ATK permanently');
+    if(attM.id==='sorcerer')    L('le-ability','   ⚡ Arcane Ascent: +1 ATK +1 Gen permanently');
+    if(attM.id==='razorclaw')   L('le-ability','   ⚡ Apex Predator: +1 win stack');
+    if(attM.id==='solar_knight') L('le-ability','   ☀ Radiant Strike: tile → Light');
+    if(attM.id==='nightshard')  L('le-ability','   ✦ Soul Siphon: steal 4✦');
+    if(attM.id==='dusk_blade')  L('le-ability','   💸 Hemorrhage: opponent income −4✦ next turn');
+    if(attM.id==='grave_specter') L('le-ability','   💀 Necrotic Claim: tile → Undead');
+    if(defBoneWraith) deathHit('att',12,'💀 Death Rattle');
+    if(defThornling){ L('le-ability','   🌿 Thorn Burst: tile → Nature'); deathHit('att',8,'🌿 Thorn Burst'); }
+    if(attM.id==='succubus')    L('le-ability','   ✦ Mana Drain: steal 10✦');
+  } else if(outcome==='def_wins'){
+    if(defM.id==='cursed_revenant') L('le-ability','   🛡 Undead Resilience: +2 DEF permanently');
+    if(defM.id==='iron_hide'){ def.maxHp+=3; defHp+=3; L('le-ability',`   🛡 Hardened Shell: +3 max HP (→ ${defHp}/${def.maxHp})`); }
+    if(defM.id==='dawn_striker'){ const h=Math.min(8,def.maxHp-defHp); defHp+=h; L('le-ability',`✨ Soulmend: ${def.name} heals ${h} HP`); }
+    if(defM.id==='void_reaper') L('le-ability','   ⚡ Void Hunger: +2 ATK permanently');
+    if(defM.id==='sorcerer')    L('le-ability','   ⚡ Arcane Ascent: +1 ATK +1 Gen permanently');
+    if(defM.id==='razorclaw')   L('le-ability','   ⚡ Apex Predator: +1 win stack');
+    if(attBoneWraith) deathHit('def',12,'💀 Death Rattle');
+  } else if(outcome==='stalemate'){
+    [['att',att,attM],['def',def,defM]].forEach(([sd,m,b])=>{
+      if(b.id==='cursed_revenant') L('le-ability',`   🛡 Undead Resilience (${sd}): +2 DEF permanently`);
+      if(b.id==='iron_hide'){ m.maxHp+=3; if(sd==='att') attHp+=3; else defHp+=3; L('le-ability',`   🛡 Hardened Shell (${sd}): +3 max HP`); }
+    });
+    if(attM.id==='succubus') L('le-ability','   ✦ Mana Drain: steal 10✦');
+    if(attM.id==='shade_walker') L('le-ability',`   🌑 Cursed Touch: ${def.name} cursed (−5 HP/turn × 2)`);
+    if(defM.id==='shade_walker') L('le-ability',`   🌑 Cursed Touch: ${att.name} cursed (−5 HP/turn × 2)`);
+  }
+  if(defM.id==='arcane_arbiter') L('le-ability','   🌀 Chaos Flux: one attacker tile gets a random element');
+  if(unclaimed) outcome='mutual';
+
+  const finalAttHp=Math.max(0,attHp), finalDefHp=Math.max(0,defHp);
+  L('le-info','');
   const resultText={
     att_wins:`⚔ ${att.name} WINS — ${def.name} destroyed!`,
     def_wins:`🛡 ${def.name} WINS — ${att.name} destroyed!`,
     stalemate:`🤝 STALEMATE — both survive`,
-    mutual:`💥 MUTUAL DESTRUCTION`
+    mutual: unclaimed ? `💥 BOTH DESTROYED — death effect killed the winner, tile unclaimed` : `💥 MUTUAL DESTRUCTION`
   }[outcome];
-  log.push({cls:outcome==='att_wins'?'le-win':outcome==='def_wins'?'le-lose':'le-draw',t:resultText});
+  L(outcome==='att_wins'?'le-win':outcome==='def_wins'?'le-lose':'le-draw', resultText);
+  const manaD={att_wins:'+4 / −4',def_wins:'−8 / +4',mutual:'−8 / +4',stalemate:'−4 / +4'}[outcome];
+  L('le-info',`   Mana (attacker / defender): ${manaD}`);
 
-  return {atkDmg,ctrDmg,attHpAfter:Math.max(0,attHp),defHpAfter:Math.max(0,defHp),outcome,log,resultText};
+  return {preDmg, preKilled, atkDmg, ctrDmg, attHpAfter:finalAttHp, defHpAfter:finalDefHp, outcome, log, resultText,
+          attMaxAfter:att.maxHp, defMaxAfter:def.maxHp};
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -545,7 +744,7 @@ function getHitAnim(m){
   if(!m||!m.type) return 'Hit_Magic';
   if(m.id==='hex_stalker')       return 'Hit_Claw';
   if(m.id==='verdant_sorcerer')  return 'Hit_Magic';
-  if(m.id==='seraphim')          return 'Hit_Magic';
+  if(m.id==='luminar_operative')          return 'Hit_Magic';
   if(m.type==='Beast'||m.type==='Nature') return 'Hit_Claw';
   if(m.type==='Dark' ||m.type==='Undead') return 'Hit_Slash';
   return 'Hit_Magic';
@@ -604,14 +803,26 @@ async function runBattle(){
   const attWrap=document.getElementById('att-wrap');
   const defWrap=document.getElementById('def-wrap');
 
+  // Beat 0 — Stormtalon (defending) strikes first
+  if(res.preDmg>0){
+    await wait(300*sp);
+    showShock(attWrap);
+    showDmgFloat(attWrap, res.preDmg, '#b06fe8');
+    await wait(130*sp);
+    playHitAnim(attWrap, getHitAnim(defM));
+    await wait(700*sp);
+  }
+
   // Beat 1 — attacker hits defender
+  if(!res.preKilled){
   await wait(300*sp);
   showShock(defWrap);
   showDmgFloat(defWrap, res.atkDmg, '#ff6b35');
   await wait(130*sp);
   playHitAnim(defWrap, getHitAnim(attM));
   await wait(700*sp);
-  defM.hp=res.defHpAfter;
+  }
+  defM.hp=res.defHpAfter; defM.maxHp=res.defMaxAfter;
   refreshHpDisplay('att');
   refreshHpDisplay('def');
 
@@ -623,9 +834,9 @@ async function runBattle(){
     await wait(130*sp);
     playHitAnim(attWrap, getHitAnim(defM));
     await wait(700*sp);
-    attM.hp=res.attHpAfter;
-    refreshHpDisplay('att');
   }
+  attM.hp=res.attHpAfter; attM.maxHp=res.attMaxAfter;
+  refreshHpDisplay('att');
 
   // Beat 3 — result badges
   await wait(350*sp);
@@ -661,6 +872,38 @@ async function runBattle(){
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// ABILITY AUTO-TOGGLE HELPERS
+// ═══════════════════════════════════════════════════════════════════════
+function autoSetAbilityToggles(s, m){
+  if(!m) return;
+  const isAtt = s === 'att';
+  // Clear ability toggles for this side
+  if(isAtt){
+    document.getElementById('att-stormtalon').checked = (m.id === 'stormtalon');
+    document.getElementById('att-deathsentence').checked = (m.id === 'death_knight');
+    document.getElementById('att-layonhands').checked = (m.id === 'high_paladin');
+    document.getElementById('att-lastrip').checked = (m.id === 'demon_lord');
+    document.getElementById('att-bonewraith').checked = (m.id === 'bone_wraith');
+  } else {
+    document.getElementById('def-stormtalon').checked = (m.id === 'stormtalon');
+    document.getElementById('def-deathsentence').checked = (m.id === 'death_knight');
+    document.getElementById('def-lastdarkness').checked = (m.id === 'void_sentinel');
+    document.getElementById('def-layonhands').checked = (m.id === 'high_paladin');
+    document.getElementById('def-bonewraith').checked = (m.id === 'bone_wraith');
+    document.getElementById('def-thornling').checked = (m.id === 'thornling');
+    document.getElementById('def-lastrip').checked = (m.id === 'demon_lord');
+  }
+  // Show ability note
+  const note = document.getElementById(`${s}-ability-note`);
+  if(m.id && ABILITY_NOTES[m.id]){
+    note.textContent = ABILITY_NOTES[m.id];
+    note.style.display = 'block';
+  } else {
+    note.style.display = 'none';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // UI HELPERS
 // ═══════════════════════════════════════════════════════════════════════
 function buildDropdowns(){
@@ -691,6 +934,7 @@ function pickMonster(s){
   else          { defBase=base; defM={...base}; }
   populateStats(s,base);
   renderCard(s,base);
+  autoSetAbilityToggles(s, base);
   onTileChange();
   refreshPreview();
   document.getElementById('btn-run').disabled=!(attM&&defM);
@@ -742,7 +986,6 @@ function refreshHpDisplay(s){
   bar.style.background=pct>50?'#5cb85c':pct>25?'#f0ad4e':'#e05555';
   document.getElementById(`${s}-hpdisp`).textContent=`${Math.max(0,m.hp)} / ${m.maxHp} HP`;
   document.getElementById(`${s}-hpdisp`).style.color=m.hp<=0?'#e05555':'';
-  // sync input
   document.getElementById(`${s}-hp`).value=Math.max(0,m.hp);
 }
 
@@ -750,8 +993,8 @@ function renderCard(s,m){
   const elC=EL_CLR[m.type]||EL_CLR[null];
   const elC2=m.type2?EL_CLR[m.type2]:null;
   const img=document.getElementById(`${s}-img`);
-  img.src=`/img/monsters/monster-${m.id}.gif`;
-  img.onerror=function(){ this.onerror=null; this.src=`/img/monsters/monster-${m.id}.png`; };
+  img.src=`/img/monsters/anim/monster-${m.id}.webp`;
+  img.onerror=function(){ this.onerror=null; this.src=`/img/monsters/card/monster-${m.id}.png`; };
   img.style.borderBottom=`2px solid ${elC}88`;
 
   document.getElementById(`${s}-cname`).textContent=m.name;
@@ -804,13 +1047,14 @@ function refreshPreview(){
   const tileEl=document.getElementById('def-tile').value||null;
   const ws=parseInt(document.getElementById('att-ws').textContent)||0;
   const fg=parseInt(document.getElementById('def-fg').textContent)||0;
+  const attVH=parseInt(document.getElementById('att-vh').textContent)||0;
   const tm=typeMultiplier(attM,defM);
   const tmLabel=tm===2?`<span style="color:#5cb85c">2× ⚡ STRONG</span>`:tm===0.5?`<span style="color:var(--red)">0.5× 💧 WEAK</span>`:`<span style="color:var(--muted)">1× Neutral</span>`;
   const tileEff=tileEffectOnDefender(tileEl,defM);
   const effDef=Math.round((defM.def+fg*5)*tileEff);
-  const effAtk=attM.atk+ws*5;
+  const effAtk=attM.atk+ws*5+attVH;
   const base=Math.max(1,effAtk-effDef);
-  const avgDmg=Math.round(base*tm)+1; // avg roll 1
+  const avgDmg=Math.round(base*tm)+1;
   el.innerHTML=`${tmLabel}<br><span style="color:var(--muted);font-size:10px">ATK ${effAtk} − DEF ${effDef} = ${base} × ${tm}</span><br><span style="color:var(--gold)">~${avgDmg} avg initial dmg</span>`;
 }
 
@@ -821,10 +1065,14 @@ function refreshTopbar(){
 
 function spin(id, d){
   const el=document.getElementById(id);
-  let v=Math.max(0,Math.min(5,(parseInt(el.textContent)||0)+d));
+  const isVH = id.endsWith('-vh');
+  const min = 0, max = isVH ? 30 : 5;
+  let v=Math.max(min,Math.min(max,(parseInt(el.textContent)||0)+d));
   el.textContent=v;
   if(id==='att-ws') document.getElementById('att-ws-lbl').textContent=`+${v*5} ATK`;
   if(id==='def-fg') document.getElementById('def-fg-lbl').textContent=`+${v*5} DEF`;
+  if(id==='att-vh') document.getElementById('att-vh-lbl').textContent=`+${v} ATK`;
+  if(id==='def-vh') document.getElementById('def-vh-lbl').textContent=`+${v} ATK`;
   refreshPreview();
 }
 

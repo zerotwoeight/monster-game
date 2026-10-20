@@ -35,14 +35,19 @@ function getHitAnim(monster) {
   // Rare monster ID overrides
   if (monster.id === 'hex_stalker')      return 'Hit_Claw';
   if (monster.id === 'verdant_sorcerer') return 'Hit_Magic';
-  if (monster.id === 'seraphim')         return 'Hit_Magic';
+  if (monster.id === 'luminar_operative')         return 'Hit_Magic';
   // Element fallback
   const map = { Beast:'Hit_Claw', Nature:'Hit_Claw', Dark:'Hit_Slash', Undead:'Hit_Slash', Light:'Hit_Magic', Arcane:'Hit_Magic' };
   return map[monster.type] || null;
 }
+// v1.0.99: monster art lives in img/monsters/{anim,card,mini}/. Animated art is WebP.
+function monsterAnimSrc(id){ return `/img/monsters/anim/monster-${id}.webp`; }
+function monsterCardSrc(id){ return `/img/monsters/card/monster-${id}.png`; }
+function monsterMiniSrc(id){ return `/img/monsters/mini/monster-${id}-mini.png`; }
 function summonImg(id,suffix=''){
-  const png=`/img/monsters/monster-${id}${suffix}.png`;
-  return `<img src="/img/monsters/monster-${id}${suffix}.gif" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.src='${png}';this.onerror=function(){this.style.display='none'}" alt="">`;
+  const st='width:100%;height:100%;object-fit:cover;display:block;';
+  if (suffix==='-mini') return `<img src="${monsterMiniSrc(id)}" style="${st}" onerror="this.style.display='none'" alt="">`;
+  return `<img src="${monsterAnimSrc(id)}" style="${st}" onerror="this.src='${monsterCardSrc(id)}';this.onerror=function(){this.style.display='none'}" alt="">`;
 }
 
 // ── v0.1.1: HTML-escape for server/player-supplied text (names, effect lines) ──

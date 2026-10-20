@@ -48,6 +48,19 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .roll-val{font-size:28px;font-weight:500;letter-spacing:.1em;font-variant-numeric:tabular-nums;font-family:'Cinzel',serif;}
 .vdiv{width:1px;height:34px;background:var(--border2);}
 .mute-btn{background:rgba(145,132,217,.12);border:1px solid rgba(145,132,217,.28);border-radius:7px;color:var(--text-lo);font-size:18px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .18s,border-color .18s;line-height:1;padding:0;}
+#audio-settings-overlay{position:fixed;inset:0;z-index:9500;display:none;align-items:center;justify-content:center;background:rgba(6,6,16,.72);backdrop-filter:blur(6px);}
+#audio-settings-overlay.visible{display:flex;}
+.aus-box{width:min(440px,92vw);background:#16172a;border:1px solid rgba(145,132,217,.35);border-radius:16px;padding:26px 28px 22px;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+.aus-title{font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#d6d0ff;text-align:center;}
+.aus-sub{font-size:12px;color:#8e8aa8;text-align:center;margin:6px 0 18px;}
+.aus-row{margin-bottom:18px;}
+.aus-lbl{display:flex;justify-content:space-between;font-family:'Cinzel',serif;font-size:13px;letter-spacing:.08em;color:#c9c4e8;margin-bottom:8px;}
+.aus-val{color:#b5abfc;font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;}
+.aus-ctl{display:flex;align-items:center;gap:12px;}
+.aus-mute{width:40px;height:40px;flex-shrink:0;border-radius:9px;border:1px solid rgba(145,132,217,.35);background:rgba(145,132,217,.12);font-size:18px;cursor:pointer;}
+.aus-mute.on{background:rgba(224,82,82,.18);border-color:rgba(224,82,82,.5);}
+.aus-range{flex:1;accent-color:#9184d9;height:28px;cursor:pointer;}
+.aus-btns{display:flex;gap:12px;justify-content:center;margin-top:6px;}
 .mute-btn:hover{background:rgba(145,132,217,.22);border-color:rgba(145,132,217,.5);}
 
 /* Main */
@@ -321,7 +334,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .dco-wait{font-size:12px;color:var(--text-mute);display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:28px;}
 .dco-spinner{width:12px;height:12px;border:2px solid rgba(145,132,217,.3);border-top-color:#9184d9;border-radius:50%;animation:spin .9s linear infinite;flex-shrink:0;}
 @keyframes spin{to{transform:rotate(360deg)}}
-.dco-btns{display:flex;gap:12px;justify-content:center;}
+.dco-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
 .dco-qr-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:20px;}
 .dco-qr-lbl{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;}
 .dco-qr-box{background:#fff;padding:8px;border-radius:8px;line-height:0;}
@@ -361,6 +374,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .egm-btn{font-family:'Cinzel',serif;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;border:none;border-radius:8px;padding:12px 28px;cursor:pointer;transition:all .18s;}
 .egm-btn.cancel{background:rgba(255,255,255,.07);color:var(--text-lo);border:1px solid var(--border2);}
 .egm-btn.cancel:hover{background:rgba(255,255,255,.12);color:var(--text);}
+.egm-btn.remove{order:3;flex:1 1 100%;white-space:nowrap;background:rgba(224,82,82,.12);color:#f0a0a0;border:1px solid rgba(224,82,82,.45);}
+.egm-btn.remove:hover{background:rgba(224,82,82,.22);color:#ffd0d0;}
+.egm-btn.remove.armed{background:linear-gradient(135deg,#d04040,#a02828);color:#fff;border-color:#ff8080;}
 .egm-btn.confirm{background:linear-gradient(135deg,#b03030,#8a1f1f);color:#ffd0d0;}
 .egm-btn.confirm:hover{background:linear-gradient(135deg,#c83030,#a02020);box-shadow:0 0 20px rgba(180,50,50,.4);}
 /* End game topbar button */
@@ -419,7 +435,19 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 'use strict';
 
 // ─── Background image ────────────────────────────────────────────────────────────────────────────────
-const BKG_SRC = "/images/bkg_1140.png";
+const BKG_SRC = "/img/backgrounds/bkg_1140.png";
+
+// ─── AUDIO SETTINGS (v0.5.05) ─────────────────────────────────────────────────
+// Per-device Music + Sound-effect levels, saved in this browser (host and every
+// spectator keep their own). Level 0–1 multiplies each sound's built-in base volume.
+const AUD = (() => {
+  const d = { music: 1, sfx: 1, musicMute: false, sfxMute: false };
+  try { Object.assign(d, JSON.parse(localStorage.getItem('sg_audio_board') || '{}')); } catch(e) {}
+  return d;
+})();
+function _saveAud() { try { localStorage.setItem('sg_audio_board', JSON.stringify(AUD)); } catch(e) {} }
+function _musicLvl() { return AUD.musicMute ? 0 : Math.max(0, Math.min(1, +AUD.music || 0)); }
+function _sfxLvl()   { return AUD.sfxMute   ? 0 : Math.max(0, Math.min(1, +AUD.sfx   || 0)); }
 
 // ─── SFX (Web Audio API — procedural, no external files) ─────────────────────────────────────────────
 const SFX = (() => {
@@ -433,6 +461,7 @@ const SFX = (() => {
   document.addEventListener('keydown', () => ctx(), {once:true, capture:true});
 
   function tone(freq, type='sine', vol=0.15, dur=0.12, attack=0.005, rel=0.1, delay=0) {
+    const L = _sfxLvl(); if (L <= 0) return; vol = Math.max(0.0012, vol * L);
     try {
       const c = ctx(), now = c.currentTime;
       const o = c.createOscillator(), g = c.createGain();
@@ -445,6 +474,7 @@ const SFX = (() => {
     } catch(e){}
   }
   function noise(vol=0.08, dur=0.1, delay=0, hipass=0) {
+    const L = _sfxLvl(); if (L <= 0) return; vol = Math.max(0.0012, vol * L);
     try {
       const c = ctx(), now = c.currentTime;
       const buf = c.createBuffer(1, Math.ceil(c.sampleRate * dur), c.sampleRate);
@@ -653,7 +683,7 @@ function playerSigilSVG(player, size=20){
 }
 function playerTokenSVG(player, size=40){
   const i = ((player.idx !== undefined ? player.idx : 0) % 6) + 1;
-  return `<img src="/img/svg/Player${i}.svg" width="${size}" height="${size}" style="display:block;pointer-events:none;" alt="P${i}">`;
+  return `<img src="/img/players/Player${i}.svg" width="${size}" height="${size}" style="display:block;pointer-events:none;" alt="P${i}">`;
 }
 
 // ─── Tile mini summon card ─────────────────────────────────────────────────────────────────────
@@ -664,7 +694,7 @@ function tileSummonCard(summon, ownerColor){
   // Art: SVG base + try real summon image on top
   const svgArt = artSVG(summon.type, 54, 70);
   const imgLayer = summon.id
-    ? `<img src="/img/monsters/monster-${summon.id}-mini.gif" class="tmc-art-img-overlay" onerror="this.src='/img/monsters/monster-${summon.id}-mini.png';this.onerror=function(){this.remove()}" alt="">`
+    ? `<img src="${monsterMiniSrc(summon.id)}" class="tmc-art-img-overlay" onerror="this.remove()" alt="">`
     : '';
   return `<div class="tmc-wrap" style="position:relative;">
     ${summon.charm ? `<div style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#c9a05a;box-shadow:0 0 7px #c9a05acc;z-index:5;display:flex;align-items:center;justify-content:center;font-size:8px;line-height:1;" title="Battle Charm">⚡</div>` : ''}
@@ -1317,7 +1347,8 @@ function runRoundTally(tally, boardArea, onDone) {
   skipBtn.onclick = () => { skipped = true; cleanup(); onDone(); };
 
   function playSound(file) {
-    try { const a = new Audio('/audio/' + file); a.volume = 0.6; a.play().catch(() => {}); } catch(e) {}
+    const L = _sfxLvl(); if (L <= 0) return;
+    try { const a = new Audio('/audio/' + file); a.volume = 0.6 * L; a.play().catch(() => {}); } catch(e) {}
   }
 
   // getBoundingClientRect() returns screen (post-scale) coords, but overlay children use
@@ -1463,6 +1494,12 @@ function updateDisconnectOverlay(){
   ov.querySelector('.dco-title').innerHTML = `<span style="color:${pf.color}">${pf.name}</span> has left`;
   ov.querySelector('.dco-code').textContent = G.roomCode;
   ov.querySelector('.dco-wait span').textContent = `Waiting for ${pf.name} to rejoin…`;
+  // v0.5.04: Remove Player (host only — hidden on spectator screens)
+  const rb = document.getElementById('dco-remove-btn');
+  if (rb) {
+    rb.style.display = isSpectator ? 'none' : '';
+    if (rb._forIdx !== pf.idx) { rb._forIdx = pf.idx; _dcoDisarm(rb); }
+  }
   // QR code pointing to /player
   const playerUrl = `${location.protocol}//${location.host}/player`;
   const qrUrlEl = document.getElementById('dco-qr-url');
@@ -1477,6 +1514,28 @@ function updateDisconnectOverlay(){
     } catch(e) { /* QR lib not ready */ }
   }
   ov.classList.add('visible');
+}
+
+// v0.5.04: two-tap Remove Player — first tap arms (4s), second tap sends remove_player.
+let _dcoArmTimer = null;
+function _dcoDisarm(rb){
+  clearTimeout(_dcoArmTimer); _dcoArmTimer = null;
+  rb.classList.remove('armed');
+  const n = (G && G.pausedFor) ? G.pausedFor.name : 'Player';
+  rb.textContent = `Remove ${n}`;
+}
+function dcoRemoveClick(){
+  const rb = document.getElementById('dco-remove-btn');
+  if (!rb || !G || !G.pausedFor || isSpectator) return;
+  if (!rb.classList.contains('armed')) {
+    rb.classList.add('armed');
+    rb.textContent = `Tap again to remove ${G.pausedFor.name} for good`;
+    _dcoArmTimer = setTimeout(() => _dcoDisarm(rb), 4000);
+    return;
+  }
+  const idx = G.pausedFor.idx;
+  _dcoDisarm(rb);
+  try { ws.send(JSON.stringify({ action: 'remove_player', idx })); } catch(e) {}
 }
 
 function renderConnecting(app){
@@ -1582,8 +1641,8 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.5.03 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.03</div>
-    <div style="margin-top:6px;"><button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Toggle music" style="width:auto;padding:0 14px;gap:6px;display:inline-flex;align-items:center;font-size:14px;">${typeof _bgMuted !== 'undefined' && _bgMuted ? '🔇' : '🔊'}&nbsp;${typeof _bgMuted !== 'undefined' && _bgMuted ? 'Unmute Music' : 'Mute Music'}</button></div>`;
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.5.09 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.20</div>
+    <div style="margin-top:6px;"><button class="mute-btn" id="mute-btn" onclick="openAudioSettings()" title="Sound settings" style="width:auto;padding:0 14px;gap:6px;display:inline-flex;align-items:center;font-size:14px;">${_musicLvl()<=0 && _sfxLvl()<=0 ? '🔇' : '⚙'}&nbsp;Sound Settings</button></div>`;
   splash.appendChild(brand);
 
   // ── Two panels
@@ -1761,7 +1820,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.5.03</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.5.09</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -1775,7 +1834,7 @@ function renderGame(app){
         <span class="roll-val">${lastRoll != null ? lastRoll : '—'}</span>
       </div>
       <div class="vdiv"></div>
-      <button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Toggle music">${typeof _bgMuted !== 'undefined' && _bgMuted ? '🔇' : '🔊'}</button>
+      <button class="mute-btn" id="mute-btn" onclick="openAudioSettings()" title="Sound settings">${_musicLvl()<=0 && _sfxLvl()<=0 ? '🔇' : '⚙'}</button>
       <div class="vdiv"></div>
       ${isSpectator
         ? `<div style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:.22em;color:#9184d9;background:rgba(145,132,217,.14);border:1px solid rgba(145,132,217,.3);border-radius:5px;padding:5px 10px;text-transform:uppercase;">👁 Spectating</div>`
@@ -2102,7 +2161,7 @@ function renderGame(app){
       const isElim = p.eliminated || false;
       const playerAwards = awards[p.name] || [];
       const awardBadge = playerAwards.length ? `<span class="wt-award">${playerAwards.join(' · ')}</span>` : '';
-      const elimBadge = isElim ? `<span class="wt-award" style="color:#e05252">💀 Eliminated</span>` : '';
+      const elimBadge = isElim ? `<span class="wt-award" style="color:#e05252">${p.forfeited ? '🏳 Left' : '💀 Eliminated'}</span>` : '';
       const medal = rank===0 ? '🥇' : rank===1 ? '🥈' : rank===2 ? '🥉' : `${rank+1}.`;
       const rowStyle = isElim ? `color:${p.color};padding-left:16px;opacity:.5;` : `color:${p.color};padding-left:16px;`;
       return `<div class="wt-cell wt-row-${rank+1}" style="${rowStyle}">${medal} ${p.name}${awardBadge}${elimBadge}</div>
@@ -2178,10 +2237,10 @@ function renderPaper(){
     if (isElim) chip.style.cssText = 'opacity:.38;filter:grayscale(.7);';
     const monoEl = monoElementPlayers.get(p.idx);
     const monoTag = monoEl ? `<span class="chip-mono-badge" title="Mono-Element Mastery: ${monoEl}">⭐</span><span class="chip-mono-label" style="color:${TYPE_COLOR[monoEl]||'#ffc840'}">${monoEl}</span>` : '';
-    chip.innerHTML = `<div class="chip-dot">${isElim ? `<span style="font-size:16px">💀</span>` : playerSigilSVG(p, 18)}</div>
+    chip.innerHTML = `<div class="chip-dot">${isElim ? `<span style="font-size:16px">${p.forfeited ? '🏳' : '💀'}</span>` : playerSigilSVG(p, 18)}</div>
       <div class="chip-info">
         <div class="chip-name" style="color:${isElim ? 'var(--text-mute)' : (isActive ? p.color : 'var(--parch-ink)')}">
-          ${p.name}${isActive ? ' ◄' : ''}${isElim ? ' <span style="font-size:9px;color:#e05252;font-family:Inter,sans-serif">ELIMINATED</span>' : monoTag}
+          ${p.name}${isActive ? ' ◄' : ''}${isElim ? ` <span style="font-size:9px;color:#e05252;font-family:Inter,sans-serif">${p.forfeited ? 'LEFT' : 'ELIMINATED'}</span>` : monoTag}
         </div>
         <div class="chip-sub">${isElim ? 'Out of the game' : `${p.tileCount} tiles · ${p.stationedCount} stationed · <span style="color:#5dc97d">⚔${p.battlesWon??0}W</span> <span style="color:#e05252">${p.battlesLost??0}L</span>`}</div>
       </div>
@@ -2314,25 +2373,33 @@ function doNewGame(){
 }
 
 // ─── Background Music ───────────────────────────────────────────────────────────────────────
-let _bgMuted = false;
+// v0.5.05: _bgMuted now means MUSIC is off (level 0 or muted). SFX use _sfxLvl().
+let _bgMuted = _musicLvl() <= 0;
+const MUSIC_BASE = 0.15;
+function _musicTarget() { return MUSIC_BASE * _musicLvl(); }
 // ─── Hit / UI SFX ───────────────────────────────────────────────────────────────────────────
-const _sfxTitle      = new Audio('/audio/title-sound.mp3');   _sfxTitle.volume      = 0.6;
-const _sfxHitSlash   = new Audio('/audio/Hit-Slash.mp3');     _sfxHitSlash.volume   = 0.5;
-const _sfxHitMagic   = new Audio('/audio/Hit-Magic.mp3');     _sfxHitMagic.volume   = 0.5;
-const _sfxHitClaw    = new Audio('/audio/Hit-Claw.mp3');      _sfxHitClaw.volume    = 0.5;
-function _playSfx(audio) { if (_bgMuted) return; audio.currentTime = 0; audio.play().catch(() => {}); }
+const _sfxTitle      = new Audio('/audio/title-sound.mp3');   _sfxTitle._base      = 0.6;
+const _sfxHitSlash   = new Audio('/audio/Hit-Slash.mp3');     _sfxHitSlash._base   = 0.5;
+const _sfxHitMagic   = new Audio('/audio/Hit-Magic.mp3');     _sfxHitMagic._base   = 0.5;
+const _sfxHitClaw    = new Audio('/audio/Hit-Claw.mp3');      _sfxHitClaw._base    = 0.5;
+function _playSfx(audio) {
+  const L = _sfxLvl(); if (L <= 0) return;
+  audio.volume = (audio._base || 0.5) * L;
+  audio.currentTime = 0; audio.play().catch(() => {});
+}
 let _bgStarted = false;
 const _bgAudio = new Audio('/audio/main-theme.mp3');
 _bgAudio.loop = true;
-_bgAudio.volume = 0.15;
+_bgAudio.volume = _musicTarget();
 // Safari/iOS loop fallback — iOS sometimes ignores audio.loop; the 'ended' listener catches it
 _bgAudio.addEventListener('ended', function() {
   if (!_bgMuted) { _bgAudio.currentTime = 0; _bgAudio.play().catch(() => {}); }
 });
 
 // ── Round callout + game-over audio ───────────────────────────────────────
-const _sfxWarnSting = new Audio('/audio/Warning-Sting.mp3'); _sfxWarnSting.volume = 0.7;
-const _bgFinal = new Audio('/audio/final-round.wav'); _bgFinal.loop = true; _bgFinal.volume = 0.15;
+const _sfxWarnSting = new Audio('/audio/Warning-Sting.mp3'); _sfxWarnSting._base = 0.7; _sfxWarnSting.volume = 0.7 * _sfxLvl();
+const _bgFinal = new Audio('/audio/final-round.mp3'); _bgFinal.loop = true; _bgFinal.volume = _musicTarget();
+let _musicTrack = 'main'; // v0.5.05: which music track should be playing ('main' | 'final' | null)
 _bgFinal.addEventListener('ended', function() {
   if (!_bgMuted && _bgFinal.loop === false) { _bgFinal.currentTime = 0; _bgFinal.play().catch(()=>{}); }
 });
@@ -2359,14 +2426,16 @@ function _fadeInAudio(audio, target, ms) {
 
 function _crossfadeToFinal() {
   _fadeOutAudio(_bgAudio, 1200, null);
-  setTimeout(() => { if (!_bgMuted) _fadeInAudio(_bgFinal, 0.15, 1200); }, 600);
+  _musicTrack = 'final';
+  setTimeout(() => { if (!_bgMuted) _fadeInAudio(_bgFinal, _musicTarget(), 1200); }, 600);
 }
 
 function _fadeInBgMain() {
+  _musicTrack = 'main';
   if (_bgMuted) return;
   _bgFinal.pause(); _bgFinal.currentTime = 0;
   _bgAudio.currentTime = 0;
-  _fadeInAudio(_bgAudio, 0.15, 1200);
+  _fadeInAudio(_bgAudio, _musicTarget(), 1200);
 }
 
 function _fireRoundCallout(type) {
@@ -2386,10 +2455,8 @@ function _fireRoundCallout(type) {
     document.getElementById('rco-title').textContent = 'FINAL ROUND';
     document.getElementById('rco-sub').textContent   = 'This is the last round!';
   }
-  if (!_bgMuted) {
-    _sfxWarnSting.currentTime = 0; _sfxWarnSting.play().catch(() => {});
-    if (type === 'final') _crossfadeToFinal();
-  }
+  _playSfx(_sfxWarnSting);
+  if (type === 'final') _crossfadeToFinal();
   const holdMs = type === 'final' ? 2000 : 1500;
   setTimeout(() => {
     ov.classList.add('fade-out');
@@ -2399,7 +2466,7 @@ function _fireRoundCallout(type) {
 }
 
 function _fireGameOverFanfare() {
-  _bgAudio.pause(); _bgFinal.pause();
+  _bgAudio.pause(); _bgFinal.pause(); _musicTrack = null;
   const fo = document.getElementById('go-fanfare-overlay');
   if (fo) {
     fo.className = 'visible';
@@ -2409,9 +2476,8 @@ function _fireGameOverFanfare() {
       setTimeout(() => { fo.className = ''; }, 1200);
     }, holdMs);
   }
-  if (_bgMuted) return;
   setTimeout(() => {
-    _sfxWarnSting.currentTime = 0; _sfxWarnSting.play().catch(() => {});
+    _playSfx(_sfxWarnSting);
     setTimeout(() => {
       _fadeOutAudio(_sfxWarnSting, 1200, () => { _fadeInBgMain(); });
     }, 4500);
@@ -2427,39 +2493,81 @@ function _startBgMusic() {
   });
 }
 
-function toggleMute() {
-  _bgMuted = !_bgMuted;
-  if (_bgMuted) {
-    _bgAudio.pause();
-    _bgFinal.pause();
-  } else {
-    _bgAudio.play().catch(() => {});
+// v0.5.05: apply current AUD levels to everything that's playing / will play
+function _applyAudio() {
+  const wasMuted = _bgMuted;
+  _bgMuted = _musicLvl() <= 0;
+  const mt = _musicTarget();
+  _bgAudio.volume = mt; _bgFinal.volume = mt;
+  if (_bgMuted) { _bgAudio.pause(); _bgFinal.pause(); }
+  else if (wasMuted) {
+    const tr = _musicTrack === 'final' ? _bgFinal : (_musicTrack === 'main' ? _bgAudio : null);
+    if (tr) { tr.play().catch(() => {}); _bgStarted = true; }
   }
-  // Sync all SFX to the same mute state
-  _sfxTitle.muted      = _bgMuted;
-  _sfxHitSlash.muted   = _bgMuted;
-  _sfxHitMagic.muted   = _bgMuted;
-  _sfxHitClaw.muted    = _bgMuted;
-  _sfxWarnSting.muted  = _bgMuted;
+  const sl = _sfxLvl();
+  [_sfxTitle, _sfxHitSlash, _sfxHitMagic, _sfxHitClaw, _sfxWarnSting].forEach(a => { a.muted = false; a.volume = (a._base || .5) * sl; });
   const btn = document.getElementById('mute-btn');
   if (btn) {
-    // Lobby button includes text label; gameplay button is icon-only
+    const off = _bgMuted && sl <= 0;
     const hasLabel = btn.style.padding && btn.style.padding !== '';
-    if (hasLabel) {
-      btn.innerHTML = _bgMuted ? '🔇&nbsp;Unmute Music' : '🔊&nbsp;Mute Music';
-    } else {
-      btn.textContent = _bgMuted ? '🔇' : '🔊';
-    }
+    if (hasLabel) btn.innerHTML = `${off ? '🔇' : '⚙'}&nbsp;Sound Settings`;
+    else btn.textContent = off ? '🔇' : '⚙';
   }
 }
+// Kept for any old callers — now opens the settings panel
+function toggleMute() { openAudioSettings(); }
+
+function openAudioSettings() {
+  let ov = document.getElementById('audio-settings-overlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'audio-settings-overlay';
+    ov.onclick = e => { if (e.target === ov) closeAudioSettings(); };
+    document.body.appendChild(ov);
+  }
+  const row = (key, label, icon) => {
+    const v = Math.round((+AUD[key] || 0) * 100), muted = AUD[key + 'Mute'];
+    return `<div class="aus-row">
+      <div class="aus-lbl"><span>${icon} ${label}</span><span class="aus-val" id="aus-${key}-val">${muted ? 'Muted' : v + '%'}</span></div>
+      <div class="aus-ctl">
+        <button class="aus-mute ${muted ? 'on' : ''}" id="aus-${key}-mute" onclick="_ausMute('${key}')" title="Mute">${muted ? '🔇' : '🔊'}</button>
+        <input type="range" min="0" max="100" step="5" value="${v}" class="aus-range" id="aus-${key}" oninput="_ausSet('${key}', this.value)" ${muted ? 'style="opacity:.4"' : ''}>
+      </div></div>`;
+  };
+  ov.innerHTML = `<div class="aus-box">
+    <div class="aus-title">Sound Settings</div>
+    <div class="aus-sub">${isSpectator ? 'Only affects this screen.' : 'Only affects this screen — spectators set their own.'}</div>
+    ${row('music', 'Music', '🎵')}
+    ${row('sfx', 'Sound Effects', '💥')}
+    <div class="aus-btns"><button class="egm-btn cancel" onclick="_ausTest()">Test Sound</button><button class="egm-btn cancel" onclick="closeAudioSettings()">Done</button></div>
+  </div>`;
+  ov.classList.add('visible');
+}
+function closeAudioSettings() { const ov = document.getElementById('audio-settings-overlay'); if (ov) ov.classList.remove('visible'); }
+function _ausSet(key, val) {
+  AUD[key] = Math.max(0, Math.min(100, +val)) / 100;
+  if (AUD[key] > 0) AUD[key + 'Mute'] = false;
+  _saveAud(); _applyAudio(); _ausRefresh(key);
+}
+function _ausMute(key) {
+  AUD[key + 'Mute'] = !AUD[key + 'Mute'];
+  _saveAud(); _applyAudio(); _ausRefresh(key);
+}
+function _ausRefresh(key) {
+  const m = AUD[key + 'Mute'];
+  const v = document.getElementById(`aus-${key}-val`), b = document.getElementById(`aus-${key}-mute`), r = document.getElementById(`aus-${key}`);
+  if (v) v.textContent = m ? 'Muted' : Math.round(AUD[key] * 100) + '%';
+  if (b) { b.textContent = m ? '🔇' : '🔊'; b.classList.toggle('on', m); }
+  if (r) r.style.opacity = m ? '.4' : '';
+}
+function _ausTest() { SFX.unlock(); _playSfx(_sfxHitMagic); }
 
 // Start music on first user interaction (browser autoplay policy)
 document.addEventListener('click', () => {
   _startBgMusic();
   // Prime _sfxWarnSting so future non-gesture plays (WebSocket handlers) work
-  const v = _sfxWarnSting.volume;
   _sfxWarnSting.volume = 0;
-  _sfxWarnSting.play().then(() => { _sfxWarnSting.pause(); _sfxWarnSting.currentTime = 0; _sfxWarnSting.volume = v; }).catch(() => {});
+  _sfxWarnSting.play().then(() => { _sfxWarnSting.pause(); _sfxWarnSting.currentTime = 0; _sfxWarnSting.volume = _sfxWarnSting._base * _sfxLvl(); }).catch(() => {});
 }, { once: true });
 // Also try immediately (works if page was navigated to with user gesture)
 window.addEventListener('load', () => { setTimeout(_startBgMusic, 500); });
@@ -2491,6 +2599,7 @@ connect();
     </div>
     <div class="dco-btns">
       <button class="egm-btn cancel" onclick="document.getElementById('disconnect-overlay').classList.remove('visible')">Dismiss</button>
+      <button class="egm-btn remove" id="dco-remove-btn" onclick="dcoRemoveClick()">Remove Player</button>
       <button class="egm-btn confirm" onclick="showEndGameModal()">End Game</button>
     </div>
   </div>
@@ -2498,7 +2607,7 @@ connect();
 
 <!-- Round callout overlay (penultimate / final round announcement) -->
 <div id="round-callout-overlay">
-  <div class="rco-bg" id="rco-bg"><img src="/img/scns/SummonHost.png" alt=""></div>
+  <div class="rco-bg" id="rco-bg"><img src="/img/backgrounds/SummonHost.png" alt=""></div>
   <div class="rco-content">
     <span class="rco-icon" id="rco-icon">⚠️</span>
     <div class="rco-title" id="rco-title">PENULTIMATE ROUND</div>
@@ -2507,7 +2616,7 @@ connect();
 </div>
 <!-- Game over fanfare overlay -->
 <div id="go-fanfare-overlay">
-  <div class="gameover-bg"><img src="/img/scns/GameOver.png" alt=""></div>
+  <div class="gameover-bg"><img src="/img/backgrounds/GameOver.png" alt=""></div>
   <div id="go-fanfare-content">
     <div id="go-fanfare-title">GAME OVER</div>
     <div id="go-fanfare-sub">Final Standings</div>

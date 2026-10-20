@@ -167,17 +167,17 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 </div>
 
 <div class="section-divider"></div>
-<div id="light"  class="section"><div class="section-title" style="color:var(--el-Light)">Light</div><div class="section-sub">public/img/monsters/monster-[id].png &amp; monster-[id]-mini.png</div><div id="light-grid"  class="card-row"></div></div>
+<div id="light"  class="section"><div class="section-title" style="color:var(--el-Light)">Light</div><div class="section-sub">public/img/monsters/card/monster-[id].png &amp; mini/monster-[id]-mini.png</div><div id="light-grid"  class="card-row"></div></div>
 <div class="section-divider"></div>
-<div id="dark"   class="section"><div class="section-title" style="color:var(--el-Dark)">Dark</div><div class="section-sub">public/img/monsters/monster-[id].png &amp; monster-[id]-mini.png</div><div id="dark-grid"   class="card-row"></div></div>
+<div id="dark"   class="section"><div class="section-title" style="color:var(--el-Dark)">Dark</div><div class="section-sub">public/img/monsters/card/monster-[id].png &amp; mini/monster-[id]-mini.png</div><div id="dark-grid"   class="card-row"></div></div>
 <div class="section-divider"></div>
-<div id="arcane" class="section"><div class="section-title" style="color:var(--el-Arcane)">Arcane</div><div class="section-sub">public/img/monsters/monster-[id].png &amp; monster-[id]-mini.png</div><div id="arcane-grid" class="card-row"></div></div>
+<div id="arcane" class="section"><div class="section-title" style="color:var(--el-Arcane)">Arcane</div><div class="section-sub">public/img/monsters/card/monster-[id].png &amp; mini/monster-[id]-mini.png</div><div id="arcane-grid" class="card-row"></div></div>
 <div class="section-divider"></div>
-<div id="undead" class="section"><div class="section-title" style="color:var(--el-Undead)">Undead</div><div class="section-sub">public/img/monsters/monster-[id].png &amp; monster-[id]-mini.png</div><div id="undead-grid" class="card-row"></div></div>
+<div id="undead" class="section"><div class="section-title" style="color:var(--el-Undead)">Undead</div><div class="section-sub">public/img/monsters/card/monster-[id].png &amp; mini/monster-[id]-mini.png</div><div id="undead-grid" class="card-row"></div></div>
 <div class="section-divider"></div>
-<div id="beast"  class="section"><div class="section-title" style="color:var(--el-Beast)">Beast</div><div class="section-sub">public/img/monsters/monster-[id].png &amp; monster-[id]-mini.png</div><div id="beast-grid"  class="card-row"></div></div>
+<div id="beast"  class="section"><div class="section-title" style="color:var(--el-Beast)">Beast</div><div class="section-sub">public/img/monsters/card/monster-[id].png &amp; mini/monster-[id]-mini.png</div><div id="beast-grid"  class="card-row"></div></div>
 <div class="section-divider"></div>
-<div id="nature" class="section"><div class="section-title" style="color:var(--el-Nature)">Nature</div><div class="section-sub">public/img/monsters/monster-[id].png &amp; monster-[id]-mini.png</div><div id="nature-grid" class="card-row"></div></div>
+<div id="nature" class="section"><div class="section-title" style="color:var(--el-Nature)">Nature</div><div class="section-sub">public/img/monsters/card/monster-[id].png &amp; mini/monster-[id]-mini.png</div><div id="nature-grid" class="card-row"></div></div>
 <div class="section-divider"></div>
 <div id="wildcards" class="section">
   <div class="section-title" style="color:#c9922a">Wild Cards</div>
@@ -214,7 +214,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
     <span class="rare-badge-header">★ Dual-Element</span>
   </div>
   <div class="rare-desc">Dual-type summons — strong against two types, no elemental weakness. Obtained via Warp or special events. Never in the shop.</div>
-  <div class="section-sub">public/img/monsters/monster-[id].png &amp; monster-[id]-mini.png</div>
+  <div class="section-sub">public/img/monsters/card/monster-[id].png &amp; mini/monster-[id]-mini.png</div>
   <div id="rare-grid" class="card-row"></div>
 </div>
 
@@ -225,7 +225,7 @@ const TYPE_COLOR = {
   Undead:'#5fb3a4', Beast:'#d98a5a', Nature:'#3aaa5c'
 };
 
-// Tile image paths — served from /images/ by the Node server
+// Tile image paths — served from /img/tiles/ by the Node server
 const TILES = [
   {key:'Light',  src:'/img/tiles/tile-light.png',   label:'Light',     icon:null},
   {key:'Dark',   src:'/img/tiles/tile-dark.png',    label:'Dark',      icon:null},
@@ -298,7 +298,7 @@ const MONSTERS = [
 
 // ── Rare / Dual-Element (3) ──────────────────────────────────────────────────
 const RARES = [
-  {id:'seraphim',         name:'Luminar Operative', type:'Light',  type2:'Arcane', hp:35, atk:22, def:12, cost:26, gen:4,
+  {id:'luminar_operative',         name:'Luminar Operative', type:'Light',  type2:'Arcane', hp:35, atk:22, def:12, cost:26, gen:4,
     rareDesc:'2× vs Dark & Undead · No elemental weakness'},
   {id:'hex_stalker',      name:'Hex Stalker',       type:'Undead', type2:'Beast',  hp:42, atk:20, def:11, cost:25, gen:3,
     rareDesc:'2× vs Beast & Nature · No elemental weakness'},
@@ -463,10 +463,10 @@ function buildTiles(){
 // ─── Build Summon card ───────────────────────────────────────────────────────
 function buildSummonCard(m, grid, svgOverrideFn){
   const c = TYPE_COLOR[m.type];
-  const gifSrc  = `/img/monsters/monster-${m.id}.gif`;
-  const miniGifSrc = `/img/monsters/monster-${m.id}-mini.gif`;
-  const fullSrc = `/img/monsters/monster-${m.id}.png`;
-  const miniSrc = `/img/monsters/monster-${m.id}-mini.png`;
+  const gifSrc  = `/img/monsters/anim/monster-${m.id}.webp`;
+  const miniGifSrc = `/img/monsters/anim/monster-${m.id}-mini.webp`;
+  const fullSrc = `/img/monsters/card/monster-${m.id}.png`;
+  const miniSrc = `/img/monsters/mini/monster-${m.id}-mini.png`;
   const svgFull = svgOverrideFn ? svgOverrideFn(130,186) : artSVG(m.type,130,186);
   const svgMini = svgOverrideFn ? svgOverrideFn(70,100)  : artSVG(m.type,70,100);
   const isRare  = m.isRare;
@@ -497,13 +497,13 @@ function buildSummonCard(m, grid, svgOverrideFn){
   fullImg.alt = m.name;
   fullImg.style.cssText='width:100%;height:100%;object-fit:cover;display:block;';
   fullImg.onload = ()=>{
-    const isGif = fullImg.src.endsWith('.gif');
-    fullBadge.textContent = isGif ? '✓ GIF' : '✓ PNG';
+    const isGif = fullImg.src.endsWith('.webp');
+    fullBadge.textContent = isGif ? '✓ WebP' : '✓ PNG';
     fullBadge.className='png-badge ok';
     summonPng++; updateSummary();
   };
   fullImg.onerror = ()=>{
-    if(fullImg.src.endsWith('.gif')){
+    if(fullImg.src.endsWith('.webp')){
       // GIF failed → try PNG
       fullBadge.textContent='trying PNG…'; fullBadge.className='png-badge loading';
       fullImg.src = fullSrc;
@@ -562,7 +562,7 @@ function buildSummonCard(m, grid, svgOverrideFn){
   fullWrap.appendChild(fullBadge);
   const fpth=document.createElement('a'); fpth.className='path-link';
   fpth.href=gifSrc; fpth.target='_blank'; fpth.rel='noopener';
-  fpth.textContent=`monster-${m.id}.gif / .png`;
+  fpth.textContent=`anim/monster-${m.id}.webp / card/.png`;
   fullWrap.appendChild(fpth);
 
   // ── Mini card (70×100) ──
@@ -582,12 +582,12 @@ function buildSummonCard(m, grid, svgOverrideFn){
   miniImg.alt = m.name;
   miniImg.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
   miniImg.onload = ()=>{
-    const isGif = miniImg.src.endsWith('.gif');
-    miniBadge.textContent = isGif ? '✓ mini GIF' : miniImg.src===miniSrc ? '✓ mini PNG' : '✓ full PNG';
+    const isGif = miniImg.src.endsWith('.webp');
+    miniBadge.textContent = isGif ? '✓ mini WebP' : miniImg.src===miniSrc ? '✓ mini PNG' : '✓ full PNG';
     miniBadge.className='png-badge ok';
   };
   miniImg.onerror = ()=>{
-    if(miniImg.src.endsWith('.gif')){
+    if(miniImg.src.endsWith('.webp')){
       // mini GIF failed → try mini PNG
       miniBadge.textContent='trying mini PNG…'; miniBadge.className='png-badge loading';
       miniImg.src = miniSrc;
@@ -623,7 +623,7 @@ function buildSummonCard(m, grid, svgOverrideFn){
   miniWrap.appendChild(miniBadge);
   const mpth=document.createElement('a'); mpth.className='path-link';
   mpth.href=miniGifSrc; mpth.target='_blank'; mpth.rel='noopener';
-  mpth.textContent=`monster-${m.id}-mini.gif / .png`;
+  mpth.textContent=`mini/monster-${m.id}-mini.png`;
   miniWrap.appendChild(mpth);
 
   sizesRow.appendChild(fullWrap);

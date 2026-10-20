@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Summoner's Gambit — Visual Design Reference</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
+<style>*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0d0e1c;--surface:#151627;--surface2:#1c1e2b;--border:#272a38;--border2:#3f424d;--text:#e9e9ed;--text2:#b2b6ca;--text3:#9397ab;--text4:#75798c;--accent:#9184d9;--accent-light:#b5abfc;--accent-pale:#d2cefd;--gold:#c9a05a}
+html{scroll-behavior:smooth;scroll-padding-top:20px}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.6}
+a{color:var(--accent-light)}
+#nav{position:fixed;top:0;left:0;width:230px;height:100vh;overflow-y:auto;background:#09091a;border-right:1px solid var(--border);padding:22px 0 40px}
+#nav .brand{font-family:'Cinzel',serif;font-weight:700;letter-spacing:.12em;color:var(--gold);font-size:14px;padding:0 18px}
+#nav .brand-sub{font-size:10px;color:var(--text4);padding:4px 18px 14px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.nav-label{font-size:10px;font-weight:600;color:var(--text4);letter-spacing:.16em;text-transform:uppercase;padding:12px 18px 4px}
+#nav a{display:block;padding:4px 18px;font-size:12.5px;color:var(--text3);text-decoration:none;border-left:2px solid transparent}
+#nav a:hover{color:var(--text);background:rgba(145,132,217,.07)}
+#nav a.active{color:var(--accent-pale);border-left-color:var(--accent);background:rgba(145,132,217,.12)}
+main{margin-left:230px;padding:44px 52px 120px;max-width:1340px}
+.page-title{font-family:'Cinzel',serif;font-size:34px;font-weight:700;letter-spacing:.1em;color:var(--gold)}
+.page-sub{color:var(--text3);font-size:13px;margin:6px 0 40px}
+.section{margin-bottom:76px}
+.section-title{font-family:'Cinzel',serif;font-size:21px;font-weight:600;letter-spacing:.06em;border-bottom:1px solid var(--border2);padding-bottom:10px;margin-bottom:14px}
+.intro{color:var(--text2);max-width:820px;margin-bottom:22px}
+.note{color:var(--text3);font-size:12.5px;margin:-4px 0 12px;max-width:820px}
+.sub{font-size:12px;font-weight:600;color:var(--accent-light);text-transform:uppercase;letter-spacing:.12em;margin:26px 0 12px}
+code{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--accent-pale);background:rgba(145,132,217,.12);padding:1px 5px;border-radius:4px}
+.shot{margin:0 0 26px}
+.shot img{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--border2);background:#000}
+.shot.board{max-width:1180px}
+.shot.cards img{width:auto;max-width:100%;border-radius:8px}
+.shot figcaption{font-size:12.5px;color:var(--text3);margin-top:8px}
+.shot figcaption b{color:var(--text);font-weight:600}
+.phone-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:26px 22px}
+.shot.phone{margin:0}
+.shot.phone img{border-radius:22px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.shot.phone figcaption span{display:block;color:var(--text4);font-size:11.5px}
+.hero{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,1.4fr);gap:24px;align-items:start}
+.hero-phones{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.swatch-row{display:flex;flex-wrap:wrap;gap:10px}
+.swatch{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:230px}
+.swatch-dot{width:30px;height:30px;border-radius:6px;flex-shrink:0;border:1px solid rgba(255,255,255,.12)}
+.swatch-name{font-size:12px;font-weight:600}
+.swatch-hex{font-size:11px;color:var(--text4);font-family:ui-monospace,Menlo,monospace}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:middle}
+.players{display:flex;flex-wrap:wrap;gap:18px}
+.pl{display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px}
+.pl-c{width:44px;height:6px;border-radius:3px}
+.type-row{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.type-row>div{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px}
+.t-cinzel{font-family:'Cinzel',serif;font-size:28px;font-weight:700;letter-spacing:.12em;color:var(--gold);margin-bottom:6px}
+.t-inter{font-size:20px;margin-bottom:6px}
+.elem-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:18px}
+.elem-table th{text-align:left;padding:8px 10px;font-size:10px;font-weight:600;color:var(--text4);text-transform:uppercase;letter-spacing:.1em;border-bottom:1px solid var(--border2)}
+.elem-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top}
+.elem-table td:first-child{color:var(--text);font-weight:500;white-space:nowrap}
+@media (max-width:900px){#nav{display:none}main{margin-left:0;padding:24px 16px}.hero,.type-row{grid-template-columns:1fr}}
+</style></head><body>
+<nav id="nav"><div class="brand">Summoners Gambit</div><div class="brand-sub">Visual design reference<br>server v1.0.99 · board v0.5.09 · player v0.5.20</div><div class="nav-group"><div class="nav-label">Start</div><a href="#overview" data-id="overview">At a glance</a><a href="#tokens" data-id="tokens">Colour & type</a></div><div class="nav-group"><div class="nav-label">Board view</div><a href="#bv-lobby" data-id="bv-lobby">Lobby</a><a href="#bv-setup" data-id="bv-setup">Setup phase</a><a href="#bv-turn" data-id="bv-turn">A normal turn</a><a href="#bv-battle" data-id="bv-battle">Battles</a><a href="#bv-tally" data-id="bv-tally">Round income tally</a><a href="#bv-wild" data-id="bv-wild">Wild card event</a><a href="#bv-callouts" data-id="bv-callouts">Round callouts</a><a href="#bv-pause" data-id="bv-pause">Dropouts — pause & Remove</a><a href="#bv-sound" data-id="bv-sound">Sound settings</a><a href="#bv-gameover" data-id="bv-gameover">Game over</a></div><div class="nav-group"><div class="nav-label">Phone view</div><a href="#pv-join" data-id="pv-join">Join & lobby</a><a href="#pv-setup" data-id="pv-setup">Setup</a><a href="#pv-waiting" data-id="pv-waiting">Waiting & turn start</a><a href="#pv-shop" data-id="pv-shop">Shop</a><a href="#pv-move" data-id="pv-move">Roll & landing choice</a><a href="#pv-claim" data-id="pv-claim">Claim</a><a href="#pv-battle" data-id="pv-battle">Battle</a><a href="#pv-own" data-id="pv-own">Your own tile</a><a href="#pv-special" data-id="pv-special">Special tiles</a><a href="#pv-stalemate" data-id="pv-stalemate">Stalemate</a><a href="#pv-wild" data-id="pv-wild">Wild cards</a><a href="#pv-menu" data-id="pv-menu">Menu, sound & leaving</a><a href="#pv-end" data-id="pv-end">Eliminated & game over</a><a href="#pv-detail" data-id="pv-detail">Card detail sheet</a></div><div class="nav-group"><div class="nav-label">Cards</div><a href="#cards-anatomy" data-id="cards-anatomy">Card states</a><a href="#cards-light" data-id="cards-light">Light</a><a href="#cards-dark" data-id="cards-dark">Dark</a><a href="#cards-arcane" data-id="cards-arcane">Arcane</a><a href="#cards-undead" data-id="cards-undead">Undead</a><a href="#cards-beast" data-id="cards-beast">Beast</a><a href="#cards-nature" data-id="cards-nature">Nature</a><a href="#cards-rare" data-id="cards-rare">Rares</a><a href="#cards-support" data-id="cards-support">Support</a></div><div class="nav-group"><div class="nav-label">Reference</div><a href="#ref-phases" data-id="ref-phases">Phases</a><a href="#ref-actions" data-id="ref-actions">Actions</a><a href="#ref-ability-ref" data-id="ref-ability-ref">Abilities</a><a href="#ref-ascendants" data-id="ref-ascendants">Ascendants</a><a href="#ref-wildcards-ref" data-id="ref-wildcards-ref">Wild cards</a><a href="#ref-economy" data-id="ref-economy">Economy</a></div></nav>
+<main>
+<div class="page-title">Visual Design Reference</div>
+<div class="page-sub">Summoner's Gambit · server v1.0.99 · board v0.5.09 · player v0.5.20 · screenshots captured 2026-10-19 from the live build · open from <code>public/</code> (images live in <code>public/img/docs/</code>)</div>
+<section class="section" id="overview"><h2 class="section-title">At a glance</h2>
+<p class="intro">Every image on this page is a real screenshot of the game, captured from the current build with the real art, fonts and code. The board view is shot at its native 1440×900 canvas; phone screens at 390×844 (2× pixel density). Click any image to open it full size.</p><div class="hero"><figure class="shot board"><a href="img/docs/board-turn.webp" target="_blank"><img src="img/docs/board-turn.webp" width="1440" height="900" loading="lazy" alt="Board view"></a>
+<figcaption><b>Board view</b> — the shared screen everyone watches</figcaption></figure><div class="hero-phones"><figure class="shot phone"><a href="img/docs/phone-shop.webp" target="_blank"><img src="img/docs/phone-shop.webp" width="780" height="1688" loading="lazy" alt="Phone — shop"></a>
+<figcaption><b>Phone — shop</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-waiting-ring.webp" target="_blank"><img src="img/docs/phone-waiting-ring.webp" width="780" height="1688" loading="lazy" alt="Phone — waiting"></a>
+<figcaption><b>Phone — waiting</b></figcaption></figure></div></div></section><section class="section" id="tokens"><h2 class="section-title">Colour &amp; type</h2>
+<p class="intro">Values taken from the <code>:root</code> blocks of <code>board.html</code> and <code>player.html</code>.</p><h3 class="sub">Surfaces</h3><div class="swatch-row"><div class="swatch"><div class="swatch-dot" style="background:#0d0e1c"></div><div><div class="swatch-name">--bg</div><div class="swatch-hex">#0d0e1c · Page background</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#09091a"></div><div><div class="swatch-name">--bg-deep</div><div class="swatch-hex">#09091a · Deepest background</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#151627"></div><div><div class="swatch-name">--surface</div><div class="swatch-hex">#151627 · Panels</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#1c1e2b"></div><div><div class="swatch-name">--surface2</div><div class="swatch-hex">#1c1e2b · Raised panels</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#272a38"></div><div><div class="swatch-name">--border</div><div class="swatch-hex">#272a38 · Hairlines</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#3f424d"></div><div><div class="swatch-name">--border2</div><div class="swatch-hex">#3f424d · Strong borders</div></div></div></div><h3 class="sub">Text</h3><div class="swatch-row"><div class="swatch"><div class="swatch-dot" style="background:#e9e9ed"></div><div><div class="swatch-name">--text</div><div class="swatch-hex">#e9e9ed · Primary text</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#b2b6ca"></div><div><div class="swatch-name">--text-lo</div><div class="swatch-hex">#b2b6ca · Secondary</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#9397ab"></div><div><div class="swatch-name">--text-dim</div><div class="swatch-hex">#9397ab · Tertiary</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#75798c"></div><div><div class="swatch-name">--text-mute</div><div class="swatch-hex">#75798c · Muted / labels</div></div></div></div><h3 class="sub">Accent, gold &amp; status</h3><div class="swatch-row"><div class="swatch"><div class="swatch-dot" style="background:#9184d9"></div><div><div class="swatch-name">--accent</div><div class="swatch-hex">#9184d9 · Accent / primary buttons</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#b5abfc"></div><div><div class="swatch-name">--accent-lit</div><div class="swatch-hex">#b5abfc · Accent light</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#d2cefd"></div><div><div class="swatch-name">--accent-pale</div><div class="swatch-hex">#d2cefd · Accent pale</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#a97b40"></div><div><div class="swatch-name">--gold</div><div class="swatch-hex">#a97b40 · Gold</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#c9a05a"></div><div><div class="swatch-name">--gold-glow</div><div class="swatch-hex">#c9a05a · Gold glow / highlights</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#4f9153"></div><div><div class="swatch-name">--good</div><div class="swatch-hex">#4f9153 · Positive (player view)</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#c9843a"></div><div><div class="swatch-name">--warn</div><div class="swatch-hex">#c9843a · Warning</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#b05050"></div><div><div class="swatch-name">--danger</div><div class="swatch-hex">#b05050 · Danger / low HP</div></div></div></div><h3 class="sub">Board right-rail parchment</h3><div class="swatch-row"><div class="swatch"><div class="swatch-dot" style="background:#f5efe0"></div><div><div class="swatch-name">--parch-hi</div><div class="swatch-hex">#f5efe0 · Right-rail parchment (top)</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#e8d5b0"></div><div><div class="swatch-name">--parch-lo</div><div class="swatch-hex">#e8d5b0 · Parchment (bottom)</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#1a1710"></div><div><div class="swatch-name">--parch-ink</div><div class="swatch-hex">#1a1710 · Parchment ink</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#6b5a3a"></div><div><div class="swatch-name">--parch-sub</div><div class="swatch-hex">#6b5a3a · Parchment secondary</div></div></div></div><h3 class="sub">Elements</h3><p class="note">From <code>TYPE_COLOR</code> in <code>common.js</code> (also <code>--el-*</code> CSS vars). Dark is a cool grey and Nature a saturated green — older docs listed purple / pale green, which the game no longer uses.</p><div class="swatch-row"><div class="swatch"><div class="swatch-dot" style="background:#e0c07a"></div><div><div class="swatch-name">Light</div><div class="swatch-hex">#e0c07a</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#6b6b7a"></div><div><div class="swatch-name">Dark</div><div class="swatch-hex">#6b6b7a</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#7f92e8"></div><div><div class="swatch-name">Arcane</div><div class="swatch-hex">#7f92e8</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#5fb3a4"></div><div><div class="swatch-name">Undead</div><div class="swatch-hex">#5fb3a4</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#d98a5a"></div><div><div class="swatch-name">Beast</div><div class="swatch-hex">#d98a5a</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#3aaa5c"></div><div><div class="swatch-name">Nature</div><div class="swatch-hex">#3aaa5c</div></div></div><div class="swatch"><div class="swatch-dot" style="background:#9aabbc"></div><div><div class="swatch-name">Support</div><div class="swatch-hex">#9aabbc</div></div></div></div><h3 class="sub">Type wheel</h3><p class="note">Each element deals 2× to the one it beats and 0.5× to the one that beats it.</p><table class="elem-table" style="max-width:520px"><thead><tr><th>Element</th><th>Beats</th><th>Loses to</th></tr></thead><tbody><tr><td><span class="dot" style="background:#e0c07a"></span>Light</td><td>Undead</td><td>Nature</td></tr><tr><td><span class="dot" style="background:#6b6b7a"></span>Dark</td><td>Beast</td><td>Arcane</td></tr><tr><td><span class="dot" style="background:#7f92e8"></span>Arcane</td><td>Dark</td><td>Undead</td></tr><tr><td><span class="dot" style="background:#5fb3a4"></span>Undead</td><td>Arcane</td><td>Light</td></tr><tr><td><span class="dot" style="background:#d98a5a"></span>Beast</td><td>Nature</td><td>Dark</td></tr><tr><td><span class="dot" style="background:#3aaa5c"></span>Nature</td><td>Light</td><td>Beast</td></tr></tbody></table><h3 class="sub">Players</h3><p class="note">Slot colours from <code>PLAYER_COLORS</code>; board tokens are <code>img/players/Player1–6.svg</code>.</p><div class="players"><div class="pl"><img src="img/players/Player1.svg" width="44" height="44" alt=""><div class="pl-c" style="background:#e05252"></div><div class="swatch-hex">P1 · #e05252</div></div><div class="pl"><img src="img/players/Player2.svg" width="44" height="44" alt=""><div class="pl-c" style="background:#5ca8e0"></div><div class="swatch-hex">P2 · #5ca8e0</div></div><div class="pl"><img src="img/players/Player3.svg" width="44" height="44" alt=""><div class="pl-c" style="background:#5dc97d"></div><div class="swatch-hex">P3 · #5dc97d</div></div><div class="pl"><img src="img/players/Player4.svg" width="44" height="44" alt=""><div class="pl-c" style="background:#e0b050"></div><div class="swatch-hex">P4 · #e0b050</div></div><div class="pl"><img src="img/players/Player5.svg" width="44" height="44" alt=""><div class="pl-c" style="background:#c07fd8"></div><div class="swatch-hex">P5 · #c07fd8</div></div><div class="pl"><img src="img/players/Player6.svg" width="44" height="44" alt=""><div class="pl-c" style="background:#60cdc0"></div><div class="swatch-hex">P6 · #60cdc0</div></div></div><h3 class="sub">Typography</h3><div class="type-row"><div><div class="t-cinzel">Summoners Gambit</div><div class="swatch-hex">Cinzel 400/600/700 — headings, card names, buttons, labels (often small caps-style with wide letter-spacing)</div></div><div><div class="t-inter">Roll the dice to move and claim tiles.</div><div class="swatch-hex">Inter 400/500/600 — body text, stats, descriptions</div></div></div></section><section class="section" id="bv-lobby"><h2 class="section-title">Board — Lobby</h2>
+<p class="intro">Host opens <code>/board</code>. Room code, player and spectator URLs, QR code, joined players with starter sets, round-limit picker and Start Game. ⚙ opens sound settings.</p><figure class="shot board"><a href="img/docs/board-lobby.webp" target="_blank"><img src="img/docs/board-lobby.webp" width="1440" height="900" loading="lazy" alt="Lobby with three players joined"></a>
+<figcaption><b>Lobby with three players joined</b></figcaption></figure></section><section class="section" id="bv-setup"><h2 class="section-title">Board — Setup phase</h2>
+<p class="intro">Players take turns placing their starting summons for free. The top bar shows setup round and turn; the right rail lists players and the event log.</p><figure class="shot board"><a href="img/docs/board-setup.webp" target="_blank"><img src="img/docs/board-setup.webp" width="1440" height="900" loading="lazy" alt="Setup — round 2 of 3"></a>
+<figcaption><b>Setup — round 2 of 3</b></figcaption></figure></section><section class="section" id="bv-turn"><h2 class="section-title">Board — A normal turn</h2>
+<p class="intro">28-tile wheel with tile art, stationed summon cards, tile numbers and player banners. Centre shows the die; the parchment right rail shows each player's tiles, stationed count, battle record and Mana, then the live event log.</p><figure class="shot board"><a href="img/docs/board-turn.webp" target="_blank"><img src="img/docs/board-turn.webp" width="1440" height="900" loading="lazy" alt="Shop phase — Aria&#x27;s turn"></a>
+<figcaption><b>Shop phase — Aria's turn</b></figcaption></figure><figure class="shot board"><a href="img/docs/board-landing.webp" target="_blank"><img src="img/docs/board-landing.webp" width="1440" height="900" loading="lazy" alt="After a roll"></a>
+<figcaption><b>After a roll</b> — the die shows the roll while the player picks one of three landing tiles</figcaption></figure></section><section class="section" id="bv-battle"><h2 class="section-title">Board — Battles</h2>
+<p class="intro">The attacker card updates live as the player browses their hand; then the clash plays with hit animations, HP bars and ability callouts.</p><figure class="shot board"><a href="img/docs/board-battle-preview.webp" target="_blank"><img src="img/docs/board-battle-preview.webp" width="1440" height="900" loading="lazy" alt="Battle engaged — live attacker preview"></a>
+<figcaption><b>Battle engaged — live attacker preview</b></figcaption></figure><figure class="shot board"><a href="img/docs/board-battle-anim1.webp" target="_blank"><img src="img/docs/board-battle-anim1.webp" width="1440" height="900" loading="lazy" alt="Clash animation"></a>
+<figcaption><b>Clash animation</b></figcaption></figure><figure class="shot board"><a href="img/docs/board-battle-anim2.webp" target="_blank"><img src="img/docs/board-battle-anim2.webp" width="1440" height="900" loading="lazy" alt="Clash animation — later beat"></a>
+<figcaption><b>Clash animation — later beat</b></figcaption></figure></section><section class="section" id="bv-tally"><h2 class="section-title">Board — Round income tally</h2>
+<p class="intro">From round 2, each turn starts with the board animating every stationed summon's income (with ability labels), then a compact summary callout.</p><figure class="shot board"><a href="img/docs/board-tally.webp" target="_blank"><img src="img/docs/board-tally.webp" width="1440" height="900" loading="lazy" alt="Income tally"></a>
+<figcaption><b>Income tally</b></figcaption></figure><figure class="shot board"><a href="img/docs/board-turn-summary.webp" target="_blank"><img src="img/docs/board-turn-summary.webp" width="1440" height="900" loading="lazy" alt="Turn summary callout"></a>
+<figcaption><b>Turn summary callout</b></figcaption></figure></section><section class="section" id="bv-wild"><h2 class="section-title">Board — Wild card event</h2>
+<p class="intro">Banner at the top of the wheel while the player chooses a wild card.</p><figure class="shot board"><a href="img/docs/board-wildcard.webp" target="_blank"><img src="img/docs/board-wildcard.webp" width="1440" height="900" loading="lazy" alt="Wild card banner"></a>
+<figcaption><b>Wild card banner</b></figcaption></figure></section><section class="section" id="bv-callouts"><h2 class="section-title">Board — Round callouts</h2>
+<p class="intro">Played before the penultimate and final rounds (with Warning-Sting.mp3; the final round also crossfades to final-round music).</p><figure class="shot board"><a href="img/docs/board-callout-penultimate.webp" target="_blank"><img src="img/docs/board-callout-penultimate.webp" width="1440" height="900" loading="lazy" alt="Penultimate round"></a>
+<figcaption><b>Penultimate round</b></figcaption></figure><figure class="shot board"><a href="img/docs/board-callout-final.webp" target="_blank"><img src="img/docs/board-callout-final.webp" width="1440" height="900" loading="lazy" alt="Final round"></a>
+<figcaption><b>Final round</b></figcaption></figure></section><section class="section" id="bv-pause"><h2 class="section-title">Board — Dropouts — pause & Remove</h2>
+<p class="intro">A disconnect pauses the game. The host can Dismiss, Remove the player (two taps within 4 s), or End Game.</p><figure class="shot board"><a href="img/docs/board-paused.webp" target="_blank"><img src="img/docs/board-paused.webp" width="1440" height="900" loading="lazy" alt="Paused — player disconnected"></a>
+<figcaption><b>Paused — player disconnected</b></figcaption></figure><figure class="shot board"><a href="img/docs/board-paused-armed.webp" target="_blank"><img src="img/docs/board-paused-armed.webp" width="1440" height="900" loading="lazy" alt="Remove armed (second tap confirms)"></a>
+<figcaption><b>Remove armed (second tap confirms)</b></figcaption></figure></section><section class="section" id="bv-sound"><h2 class="section-title">Board — Sound settings</h2>
+<p class="intro">Per-device Music and Sound Effects sliders with mute toggles, saved in the browser.</p><figure class="shot board"><a href="img/docs/board-sound-settings.webp" target="_blank"><img src="img/docs/board-sound-settings.webp" width="1440" height="900" loading="lazy" alt="Sound settings (⚙)"></a>
+<figcaption><b>Sound settings (⚙)</b></figcaption></figure></section><section class="section" id="bv-gameover"><h2 class="section-title">Board — Game over</h2>
+<p class="intro">Fanfare overlay, then the final standings with awards.</p><figure class="shot board"><a href="img/docs/board-gameover-fanfare.webp" target="_blank"><img src="img/docs/board-gameover-fanfare.webp" width="1440" height="900" loading="lazy" alt="Game over fanfare"></a>
+<figcaption><b>Game over fanfare</b></figcaption></figure><figure class="shot board"><a href="img/docs/board-gameover.webp" target="_blank"><img src="img/docs/board-gameover.webp" width="1440" height="900" loading="lazy" alt="Final standings"></a>
+<figcaption><b>Final standings</b></figcaption></figure></section><section class="section" id="pv-join"><h2 class="section-title">Phone — Join & lobby</h2>
+<p class="intro">Room code, name, starter set (A–F) and an optional Desktop Mode. After joining, the lobby lists everyone.</p><div class="phone-grid"><figure class="shot phone"><a href="img/docs/phone-join.webp" target="_blank"><img src="img/docs/phone-join.webp" width="780" height="1688" loading="lazy" alt="Join"></a>
+<figcaption><b>Join</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-lobby.webp" target="_blank"><img src="img/docs/phone-lobby.webp" width="780" height="1688" loading="lazy" alt="Lobby"></a>
+<figcaption><b>Lobby</b></figcaption></figure></div></section><section class="section" id="pv-setup"><h2 class="section-title">Phone — Setup</h2>
+<p class="intro">How-to-play walkthrough first, then the board ring: pick an open tile on the ring and a summon from the hand strip; the sheet shows home-field boost or weak ground.</p><div class="phone-grid"><figure class="shot phone"><a href="img/docs/phone-setup-instructions.webp" target="_blank"><img src="img/docs/phone-setup-instructions.webp" width="780" height="1688" loading="lazy" alt="How to play"></a>
+<figcaption><b>How to play</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-setup-ring.webp" target="_blank"><img src="img/docs/phone-setup-ring.webp" width="780" height="1688" loading="lazy" alt="Your setup turn"></a>
+<figcaption><b>Your setup turn</b><span>ring + hand strip</span></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-setup-claim-sheet.webp" target="_blank"><img src="img/docs/phone-setup-claim-sheet.webp" width="780" height="1688" loading="lazy" alt="Claim sheet"></a>
+<figcaption><b>Claim sheet</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-setup-waiting.webp" target="_blank"><img src="img/docs/phone-setup-waiting.webp" width="780" height="1688" loading="lazy" alt="Waiting during setup"></a>
+<figcaption><b>Waiting during setup</b></figcaption></figure></div></section><section class="section" id="pv-waiting"><h2 class="section-title">Phone — Waiting & turn start</h2>
+<p class="intro">Between turns the phone shows the whole board as a ring that follows the active player, plus recent events. Your turn starts with the income summary.</p><div class="phone-grid"><figure class="shot phone"><a href="img/docs/phone-waiting-ring.webp" target="_blank"><img src="img/docs/phone-waiting-ring.webp" width="780" height="1688" loading="lazy" alt="Waiting — board ring"></a>
+<figcaption><b>Waiting — board ring</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-turn-summary.webp" target="_blank"><img src="img/docs/phone-turn-summary.webp" width="780" height="1688" loading="lazy" alt="Turn summary"></a>
+<figcaption><b>Turn summary</b><span>income breakdown, upkeep, net Mana</span></figcaption></figure></div></section><section class="section" id="pv-shop"><h2 class="section-title">Phone — Shop</h2>
+<p class="intro">One action per turn: buy, sell or skip. Tapping a card opens the swipeable detail sheet with the action button.</p><div class="phone-grid"><figure class="shot phone"><a href="img/docs/phone-shop.webp" target="_blank"><img src="img/docs/phone-shop.webp" width="780" height="1688" loading="lazy" alt="Shop"></a>
+<figcaption><b>Shop</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-shop-sheet.webp" target="_blank"><img src="img/docs/phone-shop-sheet.webp" width="780" height="1688" loading="lazy" alt="Shop detail sheet"></a>
+<figcaption><b>Shop detail sheet</b></figcaption></figure></div></section><section class="section" id="pv-move"><h2 class="section-title">Phone — Roll & landing choice</h2>
+<p class="intro">Roll 2d6 (min 3), then choose one of three tiles. Each option opens a preview sheet before you commit.</p><div class="phone-grid"><figure class="shot phone"><a href="img/docs/phone-roll.webp" target="_blank"><img src="img/docs/phone-roll.webp" width="780" height="1688" loading="lazy" alt="Roll"></a>
+<figcaption><b>Roll</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-landing.webp" target="_blank"><img src="img/docs/phone-landing.webp" width="780" height="1688" loading="lazy" alt="Choose destination"></a>
+<figcaption><b>Choose destination</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-landing-sheet.webp" target="_blank"><img src="img/docs/phone-landing-sheet.webp" width="780" height="1688" loading="lazy" alt="Destination preview"></a>
+<figcaption><b>Destination preview</b></figcaption></figure></div></section><section class="section" id="pv-claim"><h2 class="section-title">Phone — Claim</h2>
+<p class="intro">Empty tile: pick a summon to station (pay its cost) or skip.</p><div class="phone-grid"><figure class="shot phone"><a href="img/docs/phone-claim.webp" target="_blank"><img src="img/docs/phone-claim.webp" width="780" height="1688" loading="lazy" alt="Empty tile"></a>
+<figcaption><b>Empty tile</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-claim-sheet.webp" target="_blank"><img src="img/docs/phone-claim-sheet.webp" width="780" height="1688" loading="lazy" alt="Claim sheet"></a>
+<figcaption><b>Claim sheet</b></figcaption></figure></div></section><section class="section" id="pv-battle"><h2 class="section-title">Phone — Battle</h2>
+<p class="intro">Enemy tile: pick an attacker (live preview on the board) or retreat. Matchups show as gold glow (2×) or red tint (½×) with a banner on the sheet. Both players then see a personal result.</p><div class="phone-grid"><figure class="shot phone"><a href="img/docs/phone-battle.webp" target="_blank"><img src="img/docs/phone-battle.webp" width="780" height="1688" loading="lazy" alt="Enemy tile"></a>
+<figcaption><b>Enemy tile</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-battle-sheet.webp" target="_blank"><img src="img/docs/phone-battle-sheet.webp" width="780" height="1688" loading="lazy" alt="Attacker sheet"></a>
+<figcaption><b>Attacker sheet</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-battle-result.webp" target="_blank"><img src="img/docs/phone-battle-result.webp" width="780" height="1688" loading="lazy" alt="Result — attacker"></a>
+<figcaption><b>Result — attacker</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-battle-result-def.webp" target="_blank"><img src="img/docs/phone-battle-result-def.webp" width="780" height="1688" loading="lazy" alt="Result — defender"></a>
+<figcaption><b>Result — defender</b></figcaption></figure></div></section><section class="section" id="pv-own"><h2 class="section-title">Phone — Your own tile</h2>
+<p class="intro">Heal, sacrifice, change element, or swap in a summon from your hand.</p><div class="phone-grid"><figure class="shot phone"><a href="img/docs/phone-own.webp" target="_blank"><img src="img/docs/phone-own.webp" width="780" height="1688" loading="lazy" alt="Own tile actions"></a>
+<figcaption><b>Own tile actions</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-own-swap-sheet.webp" target="_blank"><img src="img/docs/phone-own-swap-sheet.webp" width="780" height="1688" loading="lazy" alt="Swap sheet"></a>
+<figcaption><b>Swap sheet</b></figcaption></figure></div></section><section class="section" id="pv-special"><h2 class="section-title">Phone — Special tiles</h2>
+<p class="intro">Temple (trade for an Ascendant), Healing Spring and Treasure Chest.</p><div class="phone-grid"><figure class="shot phone"><a href="img/docs/phone-temple.webp" target="_blank"><img src="img/docs/phone-temple.webp" width="780" height="1688" loading="lazy" alt="Temple offers"></a>
+<figcaption><b>Temple offers</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-temple-sheet.webp" target="_blank"><img src="img/docs/phone-temple-sheet.webp" width="780" height="1688" loading="lazy" alt="Ascendant sheet"></a>
+<figcaption><b>Ascendant sheet</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-heal.webp" target="_blank"><img src="img/docs/phone-heal.webp" width="780" height="1688" loading="lazy" alt="Healing Spring"></a>
+<figcaption><b>Healing Spring</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-chest.webp" target="_blank"><img src="img/docs/phone-chest.webp" width="780" height="1688" loading="lazy" alt="Treasure Chest"></a>
+<figcaption><b>Treasure Chest</b></figcaption></figure></div></section><section class="section" id="pv-stalemate"><h2 class="section-title">Phone — Stalemate</h2>
+<p class="intro">Next turn after a stalemate: battle again or walk away for 8✦.</p><div class="phone-grid"><figure class="shot phone"><a href="img/docs/phone-stalemate.webp" target="_blank"><img src="img/docs/phone-stalemate.webp" width="780" height="1688" loading="lazy" alt="Stalemate"></a>
+<figcaption><b>Stalemate</b></figcaption></figure></div></section><section class="section" id="pv-wild"><h2 class="section-title">Phone — Wild cards</h2>
+<p class="intro">Pick one of three tier cards (or skip), reveal, choose a target. Targeted players get a full-screen notice with a Dismiss button.</p><div class="phone-grid"><figure class="shot phone"><a href="img/docs/phone-wildcard-pick.webp" target="_blank"><img src="img/docs/phone-wildcard-pick.webp" width="780" height="1688" loading="lazy" alt="Pick a card"></a>
+<figcaption><b>Pick a card</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-wildcard-reveal.webp" target="_blank"><img src="img/docs/phone-wildcard-reveal.webp" width="780" height="1688" loading="lazy" alt="Reveal"></a>
+<figcaption><b>Reveal</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-wildcard-target.webp" target="_blank"><img src="img/docs/phone-wildcard-target.webp" width="780" height="1688" loading="lazy" alt="Choose target"></a>
+<figcaption><b>Choose target</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-wildcard-notification.webp" target="_blank"><img src="img/docs/phone-wildcard-notification.webp" width="780" height="1688" loading="lazy" alt="Targeted notice"></a>
+<figcaption><b>Targeted notice</b></figcaption></figure></div></section><section class="section" id="pv-menu"><h2 class="section-title">Phone — Menu, sound & leaving</h2>
+<p class="intro">☰ in the status bar (or floating ☰ where the status bar is hidden): sound settings, how to play, leave game.</p><div class="phone-grid"><figure class="shot phone"><a href="img/docs/phone-menu.webp" target="_blank"><img src="img/docs/phone-menu.webp" width="780" height="1688" loading="lazy" alt="Menu"></a>
+<figcaption><b>Menu</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-sound-settings.webp" target="_blank"><img src="img/docs/phone-sound-settings.webp" width="780" height="1688" loading="lazy" alt="Sound settings"></a>
+<figcaption><b>Sound settings</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-leave-confirm.webp" target="_blank"><img src="img/docs/phone-leave-confirm.webp" width="780" height="1688" loading="lazy" alt="Leave confirmation"></a>
+<figcaption><b>Leave confirmation</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-left-game.webp" target="_blank"><img src="img/docs/phone-left-game.webp" width="780" height="1688" loading="lazy" alt="After leaving"></a>
+<figcaption><b>After leaving</b></figcaption></figure></div></section><section class="section" id="pv-end"><h2 class="section-title">Phone — Eliminated & game over</h2>
+<div class="phone-grid"><figure class="shot phone"><a href="img/docs/phone-eliminated.webp" target="_blank"><img src="img/docs/phone-eliminated.webp" width="780" height="1688" loading="lazy" alt="Eliminated"></a>
+<figcaption><b>Eliminated</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-gameover.webp" target="_blank"><img src="img/docs/phone-gameover.webp" width="780" height="1688" loading="lazy" alt="Game over"></a>
+<figcaption><b>Game over</b></figcaption></figure></div></section><section class="section" id="pv-detail"><h2 class="section-title">Phone — Card detail sheet</h2>
+<p class="intro">Tapping any card opens the shared detail sheet: stats, HP, type matchup, ability and lore. Swipe for the next card.</p><div class="phone-grid"><figure class="shot phone"><a href="img/docs/phone-card-detail.webp" target="_blank"><img src="img/docs/phone-card-detail.webp" width="780" height="1688" loading="lazy" alt="Standard card"></a>
+<figcaption><b>Standard card</b></figcaption></figure><figure class="shot phone"><a href="img/docs/phone-card-detail-rare.webp" target="_blank"><img src="img/docs/phone-card-detail-rare.webp" width="780" height="1688" loading="lazy" alt="Rare card"></a>
+<figcaption><b>Rare card</b></figcaption></figure></div></section><section class="section" id="cards-anatomy"><h2 class="section-title">Cards — Card states</h2>
+<p class="intro">One illustrated card per monster, reused everywhere. Type is the coloured frame + label; the stat strip shows HP bar, ATK, DEF, Gen and cost.</p><figure class="shot cards"><a href="img/docs/cards-states.webp" target="_blank"><img src="img/docs/cards-states.webp" width="950" height="268" loading="lazy" alt="States"></a>
+<figcaption><b>States</b> — default, selected, 2× matchup glow, ½× weak tint, low HP with Battle Charm, locked Ascendant</figcaption></figure><figure class="shot cards"><a href="img/docs/cards-board.webp" target="_blank"><img src="img/docs/cards-board.webp" width="407" height="123" loading="lazy" alt="Board card"></a>
+<figcaption><b>Board card</b> — smaller card used for stationed summons and battle overlays (renderBoardCard)</figcaption></figure><figure class="shot cards"><a href="img/docs/cards-mini.webp" target="_blank"><img src="img/docs/cards-mini.webp" width="1240" height="326" loading="lazy" alt="Mini card"></a>
+<figcaption><b>Mini card</b> — hand strip</figcaption></figure></section><section class="section" id="cards-light"><h2 class="section-title">Cards — Light</h2>
+<figure class="shot cards"><a href="img/docs/cards-light.webp" target="_blank"><img src="img/docs/cards-light.webp" width="1102" height="268" loading="lazy" alt="Light — 7 cards"></a>
+<figcaption><b>Light — 7 cards</b> — 2 Assailants, Guardian, 3 Vanguards, Ascendant</figcaption></figure></section><section class="section" id="cards-dark"><h2 class="section-title">Cards — Dark</h2>
+<figure class="shot cards"><a href="img/docs/cards-dark.webp" target="_blank"><img src="img/docs/cards-dark.webp" width="1102" height="268" loading="lazy" alt="Dark — 7 cards"></a>
+<figcaption><b>Dark — 7 cards</b> — 2 Assailants, Guardian, 3 Vanguards, Ascendant</figcaption></figure></section><section class="section" id="cards-arcane"><h2 class="section-title">Cards — Arcane</h2>
+<figure class="shot cards"><a href="img/docs/cards-arcane.webp" target="_blank"><img src="img/docs/cards-arcane.webp" width="1102" height="268" loading="lazy" alt="Arcane — 7 cards"></a>
+<figcaption><b>Arcane — 7 cards</b> — 2 Assailants, Guardian, 3 Vanguards, Ascendant</figcaption></figure></section><section class="section" id="cards-undead"><h2 class="section-title">Cards — Undead</h2>
+<figure class="shot cards"><a href="img/docs/cards-undead.webp" target="_blank"><img src="img/docs/cards-undead.webp" width="1102" height="268" loading="lazy" alt="Undead — 7 cards"></a>
+<figcaption><b>Undead — 7 cards</b> — 2 Assailants, Guardian, 3 Vanguards, Ascendant</figcaption></figure></section><section class="section" id="cards-beast"><h2 class="section-title">Cards — Beast</h2>
+<figure class="shot cards"><a href="img/docs/cards-beast.webp" target="_blank"><img src="img/docs/cards-beast.webp" width="1102" height="268" loading="lazy" alt="Beast — 7 cards"></a>
+<figcaption><b>Beast — 7 cards</b> — 2 Assailants, Guardian, 3 Vanguards, Ascendant</figcaption></figure></section><section class="section" id="cards-nature"><h2 class="section-title">Cards — Nature</h2>
+<figure class="shot cards"><a href="img/docs/cards-nature.webp" target="_blank"><img src="img/docs/cards-nature.webp" width="1102" height="268" loading="lazy" alt="Nature — 7 cards"></a>
+<figcaption><b>Nature — 7 cards</b> — 2 Assailants, Guardian, 3 Vanguards, Ascendant</figcaption></figure></section><section class="section" id="cards-rare"><h2 class="section-title">Cards — Rares</h2>
+<p class="intro">Dual-element; shop ~10%.</p><figure class="shot cards"><a href="img/docs/cards-rare.webp" target="_blank"><img src="img/docs/cards-rare.webp" width="494" height="268" loading="lazy" alt="Dual-element rares"></a>
+<figcaption><b>Dual-element rares</b></figcaption></figure></section><section class="section" id="cards-support"><h2 class="section-title">Cards — Support</h2>
+<p class="intro">Neutral; shop ~10%; passive effects.</p><figure class="shot cards"><a href="img/docs/cards-support.webp" target="_blank"><img src="img/docs/cards-support.webp" width="646" height="268" loading="lazy" alt="Support cards"></a>
+<figcaption><b>Support cards</b></figcaption></figure></section><section class="section" id="ref-phases"><h2 class="section-title">Reference — Phases</h2>
+<p class="intro">Server-driven; <code>G.phase</code>.</p><table class="elem-table"><thead><tr><th>Phase</th><th>Who acts</th><th>Notes</th></tr></thead><tbody>
+<tr><td>lobby</td><td>Host</td><td>Players join; host picks round limit and starts.</td></tr>
+<tr><td>setup</td><td>Current player</td><td>3 rounds × N players; free placement (<code>setup_claim</code> / <code>setup_pass</code>).</td></tr>
+<tr><td>resolve:turn_summary</td><td>Current player</td><td>Round 2+: board tally → <code>tally_complete</code> → summary → <code>dismiss_turn_summary</code>.</td></tr>
+<tr><td>stalemate</td><td>Current player</td><td>Only if they left a stalemate: <code>stalemate_fight</code> / <code>stalemate_continue</code>.</td></tr>
+<tr><td>shop</td><td>Current player</td><td><code>buy</code> / <code>sell</code> / <code>skip_shop</code>.</td></tr>
+<tr><td>roll → resolve:landing</td><td>Current player</td><td><code>roll</code>, then <code>choose_landing</code> (3 options).</td></tr>
+<tr><td>resolve:claim / battle / own / temple / heal_tile / chest / well</td><td>Current player</td><td>Landing outcomes; <code>resolve:well</code> auto-advances after 1.5 s.</td></tr>
+<tr><td>resolve:battle_result</td><td>—</td><td>Held 3.5 s (longer with ability callouts), then the turn advances.</td></tr>
+<tr><td>resolve:wildcard_*</td><td>Current player</td><td>After the turn if the roll passed the Mana Well: cards → target / coup / shatter.</td></tr>
+<tr><td>resolve:round_callout</td><td>Board</td><td>Before penultimate/final round; board sends <code>round_callout_complete</code>.</td></tr>
+<tr><td>game_over</td><td>Host</td><td>Final standings; New Game returns to lobby.</td></tr></tbody></table></section><section class="section" id="ref-actions"><h2 class="section-title">Reference — Actions</h2>
+
+<p style="color:var(--text2);font-size:13px;margin-bottom:20px">All WebSocket messages. Payload shape shown. ⚠ Use exact action names — old names (buy_monster, roll_dice, claim_tile, etc.) are stale and silently ignored.</p>
+
+<table class="elem-table">
+<thead><tr><th>Action</th><th>Who</th><th>Valid Phase</th><th>Payload / Notes</th></tr></thead>
+<tbody>
+<tr><td><code>board_connect</code></td><td>Board</td><td>anytime</td><td>{ roomCode? } — sent on ws.onopen. Creates or joins room.</td></tr>
+<tr><td><code>remove_player</code></td><td>Board (host only)</td><td>any mid-game</td><td>{ idx } — removes a DISCONNECTED player for good (v1.0.96). Same as leave_game for that player. Rejected from phones/spectators.</td></tr>
+<tr><td><code>join</code></td><td>Player</td><td>lobby</td><td>{ name, color, starterSet } — joins room with starter hand.</td></tr>
+<tr><td><code>rejoin</code></td><td>Player</td><td>any</td><td>{ sessionKey } — reconnect after disconnect. Forfeited players get <code>{type:'left_game'}</code> back instead (v1.0.96).</td></tr>
+<tr><td><code>leave_game</code></td><td>Player</td><td>any mid-game</td><td>{} — quit for good (v1.0.96). Player is eliminated (forfeited), hand + Mana discarded, stationed summons stay, pending effects cancelled; if it was their turn the game advances. Server replies <code>{type:'left_game'}</code>.</td></tr>
+<tr><td><code>new_game</code></td><td>Board/Player</td><td>game_over</td><td>{} — resets room to fresh lobby.</td></tr>
+<tr><td><code>start_game</code></td><td>Host/Board</td><td>lobby</td><td>{ roundLimit } — starts game, enters setup phase.</td></tr>
+<tr><td><code>set_round_limit</code></td><td>Any</td><td>lobby</td><td>{ roundLimit: 10|20|30 }</td></tr>
+<tr><td><code>setup_claim</code></td><td>Player</td><td>setup</td><td>{ tilePos, iid } — place monster on elemental tile (free). Validates kind==='element'.</td></tr>
+<tr><td><code>setup_pass</code></td><td>Player</td><td>setup</td><td>{} — pass without placing.</td></tr>
+<tr><td><code>skip_shop</code></td><td>Player</td><td>shop</td><td>{} — advance shop → roll.</td></tr>
+<tr><td><code>buy</code></td><td>Player</td><td>shop</td><td>{ iid } — buy monster from shop offer. Validates mana ≥ cost, hand &lt; 5.</td></tr>
+<tr><td><code>sell</code></td><td>Player</td><td>shop</td><td>{ iid } — sell hand monster. Returns mana × (hp/maxHp).</td></tr>
+<tr><td><code>roll</code></td><td>Player</td><td>roll</td><td>{} — roll 2d6 (min 3). Sets pendingLanding.</td></tr>
+<tr><td><code>choose_landing</code></td><td>Player</td><td>resolve:landing</td><td>{ tilePos } — confirm which of 3 options to land on.</td></tr>
+<tr><td><code>claim</code></td><td>Player</td><td>resolve:claim</td><td>{ iid } — station monster on current tile.</td></tr>
+<tr><td><code>skip_claim</code></td><td>Player</td><td>resolve:claim</td><td>{} — pass on empty tile.</td></tr>
+<tr><td><code>preview_attacker</code></td><td>Player</td><td>resolve:battle</td><td>{ iid } — visual only; broadcasts to board. Does NOT advance phase.</td></tr>
+<tr><td><code>attack</code></td><td>Player</td><td>resolve:battle</td><td>{ iid } — execute battle with chosen monster.</td></tr>
+<tr><td><code>retreat</code></td><td>Player</td><td>resolve:battle</td><td>{} — retreat; pay up to 8✦ penalty.</td></tr>
+<tr><td><code>swap</code></td><td>Player</td><td>resolve:own</td><td>{ newSummonIid } — pay the new summon's cost; stationed summon returns to hand.</td></tr>
+<tr><td><code>heal_stationed</code></td><td>Player</td><td>resolve:own</td><td>{} — 5✦: heal the stationed summon up to 20 HP.</td></tr>
+<tr><td><code>sacrifice_tile</code></td><td>Player</td><td>resolve:own</td><td>{} — destroy the stationed summon for +15✦; tile goes neutral.</td></tr>
+<tr><td><code>change_element</code></td><td>Player</td><td>resolve:own</td><td>{ element } — 18✦: change this tile's element.</td></tr>
+<tr><td><code>skip_own</code></td><td>Player</td><td>resolve:own</td><td>{} — skip own tile.</td></tr>
+<tr><td><code>chest_apply_potion</code></td><td>Player</td><td>resolve:chest</td><td>{ iid } — apply the potion to a hand or stationed summon.</td></tr>
+<tr><td><code>chest_assign_charm</code></td><td>Player</td><td>resolve:chest</td><td>{ iid } — assign battle charm to monster (hand or stationed).</td></tr>
+<tr><td><code>chest_warp</code></td><td>Player</td><td>resolve:chest</td><td>{} — warp to random non-special tile.</td></tr>
+<tr><td><code>chest_discard</code></td><td>Player</td><td>resolve:chest</td><td>{} — discard warp and stay.</td></tr>
+<tr><td><code>chest_skip</code></td><td>Player</td><td>resolve:chest</td><td>{} — skip chest (also used after free_monster is auto-added to hand).</td></tr>
+<tr><td><code>temple_trade</code></td><td>Player</td><td>resolve:temple</td><td>{ specialIid, sacrificeIid } — give up a same-element non-Ascendant hand summon + pay the Ascendant's cost.</td></tr>
+<tr><td><code>temple_leave</code></td><td>Player</td><td>resolve:temple</td><td>{} — leave temple without trading.</td></tr>
+<tr><td><code>heal_tile_apply</code></td><td>Player</td><td>resolve:heal_tile</td><td>{} — Healing Spring: 10✦ heals ALL your stationed + hand summons +10 HP.</td></tr>
+<tr><td><code>heal_tile_skip</code></td><td>Player</td><td>resolve:heal_tile</td><td>{}</td></tr>
+<tr><td><code>stalemate_fight</code></td><td>Player</td><td>stalemate</td><td>{} — go back to resolve:battle on the contested tile (pick attacker there). <code>stalemate_attack</code> is a legacy alias.</td></tr>
+<tr><td><code>stalemate_continue</code></td><td>Player</td><td>stalemate</td><td>{} — walk away: pay up to 8✦, then continue to shop and roll normally.</td></tr>
+<tr><td><code>wildcard_skip</code></td><td>Player</td><td>resolve:wildcard_cards</td><td>{} — skip wild card event entirely (free).</td></tr>
+<tr><td><code>wildcard_select</code></td><td>Player</td><td>resolve:wildcard_cards</td><td>{ tier: 'low'|'mid'|'high' } — pick card, deduct mana. Pre-flight validates targetability.</td></tr>
+<tr><td><code>wildcard_target</code></td><td>Player</td><td>resolve:wildcard_target</td><td>{ targetIdx } — choose target player (or own tile idx for Mend).</td></tr>
+<tr><td><code>wildcard_coup_tile</code></td><td>Player</td><td>resolve:wildcard_coup_tile</td><td>{ tilePos } — choose enemy occupied tile to seize.</td></tr>
+<tr><td><code>wildcard_coup_summon</code></td><td>Player</td><td>resolve:wildcard_coup_summon</td><td>{ iid } — choose hand monster to sacrifice (destroyed); enemy stationed monster defects.</td></tr>
+<tr><td><code>wildcard_shatter</code></td><td>Player</td><td>resolve:wildcard_shatter</td><td>{ tilePos } — sent twice; each destroys one stationed monster and neutralises tile.</td></tr>
+<tr><td><code>dismiss_notification</code></td><td>Player</td><td>any</td><td>{} — clear p.notification (wild card targeting overlay). Sent by the Dismiss button or a card tap (v0.5.15).</td></tr>
+</tbody>
+</table>
+</section><section class="section" id="ref-ability-ref"><h2 class="section-title">Reference — Abilities</h2>
+
+<p style="color:var(--text2);font-size:13px;margin-bottom:20px">Authoritative source: <code>summoners_gambit_abilities.xlsx</code>. All ability logic wired in <code>server.js</code> (v1.0.98). Shown in Card Detail Overlay via MONSTER_LORE in <code>player.html</code> (v0.5.18).</p>
+
+<div style="color:#e0c07a;font-family:'Cinzel',serif;font-size:14px;font-weight:700;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid #272a38">⚔ Light</div>
+<table class="elem-table">
+<thead><tr><th>Monster</th><th>Arch</th><th>Ability Name</th><th>Description</th><th>Type</th></tr></thead>
+<tbody>
+<tr><td>Solar Knight</td><td>Assailant</td><td><b>Radiant Strike</b></td><td>On claim or battle win, tile converts to Light element.</td><td>Passive</td></tr>
+<tr><td>Dawn Striker</td><td>Assailant</td><td><b>Soulmend</b></td><td>On battle win, heals itself 8 HP.</td><td>On-Win</td></tr>
+<tr><td>Dawnguard</td><td>Guardian</td><td><b>Bulwark Aura</b></td><td>Grants +5 DEF to the friendly summon on each adjacent tile (aura, not self).</td><td>Aura</td></tr>
+<tr><td>High Paladin</td><td>Vanguard</td><td><b>Lay on Hands</b></td><td>Once per game, self-heals 15 HP when HP drops to 30% or below.</td><td>Triggered</td></tr>
+<tr><td>Radiant Lancer</td><td>Vanguard</td><td><b>Piercing Light</b></td><td>Ignores 30% of the target's DEF on every strike it makes (attack and counter-strike).</td><td>Passive</td></tr>
+<tr><td>Sunfire Herald</td><td>Vanguard</td><td><b>Battle Cry</b></td><td>Grants +5 ATK to the friendly summon on each adjacent tile (aura, not self).</td><td>Aura</td></tr>
+</tbody>
+</table>
+
+<div style="color:#b56fd0;font-family:'Cinzel',serif;font-size:14px;font-weight:700;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid #272a38">🌑 Dark</div>
+<table class="elem-table">
+<thead><tr><th>Monster</th><th>Arch</th><th>Ability Name</th><th>Description</th><th>Type</th></tr></thead>
+<tbody>
+<tr><td>Nightshard</td><td>Assailant</td><td><b>Soul Siphon</b></td><td>On kill, steal 4✦ from the defeated monster's owner.</td><td>On-Kill</td></tr>
+<tr><td>Void Reaper</td><td>Assailant</td><td><b>Void Hunger</b></td><td>On win, permanently gains +2 ATK (stacks).</td><td>On-Win</td></tr>
+<tr><td>Void Sentinel</td><td>Guardian</td><td><b>Last Darkness</b></td><td>When HP drops below 30% of max, ATK instantly becomes 36.</td><td>Triggered</td></tr>
+<tr><td>Shadow Paladin</td><td>Vanguard</td><td><b>Dark Pact</b></td><td>Gains +1 ATK per friendly Dark summon currently stationed on tiles.</td><td>Passive</td></tr>
+<tr><td>Dusk Blade</td><td>Vanguard</td><td><b>Hemorrhage</b></td><td>On win, target's Mana income next turn is reduced by 4✦.</td><td>On-Win</td></tr>
+<tr><td>Umbral Stalker</td><td>Vanguard</td><td><b>Umbral Aura</b></td><td>Adjacent enemy stationed monsters lose 5 DEF (aura, active while stationed).</td><td>Aura</td></tr>
+</tbody>
+</table>
+
+<div style="color:#7f92e8;font-family:'Cinzel',serif;font-size:14px;font-weight:700;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid #272a38">✨ Arcane</div>
+<table class="elem-table">
+<thead><tr><th>Monster</th><th>Arch</th><th>Ability Name</th><th>Description</th><th>Type</th></tr></thead>
+<tbody>
+<tr><td>Sorcerer</td><td>Assailant</td><td><b>Arcane Ascent</b></td><td>On win, permanently gains +1 ATK and +1 Gen (stacks, never resets).</td><td>On-Win</td></tr>
+<tr><td>Spell Wraith</td><td>Assailant</td><td><b>Mana Siphon</b></td><td>Each turn, adjacent enemy stationed monsters lose their base Gen from their owner's income, and the Spell Wraith's owner gains it (real drain since v1.0.98).</td><td>Passive</td></tr>
+<tr><td>Rune Priestess</td><td>Guardian</td><td><b>Runic Amplification</b></td><td>Gen income is doubled while stationed on an Arcane tile.</td><td>Passive</td></tr>
+<tr><td>Arch Mage</td><td>Vanguard</td><td><b>Mana Infusion</b></td><td>+3✦ bonus income per turn while stationed.</td><td>Passive</td></tr>
+<tr><td>Runic Duelist</td><td>Vanguard</td><td><b>Arcane Pact</b></td><td>Gains +1 ATK per friendly Arcane summon currently stationed on tiles.</td><td>Passive</td></tr>
+<tr><td>Mana Weaver</td><td>Vanguard</td><td><b>Mana Web</b></td><td>All other friendly stationed monsters gain +1✦ Gen per turn.</td><td>Aura</td></tr>
+</tbody>
+</table>
+
+<div style="color:#5fb3a4;font-family:'Cinzel',serif;font-size:14px;font-weight:700;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid #272a38">💀 Undead</div>
+<table class="elem-table">
+<thead><tr><th>Monster</th><th>Arch</th><th>Ability Name</th><th>Description</th><th>Type</th></tr></thead>
+<tbody>
+<tr><td>Bone Wraith</td><td>Assailant</td><td><b>Death Rattle</b></td><td>On death, deals 12 damage to the monster that killed it.</td><td>On-Death</td></tr>
+<tr><td>Grave Specter</td><td>Assailant</td><td><b>Necrotic Claim</b></td><td>On win, tile converts to Undead element.</td><td>On-Win</td></tr>
+<tr><td>Death Knight</td><td>Guardian</td><td><b>Death Sentence</b></td><td>10% chance to instantly kill on any damage dealt (attack or counter-strike).</td><td>Passive</td></tr>
+<tr><td>Shade Walker</td><td>Vanguard</td><td><b>Cursed Touch</b></td><td>After a stalemate, the opposing monster loses 5 HP per turn for 2 turns, ticking on its owner's turn (follows the monster into hand, can't kill, does not stack). Fixed v1.0.98.</td><td>On-Battle</td></tr>
+<tr><td>Cursed Revenant</td><td>Vanguard</td><td><b>Undead Resilience</b></td><td>Gains +2 DEF each time it survives a battle (stacks).</td><td>On-Survive</td></tr>
+<tr><td>Plague Herald</td><td>Vanguard</td><td><b>Pestilence</b></td><td>Adjacent enemy stationed monsters lose 3 HP per turn (cannot kill).</td><td>Aura</td></tr>
+</tbody>
+</table>
+
+<div style="color:#d98a5a;font-family:'Cinzel',serif;font-size:14px;font-weight:700;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid #272a38">🐾 Beast</div>
+<table class="elem-table">
+<thead><tr><th>Monster</th><th>Arch</th><th>Ability Name</th><th>Description</th><th>Type</th></tr></thead>
+<tbody>
+<tr><td>Razorclaw</td><td>Assailant</td><td><b>Apex Predator</b></td><td>Gains +1 ATK per tile currently owned and +1 ATK per battle won (cumulative).</td><td>Passive</td></tr>
+<tr><td>Feral Striker</td><td>Assailant</td><td><b>Territorial</b></td><td>Gains +2 ATK per tile currently owned (dynamic, recalculates each battle).</td><td>Passive</td></tr>
+<tr><td>Iron Hide</td><td>Guardian</td><td><b>Hardened Shell</b></td><td>Gains +3 HP permanently each time it survives a battle (stacks).</td><td>On-Survive</td></tr>
+<tr><td>Pack Hunter</td><td>Vanguard</td><td><b>Pack Tactics</b></td><td>Gains +3 ATK per other Beast summon currently stationed on tiles.</td><td>Passive</td></tr>
+<tr><td>Stormtalon</td><td>Vanguard</td><td><b>Lightning Strike</b></td><td>Always strikes first — even when defending. If that first strike kills, there is no counter-strike.</td><td>Passive</td></tr>
+<tr><td>Stoneback</td><td>Vanguard</td><td><b>Granite Hide</b></td><td>Gains +2 DEF per tile currently owned (dynamic, recalculates each battle).</td><td>Passive</td></tr>
+</tbody>
+</table>
+
+<div style="color:#7fb36a;font-family:'Cinzel',serif;font-size:14px;font-weight:700;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid #272a38">🌿 Nature</div>
+<table class="elem-table">
+<thead><tr><th>Monster</th><th>Arch</th><th>Ability Name</th><th>Description</th><th>Type</th></tr></thead>
+<tbody>
+<tr><td>Thornling</td><td>Assailant</td><td><b>Thorn Burst</b></td><td>While stationed on a tile only: if destroyed, the attacker loses 8 HP and the tile converts to Nature element. Does not trigger when Thornling attacks.</td><td>On-Death</td></tr>
+<tr><td>Briar Sprite</td><td>Assailant</td><td><b>Nature's Fury</b></td><td>Grants +5 ATK to all friendly Nature-type summons currently stationed.</td><td>Aura</td></tr>
+<tr><td>Ancient Oak</td><td>Guardian</td><td><b>Overgrowth</b></td><td>Every 3 turns stationed without being attacked, permanently gains +3 ATK and +3 DEF (resets on attack).</td><td>Triggered</td></tr>
+<tr><td>Grove Warden</td><td>Vanguard</td><td><b>Nature's Bulwark</b></td><td>Grants +5 DEF to all friendly Nature-type summons currently stationed.</td><td>Aura</td></tr>
+<tr><td>Vine Stalker</td><td>Vanguard</td><td><b>Verdant Surge</b></td><td>After 5 rounds stationed, permanently grants +3 ATK to all friendly stationed monsters (clock resets on redeploy).</td><td>Triggered</td></tr>
+<tr><td>Moss Golem</td><td>Vanguard</td><td><b>Stone Skin</b></td><td>After 5 rounds stationed, permanently grants +5 DEF to all friendly stationed monsters (clock resets on redeploy).</td><td>Triggered</td></tr>
+</tbody>
+</table>
+</section><section class="section" id="ref-ascendants"><h2 class="section-title">Reference — Ascendants</h2>
+
+<p style="color:var(--text2);font-size:13px;margin-bottom:20px">All 6 Ascendants are Temple-only (never appear in shop). Usability condition checked server-side via canUseSpecial(). Client shows 🔒 lock overlay + disabled Attack button when canUse === false. Tracking field noted per row.</p>
+
+<table class="elem-table">
+<thead><tr><th>Ascendant</th><th>Element</th><th>Unlock Condition</th><th>Tracking</th><th>Ability</th></tr></thead>
+<tbody>
+<tr>
+  <td><span style="color:#e0c07a;font-weight:600">Ardent Saint</span></td>
+  <td><span style="color:#e0c07a">Light</span></td>
+  <td>Healed 2+ summons this game</td>
+  <td>p.healCount ≥ 2</td>
+  <td><b>Aura of Renewal</b> — heal all friendly stationed summons 5 HP/turn (passive, each advanceTurn)</td>
+</tr>
+<tr>
+  <td><span style="color:#b56fd0;font-weight:600">Succubus</span></td>
+  <td><span style="color:#b56fd0">Dark</span></td>
+  <td>Have ≥ 40✦ Mana (snapshot at use)</td>
+  <td>p.mana ≥ 40</td>
+  <td><b>Mana Drain</b> — when it attacks and wins or stalemates, steal 10✦ from the defender</td>
+</tr>
+<tr>
+  <td><span style="color:#7f92e8;font-weight:600">Arcane Arbiter</span></td>
+  <td><span style="color:#7f92e8">Arcane</span></td>
+  <td>Changed 1+ tile to Arcane element this game</td>
+  <td>p.arcaneChangeCount ≥ 1</td>
+  <td><b>Chaos Flux</b> — after any battle or stalemate against it, one random attacker-owned tile changes to a random element</td>
+</tr>
+<tr>
+  <td><span style="color:#5fb3a4;font-weight:600">Demon Lord</span></td>
+  <td><span style="color:#5fb3a4">Undead</span></td>
+  <td>2+ summons destroyed in battle this game (sells don't count)</td>
+  <td>p.destroyedCount ≥ 2</td>
+  <td><b>Last Rite</b> — survive at 15 HP when HP hits 0; once per game</td>
+</tr>
+<tr>
+  <td><span style="color:#d98a5a;font-weight:600">Red Dragon</span></td>
+  <td><span style="color:#d98a5a">Beast</span></td>
+  <td>Have 3+ summons stationed on board (snapshot at use)</td>
+  <td>board stationed count ≥ 3</td>
+  <td><b>Intimidate</b> — passive aura; at start of affected player's turn, they pay 5✦ per stationed summon adjacent to Red Dragon</td>
+</tr>
+<tr>
+  <td><span style="color:#7fb36a;font-weight:600">World Tree</span></td>
+  <td><span style="color:#7fb36a">Nature</span></td>
+  <td>Own 2+ Nature tiles (snapshot at use)</td>
+  <td>board Nature tile owned count ≥ 2</td>
+  <td><b>Deep Roots</b> — +1 Mana Gen per Nature tile owned + +1 Mana Gen per Nature-type summon stationed on any of your tiles</td>
+</tr>
+</tbody>
+</table>
+</section><section class="section" id="ref-wildcards-ref"><h2 class="section-title">Reference — Wild cards</h2>
+
+<p style="color:var(--text2);font-size:13px;margin-bottom:20px">Triggered by passing the Mana Well (position 0) without landing on it. One card drawn per tier; player picks one or skips for free. Wild Card eligibility uses the full roll value, not chosen landing tile.</p>
+
+<table class="elem-table">
+<thead><tr><th>Tier</th><th>Cost</th><th>ID</th><th>Name</th><th>Target</th><th>Effect</th></tr></thead>
+<tbody>
+<tr><td rowspan="4"><span style="color:#8a9aaa;font-weight:600">Iron</span></td><td rowspan="4">15✦</td>
+  <td>mend</td><td>Mend</td><td>own_station</td><td>Heal one stationed summon +20 HP</td></tr>
+<tr><td>stumble</td><td>Stumble</td><td>player</td><td>Target skips roll — moves exactly 3 spaces (die shows 3)</td></tr>
+<tr><td>delay</td><td>Delay</td><td>player</td><td>Target skips shop phase next turn</td></tr>
+<tr><td>jinx</td><td>Jinx</td><td>player</td><td>Target's passive income halved next turn</td></tr>
+<tr><td rowspan="4"><span style="color:#9184d9;font-weight:600">Arcane</span></td><td rowspan="4">30✦</td>
+  <td>ambush</td><td>Ambush</td><td>self</td><td>Next attack deals +40% damage</td></tr>
+<tr><td>fortify</td><td>Fortify</td><td>self</td><td>Next battle: take −40% damage received</td></tr>
+<tr><td>rattle</td><td>Rattle</td><td>player</td><td>Target's next battle: their summon fights at half ATK</td></tr>
+<tr><td>poach</td><td>Poach</td><td>player</td><td>Steal a random summon from target's hand. Pre-flight: blocked if target has no hand monsters.</td></tr>
+<tr><td rowspan="4"><span style="color:#c9922a;font-weight:600">Gilded</span></td><td rowspan="4">60✦</td>
+  <td>coup</td><td>Coup</td><td>coup</td><td>Sacrifice 1 hand monster (destroyed) → seize any occupied enemy tile; their stationed monster defects and fights for you</td></tr>
+<tr><td>plague</td><td>Plague</td><td>player</td><td>All of target's stationed summons lose 15 HP. Pre-flight: blocked if no stationed monsters.</td></tr>
+<tr><td>windfall</td><td>Windfall</td><td>self</td><td>Next income collection is tripled</td></tr>
+<tr><td>shatter</td><td>Shatter</td><td>shatter</td><td>Destroy any 2 stationed summons; both tiles go neutral</td></tr>
+</tbody>
+</table>
+
+<div style="margin-top:12px">
+<table class="elem-table">
+<thead><tr><th>wcEffect</th><th>Applied in</th><th>How</th></tr></thead>
+<tbody>
+<tr><td>windfall</td><td>collectPassiveIncome()</td><td>earned = earned × 3 (before soft cap)</td></tr>
+<tr><td>jinx</td><td>collectPassiveIncome()</td><td>earned = Math.floor(earned × 0.5) (before soft cap)</td></tr>
+<tr><td>delay</td><td>startShopPhase()</td><td>Skip to phase = 'roll' immediately</td></tr>
+<tr><td>stumble</td><td>resolveRoll()</td><td>Move exactly 3 spaces; die animation lands on 3</td></tr>
+<tr><td>ambush</td><td>doStrike()</td><td>Check attacker._ambush; multiply dmg ×1.40; clear flag</td></tr>
+<tr><td>fortify</td><td>resolveBattle()</td><td>After computing defDmg, multiply ×0.60 before subtracting from attackerM.hp</td></tr>
+<tr><td>rattle</td><td>resolveBattle()</td><td>Temporarily halve defenderM.atk before counter-strike; restore after</td></tr>
+</tbody>
+</table>
+</div>
+</section><section class="section" id="ref-economy"><h2 class="section-title">Reference — Economy</h2>
+<p class="intro">Matches <code>CLAUDE.md</code> (server v1.0.98).</p><table class="elem-table"><thead><tr><th>Item</th><th>Value</th><th>Notes</th></tr></thead><tbody>
+<tr><td>Starting Mana</td><td>40✦</td><td>Starting hand: 5 summons from a starter set</td></tr>
+<tr><td>Baseline income</td><td>+5✦ / turn</td><td>From round 2, plus each stationed summon's Gen</td></tr>
+<tr><td>Tile upkeep</td><td>−1✦ per owned tile</td><td>Each turn from round 2</td></tr>
+<tr><td>Spell Wraith drain</td><td>−base Gen per adjacent summon</td><td>Goes to the Wraith's owner</td></tr>
+<tr><td>Soft cap</td><td>150✦</td><td>Income halved (min 5) at or above</td></tr>
+<tr><td>Costs</td><td>Assailant 8 · Vanguard 10 · Guardian 12 · Support 12 · Ascendant 20 · Rare 25–27</td><td>Sell refund = cost × HP/maxHP</td></tr>
+<tr><td>Retreat / walk away</td><td>up to 8✦</td><td>Battle retreat or leaving a stalemate</td></tr>
+<tr><td>Own tile</td><td>Heal 5✦ (up to 20 HP) · Change element 18✦ · Sacrifice +15✦</td><td>Swap = pay the new summon's cost</td></tr>
+<tr><td>Healing Spring</td><td>10✦</td><td>+10 HP to all your stationed + hand summons</td></tr>
+<tr><td>Mana Well</td><td>+40✦</td><td>On landing</td></tr>
+<tr><td>Battle Mana</td><td>Win +4/−4 · Lose −8/+4 · Mutual −8/+4 · Stalemate −4/+4</td><td>Attacker / defender</td></tr>
+<tr><td>Wild cards</td><td>Iron 15 · Arcane 30 · Gilded 60</td><td>Skip is free</td></tr>
+<tr><td>Round limit</td><td>10 / 20 / 30 (default 20)</td><td>5+ players → 10</td></tr></tbody></table></section>
+</main><script>const links=[...document.querySelectorAll('#nav a')];const secs=links.map(a=>document.getElementById(a.dataset.id)).filter(Boolean);
+function upd(){let cur=secs[0];for(const s of secs){if(s.getBoundingClientRect().top<140)cur=s;}links.forEach(a=>a.classList.toggle('active',cur&&a.dataset.id===cur.id));}
+addEventListener('scroll',upd,{passive:true});upd();</script></body></html>

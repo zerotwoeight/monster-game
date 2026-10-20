@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.95';
+const SERVER_VERSION = 'v1.0.99';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -102,7 +102,7 @@ const ROSTER = [
 
   // ── Dual-Element Rares ──
   // Gets BOTH elements' advantages: max(mod1, mod2). Mutual weaknesses cancel → no weak sides.
-  {id:'seraphim',         type:'Light',  type2:'Arcane', name:'Luminar Operative', arch:'rare', rarity:'rare',
+  {id:'luminar_operative',         type:'Light',  type2:'Arcane', name:'Luminar Operative', arch:'rare', rarity:'rare',
    hp:35, maxHp:35, atk:30, def:12, cost:26, gen:4, isSpecial:false,
    rareDesc:'2× vs Dark & Undead · No weaknesses'},
   {id:'hex_stalker',      type:'Undead', type2:'Beast',  name:'Hex Stalker',      arch:'rare', rarity:'rare',
@@ -115,13 +115,13 @@ const ROSTER = [
   // ── Support Cards — neutral (no element), passive aura while stationed ──
   {id:'mana_refinery', type:null, name:'Mana Refinery', arch:'support', rarity:'support',
    hp:18, maxHp:18, atk:1, def:10, cost:12, gen:0, isSpecial:false,
-   supportDesc:'+1✦/round per stationed tile (stacks)'},
+   supportDesc:'+1✦/round per friendly stationed summon (needs ≥1 Refinery; copies don\'t stack)'},
   {id:'weapon_smith',  type:null, name:'Weapon Smith',  arch:'support', rarity:'support',
    hp:18, maxHp:18, atk:1, def:10, cost:12, gen:0, isSpecial:false,
-   supportDesc:'+5 ATK to all hand summons (stacks)'},
+   supportDesc:'+5 ATK to your attacker per copy in hand (stacks)'},
   {id:'forge',         type:null, name:'Forge',         arch:'support', rarity:'support',
    hp:18, maxHp:18, atk:1, def:10, cost:12, gen:0, isSpecial:false,
-   supportDesc:'+5 DEF to all stationed summons (stacks)'},
+   supportDesc:'+5 DEF to your defender per copy stationed (stacks)'},
   {id:'field_medic',   type:null, name:'Field Medic',   arch:'support', rarity:'support',
    hp:18, maxHp:18, atk:1, def:10, cost:12, gen:0, isSpecial:false,
    supportDesc:'+2 HP/round to all stationed summons (stacks)'},
@@ -368,9 +368,15 @@ function freshGame(roomCode) {
 
 // Defer a room-scoped action — safe across async gaps (setTimeout loses G closure)
 function scheduleRoomAction(roomCode, fn, ms) {
+  // v1.0.96: capture the forfeit generation — if the active player forfeits before this
+  // fires, the turn was already advanced by forfeitPlayer() and this timer must not run.
+  const _r = rooms.get(roomCode);
+  const gen = _r ? (_r._forfeitGen || 0) : 0;
   setTimeout(() => {
     G = rooms.get(roomCode);
-    if (G) fn();
+    if (!G) return;
+    if ((G._forfeitGen || 0) !== gen) return;
+    fn();
   }, ms);
 }
 
@@ -832,7 +838,7 @@ function monoElementPlayerSet() {
  *  • Mana Weaver     — +1 GEN/turn to all friendly stationed summons (same owner)
  *  • Forge support   — +5 DEF per stationed Forge (existing, handled in resolveBattle;
  *                       included here for completeness via weaponSmithCount path)
- *  • Luminar Operative (seraphim) — Luminary Field: +2 ATK/DEF to friendly summons on Light or Arcane tiles
+ *  • Luminar Operative (luminar_operative) — Luminary Field: +2 ATK/DEF to friendly summons on Light or Arcane tiles
  *  • Hex Stalker      — Hex Dominion:    +2 ATK/DEF to friendly summons on Undead or Beast tiles
  *  • Verdant Sorcerer — Verdant Surge:   +2 ATK/DEF to friendly summons on Arcane or Nature tiles
  */
@@ -880,7 +886,7 @@ function getEffectiveStats(monster, tilePos, ownerIdx) {
       if (isNature && mi.id === 'briar_sprite') atkBonus += 5;
       if (isNature && mi.id === 'grove_warden') defBonus += 5;
       if (mi.id === 'mana_weaver') genBonus += 1;
-      if (mi.id === 'seraphim'         && onLightArcane)  { atkBonus += 2; defBonus += 2; } // Luminary Field
+      if (mi.id === 'luminar_operative' && onLightArcane)  { atkBonus += 2; defBonus += 2; } // Luminary Field
       if (mi.id === 'hex_stalker'      && onUndeadBeast)  { atkBonus += 2; defBonus += 2; } // Hex Dominion
       if (mi.id === 'verdant_sorcerer' && onArcaneNature) { atkBonus += 2; defBonus += 2; } // Verdant Surge
       if (mi.id === 'vine_stalker' && mi.abilityData && mi.abilityData.vineAuraActive) atkBonus += 3;
@@ -953,14 +959,20 @@ function processTurnStartEffects(playerIdx) {
   // We tick it for all monsters across the whole board that belong to this player.
   // Note: Shade Walker afflicts the OPPONENT's monster — so we tick ALL board monsters
   // each turn, decrement the curse counter on whatever monster holds it.
-  for (const tile of G.board) {
-    const mi = tile.summonInstance;
+  // v1.0.98: ticks once per round on the cursed monster's OWNER's turn, wherever it is
+  // (stationed or back in hand) — "follows the monster". Previously ticked every player's
+  // turn and only for stationed monsters.
+  const _cursed = [
+    ...G.board.filter(t => t.ownerId === playerIdx && t.summonInstance).map(t => [t.summonInstance, `tile ${t.pos}`]),
+    ...(p.hand || []).map(m => [m, 'hand']),
+  ];
+  for (const [mi, where] of _cursed) {
     if (!mi || !mi.abilityData) continue;
     if (mi.abilityData.shadeWalkerCurse > 0) {
       const loss = mi.abilityData.shadeWalkerCurseAmt || 5;
       mi.hp = Math.max(1, mi.hp - loss); // can't kill via Shade Walker DoT
       mi.abilityData.shadeWalkerCurse--;
-      log(`🌑 Shade Walker curse: ${mi.name} at tile ${tile.pos} takes ${loss} HP (${mi.abilityData.shadeWalkerCurse} turns left)`);
+      log(`🌑 Shade Walker curse: ${mi.name} (${where}) takes ${loss} HP (${mi.abilityData.shadeWalkerCurse} turns left)`);
     }
   }
 
@@ -1015,33 +1027,7 @@ function processTurnStartEffects(playerIdx) {
     }
   }
 
-  // ── Spell Wraith — Mana Siphon: drain full Gen value from each adjacent ENEMY stationed monster per turn ──
-  // "Per turn, drain full Gen value from each adjacent enemy stationed monster"
-  // Spell Wraith steals the enemy's gen into the owner's income; enemy gen is NOT permanently reduced.
-  for (const tile of G.board) {
-    if (tile.ownerId !== playerIdx || !tile.summonInstance) continue;
-    if (tile.summonInstance.id !== 'spell_wraith') continue;
-    const swNeighbors = [(tile.pos + 1) % 28, (tile.pos + 27) % 28];
-    for (const np of swNeighbors) {
-      const nt = G.board[np];
-      if (nt && nt.ownerId !== playerIdx && nt.summonInstance) {
-        const stolen = nt.summonInstance.gen || 0;
-        if (stolen > 0) {
-          // Add stolen gen to Spell Wraith owner's turn income (tracked in abilityData)
-          tile.summonInstance.abilityData = tile.summonInstance.abilityData || {};
-          tile.summonInstance.abilityData.spellWraithDrainThisTurn = (tile.summonInstance.abilityData.spellWraithDrainThisTurn || 0) + stolen;
-          log(`✨ Mana Siphon: Spell Wraith drains ${stolen}✦ Gen from ${nt.summonInstance.name} (tile ${np})`);
-        }
-      }
-    }
-    // Apply all drain for this Spell Wraith instance to player income
-    if (tile.summonInstance.abilityData && tile.summonInstance.abilityData.spellWraithDrainThisTurn > 0) {
-      const totalDrain = tile.summonInstance.abilityData.spellWraithDrainThisTurn;
-      G.players[playerIdx].mana = (G.players[playerIdx].mana || 0) + totalDrain;
-      log(`✨ Mana Siphon: Spell Wraith grants ${totalDrain}✦ to ${G.players[playerIdx].name}`);
-      tile.summonInstance.abilityData.spellWraithDrainThisTurn = 0;
-    }
-  }
+  // v1.0.98: Spell Wraith — Mana Siphon moved to collectPassiveIncome (real drain on the victim's income).
 }
 
 // ─── PASSIVE INCOME / SPECIALS ────────────────────────────────────────────────
@@ -1100,6 +1086,31 @@ function collectPassiveIncome(playerIdx) {
 
     earned += gen;
     summonGen += gen;
+  }
+
+  // v1.0.98: Spell Wraith — Mana Siphon (real drain). Each of this player's stationed summons
+  // next to an enemy Spell Wraith loses its base Gen from this turn's income; that Mana goes to
+  // the Wraith's owner. Same numbers computeRoundTally shows as spellWraithDrain.
+  let spellWraithDrainTotal = 0;
+  for (const tile of G.board) {
+    if (tile.ownerId !== playerIdx || !tile.summonInstance) continue;
+    const mi = tile.summonInstance;
+    for (const np of [(tile.pos + 1) % 28, (tile.pos + 27) % 28]) {
+      const wt = G.board[np];
+      if (!wt || !wt.summonInstance || wt.summonInstance.id !== 'spell_wraith') continue;
+      if (wt.ownerId == null || wt.ownerId === playerIdx) continue;
+      const want = mi.gen || 0;
+      const take = Math.max(0, Math.min(want, earned));
+      if (take <= 0) continue;
+      earned -= take;
+      spellWraithDrainTotal += take;
+      const owner = G.players[wt.ownerId];
+      if (owner) {
+        owner.mana += take;
+        if (owner.totalManaEarned != null) owner.totalManaEarned += take;
+      }
+      log(`✨ Mana Siphon: ${owner ? owner.name + "'s " : ''}Spell Wraith drains ${take}✦ from ${p.name}'s ${mi.name}`);
+    }
   }
 
   // Ardent Saint passive — heal all friendly stationed summons 5 HP/turn
@@ -1401,6 +1412,7 @@ function publicState() {
     isConnected: p.isConnected !== false, // include so board can show disconnect badge
     eliminated: p.eliminated || false,
     eliminatedRank: p.eliminatedRank || null,
+    forfeited: p.forfeited || false,
   }));
 
   return {
@@ -1478,6 +1490,63 @@ function checkManaElimination(playerIdx) {
   p.eliminated = true;
   p.eliminatedRank = elimCount + 1;
   log(`💸 ${p.name} ran out of Mana and is ELIMINATED!`);
+  return true;
+}
+
+// ─── FORFEIT (v1.0.96) ───────────────────────────────────────────────────────
+// Voluntary quit (leave_game) or host removal (remove_player). Works like an
+// elimination: tiles keep their stationed summons (still owned by the out player,
+// same as a normal elimination, so others must battle for them); hand + Mana are
+// discarded; pending effects on the player are cancelled (no refunds). Permanent —
+// a forfeited player can never rejoin.
+function forfeitPlayer(idx, reason) {
+  const p = G.players[idx];
+  if (!p || p.eliminated) return false;
+  if (G.phase === 'lobby' || G.phase === 'game_over') return false;
+
+  const elimCount = G.players.filter(pl => pl.eliminated).length;
+  p.eliminated = true;
+  p.eliminatedRank = elimCount + 1;
+  p.forfeited = true;
+  p.hand = [];
+  p.mana = 0;
+  p.notification = null;
+  if (p.wcEffects) for (const k of Object.keys(p.wcEffects)) p.wcEffects[k] = (typeof p.wcEffects[k] === 'number') ? 0 : false;
+  p.hemorrhageStacks = 0; p.hemorrhageAmt = 0; p._hemorrhageIncomeReduction = 0;
+  if (G.stalemateData && G.stalemateData.attackerIdx === idx) G.stalemateData = null;
+
+  log(reason === 'removed'
+    ? `🚪 ${p.name} was removed by the host — out of the game`
+    : `🏳 ${p.name} left the game — out of the game`);
+
+  // Pause bookkeeping: clear if it was for them; re-point at another dropout if any
+  if (G.pausedFor && G.pausedFor.idx === idx) G.pausedFor = null;
+  if (!G.pausedFor) {
+    const other = G.players.find(pl => !pl.eliminated && pl.isConnected === false);
+    if (other) G.pausedFor = { idx: other.idx, name: other.name, color: other.color };
+  }
+
+  if (checkLastStanding()) { broadcast(); return true; }
+
+  if (G.currentPlayer === idx) {
+    // Invalidate any timers scheduled for this turn, cancel pending turn state
+    G._forfeitGen = (G._forfeitGen || 0) + 1;
+    G.pendingWildCard = false; G.wildCardDrawn = null; G.wildCardPending = null;
+    G.pendingTemple = null; G.pendingChest = null; G.pendingLanding = null;
+    G.pendingAttackerMonster = null;
+    if (G.phase === 'setup') { advanceSetupTurn(); return true; }
+    if (G.phase === 'resolve:round_callout') {
+      // Turn hasn't started yet — hand it to the next active player; callout continues
+      let n = idx, guard = 0;
+      do { n = (n + 1) % G.players.length; } while (G.players[n].eliminated && ++guard <= G.players.length);
+      G.currentPlayer = n;
+      broadcast();
+      return true;
+    }
+    advanceTurn();
+    return true;
+  }
+  broadcast();
   return true;
 }
 
@@ -1822,6 +1891,7 @@ function endGame() {
     handSize: p.hand.length,
     eliminated: p.eliminated || false,
     eliminatedRank: p.eliminatedRank || null,
+    forfeited: p.forfeited || false,
     wasLastStanding,
   }));
   broadcast();
@@ -1996,7 +2066,7 @@ const handlers = {
 
     // During an active game: allow name-based manual rejoin for disconnected players
     if (G.phase !== 'lobby') {
-      const disc = G.players.find(p => !p.isConnected && p.name.toLowerCase() === name.toLowerCase());
+      const disc = G.players.find(p => !p.isConnected && !p.forfeited && p.name.toLowerCase() === name.toLowerCase());
       if (disc) {
         conn.playerIdx = disc.idx;
         conn.sessionKey = disc.sessionKey;
@@ -2051,6 +2121,7 @@ const handlers = {
       if (pl) { foundRoom = room; foundPlayer = pl; break; }
     }
     if (!foundRoom || !foundPlayer) return sendError(ws, 'Session expired — please rejoin');
+    if (foundPlayer.forfeited) { wsSend(ws, { type: 'left_game' }); return; } // v1.0.96: out for good
     G = foundRoom;
     conn.roomCode = foundRoom.roomCode;
     conn.playerIdx = foundPlayer.idx;
@@ -2096,6 +2167,27 @@ const handlers = {
     }
     log(`🎮 Game started! ${G.roundLimit} rounds per player`);
     startSetupPhase();
+  },
+
+  // v1.0.96: player voluntarily leaves mid-game (permanent)
+  leave_game(ws, conn, data) {
+    if (!G) return;
+    if (conn.playerIdx === null || conn.playerIdx === undefined) return;
+    const idx = conn.playerIdx;
+    if (G.phase === 'lobby' || G.phase === 'game_over') return sendError(ws, 'No game in progress');
+    forfeitPlayer(idx, 'left');
+    wsSend(ws, { type: 'left_game' });
+  },
+
+  // v1.0.96: host removes a disconnected player (board only, not spectators)
+  remove_player(ws, conn, data) {
+    if (!G) return;
+    if (!conn.isBoard || conn.isSpectator) return sendError(ws, 'Only the host can remove players');
+    const idx = Number(data.idx);
+    const p = G.players[idx];
+    if (!p || p.eliminated) return;
+    if (p.isConnected !== false) return sendError(ws, 'Player is still connected');
+    forfeitPlayer(idx, 'removed');
   },
 
   end_game(ws, conn, data) {
@@ -3099,15 +3191,6 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
       fx('att', 'Hemorrhage', `${defPlayer.name}\'s income −4✦ next turn`, '−4✦', 'good');
       fx('def', 'Hemorrhage', 'Your Mana income is −4✦ next turn', '−4✦', 'bad');
     }
-    if (attM.id === 'shade_walker' && defM) {          // Cursed Touch (follows defeated monster)
-      defM.abilityData = defM.abilityData || {};
-      if (!defM.abilityData.shadeWalkerCurse || defM.abilityData.shadeWalkerCurse <= 0) {
-        defM.abilityData.shadeWalkerCurse = 2;
-        defM.abilityData.shadeWalkerCurseAmt = 5;
-        log(`🌑 Cursed Touch: Shade Walker curses ${defM.name} — 5 HP DoT for 2 turns (follows monster)`);
-        fx('att', 'Cursed Touch', `Cursed ${defM.name}: 5 HP per turn for 2 turns`, 'curse', 'good');
-      }
-    }
     if (attM.id === 'grave_specter') {                 // Necrotic Claim
       _convertTile(tile, 'Undead', 'Necrotic Claim');
       fx('att', 'Necrotic Claim', `Tile ${tilePos} became Undead`, '→ Undead', 'good');
@@ -3147,14 +3230,6 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
     _onSurvive(defM, 'battle', 'def');
     _onBattleWin(defM, 'defense');
 
-    if (defM.id === 'shade_walker' && attM.abilityData) {  // Cursed Touch on attacker
-      if (!attM.abilityData.shadeWalkerCurse || attM.abilityData.shadeWalkerCurse <= 0) {
-        attM.abilityData.shadeWalkerCurse = 2;
-        attM.abilityData.shadeWalkerCurseAmt = 5;
-        log(`🌑 Cursed Touch: Shade Walker curses ${attM.name} — 5 HP DoT for 2 turns (follows monster)`);
-        fx('def', 'Cursed Touch', `Cursed ${attM.name}: 5 HP per turn for 2 turns`, 'curse', 'good');
-      }
-    }
 
     if (attM.id === 'bone_wraith') {                   // Death Rattle hits the defender
       log(`💀 Death Rattle: Bone Wraith's death deals 12 damage to ${defM.name} (now ${defM.hp - 12}/${defM.maxHp})`);
@@ -3178,6 +3253,20 @@ function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, ti
 
     _onSurvive(attM, 'stalemate', 'att');
     _onSurvive(defM, 'stalemate', 'def');
+
+    // v1.0.98: Shade Walker — Cursed Touch. Stalemate is the only outcome where the
+    // opponent survives, so this is where the curse lands. Doesn't stack/refresh.
+    const _curse = (victim, side, victimSide) => {
+      victim.abilityData = victim.abilityData || {};
+      if (victim.abilityData.shadeWalkerCurse > 0) return;
+      victim.abilityData.shadeWalkerCurse = 2;
+      victim.abilityData.shadeWalkerCurseAmt = 5;
+      log(`🌑 Cursed Touch: Shade Walker curses ${victim.name} — 5 HP per turn for 2 turns (follows the monster)`);
+      fx(side, 'Cursed Touch', `Cursed ${victim.name}: 5 HP per turn for 2 turns`, 'curse', 'good');
+      fx(victimSide, 'Cursed Touch', `${victim.name} is cursed: −5 HP per turn for 2 turns`, 'curse', 'bad');
+    };
+    if (attM.id === 'shade_walker') _curse(defM, 'att', 'def');
+    if (defM.id === 'shade_walker') _curse(attM, 'def', 'att');
 
     if (attM.id === 'succubus') {                      // Mana Drain (stalemate too)
       const stolen = _stealMana(attPlayer, defPlayer, 10);
@@ -3234,6 +3323,8 @@ const MIME = {
   '.png':  'image/png',
   '.jpg':  'image/jpeg',
   '.gif':  'image/gif',
+  '.webp': 'image/webp',
+  '.wav':  'audio/wav',
   '.svg':  'image/svg+xml',
   '.json': 'application/json',
   '.mp3':  'audio/mpeg',

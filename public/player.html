@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.5.13</title>
+<title>Summoners Gambit — Player v0.5.20</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -523,6 +523,19 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .help-btn:hover { background:rgba(145,132,217,.22); border-color:var(--accent); }
 
 /* ── Help overlay ── */
+/* v0.5.14: game menu (☰) + leave confirm */
+#menu-fab { position:fixed; top:10px; right:12px; z-index:450; display:none; }
+#game-menu { position:fixed; inset:0; z-index:9000; display:none; background:rgba(6,6,16,.72); backdrop-filter:blur(6px); align-items:flex-end; justify-content:center; }
+#game-menu.visible { display:flex; }
+.gm-sheet { width:100%; max-width:480px; background:var(--surface,#16172a); border-top:1px solid var(--border2); border-radius:18px 18px 0 0; padding:18px 16px calc(18px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:10px; }
+.gm-title { font-family:'Cinzel',serif; font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--text-mute); text-align:center; margin-bottom:4px; }
+.gm-item { width:100%; min-height:52px; border-radius:12px; border:1px solid var(--border2); background:rgba(145,132,217,.08); color:var(--text); font-family:'Cinzel',serif; font-size:14px; letter-spacing:.06em; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:12px; padding:0 16px; }
+.gm-item .gm-ico { font-size:18px; width:22px; text-align:center; }
+.gm-item.danger { border-color:rgba(224,82,82,.45); background:rgba(224,82,82,.10); color:#f0a0a0; }
+.gm-item.danger-solid { border-color:#ff8080; background:linear-gradient(135deg,#d04040,#a02828); color:#fff; justify-content:center; }
+.gm-item.ghost { justify-content:center; background:transparent; color:var(--text-mute); }
+.gm-warn { font-size:13px; line-height:1.5; color:var(--text-lo,#c9c4e8); text-align:center; padding:4px 6px 8px; }
+.gm-warn b { color:#f0a0a0; }
 #help-overlay { position:absolute; inset:0; background:var(--bg); z-index:500; overflow-y:auto; -webkit-overflow-scrolling:touch; display:none; flex-direction:column; }
 #help-overlay.visible { display:flex; }
 .help-header { display:flex; align-items:center; padding:14px 16px 12px; border-bottom:1px solid var(--border); background:var(--bg-deep); flex-shrink:0; gap:10px; position:sticky; top:0; z-index:10; }
@@ -609,8 +622,10 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
       <div class="sb-mana-val" id="sb-mana-val">0</div>
       <div class="sb-mana-lbl">Mana</div>
     </div>
-    <button class="help-btn" onclick="toggleHelp()" title="How to Play">?</button>
+    <button class="help-btn" onclick="openGameMenu()" title="Menu">☰</button>
   </div>
+  <button class="help-btn" id="menu-fab" onclick="openGameMenu()" title="Menu">☰</button>
+  <div id="game-menu" onclick="if(event.target===this)closeGameMenu()"><div class="gm-sheet" id="gm-sheet"></div></div>
   <div id="main-content" class="no-hand"></div>
   <div id="hand-area">
     <div id="hand-label">Your Hand</div>
@@ -712,6 +727,16 @@ const TYPE_WEAK   = {Light:'Nature',Dark:'Arcane',Arcane:'Undead',Undead:'Light'
 const TYPE_ICON   = {Light:'✦',Dark:'◉',Arcane:'✶',Undead:'☠',Beast:'⚔',Nature:'❧'};
 const PLAYER_COLORS = ['#e05252','#5ca8e0','#5dc97d','#e0b050','#c07fd8','#60cdc0'];
 
+// ─── AUDIO SETTINGS (v0.5.16) — per-phone, saved in this browser ─────────────
+const AUD = (() => {
+  const d = { music: 1, sfx: 1, musicMute: false, sfxMute: false };
+  try { Object.assign(d, JSON.parse(localStorage.getItem('sg_audio_player') || '{}')); } catch(e) {}
+  return d;
+})();
+function _saveAud() { try { localStorage.setItem('sg_audio_player', JSON.stringify(AUD)); } catch(e) {} }
+function _musicLvl() { return AUD.musicMute ? 0 : Math.max(0, Math.min(1, +AUD.music || 0)); }
+function _sfxLvl()   { return AUD.sfxMute   ? 0 : Math.max(0, Math.min(1, +AUD.sfx   || 0)); }
+
 // ─── SFX (Web Audio API — procedural, no external files) ────────────────────
 const SFX = (() => {
   let _ctx = null;
@@ -724,6 +749,7 @@ const SFX = (() => {
   document.addEventListener('touchstart', () => ctx(), {once:true, capture:true});
 
   function tone(freq, type='sine', vol=0.15, dur=0.12, attack=0.005, rel=0.1, delay=0) {
+    const L = _sfxLvl(); if (L <= 0) return; vol = Math.max(0.0012, vol * L);
     try {
       const c = ctx(), now = c.currentTime;
       const o = c.createOscillator(), g = c.createGain();
@@ -736,6 +762,7 @@ const SFX = (() => {
     } catch(e){}
   }
   function noise(vol=0.08, dur=0.1, delay=0, hipass=0) {
+    const L = _sfxLvl(); if (L <= 0) return; vol = Math.max(0.0012, vol * L);
     try {
       const c = ctx(), now = c.currentTime;
       const buf = c.createBuffer(1, Math.ceil(c.sampleRate * dur), c.sampleRate);
@@ -856,7 +883,8 @@ const _soundPlayedFor = {};
 function playSoundOnce(slot, key, src) {
   if (_soundPlayedFor[slot] === key) return;
   _soundPlayedFor[slot] = key;
-  try { new Audio(src).play().catch(()=>{}); } catch(e) {}
+  const L = _sfxLvl(); if (L <= 0) return;
+  try { const a = new Audio(src); a.volume = L; a.play().catch(()=>{}); } catch(e) {}
 }
 let _waitCarouselIdx = 0;  // center tile index for regular waiting screen carousel
 let _setupCarouselIdx = 0; // center tile index for setup waiting screen carousel
@@ -870,7 +898,7 @@ function connect() {
   ws.onopen = () => {
     document.getElementById('conn-status').className = 'connected';
     document.getElementById('conn-status').textContent = '●  Live';
-    setTimeout(()=>{ document.getElementById('conn-status').style.opacity='0.5'; }, 2000);
+    setTimeout(()=>{ const cs=document.getElementById('conn-status'); if (cs.className==='connected') cs.style.opacity='0'; }, 2000); // v0.5.19: hide once live (sat under the ☰ button)
     // Rejoin handled in the 'ready' message handler
   };
   ws.onclose = () => {
@@ -889,6 +917,9 @@ function connect() {
     } else if (msg.type === 'session') {
       mySessionKey = msg.sessionKey;
       try { localStorage.setItem('sg_session_key', mySessionKey); } catch(e){}
+    } else if (msg.type === 'left_game') {
+      _onLeftGame();
+      return;
     } else if (msg.type === 'tally_complete') {
       // Board finished the pre-round tally animation — now show our turn summary
       _tallyComplete = true;
@@ -1156,6 +1187,7 @@ function synergyBannerHTML() {
 // ─── STATUS BAR ─────────────────────────────────────────────────────────────
 function updateStatusBar(showIt = true) {
   const sb = document.getElementById('status-bar');
+  _syncMenuFab(showIt);
   if (!showIt || !G || myIdx === null) { sb.style.display = 'none'; return; }
   sb.style.display = 'flex';
   const me = G.players[myIdx];
@@ -1204,7 +1236,7 @@ const MONSTER_LORE = {
   'Nightshard':     { role:'Assailant',lore:'Crystallized shadow given lethal purpose, the Nightshard moves like a rumor and hits like a verdict. What they lack in durability they make up for in aggression — a summon that lives or dies in the opening exchange.', ability:'Soul Siphon — on kill, steals 4✦ from the defeated monster\'s owner.' },
   'Void Sentinel':  { role:'Guardian',lore:'The Void Sentinel was carved from the space between stars and set to guard a gateway that no longer exists. It protects tiles with the same impassive resolve regardless of what crosses its path, drawing on an endless reservoir of shadow to endure.', ability:'Last Darkness — when HP drops below 30%, ATK transforms to 36.' },
   'Shadow Paladin': { role:'Vanguard',lore:'Where Light Paladins serve order, Shadow Paladins serve inevitability. They have studied every fighting style and countered every tactic, making them adaptable soldiers who can hold ground or push forward depending on what the moment demands.', ability:'Dark Pact — gains +1 ATK per friendly Dark summon currently stationed on tiles.' },
-  'Succubus':       { role:'Ascendant · Temple Only',lore:'Beautiful, ruthless, and economically devastating. The Succubus doesn\'t just win battles — she taxes them. Every victory drains the loser\'s treasury, turning combat into a Mana siphon that compounds with every fight.', ability:'Mana Drain — steal 10 Mana from the opposing player each time you win a battle.' },
+  'Succubus':       { role:'Ascendant · Temple Only',lore:'Beautiful, ruthless, and economically devastating. The Succubus doesn\'t just win battles — she taxes them. Every victory drains the loser\'s treasury, turning combat into a Mana siphon that compounds with every fight.', ability:'Mana Drain — when it attacks and wins or stalemates, steal 10✦ from the defending player.' },
 
   // ── ARCANE ──
   'Sorcerer':       { role:'Assailant',lore:'Pure channeled spellfire in a mortal frame. The Sorcerer can disintegrate enemies in seconds, but maintaining those output levels leaves almost nothing for self-defense. High risk, high reward — one wrong trade ends them.', ability:'Arcane Ascent — on win, permanently gains +1 ATK and +1 Gen (stacks).' },
@@ -1215,7 +1247,7 @@ const MONSTER_LORE = {
   // ── UNDEAD ──
   'Bone Wraith':    { role:'Assailant',lore:'What it lacks in flesh it makes up for in fury. The Bone Wraith is animated by spite and propelled by the memory of every grievance it suffered in life. It hits hard and disintegrates fast — exactly as planned.', ability:'Death Rattle — on death, deals 12 damage to the monster that killed it.' },
   'Death Knight':   { role:'Guardian',lore:'A paladin who refused to die and cut a deal to keep going. The Death Knight\'s oath binds them to the tile they guard with unnatural persistence. Killing them once isn\'t always enough — they have a way of not staying down.', ability:'Death Sentence — 10% chance to instantly kill on any damage dealt (attack or counter-strike).' },
-  'Shade Walker':   { role:'Vanguard',lore:'The Shade Walker exists between states — partially corporeal, partially not. This makes them genuinely hard to read in combat: they can absorb a blow or dodge it depending on their angle. Versatile survivors of the Undead roster.', ability:'Cursed Touch — after any battle, the opposing monster loses 5 HP per turn for 2 turns (follows the monster, does not stack).' },
+  'Shade Walker':   { role:'Vanguard',lore:'The Shade Walker exists between states — partially corporeal, partially not. This makes them genuinely hard to read in combat: they can absorb a blow or dodge it depending on their angle. Versatile survivors of the Undead roster.', ability:'Cursed Touch — after a stalemate, the opposing monster loses 5 HP per turn for 2 turns (follows the monster, can\'t kill, does not stack).' },
   'Demon Lord':     { role:'Ascendant · Temple Only',lore:'The Demon Lord has died so many times that death simply stopped sticking. Once per game, when their HP drops to zero, they stabilize at 15 and keep fighting — a nightmare to put down permanently.', ability:'Last Rite — survives fatal damage once per game, continuing at 15 HP.' },
 
   // ── BEAST ──
@@ -1232,27 +1264,27 @@ const MONSTER_LORE = {
 
   // ── LIGHT (new) ──
   'Dawn Striker':   { role:'Assailant',lore:'The Dawn Striker hits before the enemy even sees the light. Trained to attack the moment the sun breaks the horizon, this warrior combines celestial timing with brutal force — high attack, low armour, built for the decisive first blow.', ability:'Soulmend — heals itself for 8 HP each time it wins a battle.' },
-  'Radiant Lancer': { role:'Vanguard',lore:'Carrying a spear infused with concentrated sunlight, the Radiant Lancer punches through shields and shadows alike. Steady and adaptable, it holds tiles reliably while threatening enemies who stray too close to its extended reach.', ability:'Piercing Light — ignores 3 of the defender\'s DEF on every attack.' },
+  'Radiant Lancer': { role:'Vanguard',lore:'Carrying a spear infused with concentrated sunlight, the Radiant Lancer punches through shields and shadows alike. Steady and adaptable, it holds tiles reliably while threatening enemies who stray too close to its extended reach.', ability:'Piercing Light — ignores 30% of the target\'s DEF on every strike it makes (attack and counter-strike).' },
   'Sunfire Herald': { role:'Vanguard',lore:'The Sunfire Herald moves across the board like a slow burn — patient, inevitable. It prioritises endurance over aggression, trusting that the longer a battle drags on, the more its radiant resilience tips the scales in its favour.', ability:'Battle Cry — grants +5 ATK to the friendly summon on each adjacent tile.' },
 
   // ── DARK (new) ──
-  'Void Reaper':    { role:'Assailant',lore:'The Void Reaper tears through enemy lines with terrifying speed, leaving nothing but silence. Extremely fragile, but hits with an attack stat most summons at double the cost cannot match. It exists to delete one thing, then disappear.', ability:'Void Hunger — gains +3 ATK permanently each time it wins a battle (stacks).' },
+  'Void Reaper':    { role:'Assailant',lore:'The Void Reaper tears through enemy lines with terrifying speed, leaving nothing but silence. Extremely fragile, but hits with an attack stat most summons at double the cost cannot match. It exists to delete one thing, then disappear.', ability:'Void Hunger — gains +2 ATK permanently each time it wins a battle (stacks).' },
   'Dusk Blade':     { role:'Vanguard',lore:'Half shadow, half blade — the Dusk Blade occupies the space between an assassin and a soldier. It trades blows with most opponents on even footing while always looking for the moment to strike something decisive with its slightly elevated attack.', ability:'Hemorrhage — on win, the target\'s Mana income next turn is reduced by 4✦.' },
   'Umbral Stalker': { role:'Vanguard',lore:'The Umbral Stalker watches from the dark and waits for the right time. Tougher than most balanced units, it absorbs punishment while wearing opponents down — less about explosive damage and more about outlasting the thing standing in its way.', ability:'Umbral Aura — adjacent enemy stationed monsters lose 5 DEF (active aura, while stationed).' },
 
   // ── ARCANE (new) ──
-  'Spell Wraith':   { role:'Assailant',lore:'A barely-contained burst of arcane energy given a body just long enough to fight. The Spell Wraith collapses its own existence into a single devastating strike. Impressive attack, practically no armour, and a lifespan measured in battles rather than rounds.', ability:'Mana Siphon — per turn, drains the full Gen value from each adjacent enemy stationed monster.' },
+  'Spell Wraith':   { role:'Assailant',lore:'A barely-contained burst of arcane energy given a body just long enough to fight. The Spell Wraith collapses its own existence into a single devastating strike. Impressive attack, practically no armour, and a lifespan measured in battles rather than rounds.', ability:'Mana Siphon — adjacent enemy stationed monsters lose their base Gen from their owner\'s income each turn, and you gain it.' },
   'Runic Duelist':  { role:'Vanguard',lore:'The Runic Duelist inscribes battle equations into the air mid-fight, calculating angles and energy output on the fly. It leans slightly toward aggression, finding combat solutions faster than opponents can adapt their defences.', ability:'Arcane Pact — gains +1 ATK per friendly Arcane summon currently stationed (recalculated each battle).' },
   'Mana Weaver':    { role:'Vanguard',lore:'The Mana Weaver treats the battlefield like a loom, threading magical currents through everything it touches. A durable generalist with exceptional defensive depth, it holds positions long enough for the board to shift in your favour.', ability:'Mana Web — all other friendly stationed monsters gain +1✦ Gen per turn.' },
 
   // ── UNDEAD (new) ──
   'Grave Specter':  { role:'Assailant',lore:'The Grave Specter phases through solid matter and hits from angles that shouldn\'t be possible. Its attack power is exceptional, its survivability almost nonexistent — a creature that decided dying was optional as long as it killed you first.', ability:'Necrotic Claim — on winning a battle, the tile converts to Undead element.' },
   'Cursed Revenant':{ role:'Vanguard',lore:'Bound to the battlefield by a curse it cannot lift, the Cursed Revenant fights with the weight of unfinished business behind every strike. Slightly attack-forward, it applies steady pressure and is difficult to ignore even when other threats demand attention.', ability:'Undead Resilience — gains +2 DEF permanently each time it survives a battle (stacks).' },
-  'Plague Herald':  { role:'Vanguard',lore:'The Plague Herald doesn\'t fight clean. It layers debilitating pressure over time, weathering damage while making the fight increasingly miserable for whoever stands against it. Among the more durable Undead balanced units.', ability:'Pestilence — adjacent enemy stationed monsters lose 3 HP per turn (passive aura).' },
+  'Plague Herald':  { role:'Vanguard',lore:'The Plague Herald doesn\'t fight clean. It layers debilitating pressure over time, weathering damage while making the fight increasingly miserable for whoever stands against it. Among the more durable Undead balanced units.', ability:'Pestilence — adjacent enemy stationed monsters lose 3 HP per turn (can\'t reduce them below 1 HP).' },
 
   // ── BEAST (new) ──
   'Feral Striker':  { role:'Assailant',lore:'Raw instinct weaponised. The Feral Striker doesn\'t strategise — it charges, claws, and hopes its ferocity lands before anything can hit back. Extremely high attack, a body that can barely absorb punishment, and zero regard for personal safety.', ability:'Territorial — gains +2 ATK per tile currently owned (recalculated each battle).' },
-  'Stormtalon':     { role:'Vanguard',lore:'Part eagle, part lion — built to strike from height and shred what it lands on. The Stormtalon dives hard and fast, trading finesse for raw aggression. Defenders rarely get a second pass to adjust.', ability:'Lightning Strike — always attacks first; if the defender is killed by the initial strike, no counter-strike occurs.' },
+  'Stormtalon':     { role:'Vanguard',lore:'Part eagle, part lion — built to strike from height and shred what it lands on. The Stormtalon dives hard and fast, trading finesse for raw aggression. Defenders rarely get a second pass to adjust.', ability:'Lightning Strike — always strikes first, even when defending; if that first strike kills, no counter-strike occurs.' },
   'Stoneback':      { role:'Vanguard',lore:'The Stoneback\'s hide has fossilised over decades of taking hits. Slower and tougher than most Beast units, it doesn\'t chase opponents — it stands in their way. Exceptional defensive stats for the archetype, trades raw damage for staying power.', ability:'Granite Hide — gains +2 DEF per tile you currently own (recalculated each battle).' },
 
   // ── NATURE (new) ──
@@ -1597,6 +1629,7 @@ function scrollNavHTML(scrollId, dotPrefix, count) {
 
 // ─── MAIN RENDER ROUTER ─────────────────────────────────────────────────────
 function render() {
+  if (_leftGame) { renderLeftGame(); return; }
   if (!G) { renderConnecting(); return; }
   if (myIdx === null) { renderJoin(); return; }
 
@@ -1771,7 +1804,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.13</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.20</div>
     </div>
 
     <div class="room-code-group">
@@ -1871,7 +1904,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.13</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.20</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -2322,8 +2355,8 @@ function openTileDetail(tilePos) {
         <div class="tdm-ability-desc">${lore.ability.includes('—') ? lore.ability.split('—').slice(1).join('—').trim() : lore.ability}</div>
       </div>` : '';
 
-    const artPng = `/img/monsters/monster-${m.id}.png`;
-    const artGif = `/img/monsters/monster-${m.id}.gif`;
+    const artPng = monsterCardSrc(m.id);
+    const artGif = monsterAnimSrc(m.id);
     summonHtml = `
       <div class="tdm-art-banner" style="border-bottom:2px solid ${mTypeCol}44">
         <img src="${artGif}" onerror="this.src='${artPng}';this.onerror=function(){this.style.display='none'}" alt="${m.name}">
@@ -2454,7 +2487,7 @@ function buildBoardRing(selIdx, setup, claimMode) {
   const m = selTile.summon;
   const tileImg = TILE_IMG[selTile.element] || TILE_IMG[selTile.kind] || '';
   const art = m
-    ? `<img src="/img/monsters/monster-${m.id}.png" alt="${m.name}" onerror="this.style.display='none'">`
+    ? `<img src="${monsterCardSrc(m.id)}" alt="${m.name}" onerror="this.style.display='none'">`
     : (tileImg ? `<img src="${tileImg}" alt="" onerror="this.style.display='none'">` : '');
   const here = G.players.filter(p => !p.eliminated && p.position === selIdx);
   const elLabel = selTile.kind !== 'element'
@@ -3341,7 +3374,7 @@ function renderNotification(notif) {
         Targeted by <span style="color:${notif.castByColor||ts.color};font-weight:700">${notif.castByName}</span>
       </div>
 
-      <div onclick="send('dismiss_notification')"
+      <div onclick="_dismissNotif()"
         style="position:relative;width:160px;height:224px;border-radius:12px;border:2px solid ${ts.color};
                background:linear-gradient(160deg,${ts.color}28,${ts.color}08);
                overflow:hidden;cursor:pointer;box-shadow:0 0 28px ${ts.glow},0 4px 24px rgba(0,0,0,.5);
@@ -3355,15 +3388,25 @@ function renderNotification(notif) {
           <div style="font-size:13px;font-family:'Cinzel',serif;font-weight:700;color:${ts.color};margin-bottom:3px">${notif.cardName}</div>
           <div style="font-size:9px;letter-spacing:.14em;color:${ts.color};opacity:.65;text-transform:uppercase">${ts.label}</div>
         </div>
-        <div style="position:absolute;top:8px;right:9px;font-size:8px;letter-spacing:.1em;color:${ts.color};opacity:.55;text-transform:uppercase;font-family:'Cinzel',serif">Tap</div>
+        <div style="position:absolute;top:8px;right:9px;font-size:8px;letter-spacing:.1em;color:${ts.color};opacity:.55;text-transform:uppercase;font-family:'Cinzel',serif"></div>
       </div>
 
       <div style="background:var(--surface);border:1px solid ${ts.color}44;border-radius:10px;
                   padding:13px 18px;max-width:280px;width:100%;font-size:13px;color:var(--text);line-height:1.65;text-align:center">
         ${notif.cardDesc}
       </div>
-      <div style="font-size:11px;color:var(--text-mute)">Tap the card to dismiss</div>
+      <button id="notif-dismiss-btn" onclick="_dismissNotif()"
+        style="width:100%;max-width:280px;min-height:52px;border-radius:12px;border:1px solid ${ts.color};
+               background:linear-gradient(135deg,${ts.color}38,${ts.color}14);color:var(--text);
+               font-family:'Cinzel',serif;font-size:15px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+               cursor:pointer;box-shadow:0 0 18px ${ts.glow};-webkit-tap-highlight-color:transparent">Dismiss</button>
     </div>`;
+}
+// v0.5.15: explicit Dismiss button (card tap still works); guard against double-send
+function _dismissNotif() {
+  const b = document.getElementById('notif-dismiss-btn');
+  if (b) { if (b.disabled) return; b.disabled = true; b.style.opacity = '.5'; b.textContent = 'Dismissing…'; }
+  send('dismiss_notification');
 }
 
 // ─── BATTLE RESULT CLASH ─────────────────────────────────────────────────────
@@ -3379,7 +3422,8 @@ let _battleResultPending   = false; // true = personal result is showing; hold r
 // ─── BATTLE MUSIC ────────────────────────────────────────────────────────────
 const _battleAudio = new Audio('/audio/battle.mp3');
 _battleAudio.loop = false;
-_battleAudio.volume = 0.55;
+const BATTLE_MUSIC_BASE = 0.55;
+_battleAudio.volume = BATTLE_MUSIC_BASE * _musicLvl();
 let _battleMusicKey = null; // tracks which battle we played music for (prevent re-trigger on rebroadcast)
 
 function _tryPlayBattleMusic() {
@@ -3389,6 +3433,8 @@ function _tryPlayBattleMusic() {
   const key = `${G.currentPlayer}-${G.turnCount}`;
   if (_battleMusicKey === key) return;  // already played for this attack
   _battleMusicKey = key;
+  if (_musicLvl() <= 0) return;
+  _battleAudio.volume = BATTLE_MUSIC_BASE * _musicLvl();
   _battleAudio.currentTime = 0;
   _battleAudio.play().catch(() => {});
 }
@@ -4082,7 +4128,7 @@ function renderGameOver() {
       <div class="standing-info">
         <div class="standing-name" style="color:${p.color}">
           ${p.name}${p.idx===myIdx?' (you)':''}
-          ${p.eliminated ? '<span style="font-size:9px;color:#e05252;margin-left:4px;font-family:Inter,sans-serif">💀 eliminated</span>' : ''}
+          ${p.eliminated ? `<span style="font-size:9px;color:#e05252;margin-left:4px;font-family:Inter,sans-serif">${p.forfeited ? '🏳 left' : '💀 eliminated'}</span>` : ''}
         </div>
         <div class="standing-stats">${p.tiles} tiles · ${p.mana} ✦</div>
       </div>
@@ -4099,6 +4145,108 @@ function renderGameOver() {
 }
 
 // ─── Help overlay ────────────────────────────────────────────────────────────
+// ─── GAME MENU / LEAVE GAME (v0.5.14) ────────────────────────────────────────
+let _leftGame = false;
+function _canLeave() {
+  if (!G || myIdx === null || _leftGame) return false;
+  const me = G.players[myIdx];
+  return !!me && !me.eliminated && G.phase !== 'lobby' && G.phase !== 'game_over';
+}
+// Floating ☰ shows only when the status bar (which has its own ☰) is hidden mid-game
+function _syncMenuFab(statusBarShown) {
+  const fab = document.getElementById('menu-fab');
+  // v0.5.16: menu (sound settings) available on every joined screen; Leave item only when _canLeave()
+  const avail = !!G && myIdx !== null && !_leftGame && !!G.players[myIdx];
+  if (fab) fab.style.display = (!statusBarShown && avail) ? 'flex' : 'none';
+}
+function openGameMenu() {
+  const sheet = document.getElementById('gm-sheet');
+  sheet.innerHTML = `
+    <div class="gm-title">Menu</div>
+    <button class="gm-item" onclick="showAudioSettings()"><span class="gm-ico">🔊</span>Sound Settings</button>
+    <button class="gm-item" onclick="closeGameMenu();toggleHelp()"><span class="gm-ico">?</span>How to Play</button>
+    ${_canLeave() ? `<button class="gm-item danger" onclick="showLeaveConfirm()"><span class="gm-ico">🏳</span>Leave Game</button>` : ''}
+    <button class="gm-item ghost" onclick="closeGameMenu()">Close</button>`;
+  document.getElementById('game-menu').classList.add('visible');
+}
+function showAudioSettings() {
+  const row = (key, label, icon) => {
+    const v = Math.round((+AUD[key] || 0) * 100), m = AUD[key + 'Mute'];
+    return `<div style="margin:2px 0 8px">
+      <div style="display:flex;justify-content:space-between;font-family:'Cinzel',serif;font-size:13px;color:var(--text);margin-bottom:6px">
+        <span>${icon} ${label}</span><span id="aus-${key}-val" style="color:var(--accent-pale);font-family:Inter,sans-serif">${m ? 'Muted' : v + '%'}</span></div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <button id="aus-${key}-mute" onclick="_ausMute('${key}')" style="width:48px;height:44px;flex-shrink:0;border-radius:10px;border:1px solid ${m ? 'rgba(224,82,82,.5)' : 'var(--border2)'};background:${m ? 'rgba(224,82,82,.18)' : 'rgba(145,132,217,.12)'};font-size:20px">${m ? '🔇' : '🔊'}</button>
+        <input id="aus-${key}" type="range" min="0" max="100" step="5" value="${v}" oninput="_ausSet('${key}',this.value)" style="flex:1;height:36px;accent-color:#9184d9;${m ? 'opacity:.4' : ''}">
+      </div></div>`;
+  };
+  document.getElementById('gm-sheet').innerHTML = `
+    <div class="gm-title">Sound Settings</div>
+    <div class="gm-warn" style="padding-bottom:2px">Only affects this phone.</div>
+    ${row('music', 'Music', '🎵')}
+    ${row('sfx', 'Sound Effects', '💥')}
+    <button class="gm-item" style="justify-content:center" onclick="_ausTest()">Test Sound</button>
+    <button class="gm-item ghost" onclick="openGameMenu()">‹ Back</button>`;
+  document.getElementById('game-menu').classList.add('visible');
+}
+function _ausSet(key, val) {
+  AUD[key] = Math.max(0, Math.min(100, +val)) / 100;
+  if (AUD[key] > 0) AUD[key + 'Mute'] = false;
+  _saveAud(); _applyAudio(); _ausRefresh(key);
+}
+function _ausMute(key) { AUD[key + 'Mute'] = !AUD[key + 'Mute']; _saveAud(); _applyAudio(); _ausRefresh(key); }
+function _ausRefresh(key) {
+  const m = AUD[key + 'Mute'];
+  const v = document.getElementById(`aus-${key}-val`), b = document.getElementById(`aus-${key}-mute`), r = document.getElementById(`aus-${key}`);
+  if (v) v.textContent = m ? 'Muted' : Math.round(AUD[key] * 100) + '%';
+  if (b) { b.textContent = m ? '🔇' : '🔊'; b.style.background = m ? 'rgba(224,82,82,.18)' : 'rgba(145,132,217,.12)'; b.style.borderColor = m ? 'rgba(224,82,82,.5)' : ''; }
+  if (r) r.style.opacity = m ? '.4' : '';
+}
+function _applyAudio() {
+  const ml = _musicLvl();
+  if (typeof _battleAudio !== 'undefined') {
+    if (ml <= 0) { _battleAudio.pause(); } else { _battleAudio.volume = BATTLE_MUSIC_BASE * ml; }
+  }
+}
+function _ausTest() { SFX.dieLand(4); }
+function closeGameMenu() { document.getElementById('game-menu').classList.remove('visible'); }
+function showLeaveConfirm() {
+  document.getElementById('gm-sheet').innerHTML = `
+    <div class="gm-title">Leave Game?</div>
+    <div class="gm-warn">You'll be <b>out for good</b> and can't rejoin this game.<br>
+      Your hand and Mana are discarded. Your stationed summons stay on the board — others will have to fight them for your tiles.</div>
+    <button class="gm-item danger-solid" onclick="confirmLeaveGame()">🏳 Leave Game</button>
+    <button class="gm-item ghost" onclick="closeGameMenu()">Keep Playing</button>`;
+}
+function confirmLeaveGame() {
+  if (!_canLeave()) { closeGameMenu(); return; }
+  closeGameMenu();
+  try { closeCardDetail(); } catch(e) {}
+  send('leave_game');
+}
+function _onLeftGame() {
+  _leftGame = true;
+  mySessionKey = null;
+  try { localStorage.removeItem('sg_session_key'); } catch(e){}
+  closeGameMenu();
+  try { closeCardDetail(); } catch(e) {}
+  renderLeftGame();
+}
+function renderLeftGame() {
+  updateStatusBar(false);
+  document.getElementById('hand-area').classList.remove('visible');
+  document.getElementById('action-bar').classList.remove('visible');
+  const mc = document.getElementById('main-content');
+  mc.classList.add('no-hand');
+  mc.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:24px;gap:16px;text-align:center;">
+      <div style="font-size:44px">🏳</div>
+      <div style="font-family:'Cinzel',serif;font-size:16px;letter-spacing:.1em;color:var(--accent-pale);text-transform:uppercase;">You left the game</div>
+      <div style="font-size:12px;color:var(--text-mute);max-width:280px;line-height:1.5">Thanks for playing! The game carries on without you.</div>
+      <button class="gm-item" style="max-width:280px;justify-content:center;margin-top:8px" onclick="location.reload()">Join a New Game</button>
+    </div>`;
+}
+
 function toggleHelp() {
   const o = document.getElementById('help-overlay');
   const visible = o.classList.toggle('visible');
