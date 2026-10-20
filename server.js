@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.99';
+const SERVER_VERSION = 'v1.0.103';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -148,11 +148,21 @@ const WILD_CARD_POOLS = {
   ],
   high: [
     { id:'coup',     name:'Coup',     cost:60, tier:'high', target:'coup',    desc:'Sacrifice one summon from your hand to seize any occupied enemy tile. Their stationed summon defects — it stays on the tile and now fights for you.' },
-    { id:'plague',   name:'Plague',   cost:60, tier:'high', target:'player',  desc:"All of a target player's stationed summons lose 15 HP" },
+    { id:'plague',   name:'Plague',   cost:60, tier:'high', target:'player',  desc:"All of a target player's stationed summons lose 20 HP" },
     { id:'windfall', name:'Windfall', cost:60, tier:'high', target:'self',    desc:'Your passive mana income next turn is tripled' },
     { id:'shatter',  name:'Shatter',  cost:60, tier:'high', target:'shatter', desc:'Destroy any 2 stationed summons on the board; both tiles go neutral' },
   ]
 };
+
+// v1.0.102: record each resolved Wild Card play so the board can animate it.
+// extra: { targetIdx?, tilePos?, picks?, stolenName? }
+function _wcPlayed(cardId, extra = {}) {
+  const card = [...WILD_CARD_POOLS.low, ...WILD_CARD_POOLS.mid, ...WILD_CARD_POOLS.high].find(c => c.id === cardId);
+  if (!card) return;
+  G.wcPlayedSeq = (G.wcPlayedSeq || 0) + 1;
+  G.lastWildCard = { seq: G.wcPlayedSeq, id: card.id, name: card.name, tier: card.tier, desc: card.desc,
+                     casterIdx: G.currentPlayer, ...extra };
+}
 
 // Starter sets — 6 sets × 5 cards each (no Mana cost during setup phase)
 const STARTER_SETS = {
@@ -206,7 +216,7 @@ function makeSummon(templateId) {
       sorcererGenBonus: 0,           // Sorcerer: permanent Gen bonus (+1 per win)
       runicDuelistBonus: 0,          // Runic Duelist: ATK bonus from friendly arcane count (recalc each battle)
       // Rune Priestess: Runic Amplification — gen doubled on Arcane tile (handled in collectPassiveIncome, no flag needed)
-      // Arch Mage: Mana Infusion — +3✦/turn while stationed (handled in collectPassiveIncome, no flag needed)
+      // Arch Mage: Mana Infusion — +2✦/turn while stationed (handled in collectPassiveIncome, no flag needed)
       // Undead
       cursedRevenantSurvivals: 0,    // Cursed Revenant: survivals → DEF stacks (+2 DEF per survival)
       shadeWalkerCurse: 0,           // Shade Walker: turns remaining on post-battle DoT curse
@@ -572,7 +582,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
   // Shadow Paladin — Dark Pact: +1 ATK per friendly Dark summon stationed (handled in getEffectiveStats)
   // No pre-strike ATK boost for Shadow Paladin here
 
-  // Arch Mage — Mana Infusion: +3✦/turn while stationed (handled in collectPassiveIncome, not pre-strike)
+  // Arch Mage — Mana Infusion: +2✦/turn while stationed (handled in collectPassiveIncome, not pre-strike)
 
   // Skip attacker's strike if Stormtalon (defender) pre-emptively killed the attacker
   let atkDmg = 0;
@@ -1067,11 +1077,11 @@ function collectPassiveIncome(playerIdx) {
       log(`🔮 Runic Amplification: Rune Priestess on Arcane tile — gen doubled to ${gen}✦`);
     }
 
-    // Arch Mage — Mana Infusion: +3✦ bonus income per turn while stationed
+    // Arch Mage — Mana Infusion: +2✦ bonus income per turn while stationed (v1.0.103: was +3)
     if (mi.id === 'arch_mage') {
-      _tallyBreakdown.push({ label: '🔮 Mana Infusion', bonus: 3 });
-      gen += 3;
-      log(`🔮 Mana Infusion: Arch Mage grants +3✦ bonus income (total gen: ${gen})`);
+      _tallyBreakdown.push({ label: '🔮 Mana Infusion', bonus: 2 });
+      gen += 2;
+      log(`🔮 Mana Infusion: Arch Mage grants +2✦ bonus income (total gen: ${gen})`);
     }
 
     // Sorcerer — Arcane Ascent: gen bonus from permanent sorcererGenBonus
@@ -1403,6 +1413,7 @@ function publicState() {
     elementChangeCount: p.elementChangeCount,
     arcaneChangeCount: p.arcaneChangeCount,
     lastDiceRoll: p.lastDiceRoll,
+    lastDice: p.lastDice || null,
     battlesWon: p.battlesWon,
     battlesLost: p.battlesLost,
     peakTiles: p.peakTiles,
@@ -1444,6 +1455,7 @@ function publicState() {
     turnSummary: G.turnSummary || null,
     roundCallout: G.roundCallout || null,
     tileFlashes: G.tileFlashes || [],
+    lastWildCard: G.lastWildCard || null,
     serverVersion: SERVER_VERSION,
   };
 }
@@ -1581,7 +1593,7 @@ function computeRoundTally(playerIdx, hpSnapshot, milestoneSnapshot) {
 
     // ── Beat 1: Net mana this turn ────────────────────────────────────────────
     // Use actual gen from collectPassiveIncome (_tallyGen), which includes ability
-    // bonuses like Rune Priestess doubling and Arch Mage +3.  Falls back to eff.gen
+    // bonuses like Rune Priestess doubling and Arch Mage +2.  Falls back to eff.gen
     // only if _tallyGen wasn't set (e.g. skipped collectPassiveIncome somehow).
     const actualGen = mi._tallyGen !== undefined ? mi._tallyGen : eff.gen;
     let netMana = actualGen;
@@ -1660,6 +1672,7 @@ function computeRoundTally(playerIdx, hpSnapshot, milestoneSnapshot) {
 
 function startShopPhase() {
   const p = G.players[G.currentPlayer];
+  p.lastDice = null;
   p.lastDiceRoll = null;  // reset so stale roll values don't trigger false animations
   G.lastBattle = null;    // clear battle result so it doesn't persist across turns
   G.pendingAttackerSummon = null; // clear attacker preview
@@ -1900,12 +1913,16 @@ function endGame() {
 function resolveRoll(playerIdx) {
   const p = G.players[playerIdx];
   const oldPos = p.position;
-  let roll = rand(1, 6) + rand(1, 6);
+  // v1.0.100: keep both dice so the board can show two real dice
+  const d1 = rand(1, 6), d2 = rand(1, 6);
+  let roll = d1 + d2;
+  p.lastDice = [d1, d2];
 
   // Stumble effect — skip roll, forced to move exactly 3
   if (p.wcEffects.stumble) {
     p.wcEffects.stumble = false;
     roll = 3;
+    p.lastDice = [1, 2];   // v1.0.100: show the forced 3 on the dice
     log(`🃏 Stumble! ${p.name} is cursed — forced to move 3 spaces`);
   }
 
@@ -2834,6 +2851,7 @@ const handlers = {
       if (card.id === 'fortify')  p.wcEffects.fortify  = true;
       if (card.id === 'windfall') p.wcEffects.windfall = true;
       log(`🃏 ${card.name} — effect active for ${p.name}`);
+      _wcPlayed(card.id);
       advanceTurn();
     } else if (card.target === 'own_station') {
       G.wildCardPending = { cardId: card.id };
@@ -2878,6 +2896,7 @@ const handlers = {
       const healed = Math.min(20, m.maxHp - m.hp);
       m.hp += healed;
       log(`🃏 Mend healed ${m.name} for ${healed} HP`);
+      _wcPlayed('mend', { tilePos: data.tilePos });
       G.wildCardPending = null;
       advanceTurn();
     } else {
@@ -2918,12 +2937,12 @@ const handlers = {
         let hit = 0;
         for (const t of G.board) {
           if (t.ownerId === targetIdx && t.summonInstance) {
-            t.summonInstance.hp = Math.max(1, t.summonInstance.hp - 15);
+            t.summonInstance.hp = Math.max(1, t.summonInstance.hp - 20);   // v1.0.103: was 15
             hit++;
           }
         }
-        if (hit > 0) notifyTarget('plague', 'Plague', `All ${hit} of your stationed summon${hit!==1?'s':''} each lost 15 HP.`, 'high');
-        log(`🃏 Plague — ${target.name}'s ${hit} summon${hit!==1?'s':''} each lose 15 HP`);
+        if (hit > 0) notifyTarget('plague', 'Plague', `All ${hit} of your stationed summon${hit!==1?'s':''} each lost 20 HP.`, 'high');
+        log(`🃏 Plague — ${target.name}'s ${hit} summon${hit!==1?'s':''} each lose 20 HP`);
       }
       if (pending.cardId === 'poach') {
         if (target.hand.length === 0) {
@@ -2937,6 +2956,7 @@ const handlers = {
         }
         if (p.hand.length >= 5) {
           log(`🃏 Poach failed — ${p.name}'s hand is full`);
+          _wcPlayed('poach', { targetIdx, failed: true });
           G.wildCardPending = null;
           advanceTurn();
           return;
@@ -2947,6 +2967,7 @@ const handlers = {
         notifyTarget('poach', 'Poach', `${p.name} stole ${stolen.name} from your hand!`, 'mid');
         log(`🃏 Poach — ${p.name} stole ${stolen.name} from ${target.name}`);
       }
+      _wcPlayed(pending.cardId, { targetIdx });
       G.wildCardPending = null;
       advanceTurn();
     }
@@ -3007,6 +3028,7 @@ const handlers = {
 
     log(`🃏 Coup — ${p.name} sacrificed ${sacrifice.name} to seize tile ${tilePos} and steal ${stolen.name} from ${prevOwner.name}`);
     _updatePeakTiles(G.currentPlayer);
+    _wcPlayed('coup', { targetIdx: prevOwner ? prevOwner.idx : null, tilePos });
     G.wildCardPending = null;
     advanceTurn();
   },
@@ -3045,6 +3067,7 @@ const handlers = {
         t.ownerId = null;
       }
     }
+    _wcPlayed('shatter', { picks: picks.slice() });
     G.wildCardPending = null;
     advanceTurn();
   },
@@ -3541,7 +3564,10 @@ function clearRoom(code) {
   fs.readFile(filePath, (err, data) => {
     if (err) { res.writeHead(404); res.end('Not found'); return; }
     const ext = path.extname(filePath);
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+    // v1.0.101: pages + scripts must always revalidate so a deploy reaches phones on the next load;
+    // art/audio can be cached for a day.
+    const cache = (ext === '.html' || ext === '.js' || ext === '.css' || ext === '.json') ? 'no-cache' : 'public, max-age=86400';
+    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': cache });
     res.end(data);
   });
 }

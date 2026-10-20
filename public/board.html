@@ -431,6 +431,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 <div id="app"></div>
 
 <script src="/common.js"></script>
+<script src="/board-fx.js"></script>
 <script>
 'use strict';
 
@@ -555,6 +556,72 @@ const SFX = (() => {
       noise(0.08, 0.12, 0, 200);
       tone(480, 'sine', 0.10, 0.18, 0.003, 0.15);
       tone(720, 'sine', 0.065,0.14, 0.002, 0.12, 0.10);
+    },
+    // v0.6.01: claim fanfare — land, slide, seat + rising triad
+    claimFanfare() {
+      noise(0.10, 0.12, 0.34, 180);                          // card lands on the board
+      tone(130, 'sine', 0.16, 0.22, 0.004, 0.20, 0.34);
+      noise(0.05, 0.25, 0.55, 2500);                         // slide
+      tone(110, 'sine', 0.22, 0.30, 0.004, 0.28, 0.92);      // seats in the slot
+      tone(523, 'triangle', 0.09, 0.30, 0.004, 0.26, 0.96);
+      tone(659, 'triangle', 0.08, 0.30, 0.004, 0.26, 1.04);
+      tone(784, 'triangle', 0.08, 0.45, 0.004, 0.40, 1.12);
+    },
+    // v0.6.01: dice rolling — short bright clicks while tumbling (r = 0..1 random pitch)
+    diceRattle(r=0.5) {
+      noise(0.09, 0.025, 0, 1800 + r*1400);
+      tone(900 + r*700, 'square', 0.022, 0.02, 0.001, 0.018);
+    },
+    // v0.6.01: dice hitting the table — woody clack, softer on each later bounce
+    diceClack(j=0) {
+      const v = [1, .7, .45][j] || .4;
+      noise(0.20*v, 0.05, 0, 500);
+      tone(240 - j*30, 'triangle', 0.16*v, 0.07, 0.001, 0.06);
+      tone(1200, 'square', 0.03*v, 0.02, 0.001, 0.015);
+    },
+    // v0.6.10: Tier 2 sounds
+    takeover() {
+      noise(0.16, 0.18, 0, 1200);                                 // crack
+      tone(98, 'sawtooth', 0.10, 0.30, 0.004, 0.26);
+      tone(392, 'triangle', 0.08, 0.25, 0.004, 0.22, 0.30);       // new owner rises
+      tone(587, 'triangle', 0.08, 0.35, 0.004, 0.32, 0.40);
+    },
+    shieldHeld() {
+      tone(220, 'square', 0.06, 0.25, 0.002, 0.22);               // clang
+      tone(660, 'triangle', 0.10, 0.50, 0.002, 0.46);
+      tone(990, 'sine', 0.05, 0.45, 0.002, 0.40, 0.04);
+    },
+    chestOpen() {
+      noise(0.08, 0.12, 0, 900);
+      [784, 988, 1175, 1568].forEach((f, i) => tone(f, 'triangle', 0.07, 0.25, 0.003, 0.22, 0.10 + i * 0.07));
+    },
+    wellFountain() {
+      noise(0.07, 0.6, 0, 2500);
+      [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 'sine', 0.06, 0.30, 0.003, 0.26, i * 0.08));
+    },
+    templeChoir() {
+      [261, 329, 392, 523].forEach((f, i) => tone(f, 'sine', 0.05, 1.2, 0.25, 0.9, i * 0.05));
+    },
+    healChime() {
+      tone(880, 'sine', 0.05, 0.30, 0.004, 0.26);
+      tone(1320, 'sine', 0.04, 0.35, 0.004, 0.30, 0.08);
+    },
+    // v0.6.20: Tier 3 sounds
+    wildCardFly() { noise(0.06, 0.5, 0, 1800); tone(330, 'sine', 0.05, 0.5, 0.2, 0.3); },
+    wildCardReveal(tier='low') {
+      const base = tier === 'high' ? 392 : tier === 'mid' ? 466 : 523;
+      [1, 1.25, 1.5, 2].forEach((m, i) => tone(base * m, tier === 'high' ? 'sawtooth' : 'triangle', tier === 'high' ? 0.06 : 0.07, 0.35, 0.004, 0.30, i * 0.06));
+      if (tier === 'high') { noise(0.14, 0.35, 0, 200); tone(65, 'sine', 0.22, 0.6, 0.004, 0.55); }
+    },
+    shatterBurst() { noise(0.18, 0.3, 0, 2000); tone(1568, 'square', 0.04, 0.15, 0.001, 0.12); tone(110, 'sawtooth', 0.10, 0.3, 0.004, 0.26, 0.05); },
+    playerFallen() { tone(220, 'sawtooth', 0.10, 0.9, 0.01, 0.85); tone(165, 'sawtooth', 0.09, 1.0, 0.01, 0.95, 0.25); tone(110, 'sine', 0.16, 1.2, 0.01, 1.1, 0.5); },
+    playerLeft() { tone(392, 'sine', 0.07, 0.5, 0.01, 0.45); tone(294, 'sine', 0.07, 0.6, 0.01, 0.55, 0.2); },
+    crownFanfare() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 'triangle', 0.08, i === 3 ? 0.5 : 0.18, 0.003, i === 3 ? 0.45 : 0.15, i * 0.1)); },
+    // v0.6.00: doubles sting
+    doubles() {
+      tone(784, 'square', 0.05, 0.12, 0.002, 0.10);
+      tone(1047,'square', 0.05, 0.12, 0.002, 0.10, 0.09);
+      tone(1319,'triangle',0.07, 0.40, 0.003, 0.36, 0.18);
     },
   };
 })();
@@ -736,6 +803,7 @@ function advanceTokenAnim() {
   if (!boardTokenAnim) return;
   boardTokenAnim.step++;
   if (boardTokenAnim.step >= boardTokenAnim.path.length) {
+    const _fp = boardTokenAnim.path[boardTokenAnim.path.length - 1], _fi = boardTokenAnim.playerIdx;
     boardTokenAnim = null; // animation done — token is now "settled"
     SFX.tokenArrive();
     // Phase-based landing sound cue
@@ -744,11 +812,22 @@ function advanceTokenAnim() {
       else if (G.phase === 'resolve:claim') SFX.claimTile();
     }
     render();
+    _fxHop(_fp, true, _fi);
     return;
   }
   SFX.tokenHop();
   render();
+  _fxHop(boardTokenAnim.path[boardTokenAnim.step], false, boardTokenAnim.playerIdx);
   setTimeout(advanceTokenAnim, 230);
+}
+
+// v0.6.00: dust puff per hop, landing ring, Mana Well shimmer when passing tile 0
+function _fxHop(pos, final, pIdx) {
+  if (!window.BoardFX) return;
+  const c = tileElCache.get(pos);
+  const inner = c && c.el.querySelector('.tile-inner');
+  const col = G?.players?.find(p => p.idx === pIdx)?.color || '#c9a05a';
+  BoardFX.hop(inner, { final, color: col, well: pos === 0 && !final });
 }
 
 // Used as fallback if boardTokenAnim wasn't pre-seeded (shouldn't happen in normal flow)
@@ -764,8 +843,17 @@ function startBoardDieAnimation(finalVal, fromPos, toPos, animPlayerIdx) {
   boardShowIdleDie = true;
   render(); // renders board with idle die showing '?'
 
-  const dieEl = document.getElementById('board-anim-die');
-  const faceEl = document.getElementById('board-die-face');
+  let dieEl = document.getElementById('board-anim-die');
+  let faceEl = document.getElementById('board-die-face');
+  // v0.6.20: watchdog — a roll can never hold the board for more than 7 s, whatever happens to the DOM
+  const _rollToken = (startBoardDieAnimation._n = (startBoardDieAnimation._n || 0) + 1);
+  setTimeout(() => {
+    if (startBoardDieAnimation._n !== _rollToken || !boardRollAnimating) return;
+    console.warn('[board] roll animation watchdog released the board');
+    boardShowIdleDie = false; boardRollAnimating = false;
+    if (boardPendingG) { boardPrevPhase = boardPendingG.phase; boardPrevCurrentPlayer = boardPendingG.currentPlayer; G = boardPendingG; boardPendingG = null; }
+    if (boardTokenAnim && boardTokenAnim.playerIdx === animPlayerIdx && boardTokenAnim.step === 0) advanceTokenAnim(); else render();
+  }, 7000);
   if (!dieEl || !faceEl) {
     boardShowIdleDie = false;
     boardRollAnimating = false;
@@ -775,9 +863,28 @@ function startBoardDieAnimation(finalVal, fromPos, toPos, animPlayerIdx) {
 
   const seq = [1,2,3,4,5,6,1,2,3,4,5,6];
   let step = 0;
+  // v0.6.00: two real 3D dice (BoardFX) when the server sends both dice
+  const _dice = G?.players?.[animPlayerIdx]?.lastDice;
+  const _pCol = G?.players?.[animPlayerIdx]?.color || '#c9a05a';
+  if (window.BoardFX && Array.isArray(_dice) && _dice.length === 2) {
+    faceEl.textContent = '';
+    step = seq.length; // skip the flat-number cycle
+    setTimeout(_playDiceRoll, 200);   // v0.6.02: real dice-roll.mp3 (one random take)
+    BoardFX.rollDice(dieEl, _dice, finalVal, {
+      color: _pCol,
+      land: () => {},
+      doubles: () => SFX.doubles(),
+    }).then(() => boardCycle());
+    return;
+  }
 
   function boardCycle() {
-    if (!faceEl.isConnected) return;
+    // v0.6.20: if a re-render replaced the die mid-roll, pick up the new elements instead of
+    // bailing out (bailing left boardRollAnimating stuck and froze the board).
+    if (!faceEl.isConnected || !dieEl.isConnected) {
+      const f = document.getElementById('board-die-face'), d = document.getElementById('board-anim-die');
+      if (f) faceEl = f; if (d) dieEl = d;
+    }
     if (step < seq.length) {
       SFX.dieTick();
       faceEl.textContent = seq[step++];
@@ -792,6 +899,12 @@ function startBoardDieAnimation(finalVal, fromPos, toPos, animPlayerIdx) {
       dieEl.classList.remove('die-cycling');
       dieEl.classList.add('die-landed');
       SFX.dieLand(finalVal);
+      // v0.6.02: the whole ring of cards kicks outward with the burst, wave starting at the roller
+      if (window.BoardFX) {
+        const _tiles = []; for (let i = 0; i < 28; i++) { const c = tileElCache.get(i); _tiles.push(c ? c.el : null); }
+        const _org = G?.players?.[animPlayerIdx]?.position ?? 0;
+        BoardFX.ripple(_tiles, fromPos != null ? fromPos : _org);
+      }
 
       // ── Lottie hit effect — plays before number reveals ──────────────────
       const lottieEl = document.getElementById('board-die-hit-lottie');
@@ -932,6 +1045,12 @@ function connect(){
       return;
     }
     if (msg.type === 'state') {
+      // v0.5.22 / v0.6.12: a deploy restarted the server with a new version — reload once so this
+      // device runs the new code (session key / room code bring it straight back into the game).
+      if (msg.game && msg.game.serverVersion) {
+        if (window._sgSrv && window._sgSrv !== msg.game.serverVersion) { location.reload(); return; }
+        window._sgSrv = msg.game.serverVersion;
+      }
       if (isSpectator) spectatorJoined = true; // first state received = successfully joined
       // Save room code on first state so reconnects always land in the same room
       if (msg.game && msg.game.roomCode && !savedRoomCode) {
@@ -971,7 +1090,11 @@ function connect(){
           boardTokenAnim = {playerIdx: animPlayerIdx, path: buildHopPath(fromPos, toPos), step: 0};
         }
         startBoardDieAnimation(rollVal, fromPos, toPos, animPlayerIdx);
-      } else if (newG.phase === 'resolve:battle' && prevPhase !== 'resolve:battle') {
+      } else if (newG.phase === 'resolve:battle' && prevPhase !== 'resolve:battle'
+                 && !(prevPhase === 'resolve:landing' && prevPositions
+                      && prevPositions[newG.currentPlayer] !== newG.players[newG.currentPlayer]?.position)) {
+        // v0.6.11: a landing choice that starts a battle goes to the hop branch below instead
+        // (this branch used to catch it first, so the token snapped onto the enemy tile).
         // Battle arrived without going through roll animation (warp, reconnect, etc.)
         // Block render and show idle die for 2s so battle overlay isn't instant
         boardRollAnimating = true;
@@ -1412,7 +1535,7 @@ function runRoundTally(tally, boardArea, onDone) {
       if (val !== 0) active.push({ key, val });
     }
     // Ability breakdown labels — shown as gold milestone-style beats after netMana
-    // These explain WHERE the mana total came from (Rune Priestess ×2, Arch Mage +3, etc.)
+    // These explain WHERE the mana total came from (Rune Priestess ×2, Arch Mage +2, etc.)
     for (const bd of (entry.genBreakdown || [])) {
       if (bd.bonus > 0) active.push({ key:'abilityLabel', text:`${bd.label} +${bd.bonus}✦`, positive: true });
     }
@@ -1482,8 +1605,130 @@ function render(){
   app.innerHTML = '';
   updateDisconnectOverlay();
   if (!G) { renderConnecting(app); return; }
-  if (G.phase === 'lobby') { renderLobby(app); return; }
+  if (G.phase === 'lobby') { renderLobby(app); _fxPrev = null; return; }
+  _fxDiff();
   renderGame(app);
+  _fxPump();
+}
+
+// ─── v0.6.10: Tier 2 board effects — state diff → queued BoardFX calls ────────────────
+// Effects wait (queue) while the die / token animation is running, then play once it settles.
+let _fxPrev = null, _fxQ = [];
+function _fxBusy() { return !!(boardTokenAnim || boardRollAnimating || boardShowIdleDie); }
+function _fxTile(pos) { const c = tileElCache.get(pos); return c ? c.el.querySelector('.tile-inner') : null; }
+function _fxChip(idx) { return document.querySelector(`.player-chip[data-pidx="${idx}"] .chip-mana-val`); }
+function _fxPl(idx) { return G && G.players.find(p => p.idx === idx); }
+function _fxChipEl(idx) { return document.querySelector(`.player-chip[data-pidx="${idx}"]`); }
+// v0.6.20: tile leader = most tiles; ties keep the current leader if they're still tied at the top, else nobody
+let _leaderIdx = null;
+function _computeLeader() {
+  if (!G || G.phase === 'lobby' || G.phase === 'setup') return null;
+  const alive = G.players.filter(p => !p.eliminated);
+  const top = Math.max(0, ...alive.map(p => p.tileCount || 0));
+  if (top <= 0) return null;
+  const c = alive.filter(p => (p.tileCount || 0) === top);
+  if (c.length === 1) return c[0].idx;
+  return c.some(p => p.idx === _leaderIdx) ? _leaderIdx : null;
+}
+function _fxDiff() {
+  if (!window.BoardFX || !G) return;
+  const snap = {
+    phase: G.phase, lb: G.lastBattle || null, chest: G.pendingChest || null,
+    mana: G.players.map(p => p.mana),
+    wc: G.lastWildCard ? G.lastWildCard.seq : 0,
+    elim: G.players.map(p => !!p.eliminated),
+    hp: G.board.map(t => (t.summon && t.ownerId != null) ? { o: t.ownerId, id: t.summon.iid ?? t.summon.id, hp: t.summon.hp } : null),
+  };
+  const P = _fxPrev; _fxPrev = snap;
+  const newLeader = _computeLeader();
+  if (!P) { _leaderIdx = newLeader; return; }        // first state after (re)connect: baseline only
+  // 👑 leader change
+  if (newLeader !== _leaderIdx) {
+    const was = _leaderIdx; _leaderIdx = newLeader;
+    if (newLeader != null && P.phase !== 'setup') {
+      const L = _fxPl(newLeader);
+      _fxQ.push(() => { BoardFX.crown(_fxChipEl(newLeader), { name: L ? L.name : '', color: L ? L.color : '#ffd77a' }); SFX.crownFanfare(); });
+    }
+  }
+  // ☠ eliminations / leaves
+  G.players.forEach((p, i) => {
+    if (snap.elim[i] && P.elim[i] === false) {
+      _fxQ.push(() => { BoardFX.eliminated(_fxChipEl(p.idx), { name: p.name, color: p.color, left: !!p.forfeited }); p.forfeited ? SFX.playerLeft() : SFX.playerFallen(); });
+    }
+  });
+  // 🃏 wild card played
+  if (snap.wc && snap.wc !== P.wc && G.lastWildCard) {
+    const wc = G.lastWildCard, caster = _fxPl(wc.casterIdx), tgt = wc.targetIdx != null ? _fxPl(wc.targetIdx) : null;
+    const ownedTiles = (idx) => G.board.map((t, i) => (t.ownerId === idx && t.summon) ? i : -1).filter(i => i >= 0);
+    _fxQ.push(() => {
+      const from = _fxChipEl(wc.casterIdx);
+      let targets = [], onImpact = null;
+      if (wc.id === 'mend' && wc.tilePos != null) targets = [_fxTile(wc.tilePos)];
+      else if (wc.id === 'coup' && wc.tilePos != null) {
+        targets = [_fxTile(wc.tilePos)];
+        onImpact = () => { BoardFX.takeover(_fxTile(wc.tilePos), { from: tgt ? tgt.color : '#9397ab', to: caster ? caster.color : '#e05252', name: caster ? caster.name : '' }); SFX.takeover(); };
+      } else if (wc.id === 'shatter' && Array.isArray(wc.picks)) {
+        targets = wc.picks.map(_fxTile);
+        onImpact = () => { wc.picks.forEach((pos, j) => setTimeout(() => BoardFX.shatterTile(_fxTile(pos)), j * 150)); SFX.shatterBurst(); };
+      } else if (tgt) {
+        targets = [_fxChipEl(tgt.idx)];
+        if (wc.id === 'plague') { const tiles = ownedTiles(tgt.idx); targets = targets.concat(tiles.map(_fxTile));
+          onImpact = () => tiles.forEach((pos, j) => setTimeout(() => BoardFX.plague(_fxTile(pos)), j * 90)); }
+        if (wc.id === 'poach' && !wc.failed) onImpact = () => BoardFX.flow(_fxChipEl(tgt.idx), from, { color: '#c07fd8', n: 5 });
+      } else targets = [from];                       // self cards: Ambush / Fortify / Windfall
+      SFX.wildCardFly();
+      BoardFX.wildCard(wc, from, targets, { onReveal: () => SFX.wildCardReveal(wc.tier), onImpact });
+    });
+  }
+  const cur = _fxPl(G.currentPlayer);
+  if (snap.phase !== P.phase) {
+    if (snap.phase === 'resolve:battle' && cur) {
+      const pos = cur.position, def = _fxPl(G.board[pos]?.ownerId);
+      _fxQ.push(() => { BoardFX.challenge(_fxTile(pos), { att: cur.color, def: def ? def.color : '#9397ab', attName: cur.name, defName: def ? def.name : '' }); });
+    }
+    if (snap.phase === 'resolve:heal_tile' && cur) { const pos = cur.position; _fxQ.push(() => { BoardFX.heal(_fxTile(pos), 0); SFX.healChime(); }); }
+    if (snap.phase === 'resolve:well') _fxQ.push(() => { BoardFX.well(_fxTile(0), 40); SFX.wellFountain(); });
+    if (snap.phase === 'resolve:temple' && cur) { const pos = cur.position; _fxQ.push(() => { BoardFX.temple(_fxTile(pos)); SFX.templeChoir(); }); }
+    if (snap.phase === 'resolve:chest' && snap.chest) {
+      const ch = snap.chest, pos = ch.tilePos ?? (cur ? cur.position : 7);
+      const RC = { Common: '#9aabbc', Uncommon: '#5dc97d', Rare: '#c07fd8' };
+      const info = ch.kind === 'potion' ? { icon: '🧪', title: `${ch.tier} Potion` }
+        : ch.kind === 'charm' ? { icon: '⚡', title: 'Battle Charm' }
+        : ch.kind === 'warp' ? { icon: '🌀', title: 'Warp' }
+        : { icon: '🎁', title: ch.summon ? `Free Summon · ${ch.summon.name}` : 'Free Summon' };
+      _fxQ.push(() => { BoardFX.chest(_fxTile(pos), { ...info, sub: ch.rarity || '', color: RC[ch.rarity] || '#c9a05a' }); SFX.chestOpen(); });
+    }
+    if (P.phase === 'resolve:battle_result' && P.lb) {
+      const lb = P.lb, att = _fxPl(lb.attackerIdx), def = _fxPl(lb.defOwnerIdx);
+      const pos = att ? att.position : null;
+      if (pos != null) _fxQ.push(() => setTimeout(() => {
+        const ti = _fxTile(pos);
+        const ac = att ? att.color : '#e05252', dc = def ? def.color : '#5ca8e0';
+        if (lb.outcome === 'attacker_wins') { BoardFX.takeover(ti, { from: dc, to: ac, name: att ? att.name : '' }); SFX.takeover(); }
+        else if (lb.outcome === 'defender_wins') { BoardFX.held(ti, { color: dc, name: def ? def.name : '' }); SFX.shieldHeld(); }
+        else if (lb.outcome === 'mutual') { BoardFX.clash(ti, { a: ac, b: dc, text: 'DOUBLE KO' }); SFX.takeover(); }
+        else BoardFX.clash(ti, { a: ac, b: dc, text: 'STALEMATE' });
+      }, 250));
+    }
+  }
+  // Mana changes → floating deltas + coin flow from the biggest loser to the biggest gainer
+  const deltas = G.players.map((p, i) => ({ idx: p.idx, d: (P.mana[i] != null ? p.mana - P.mana[i] : 0) })).filter(x => x.d);
+  if (deltas.length) _fxQ.push(() => {
+    deltas.forEach(x => BoardFX.manaFloat(_fxChip(x.idx), x.d));
+    const lo = deltas.reduce((a, b) => (b.d < a.d ? b : a)), hi = deltas.reduce((a, b) => (b.d > a.d ? b : a));
+    if (lo.d < 0 && hi.d > 0) BoardFX.flow(_fxChip(lo.idx), _fxChip(hi.idx));
+  });
+  // HP gains on stationed summons (Healing Spring, potions, regen, Lay on Hands…)
+  if (snap.phase !== 'resolve:battle_result') {
+    const heals = [];
+    snap.hp.forEach((t, i) => { const o = P.hp[i]; if (t && o && t.o === o.o && t.id === o.id && t.hp > o.hp) heals.push([i, t.hp - o.hp]); });
+    if (heals.length) _fxQ.push(() => { heals.forEach(([i, n], j) => setTimeout(() => BoardFX.heal(_fxTile(i), n), j * 90)); SFX.healChime(); });
+  }
+}
+function _fxPump() {
+  if (!_fxQ.length || _fxBusy()) return;
+  const q = _fxQ; _fxQ = [];
+  setTimeout(() => q.forEach(fn => { try { fn(); } catch (e) { console.warn('fx', e); } }), 60);
 }
 
 function updateDisconnectOverlay(){
@@ -1641,7 +1886,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.5.09 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.20</div>
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.21 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.23</div>
     <div style="margin-top:6px;"><button class="mute-btn" id="mute-btn" onclick="openAudioSettings()" title="Sound settings" style="width:auto;padding:0 14px;gap:6px;display:inline-flex;align-items:center;font-size:14px;">${_musicLvl()<=0 && _sfxLvl()<=0 ? '🔇' : '⚙'}&nbsp;Sound Settings</button></div>`;
   splash.appendChild(brand);
 
@@ -1820,7 +2065,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.5.09</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.6.21</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -1937,6 +2182,18 @@ function renderGame(app){
         </div>
       </div>`;
       div.onclick = () => { selectedTile = selectedTile === i ? null : i; render(); };
+      // v0.6.00: claim fanfare — an unowned tile just gained an owner + summon
+      if (cached && window.BoardFX && tile.summon && tile.ownerId != null && G.phase !== 'resolve:battle_result') {
+        const prevOwner = cached.contentKey.split('|')[2];
+        if (prevOwner === 'null' || prevOwner === 'undefined') {
+          const owner = G.players.find(p => p.idx === tile.ownerId);
+          const elemCol = TYPE_COLOR[tile.summon.type] || TYPE_COLOR[tile.element] || '#c9a05a';
+          setTimeout(() => {
+            BoardFX.claim(div.querySelector('.tile-inner'), { owner: owner ? owner.color : '#9184d9', elem: elemCol, name: owner ? owner.name : '', badge: div.querySelector('.tile-badge') });
+            SFX.claimFanfare();
+          }, 40);
+        }
+      }
       tileElCache.set(i, { el: div, contentKey });
     }
 
@@ -1986,7 +2243,9 @@ function renderGame(app){
     const tok = document.createElement('div');
     tok.className = 'player-token' + (isHopping ? ' hopping' : '');
     tok.style.cssText = `left:${cx - 70}px;top:${cy - 140}px;`; // anchor BOTTOM of token box to ring (base at cy)
-    tok.innerHTML = playerTokenSVG(p, 140);
+    tok.innerHTML = playerTokenSVG(p, 140)
+      + (p.idx === _leaderIdx && !p.eliminated ? `<div style="position:absolute;left:50%;top:6px;transform:translateX(-50%);font-size:24px;filter:drop-shadow(0 0 6px #ffd77a) drop-shadow(0 2px 2px rgba(0,0,0,.6));">👑</div>` : '');
+    if (p.eliminated) tok.style.cssText += 'opacity:.28;filter:grayscale(1);';   // v0.6.20
     tokLayer.appendChild(tok);
   });
   wheel.appendChild(tokLayer); // append layer to wheel after tiles
@@ -2005,7 +2264,7 @@ function renderGame(app){
         <div class="die-face" id="board-die-face">⚔</div>
       </div>
     </div>`;
-  } else if (G.phase === 'resolve:battle' && !boardShowIdleDie) {
+  } else if (G.phase === 'resolve:battle' && !boardShowIdleDie && !boardTokenAnim) {  // v0.6.11: die stays up while the token hops in
     const tile = G.board[curPlayer ? curPlayer.position : 0];
     const defOwner = tile && tile.ownerId != null ? G.players.find(p => p.idx === tile.ownerId) : null;
     const defM = tile ? tile.summon : null;
@@ -2234,13 +2493,14 @@ function renderPaper(){
     const isElim = p.eliminated || false;
     const chip = document.createElement('div');
     chip.className = 'player-chip' + (isActive ? ' active' : '');
+    chip.dataset.pidx = p.idx;
     if (isElim) chip.style.cssText = 'opacity:.38;filter:grayscale(.7);';
     const monoEl = monoElementPlayers.get(p.idx);
     const monoTag = monoEl ? `<span class="chip-mono-badge" title="Mono-Element Mastery: ${monoEl}">⭐</span><span class="chip-mono-label" style="color:${TYPE_COLOR[monoEl]||'#ffc840'}">${monoEl}</span>` : '';
     chip.innerHTML = `<div class="chip-dot">${isElim ? `<span style="font-size:16px">${p.forfeited ? '🏳' : '💀'}</span>` : playerSigilSVG(p, 18)}</div>
       <div class="chip-info">
         <div class="chip-name" style="color:${isElim ? 'var(--text-mute)' : (isActive ? p.color : 'var(--parch-ink)')}">
-          ${p.name}${isActive ? ' ◄' : ''}${isElim ? ` <span style="font-size:9px;color:#e05252;font-family:Inter,sans-serif">${p.forfeited ? 'LEFT' : 'ELIMINATED'}</span>` : monoTag}
+          ${p.idx === _leaderIdx && !isElim ? '<span title="Most tiles" style="margin-right:3px">👑</span>' : ''}${p.name}${isActive ? ' ◄' : ''}${isElim ? ` <span style="font-size:9px;color:#e05252;font-family:Inter,sans-serif">${p.forfeited ? 'LEFT' : 'ELIMINATED'}</span>` : monoTag}
         </div>
         <div class="chip-sub">${isElim ? 'Out of the game' : `${p.tileCount} tiles · ${p.stationedCount} stationed · <span style="color:#5dc97d">⚔${p.battlesWon??0}W</span> <span style="color:#e05252">${p.battlesLost??0}L</span>`}</div>
       </div>
@@ -2249,6 +2509,8 @@ function renderPaper(){
         <div class="chip-mana-lbl">Mana</div>
       </div>`;
     plist.appendChild(chip);
+    // v0.6.10: rolling mana counter (holds the old number while the die/token is animating)
+    if (window.BoardFX && !isElim) BoardFX.manaRoll(p.idx, chip.querySelector('.chip-mana-val'), _fxBusy() ? null : p.mana);
   });
   paper.appendChild(plist);
 
@@ -2382,6 +2644,23 @@ const _sfxTitle      = new Audio('/audio/title-sound.mp3');   _sfxTitle._base   
 const _sfxHitSlash   = new Audio('/audio/Hit-Slash.mp3');     _sfxHitSlash._base   = 0.5;
 const _sfxHitMagic   = new Audio('/audio/Hit-Magic.mp3');     _sfxHitMagic._base   = 0.5;
 const _sfxHitClaw    = new Audio('/audio/Hit-Claw.mp3');      _sfxHitClaw._base    = 0.5;
+// v0.6.02: dice-roll.mp3 is a pack of 9 separate roll takes — play one at random, then stop
+const _sfxDice = new Audio('/audio/dice-roll.mp3'); _sfxDice._base = 0.7; _sfxDice.preload = 'auto';
+const DICE_TAKES = [[0.12,1.0],[1.52,2.2],[3.02,3.7],[4.42,5.1],[5.52,6.15],[6.82,7.55],[8.37,9.1],[9.47,10.25],[10.67,11.3]];
+let _diceStopT = null, _diceLast = -1;
+function _playDiceRoll() {
+  const L = _sfxLvl(); if (L <= 0) return;
+  let k; do { k = Math.floor(Math.random() * DICE_TAKES.length); } while (k === _diceLast && DICE_TAKES.length > 1);
+  _diceLast = k;
+  const [a, b] = DICE_TAKES[k];
+  try {
+    clearTimeout(_diceStopT);
+    _sfxDice.volume = _sfxDice._base * L;
+    _sfxDice.currentTime = a;
+    _sfxDice.play().catch(() => {});
+    _diceStopT = setTimeout(() => { try { _sfxDice.pause(); } catch (e) {} }, (b - a) * 1000 + 120);
+  } catch (e) {}
+}
 function _playSfx(audio) {
   const L = _sfxLvl(); if (L <= 0) return;
   audio.volume = (audio._base || 0.5) * L;
@@ -2539,6 +2818,11 @@ function openAudioSettings() {
     <div class="aus-sub">${isSpectator ? 'Only affects this screen.' : 'Only affects this screen — spectators set their own.'}</div>
     ${row('music', 'Music', '🎵')}
     ${row('sfx', 'Sound Effects', '💥')}
+    ${window.BoardFX ? `<div class="aus-row"><div class="aus-lbl"><span>✨ Board Effects</span><span class="aus-val">${BoardFX.level === 'reduced' ? 'Reduced' : 'Full'}</span></div>
+      <div class="aus-ctl" style="gap:8px;">
+        <button class="egm-btn cancel" style="flex:1;${BoardFX.level === 'full' ? 'border-color:var(--accent);color:var(--accent-pale);' : 'opacity:.6;'}" onclick="BoardFX.setLevel('full');openAudioSettings()">Full</button>
+        <button class="egm-btn cancel" style="flex:1;${BoardFX.level === 'reduced' ? 'border-color:var(--accent);color:var(--accent-pale);' : 'opacity:.6;'}" onclick="BoardFX.setLevel('reduced');openAudioSettings()">Reduced</button>
+      </div></div>` : ''}
     <div class="aus-btns"><button class="egm-btn cancel" onclick="_ausTest()">Test Sound</button><button class="egm-btn cancel" onclick="closeAudioSettings()">Done</button></div>
   </div>`;
   ov.classList.add('visible');

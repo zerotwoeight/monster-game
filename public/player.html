@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.5.20</title>
+<title>Summoners Gambit — Player v0.5.23</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -926,6 +926,12 @@ function connect() {
       render();
       return;
     } else if (msg.type === 'state') {
+      // v0.5.23 / v0.6.12: a deploy restarted the server with a new version — reload once so this
+      // device runs the new code (session key / room code bring it straight back into the game).
+      if (msg.game && msg.game.serverVersion) {
+        if (window._sgSrv && window._sgSrv !== msg.game.serverVersion) { location.reload(); return; }
+        window._sgSrv = msg.game.serverVersion;
+      }
       // If we're entering turn_summary with a tally, reset the gate so we wait for tally_complete
       if (msg.game && msg.game.phase === 'resolve:turn_summary' &&
           msg.game.turnSummary && msg.game.turnSummary.roundTally && msg.game.turnSummary.roundTally.length > 0) {
@@ -1241,7 +1247,7 @@ const MONSTER_LORE = {
   // ── ARCANE ──
   'Sorcerer':       { role:'Assailant',lore:'Pure channeled spellfire in a mortal frame. The Sorcerer can disintegrate enemies in seconds, but maintaining those output levels leaves almost nothing for self-defense. High risk, high reward — one wrong trade ends them.', ability:'Arcane Ascent — on win, permanently gains +1 ATK and +1 Gen (stacks).' },
   'Rune Priestess': { role:'Guardian',lore:'She inscribed every ward she knows onto her own body, and now each rune absorbs a measure of incoming force. Attacking a Rune Priestess is an exercise in frustration — the damage just keeps getting absorbed, layer by layer.', ability:'Runic Amplification — Gen is doubled while stationed on an Arcane tile.' },
-  'Arch Mage':      { role:'Vanguard',lore:'The Arch Mage has spent decades mastering not just destruction, but efficiency. Every spell is precisely calibrated for the situation. Not flashy, but rarely caught off-guard, and never wasteful.', ability:'Mana Infusion — generates +3✦ bonus income per turn while stationed.' },
+  'Arch Mage':      { role:'Vanguard',lore:'The Arch Mage has spent decades mastering not just destruction, but efficiency. Every spell is precisely calibrated for the situation. Not flashy, but rarely caught off-guard, and never wasteful.', ability:'Mana Infusion — generates +2✦ bonus income per turn while stationed.' },
   'Arcane Arbiter': { role:'Ascendant · Temple Only',lore:'Once a judge in the Great Arcane Courts, the Arbiter discovered that type advantages were being exploited as legal loopholes. They devised a countermeasure: a field-disruption technique that collapses elemental affinities to neutral, leveling any fight.', ability:'Chaos Flux — after any battle or stalemate against it, one random attacker-owned tile changes to a random element.' },
 
   // ── UNDEAD ──
@@ -1804,7 +1810,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.20</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.23</div>
     </div>
 
     <div class="room-code-group">
@@ -1904,7 +1910,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.20</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.23</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -3491,7 +3497,13 @@ function renderBattleResult() {
 
   // Guard: don't reset the animation if the same battle is already playing or dismissed
   const lbId = `${lb.attackerIdx}-${lb.defOwnerIdx}-${lb.outcome}-${lb.atkDmg}-${lb.defDmg}`;
-  if (_battleResultLbId === lbId && (_battleResultDismissed || _battleResultTimer !== null)) return;
+  if (_battleResultLbId === lbId) {
+    // v0.5.23: already dismissed but the server is still on battle_result — show the waiting
+    // screen instead of returning early (that left the old result on screen, so "Got it"
+    // looked like it did nothing and had to be tapped again and again).
+    if (_battleResultDismissed) { renderWaiting(); return; }
+    if (_battleResultTimer !== null) return;
+  }
   if (_battleResultLbId !== lbId) { _battleResultDismissed = false; _battleResultPending = false; }
   _battleResultLbId = lbId;
   if (_battleResultTimer) { clearTimeout(_battleResultTimer); _battleResultTimer = null; }
