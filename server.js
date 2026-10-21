@@ -11,7 +11,7 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.103';
+const SERVER_VERSION = 'v1.0.104';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -162,6 +162,13 @@ function _wcPlayed(cardId, extra = {}) {
   G.wcPlayedSeq = (G.wcPlayedSeq || 0) + 1;
   G.lastWildCard = { seq: G.wcPlayedSeq, id: card.id, name: card.name, tier: card.tier, desc: card.desc,
                      casterIdx: G.currentPlayer, ...extra };
+}
+
+// v1.0.104: summon voices — record which monster just arrived so the board can play its clip.
+// moment: 'claim' | 'swap' | 'temple' | 'chest'. Board only; setup claims are deliberately not recorded.
+function _voice(monsterId, moment) {
+  G.voiceSeq = (G.voiceSeq || 0) + 1;
+  G.lastVoice = { seq: G.voiceSeq, id: monsterId, moment, playerIdx: G.currentPlayer };
 }
 
 // Starter sets — 6 sets × 5 cards each (no Mana cost during setup phase)
@@ -1456,6 +1463,7 @@ function publicState() {
     roundCallout: G.roundCallout || null,
     tileFlashes: G.tileFlashes || [],
     lastWildCard: G.lastWildCard || null,
+    lastVoice: G.lastVoice || null,
     serverVersion: SERVER_VERSION,
   };
 }
@@ -1995,6 +2003,7 @@ function resolveLandingTile(playerIdx) {
           hp:freeM.hp, maxHp:freeM.maxHp, atk:freeM.atk, def:freeM.def,
           cost:freeM.cost, gen:freeM.gen, isSpecial:freeM.isSpecial||false, charm:freeM.charm||false };
         log(`🎁 ${p.name} got free summon: ${freeM.name}`);
+        _voice(freeM.id, 'chest');
       } else {
         log(`🎁 ${p.name} drew free_monster but hand is full — reward lost`);
       }
@@ -2439,6 +2448,7 @@ const handlers = {
     tile.summonInstance = m;
     tile.neverOwned = false; // Phase 1: mark tile as ever-claimed
     log(`🚩 ${p.name} claimed tile ${p.position} with ${m.name}`);
+    _voice(m.id, 'claim');
 
     // ── Per-claim ability triggers ──────────────────────────────────────────
     // Feral Striker: Territorial is now dynamic (tile count) — no per-claim stack
@@ -2607,6 +2617,7 @@ const handlers = {
     tile.summonInstance = newM;
     tile.summonId = newM.iid;
     log(`🔄 ${p.name} swapped ${oldM ? oldM.name : 'empty'} → ${newM.name} on tile ${p.position}`);
+    _voice(newM.id, 'swap');
     advanceTurn();
   },
 
@@ -2682,6 +2693,7 @@ const handlers = {
     const gained = makeSummon(special.id);
     p.hand.push(gained);
     log(`🏛 ${p.name} traded ${sacrifice.name} for ${gained.name}!`);
+    _voice(gained.id, 'temple');
     G.pendingTemple = null;
     advanceTurn();
   },

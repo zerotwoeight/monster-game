@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.5.23</title>
+<title>Summoners Gambit — Player v0.5.24</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -296,7 +296,8 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 @keyframes fadeSlideUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
 /* Waiting / Setup carousel */
 .wc-wrap { display:flex; flex-direction:column; gap:0; }
-.wc-whose { display:flex; align-items:center; justify-content:center; gap:4px; font-size:13px; padding:6px 16px 0; }
+.wc-whose { display:flex; align-items:center; justify-content:center; gap:4px; font-size:13px; padding:6px 16px 0; flex-wrap:nowrap; white-space:nowrap; }
+.wc-whose .wc-follow{margin-left:8px;flex-shrink:0} /* v0.5.24: Following pill inline with turn line */
 .wc-phase-hdr { font-family:'Cinzel',serif; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-mute); text-align:center; padding:14px 16px 6px; }
 .wc-carousel { display:flex; align-items:center; justify-content:center; gap:0; padding:6px 0 4px; position:relative; }
 .wc-arrow { width:32px; height:32px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.06); border:1px solid var(--border2); border-radius:50%; font-size:16px; color:var(--text-dim); cursor:pointer; flex-shrink:0; -webkit-tap-highlight-color:transparent; transition:background 120ms; user-select:none; }
@@ -1810,7 +1811,7 @@ function renderJoin() {
         </svg>
       </div>
       <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.23</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.24</div>
     </div>
 
     <div class="room-code-group">
@@ -1910,7 +1911,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.23</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.24</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -2456,7 +2457,7 @@ function _nextFreeTile(from, dir) {
   for (let k = 1; k <= n; k++) { const i = ((from + dir * k) % n + n) % n; if (_isFreeTile(i)) return i; }
   return from;
 }
-function buildBoardRing(selIdx, setup, claimMode) {
+function buildBoardRing(selIdx, setup, claimMode, noFollowRow) {
   const n = G.board.length, { C, R, TOK } = RING;
   const selTile = G.board[selIdx];
   const selCol = _tileColor(selIdx);
@@ -2517,7 +2518,7 @@ function buildBoardRing(selIdx, setup, claimMode) {
   const cp = G.players[G.currentPlayer];
   const followLbl = _ringFollow ? 'Following' : (setup ? 'Follow claims' : `Follow ${cp ? cp.name : ''}`);
   return `
-    ${claimMode ? '' : `<div class="br-follow-row"><button class="br-follow${_ringFollow ? ' on' : ''}" onclick="ringSetFollow(${!_ringFollow})"><span class="br-dot"></span>${followLbl}</button></div>`}
+    ${(claimMode || noFollowRow) ? '' : `<div class="br-follow-row"><button class="br-follow${_ringFollow ? ' on' : ''}" onclick="ringSetFollow(${!_ringFollow})"><span class="br-dot"></span>${followLbl}</button></div>`}
     <div class="br-box" id="br-box">
       <svg class="br-svg" viewBox="0 0 ${RING.VB} ${RING.VB}" aria-label="Board">${svg}</svg>
       <button class="br-arrow l" onclick="ringStep(-1)" aria-label="Previous tile">‹</button>
@@ -2604,8 +2605,9 @@ function renderWaiting() {
         <div class="waiting-pulse"></div>
         <span style="color:${currentP?.color};font-weight:600">${currentP?.name||'?'}</span>
         <span style="color:var(--text-mute)">'s turn</span>
+        <button class="br-follow wc-follow${_ringFollow ? ' on' : ''}" onclick="ringSetFollow(${!_ringFollow})"><span class="br-dot"></span>${_ringFollow ? 'Following' : `Follow ${currentP ? currentP.name : ''}`}</button>
       </div>
-      ${buildBoardRing(_waitCarouselIdx, false)}
+      ${buildBoardRing(_waitCarouselIdx, false, false, true)}
       <div class="wc-players-strip">${chips}</div>
       ${synergyBannerHTML()}
       <div class="wc-events"><div class="screen-label" style="margin-bottom:6px">Recent Events</div>${events}</div>

@@ -442,13 +442,14 @@ const BKG_SRC = "/img/backgrounds/bkg_1140.png";
 // Per-device Music + Sound-effect levels, saved in this browser (host and every
 // spectator keep their own). Level 0–1 multiplies each sound's built-in base volume.
 const AUD = (() => {
-  const d = { music: 1, sfx: 1, musicMute: false, sfxMute: false };
+  const d = { music: 1, sfx: 1, voice: 1, musicMute: false, sfxMute: false, voiceMute: false }; // v0.6.22: + voice
   try { Object.assign(d, JSON.parse(localStorage.getItem('sg_audio_board') || '{}')); } catch(e) {}
   return d;
 })();
 function _saveAud() { try { localStorage.setItem('sg_audio_board', JSON.stringify(AUD)); } catch(e) {} }
 function _musicLvl() { return AUD.musicMute ? 0 : Math.max(0, Math.min(1, +AUD.music || 0)); }
 function _sfxLvl()   { return AUD.sfxMute   ? 0 : Math.max(0, Math.min(1, +AUD.sfx   || 0)); }
+function _voiceLvl() { return AUD.voiceMute ? 0 : Math.max(0, Math.min(1, AUD.voice == null ? 1 : +AUD.voice)); }
 
 // ─── SFX (Web Audio API — procedural, no external files) ─────────────────────────────────────────────
 const SFX = (() => {
@@ -1636,6 +1637,7 @@ function _fxDiff() {
     phase: G.phase, lb: G.lastBattle || null, chest: G.pendingChest || null,
     mana: G.players.map(p => p.mana),
     wc: G.lastWildCard ? G.lastWildCard.seq : 0,
+    voice: G.lastVoice ? G.lastVoice.seq : 0,   // v0.6.22
     elim: G.players.map(p => !!p.eliminated),
     hp: G.board.map(t => (t.summon && t.ownerId != null) ? { o: t.ownerId, id: t.summon.iid ?? t.summon.id, hp: t.summon.hp } : null),
   };
@@ -1680,6 +1682,16 @@ function _fxDiff() {
       BoardFX.wildCard(wc, from, targets, { onReveal: () => SFX.wildCardReveal(wc.tier), onImpact });
     });
   }
+  // 🗣 v0.6.22: summon voice — after the claim / temple / chest effect has started
+  if (snap.voice && snap.voice !== P.voice && G.lastVoice && G.phase !== 'setup') {
+    const v = G.lastVoice, delay = (v.moment === 'temple' || v.moment === 'chest') ? 900 : 650;
+    _fxQ.push(() => setTimeout(() => _playVoice(v.id, v.moment), delay));
+  }
+  // 🗣 v0.6.23: battle start — attacker's voice as the clash begins (stalemate re-fights included)
+  if (snap.phase === 'resolve:battle_result' && P.phase !== 'resolve:battle_result' && G.lastBattle && G.lastBattle.attM) {
+    const aid = G.lastBattle.attM.id;
+    _fxQ.push(() => setTimeout(() => _playVoice(aid, 'battle_start'), 300));
+  }
   const cur = _fxPl(G.currentPlayer);
   if (snap.phase !== P.phase) {
     if (snap.phase === 'resolve:battle' && cur) {
@@ -1705,7 +1717,8 @@ function _fxDiff() {
         const ti = _fxTile(pos);
         const ac = att ? att.color : '#e05252', dc = def ? def.color : '#5ca8e0';
         if (lb.outcome === 'attacker_wins') { BoardFX.takeover(ti, { from: dc, to: ac, name: att ? att.name : '' }); SFX.takeover(); }
-        else if (lb.outcome === 'defender_wins') { BoardFX.held(ti, { color: dc, name: def ? def.name : '' }); SFX.shieldHeld(); }
+        else if (lb.outcome === 'defender_wins') { BoardFX.held(ti, { color: dc, name: def ? def.name : '' }); SFX.shieldHeld();
+          if (lb.defM && lb.defM.id) setTimeout(() => _playVoice(lb.defM.id, 'battle_won'), 450); }   // v0.6.23: defender held — its voice
         else if (lb.outcome === 'mutual') { BoardFX.clash(ti, { a: ac, b: dc, text: 'DOUBLE KO' }); SFX.takeover(); }
         else BoardFX.clash(ti, { a: ac, b: dc, text: 'STALEMATE' });
       }, 250));
@@ -1886,7 +1899,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.21 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.23</div>
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.23 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.23</div>
     <div style="margin-top:6px;"><button class="mute-btn" id="mute-btn" onclick="openAudioSettings()" title="Sound settings" style="width:auto;padding:0 14px;gap:6px;display:inline-flex;align-items:center;font-size:14px;">${_musicLvl()<=0 && _sfxLvl()<=0 ? '🔇' : '⚙'}&nbsp;Sound Settings</button></div>`;
   splash.appendChild(brand);
 
@@ -2065,7 +2078,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.6.21</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.6.23</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -2666,6 +2679,34 @@ function _playSfx(audio) {
   audio.volume = (audio._base || 0.5) * L;
   audio.currentTime = 0; audio.play().catch(() => {});
 }
+
+// ─── SUMMON VOICES (v0.6.22, battles v0.6.23) ─────────────────────────────────────────────────
+// Server sets G.lastVoice {seq, id, moment} on claim / swap / temple / chest free summon.
+// Clips: /audio/voices/<id>_line.mp3 (spoken) or <id>_sfx.mp3 (creature sound). Line wins when both exist.
+// Rules: one voice at a time (new stops old) · 3.5 s cooldown per monster · music ducks while it plays.
+const VOICE_HAS_LINE = new Set(['ancient_oak','arcane_arbiter','arch_mage','ardent_saint','briar_sprite','cursed_revenant','dawn_striker','dawnguard','death_knight','demon_lord','dusk_blade','field_medic','grave_specter','grove_warden','hex_stalker','high_paladin','luminar_operative','mana_weaver','pack_hunter','plague_herald','radiant_lancer','rune_priestess','runic_duelist','shade_walker','shadow_paladin','solar_knight','sorcerer','spell_wraith','succubus','sunfire_herald','thornling','verdant_sorcerer','void_reaper','weapon_smith','world_tree']);
+const VOICE_HAS_SFX = new Set(['bone_wraith','cursed_revenant','feral_striker','forge','hex_stalker','iron_hide','mana_refinery','moss_golem','nightshard','razorclaw','red_dragon','spell_wraith','stoneback','stormtalon','umbral_stalker','vine_stalker','void_reaper','void_sentinel']);   // v0.6.23: battles prefer the creature sound
+const VOICE_COOLDOWN_MS = 3500, VOICE_DUCK = 0.35;
+let _voiceCur = null;
+const _voiceLast = {};
+function _voiceUnduck() { if (_bgMuted) return; const mt = _musicTarget(); _bgAudio.volume = mt; _bgFinal.volume = mt; }
+function _voiceStop() { if (_voiceCur) { try { _voiceCur.pause(); } catch (e) {} _voiceCur = null; } _voiceUnduck(); }
+function _playVoice(id, moment) {
+  const L = _voiceLvl(); if (L <= 0 || !id) return;
+  const now = Date.now();
+  if (_voiceLast[id] && now - _voiceLast[id] < VOICE_COOLDOWN_MS) return;
+  _voiceLast[id] = now;
+  if (_voiceCur) { try { _voiceCur.pause(); } catch (e) {} }
+  // v0.6.23: battle moments use the sound when a monster has both; everything else prefers the line
+  const useSfx = String(moment).startsWith('battle') ? VOICE_HAS_SFX.has(id) : !VOICE_HAS_LINE.has(id);
+  const a = new Audio('/audio/voices/' + id + (useSfx ? '_sfx' : '_line') + '.mp3');
+  a.volume = Math.min(1, (moment === 'temple' ? 1 : 0.85) * L);
+  _voiceCur = a;
+  if (!_bgMuted) { const d = _musicTarget() * VOICE_DUCK; _bgAudio.volume = d; _bgFinal.volume = d; }
+  const done = () => { if (_voiceCur === a) { _voiceCur = null; _voiceUnduck(); } };
+  a.onended = done; a.onerror = done;
+  a.play().catch(done);
+}
 let _bgStarted = false;
 const _bgAudio = new Audio('/audio/main-theme.mp3');
 _bgAudio.loop = true;
@@ -2818,6 +2859,7 @@ function openAudioSettings() {
     <div class="aus-sub">${isSpectator ? 'Only affects this screen.' : 'Only affects this screen — spectators set their own.'}</div>
     ${row('music', 'Music', '🎵')}
     ${row('sfx', 'Sound Effects', '💥')}
+    ${row('voice', 'Voices', '🗣')}
     ${window.BoardFX ? `<div class="aus-row"><div class="aus-lbl"><span>✨ Board Effects</span><span class="aus-val">${BoardFX.level === 'reduced' ? 'Reduced' : 'Full'}</span></div>
       <div class="aus-ctl" style="gap:8px;">
         <button class="egm-btn cancel" style="flex:1;${BoardFX.level === 'full' ? 'border-color:var(--accent);color:var(--accent-pale);' : 'opacity:.6;'}" onclick="BoardFX.setLevel('full');openAudioSettings()">Full</button>
@@ -2832,10 +2874,12 @@ function _ausSet(key, val) {
   AUD[key] = Math.max(0, Math.min(100, +val)) / 100;
   if (AUD[key] > 0) AUD[key + 'Mute'] = false;
   _saveAud(); _applyAudio(); _ausRefresh(key);
+  if (key === 'voice' && _voiceLvl() <= 0) _voiceStop();
 }
 function _ausMute(key) {
   AUD[key + 'Mute'] = !AUD[key + 'Mute'];
   _saveAud(); _applyAudio(); _ausRefresh(key);
+  if (key === 'voice' && _voiceLvl() <= 0) _voiceStop();
 }
 function _ausRefresh(key) {
   const m = AUD[key + 'Mute'];
