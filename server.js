@@ -11,7 +11,9 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.109';   // v1.0.109: randomised starter sets (8 pools, 1 Guardian + 4 random) + sets G Dead Covenant / H Ancient Guard
+const SERVER_VERSION = 'v1.0.111';   // v1.0.111: players[].lastStumble for the phone dice tray (player v0.5.30)
+// prev: v1.0.110;   // v1.0.110: Wild Cards trigger on rolling doubles (replaces passing the Mana Well) + board wild-card table signals
+// prev: v1.0.109;   // v1.0.109: randomised starter sets (8 pools, 1 Guardian + 4 random) + sets G Dead Covenant / H Ancient Guard
 // prev: v1.0.108   // v1.0.108: version bump — player v0.5.27 (Ascendant unlock condition on detail sheet)
 // prev: v1.0.107   // v1.0.107: version bump — player v0.5.26 (starter-set banner art)
 // prev: v1.0.106   // v1.0.106: version bump — board v0.6.25 / player v0.5.25 (new art + big-moment animations)
@@ -416,7 +418,8 @@ function freshGame(roomCode) {
     setupRound: 1,           // current setup round (1-3)
     setupTurnIdx: 0,         // total setup turns taken (0 to 3*N-1)
     setupTotalTurns: 0,      // = 3 * N, set when setup starts
-    pendingWildCard: false,  // set true when player passes position 0
+    pendingWildCard: false,  // v1.0.110: set true when the player rolls doubles
+    wcTable: null,           // v1.0.110: { seq, playerIdx, dice, pick, skipped } — drives the board's wild-card table
     pendingLanding: null,    // { roll, options:[pos,pos,pos] } — set after roll, cleared on choose_landing
     wildCardDrawn: null,     // { low: card, mid: card, high: card }
     wildCardPending: null,   // { cardId, step } for multi-step cards (coup/shatter)
@@ -1465,6 +1468,7 @@ function publicState() {
     arcaneChangeCount: p.arcaneChangeCount,
     lastDiceRoll: p.lastDiceRoll,
     lastDice: p.lastDice || null,
+    lastStumble: !!p.lastStumble,   // v1.0.111
     battlesWon: p.battlesWon,
     battlesLost: p.battlesLost,
     peakTiles: p.peakTiles,
@@ -1507,6 +1511,7 @@ function publicState() {
     roundCallout: G.roundCallout || null,
     tileFlashes: G.tileFlashes || [],
     lastWildCard: G.lastWildCard || null,
+    wcTable: G.wcTable || null,   // v1.0.110
     lastVoice: G.lastVoice || null,
     serverVersion: SERVER_VERSION,
   };
@@ -1595,7 +1600,7 @@ function forfeitPlayer(idx, reason) {
   if (G.currentPlayer === idx) {
     // Invalidate any timers scheduled for this turn, cancel pending turn state
     G._forfeitGen = (G._forfeitGen || 0) + 1;
-    G.pendingWildCard = false; G.wildCardDrawn = null; G.wildCardPending = null;
+    G.pendingWildCard = false; G.wildCardDrawn = null; G.wildCardPending = null; G.wcTable = null;
     G.pendingTemple = null; G.pendingChest = null; G.pendingLanding = null;
     G.pendingAttackerMonster = null;
     if (G.phase === 'setup') { advanceSetupTurn(); return true; }
@@ -1726,6 +1731,7 @@ function startShopPhase() {
   const p = G.players[G.currentPlayer];
   p.lastDice = null;
   p.lastDiceRoll = null;  // reset so stale roll values don't trigger false animations
+  G.wcTable = null;       // v1.0.110: last turn's wild-card table is done
   G.lastBattle = null;    // clear battle result so it doesn't persist across turns
   G.pendingAttackerSummon = null; // clear attacker preview
 
@@ -1852,13 +1858,14 @@ function advanceTurn() {
         high: drawFrom(WILD_CARD_POOLS.high),
       };
       G.phase = 'resolve:wildcard_cards';
-      log(`🃏 ${_wcPlayer.name} passed the Mana Well — Wild Card event!`);
+      log(`🃏 ${_wcPlayer.name} rolled doubles — Wild Card event!`);
       broadcast();
       return; // don't advance turn yet
     }
     // Player eliminated — discard the pending wildcard silently
     log(`🃏 Wild Card skipped — ${_wcPlayer ? _wcPlayer.name : '?'} was eliminated mid-turn`);
     G.pendingWildCard = false;
+    G.wcTable = null;   // v1.0.110: board clears the face-down cards
   }
   // Clear any lingering wildcard state
   G.pendingWildCard = false;
@@ -1971,7 +1978,10 @@ function resolveRoll(playerIdx) {
   p.lastDice = [d1, d2];
 
   // Stumble effect — skip roll, forced to move exactly 3
+  let stumbled = false;   // v1.0.110: a Stumbled roll can never earn a Wild Card
+  p.lastStumble = false;  // v1.0.111
   if (p.wcEffects.stumble) {
+    stumbled = true; p.lastStumble = true;
     p.wcEffects.stumble = false;
     roll = 3;
     p.lastDice = [1, 2];   // v1.0.100: show the forced 3 on the dice
@@ -1983,10 +1993,13 @@ function resolveRoll(playerIdx) {
 
   p.lastDiceRoll = roll;
 
-  // Wild Card eligibility — based on FULL roll arc crossing position 0, NOT the chosen tile
-  const fullRollPos = (oldPos + roll) % 28;
-  if (fullRollPos !== 0 && oldPos + roll >= 28) {
+  // v1.0.110: Wild Card eligibility — rolling doubles (snake eyes included). Replaces passing the Mana Well.
+  // Stumble forces the move, so it never counts, whatever the dice show.
+  if (!stumbled && d1 === d2) {
     G.pendingWildCard = true;
+    G.wcSeq = (G.wcSeq || 0) + 1;
+    G.wcTable = { seq: G.wcSeq, playerIdx, dice: [d1, d2], pick: null, skipped: false };
+    log(`🎲 DOUBLES! ${p.name} rolled ${d1}–${d2} — Wild Card at the end of the turn`);
   }
 
   log(`🎲 ${p.name} rolled ${roll}`);
@@ -2468,8 +2481,6 @@ const handlers = {
     G.pendingLanding = null;
     // Track well landing for next turn's summary
     p.lastTurnLandedOnWell = (tilePos === 0);
-    // If player lands on tile 0 (Mana Well), suppress the Wild Card — Mana Well covers the crossing
-    if (tilePos === 0) G.pendingWildCard = false;
     log(`🎯 ${p.name} chooses tile ${tilePos}`);
     resolveLandingTile(G.currentPlayer);
   },
@@ -2869,6 +2880,7 @@ const handlers = {
   wildcard_skip(ws, conn, data) {
     if (!guardTurn(ws, conn, ['resolve:wildcard_cards'])) return;
     G.wildCardDrawn = null;
+    if (G.wcTable) G.wcTable.skipped = true;   // v1.0.110: board slides the cards away face-down
     log(`🃏 ${G.players[G.currentPlayer].name} skipped the Wild Card`);
     advanceTurn();
   },
@@ -2900,6 +2912,8 @@ const handlers = {
 
     p.mana -= card.cost;
     G.wildCardDrawn = null;
+    // v1.0.110: tell the board which card was picked so it flips face-up before targeting
+    if (G.wcTable) G.wcTable.pick = { tier, id: card.id, name: card.name, desc: card.desc };
     log(`🃏 ${p.name} played ${card.name} (−${card.cost}✦)`);
 
     if (card.target === 'self') {
@@ -3037,6 +3051,7 @@ const handlers = {
     const refund = coupCard ? Math.floor(coupCard.cost / 2) : 30;
     p.mana += refund;
     G.wildCardPending = null;
+    if (G.wcTable) G.wcTable.skipped = true;   // v1.0.110: card slides away
     log(`🃏 Coup cancelled — ${p.name} received ${refund}✦ refund (50%)`);
     advanceTurn();
   },

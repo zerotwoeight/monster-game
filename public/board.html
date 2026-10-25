@@ -617,6 +617,13 @@ const SFX = (() => {
     },
     // v0.6.20: Tier 3 sounds
     wildCardFly() { noise(0.06, 0.5, 0, 1800); tone(330, 'sine', 0.05, 0.5, 0.2, 0.3); },
+    // v0.6.26: Wild Card table — card flick per deal (Gilded lands heavier), soft whoosh on a pass
+    wildCardDeal(i=0) {
+      noise(0.07, 0.09, 0, 3200); tone(200 + i * 60, 'triangle', 0.05, 0.12, 0.002, 0.10, 0.02);
+      if (i === 2) { noise(0.12, 0.22, 0.02, 0); tone(70, 'sine', 0.18, 0.45, 0.004, 0.40, 0.02); }
+    },
+    wildCardLive() { [392, 523, 659].forEach((f, j) => tone(f, 'sine', 0.035, 0.6, 0.05, 0.5, j * 0.07)); },
+    wildCardPass() { noise(0.06, 0.45, 0, 900); tone(220, 'sine', 0.03, 0.4, 0.01, 0.35); },
     wildCardReveal(tier='low') {
       const base = tier === 'high' ? 392 : tier === 'mid' ? 466 : 523;
       [1, 1.25, 1.5, 2].forEach((m, i) => tone(base * m, tier === 'high' ? 'sawtooth' : 'triangle', tier === 'high' ? 0.06 : 0.07, 0.35, 0.004, 0.30, i * 0.06));
@@ -1617,12 +1624,21 @@ function render(){
   if (G.phase === 'lobby') { renderLobby(app); _fxPrev = null; return; }
   _fxDiff();
   renderGame(app);
+  _wctSync();   // v0.6.26: after renderGame so the wheel centre exists to measure
   _fxPump();
 }
 
 // ─── v0.6.10: Tier 2 board effects — state diff → queued BoardFX calls ────────────────
 // Effects wait (queue) while the die / token animation is running, then play once it settles.
 let _fxPrev = null, _fxQ = [];
+// v0.6.26: Wild Card table state sync (grey / live / picked / passed / hidden under overlays)
+let _wctInstant = false;
+function _wctSync() {
+  if (!window.BoardFX || !BoardFX.wcTable || !G) return;
+  const inst = _wctInstant; _wctInstant = false;
+  try { BoardFX.wcTable(G.wcTable, G.phase, { instant: inst, sfx: _wctSfx }); } catch (e) { console.warn('wct', e); }
+}
+const _wctSfx = { deal: i => SFX.wildCardDeal(i), live: () => SFX.wildCardLive(), reveal: t => SFX.wildCardReveal(t), skip: () => SFX.wildCardPass() };   // v0.6.26
 function _fxBusy() { return !!(boardTokenAnim || boardRollAnimating || boardShowIdleDie); }
 function _fxTile(pos) { const c = tileElCache.get(pos); return c ? c.el.querySelector('.tile-inner') : null; }
 function _fxChip(idx) { return document.querySelector(`.player-chip[data-pidx="${idx}"] .chip-mana-val`); }
@@ -1645,13 +1661,14 @@ function _fxDiff() {
     phase: G.phase, lb: G.lastBattle || null, chest: G.pendingChest || null,
     mana: G.players.map(p => p.mana),
     wc: G.lastWildCard ? G.lastWildCard.seq : 0,
+    wct: G.wcTable ? G.wcTable.seq : 0,          // v0.6.26: doubles → Wild Card table
     voice: G.lastVoice ? G.lastVoice.seq : 0,   // v0.6.22
     elim: G.players.map(p => !!p.eliminated),
     hp: G.board.map(t => (t.summon && t.ownerId != null) ? { o: t.ownerId, id: t.summon.iid ?? t.summon.id, hp: t.summon.hp } : null),
   };
   const P = _fxPrev; _fxPrev = snap;
   const newLeader = _computeLeader();
-  if (!P) { _leaderIdx = newLeader; return; }        // first state after (re)connect: baseline only
+  if (!P) { _leaderIdx = newLeader; _wctInstant = true; return; }        // first state after (re)connect: baseline only
   // 👑 leader change
   if (newLeader !== _leaderIdx) {
     const was = _leaderIdx; _leaderIdx = newLeader;
@@ -1684,11 +1701,16 @@ function _fxDiff() {
         targets = [_fxChipEl(tgt.idx)];
         if (wc.id === 'plague') { const tiles = ownedTiles(tgt.idx); targets = targets.concat(tiles.map(_fxTile));
           onImpact = () => tiles.forEach((pos, j) => setTimeout(() => BoardFX.plague(_fxTile(pos)), j * 90)); }
-        if (wc.id === 'poach' && !wc.failed) onImpact = () => BoardFX.flow(_fxChipEl(tgt.idx), from, { color: '#c07fd8', n: 5 });
+        if (wc.id === 'poach' && !wc.failed) onImpact = () => { BoardFX.flow(_fxChipEl(tgt.idx), from, { color: '#c07fd8', n: 5 }); SFX.wildCardDeal(0); setTimeout(() => SFX.wildCardDeal(1), 260); };   // v0.6.30: card flick as the summon is stolen
       } else targets = [from];                       // self cards: Ambush / Fortify / Windfall
-      SFX.wildCardFly();
-      BoardFX.wildCard(wc, from, targets, { onReveal: () => SFX.wildCardReveal(wc.tier), onImpact });
+      // v0.6.26: if the card is face-up on the Wild Card table, fly it from the centre instead
+      const go = (ft) => { SFX.wildCardFly(); BoardFX.wildCard(wc, from, targets, { onReveal: () => SFX.wildCardReveal(wc.tier), onImpact, fromTable: ft }); };
+      if (BoardFX.wcTableConsume) BoardFX.wcTableConsume(wc).then(go); else go(false);
     });
+  }
+  // 🎲 v0.6.26: doubles — deal three face-down Wild Cards once the dice and token have settled
+  if (snap.wct && snap.wct !== P.wct && BoardFX.wcTable) {
+    _fxQ.push(() => BoardFX.wcTable(G.wcTable, G.phase, { deal: true, sfx: _wctSfx }));
   }
   // 🗣 v0.6.22: summon voice — after the claim / temple / chest effect has started
   if (snap.voice && snap.voice !== P.voice && G.lastVoice && G.phase !== 'setup') {
@@ -1838,7 +1860,7 @@ function openAboutModal(showHowToPlay = true) {
       <p><strong style="color:var(--accent-pale)">Your turn:</strong> Collect passive Mana from your stationed summons, then visit the shop to buy or sell one summon. Roll the dice and move around the 28-tile board. What happens next depends on where you land.</p>
       <p><strong style="color:var(--accent-pale)">Empty tile:</strong> Station one of your hand summons to claim it. That tile now generates Mana for you each round.</p>
       <p><strong style="color:var(--accent-pale)">Enemy tile:</strong> Fight! Pick one of your hand summons to attack. Damage is based on ATK vs DEF, modified by elemental type matchups — there are 6 types in a cycle, each strong against one and weak against another. Winner takes the tile; loser's summon is destroyed.</p>
-      <p><strong style="color:var(--accent-pale)">Special tiles:</strong> The Mana Well gives a Mana bonus when you pass or land on it. The Treasure Chest gives a random reward — a heal potion, a battle charm, a warp, or a free summon. The Temple lets you trade a normal summon for a powerful Ascendant. The Healing tile lets you spend Mana to restore a stationed summon's HP.</p>
+      <p><strong style="color:var(--accent-pale)">Special tiles:</strong> The Mana Well gives +40 Mana when you land on it. Roll doubles and you get a Wild Card at the end of your turn — one face-down card from each tier, buy one or pass. The Treasure Chest gives a random reward — a heal potion, a battle charm, a warp, or a free summon. The Temple lets you trade a normal summon for a powerful Ascendant. The Healing tile lets you spend Mana to restore a stationed summon's HP.</p>
       <p><strong style="color:var(--accent-pale)">Winning:</strong> Two ways to win. Hold the most tiles when the round limit runs out — or be the last player standing. If you end your turn owning zero tiles (after the first round), you're eliminated. Last one standing wins immediately.</p>
     </div>` : '';
 
@@ -1911,7 +1933,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <img class="lobby-brand-logo" src="/img/logos/logo-main.webp" alt="Summoner's Gambit">
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.25 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.25</div>
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.30 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.29</div>
     <div style="margin-top:6px;"><button class="mute-btn" id="mute-btn" onclick="openAudioSettings()" title="Sound settings" style="width:auto;padding:0 14px;gap:6px;display:inline-flex;align-items:center;font-size:14px;">${_musicLvl()<=0 && _sfxLvl()<=0 ? '🔇' : '⚙'}&nbsp;Sound Settings</button></div>`;
   splash.appendChild(brand);
 
@@ -2090,7 +2112,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.6.25</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.6.30</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">

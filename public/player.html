@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.5.28</title>
+<title>Summoners Gambit — Player v0.5.31</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -79,6 +79,29 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .field-lbl { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--text-mute); font-family: 'Cinzel', serif; margin-bottom: 7px; display: block; }
 .field-input { width: 100%; padding: 13px 15px; border-radius: 8px; border: 1px solid var(--border2); background: var(--surface); color: var(--text); font-size: 16px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 120ms; }
 .field-input:focus { border-color: var(--accent); }
+/* v0.5.31: starter picker = spotlight carousel of card packs (img/packs/pack-<set>.webp, 360 wide) */
+.sp-wrap { margin: 2px -16px 20px; }
+.sp-stage { position: relative; height: 330px; overflow: hidden; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.sp-pack { position: absolute; left: 50%; top: 8px; width: 186px; margin-left: -93px; transition: transform 320ms cubic-bezier(.2,.8,.2,1), opacity 320ms, filter 320ms; cursor: pointer; }
+.sp-pack img { display: block; width: 100%; height: auto; pointer-events: none; }
+.sp-pack.c0 { transform: none; z-index: 3; filter: drop-shadow(0 0 22px rgba(201,160,90,.45)); }
+.sp-pack.l1 { transform: translateX(-118px) translateY(34px) scale(.66) rotate(-8deg); opacity: .5; filter: brightness(.55) saturate(.8); z-index: 2; }
+.sp-pack.r1 { transform: translateX(118px) translateY(34px) scale(.66) rotate(8deg); opacity: .5; filter: brightness(.55) saturate(.8); z-index: 2; }
+.sp-pack.l2 { transform: translateX(-190px) translateY(50px) scale(.5) rotate(-12deg); opacity: 0; z-index: 1; pointer-events: none; }
+.sp-pack.r2 { transform: translateX(190px) translateY(50px) scale(.5) rotate(12deg); opacity: 0; z-index: 1; pointer-events: none; }
+.sp-pack .sp-fallback { display: none; height: 300px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface2); font-family: 'Cinzel', serif; font-size: 16px; color: var(--gold-glow); align-items: center; justify-content: center; text-align: center; padding: 12px; }
+.sp-pack.noimg .sp-fallback { display: flex; }
+.sp-arrow { position: absolute; top: 132px; z-index: 4; width: 44px; height: 44px; border-radius: 22px; border: 1px solid var(--border2); background: rgba(21,22,39,.85); color: var(--text); font-size: 22px; line-height: 1; cursor: pointer; }
+.sp-arrow.prev { left: 14px; } .sp-arrow.next { right: 14px; }
+.sp-dots { display: flex; justify-content: center; gap: 7px; margin-top: 2px; }
+.sp-dot { width: 7px; height: 7px; border-radius: 4px; background: var(--border2); border: 0; padding: 0; transition: width 200ms, background 200ms; cursor: pointer; }
+.sp-dot.on { width: 20px; background: var(--gold-glow); }
+.sp-info { text-align: center; margin-top: 12px; padding: 0 16px; }
+.sp-set { font-size: 10px; letter-spacing: .22em; color: var(--text-mute); font-family: 'Cinzel', serif; }
+.sp-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 20px; color: var(--gold-glow); margin-top: 2px; }
+.sp-tags { display: flex; justify-content: center; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+.sp-tag { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 12px; }
+.sp-note { font-size: 11.5px; color: var(--text-dim); margin-top: 8px; }
 .starter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
 .starter-card { border-radius: 10px; border: 1px solid var(--border2); background: var(--surface); padding: 0; overflow: hidden; cursor: pointer; transition: border-color 120ms, box-shadow 120ms; }
 .starter-card.selected { border-color: var(--gold-glow); box-shadow: 0 0 0 1px var(--gold-glow), 0 0 18px rgba(201,160,90,.35); }
@@ -565,6 +588,32 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .help-type-chip { font-family:'Cinzel',serif; font-size:10px; font-weight:600; padding:3px 9px; border-radius:20px; border:1px solid; letter-spacing:.04em; }
 .help-arrow { color:var(--text-mute); font-size:12px; }
 .help-beats { color:var(--text-mute); font-size:11px; }
+/* v0.5.30: dice tray — the board's 3D dice on the phone */
+.dice-tray{position:relative;width:100%;height:176px;border-radius:22px;background:radial-gradient(ellipse at 50% 60%,#1d1838 0%,#120f24 60%,#0b0a18 100%);
+  border:1px solid #2c2650;box-shadow:inset 0 0 40px rgba(0,0,0,.6);overflow:hidden;flex-shrink:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.dice-tray.idle{cursor:pointer}
+.dice-tray.idle:active{transform:scale(.985)}
+.dt-label{position:absolute;left:0;right:0;top:16px;text-align:center;font-family:'Cinzel',serif;font-size:12px;letter-spacing:.3em;color:var(--text-mute);pointer-events:none;animation:dtPulse 1.8s ease-in-out infinite}
+@keyframes dtPulse{50%{color:var(--gold-glow)}}
+.dt-stage{position:absolute;perspective:700px}
+.dt-die{position:absolute;transform-style:preserve-3d}
+.dt-face{position:absolute;inset:0;border-radius:18%;background:radial-gradient(circle at 30% 25%,#3b2d66 0%,#211741 55%,#140d2a 100%);
+  border:2px solid #c9a05a;box-shadow:inset 0 0 14px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.06);
+  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:14%;box-sizing:border-box;backface-visibility:hidden}
+.dt-pip{width:72%;height:72%;margin:auto;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe7b0,#e0b25a 55%,#a97b40);box-shadow:0 0 6px rgba(240,200,120,.75)}
+.dt-shadow{position:absolute;border-radius:50%;background:radial-gradient(ellipse at center,rgba(0,0,0,.6),rgba(0,0,0,0) 70%)}
+.dt-fx{position:absolute;border-radius:50%;pointer-events:none}
+.dt-callout{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:5;pointer-events:none}
+.stumble-callout{display:inline-block;white-space:nowrap;padding:6px 14px;border-radius:999px;font-size:12px;color:#8fa2ff;border:1px solid #8fa2ff66;background:rgba(20,24,48,.85);animation:dblPop .5s cubic-bezier(.3,1.6,.5,1) both}
+.roll-result-line{font-size:18px;color:var(--gold-glow);font-weight:600;text-align:center;min-height:24px}
+.roll-result-line.waiting{font-size:13px;color:var(--text-mute);font-weight:400}
+/* v0.5.29: both dice + doubles callout */
+.dice-pair{font-family:'Cinzel',serif;font-size:13px;letter-spacing:.12em;color:var(--text-mute);margin-top:4px;}
+.dbl-callout{margin:0 auto;display:inline-block;white-space:nowrap;padding:7px 16px;border-radius:999px;font-family:'Cinzel',serif;font-weight:700;
+  font-size:13px;letter-spacing:.16em;color:#ffd77a;border:1.5px solid #c9922a;background:rgba(40,28,8,.85);
+  box-shadow:0 0 18px rgba(201,146,42,.45);text-shadow:0 0 10px #c9922a;animation:dblPop .5s cubic-bezier(.3,1.6,.5,1) both;}
+.dbl-callout small{display:block;font-weight:400;font-size:10px;letter-spacing:.08em;color:var(--text-lo);text-shadow:none;margin-top:2px;}
+@keyframes dblPop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
 /* Wild Card styles */
 .wc-header { font-family: 'Cinzel', serif; font-size: 18px; color: var(--accent); text-align: center; padding: 16px 16px 4px; }
 .wc-sub { font-size: 12px; color: var(--text-mute); text-align: center; padding: 0 16px 12px; }
@@ -691,7 +740,8 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
       <!-- Special Tiles -->
       <div class="help-section">
         <div class="help-s-title">Special Tiles</div>
-        <div class="help-row"><span class="help-icon">💧</span><span><b style="color:var(--text)">Mana Well</b>: bonus Mana whenever you pass or land on it.</span></div>
+        <div class="help-row"><span class="help-icon">💧</span><span><b style="color:var(--text)">Mana Well</b>: +40 Mana when you land on it.</span></div>
+        <div class="help-row"><span class="help-icon">🎲</span><span><b style="color:var(--text)">Doubles</b>: roll doubles and you get a Wild Card at the end of your turn — one card per tier, buy one or skip.</span></div>
         <div class="help-row"><span class="help-icon">⛩</span><span><b style="color:var(--text)">Temple</b>: trade a normal summon for an Ascendant (see below).</span></div>
         <div class="help-row"><span class="help-icon">❤</span><span><b style="color:var(--text)">Healing Tile</b>: spend Mana to heal any of your stationed summons.</span></div>
         <div class="help-row"><span class="help-icon">📦</span><span><b style="color:var(--text)">Treasure Chest</b>: random reward: heal potion (45%), battle charm (25%), warp (15%), or a free summon (15%).</span></div>
@@ -1820,23 +1870,28 @@ function renderJoin() {
     G:{title:'Dead Covenant',    types:['Undead']},
     H:{title:'Ancient Guard',    types:['Nature','Beast']},
   };
-  Object.values(starterDefs).forEach(v => { v.sub = v.types.join(' / ') + '<br>1 Guardian + 4 random'; });
-  const starters = Object.entries(starterDefs).map(([k,v])=>`
-    <div class="starter-card${joinSet===k?' selected':''}" onclick="joinSet='${k}';renderJoin()">
-      <img class="starter-banner" src="/img/starters/starter-banner-${k}.webp" alt="${k} — ${v.title}" onerror="this.nextElementSibling.querySelector('.starter-card-title').hidden=false;this.remove()">
-      <div class="starter-card-body">
-      <div class="starter-card-title" hidden>${k} — ${v.title}</div>
-      <div class="starter-card-sub">${v.sub}</div>
-      <div class="starter-pips">${v.types.map(t=>`<div class="starter-pip" style="background:${TYPE_COLOR[t]}88;border:1px solid ${TYPE_COLOR[t]}"></div>`).join('')}</div>
+  window._starterDefs = starterDefs;
+  const keys = Object.keys(starterDefs);
+  const starters = `
+    <div class="sp-wrap">
+      <div class="sp-stage" id="sp-stage">
+        ${keys.map(k=>`<div class="sp-pack" data-set="${k}" onclick="spPick('${k}')">
+          <img src="/img/packs/pack-${k}.webp" alt="Set ${k} — ${starterDefs[k].title}" onerror="this.parentNode.classList.add('noimg');this.remove()">
+          <div class="sp-fallback">${k} — ${starterDefs[k].title}</div>
+        </div>`).join('')}
+        <button class="sp-arrow prev" aria-label="Previous set" onclick="spStep(-1)">‹</button>
+        <button class="sp-arrow next" aria-label="Next set" onclick="spStep(1)">›</button>
       </div>
-    </div>`).join('');
+      <div class="sp-dots">${keys.map(k=>`<button class="sp-dot" data-set="${k}" aria-label="Set ${k}" onclick="spPick('${k}')"></button>`).join('')}</div>
+      <div class="sp-info" id="sp-info"></div>
+    </div>`;
 
   const codeHasError = !!joinError;
 
   document.getElementById('main-content').innerHTML = `
     <div class="join-logo">
       <img class="join-logo-art" src="/img/logos/logo-main.webp" alt="Summoner's Gambit">
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.28</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.31</div>
     </div>
 
     <div class="room-code-group">
@@ -1863,7 +1918,7 @@ function renderJoin() {
       </div>
       <div class="field-group">
         <label class="field-lbl">Starter Set</label>
-        <div class="starter-grid">${starters}</div>
+        ${starters}
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:6px 0 18px;">
         <input type="checkbox" id="desktop-mode-toggle" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;" ${desktopMode?'checked':''} onchange="desktopMode=this.checked">
@@ -1871,6 +1926,30 @@ function renderJoin() {
       </div>
       <button class="action-btn primary" style="width:100%;margin-bottom:32px" onclick="doJoin()">Join Game</button>
     </div>`;
+  spLayout(); spBindSwipe();
+}
+
+// v0.5.31: starter carousel — moves packs by class only (no full re-render), so the slide animates
+function spLayout() {
+  const defs = window._starterDefs; if (!defs) return;
+  const keys = Object.keys(defs), n = keys.length, sel = Math.max(0, keys.indexOf(joinSet));
+  document.querySelectorAll('.sp-pack').forEach(el => {
+    let d = keys.indexOf(el.dataset.set) - sel;
+    if (d > n / 2) d -= n; if (d < -n / 2) d += n;
+    el.className = 'sp-pack' + (el.classList.contains('noimg') ? ' noimg' : '') + ' ' + (d === 0 ? 'c0' : d === -1 ? 'l1' : d === 1 ? 'r1' : d < 0 ? 'l2' : 'r2');
+  });
+  document.querySelectorAll('.sp-dot').forEach(el => el.classList.toggle('on', el.dataset.set === joinSet));
+  const v = defs[joinSet], info = document.getElementById('sp-info');
+  if (info) info.innerHTML = `<div class="sp-set">SET ${joinSet}</div><div class="sp-name">${v.title}</div>
+    <div class="sp-tags">${v.types.map(t=>`<span class="sp-tag" style="background:${TYPE_COLOR[t]}26;color:${TYPE_COLOR[t]};border:1px solid ${TYPE_COLOR[t]}66">${t}</span>`).join('')}</div>
+    <div class="sp-note">1 Guardian + 4 random summons${v.types.length===1?' · Mono-Element Mastery':''}</div>`;
+}
+function spPick(k) { joinSet = k; spLayout(); }
+function spStep(dir) { const keys = Object.keys(window._starterDefs); spPick(keys[(keys.indexOf(joinSet) + dir + keys.length) % keys.length]); }
+function spBindSwipe() {
+  const st = document.getElementById('sp-stage'); if (!st) return; let x0 = null;
+  st.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+  st.addEventListener('touchend', e => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 40) spStep(dx < 0 ? 1 : -1); });
 }
 
 function doJoin() {
@@ -1936,7 +2015,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.28</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.30</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -2714,18 +2793,11 @@ function renderRoll() {
   document.getElementById('main-content').innerHTML = `
     <div class="roll-hero">
       <div class="roll-position-chip">Currently on tile <span>${me.position}</span> · <span style="color:${tile.element?TYPE_COLOR[tile.element]:'var(--gold-glow)'}">${tile.label || tile.kind}</span></div>
-      <div class="big-die" id="die-btn" onclick="doRoll()">
-        <div class="die-pip pip-tl"></div><div class="die-pip pip-tr"></div>
-        <div class="die-pip pip-bl"></div><div class="die-pip pip-br"></div>
-        <span class="die-face">?</span>
-      </div>
-      <div class="roll-hint">Tap to roll</div>
-      <div class="roll-result" id="roll-result">
-        <div class="roll-result-num" id="roll-num"></div>
-        <div class="roll-result-dest" id="roll-dest"></div>
-      </div>
+      <div class="dice-tray idle" id="die-btn" onclick="doRoll()"><div class="dt-label">TAP TO ROLL</div></div>
+      <div class="roll-result-line waiting" id="roll-line">Tap the dice to roll</div>
     </div>
     ${synergyBannerHTML()}`;
+  DT.idle(document.getElementById('die-btn'));   // v0.5.30
 }
 
 function renderWell() {
@@ -2744,79 +2816,171 @@ function renderWell() {
     </div>`;
 }
 
+// ─── v0.5.30: DICE TRAY — the board's 3D dice (board-fx.js rollDice), sized for the phone ─────────
+const DT = (() => {
+  const PIPS = {1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+  const FACE_ROT = {1:[0,0],6:[0,180],3:[0,-90],4:[0,90],2:[-90,0],5:[90,0]};
+  const reduced = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+  // dice-roll.mp3 = 9 takes in one file (same table as board.html); follows the phone's Sound Effects slider
+  const TAKES = [[0.12,1.0],[1.52,2.2],[3.02,3.7],[4.42,5.1],[5.52,6.15],[6.82,7.55],[8.37,9.1],[9.47,10.25],[10.67,11.3]];
+  let snd = null, sndT = null, lastTake = -1;
+  function playRoll() {
+    const L = _sfxLvl(); if (L <= 0) return;
+    try {
+      if (!snd) { snd = new Audio('/audio/dice-roll.mp3'); snd.preload = 'auto'; }
+      let k; do { k = Math.floor(Math.random() * TAKES.length); } while (k === lastTake); lastTake = k;
+      const [a, b] = TAKES[k];
+      clearTimeout(sndT); snd.volume = 0.7 * L; snd.currentTime = a; snd.play().catch(() => {});
+      sndT = setTimeout(() => { try { snd.pause(); } catch (e) {} }, (b - a) * 1000 + 120);
+    } catch (e) {}
+  }
+  function warm() { try { if (!snd) { snd = new Audio('/audio/dice-roll.mp3'); snd.preload = 'auto'; snd.load(); } } catch (e) {} }
+  function face(v, t) {
+    const f = document.createElement('div'); f.className = 'dt-face'; if (t) f.style.transform = t;
+    for (let i = 0; i < 9; i++) { const c = document.createElement('div'); if (PIPS[v].includes(i)) c.className = 'dt-pip'; f.appendChild(c); }
+    return f;
+  }
+  function buildDie(sz) {
+    const d = document.createElement('div'); d.className = 'dt-die'; d.style.width = d.style.height = sz + 'px';
+    const h = sz / 2;
+    const t = {1:`translateZ(${h}px)`,6:`rotateY(180deg) translateZ(${h}px)`,3:`rotateY(90deg) translateZ(${h}px)`,
+               4:`rotateY(-90deg) translateZ(${h}px)`,2:`rotateX(90deg) translateZ(${h}px)`,5:`rotateX(-90deg) translateZ(${h}px)`};
+    for (const v in t) d.appendChild(face(+v, t[v]));
+    return d;
+  }
+  const geo = tray => ({ cx: tray.clientWidth / 2, cy: tray.clientHeight - 62, sz: 62, gap: 54 });
+  function mk(tray, cls, st) { const d = document.createElement('div'); d.className = cls; Object.assign(d.style, st || {}); tray.appendChild(d); return d; }
+  function stage(tray, side) {
+    const { cx, cy, sz, gap } = geo(tray);
+    const st = mk(tray, 'dt-stage', { left: (cx + side * gap - sz / 2) + 'px', top: (cy - sz / 2) + 'px', width: sz + 'px', height: sz + 'px' });
+    const sh = document.createElement('div'); sh.className = 'dt-shadow';
+    Object.assign(sh.style, { width: sz * 1.2 + 'px', height: sz * .35 + 'px', left: (-sz * .1) + 'px', top: (sz * .9) + 'px' });
+    st.appendChild(sh); const die = buildDie(sz); st.appendChild(die);
+    return { st, sh, die };
+  }
+  function clear(tray) { tray.querySelectorAll('.dt-stage,.dt-fx,.dt-callout').forEach(e => e.remove()); }
+  // resting dice before the first tap
+  function idle(tray) {
+    if (!tray) return; clear(tray); warm();
+    [[5, -1, 18], [3, 1, -22]].forEach(([v, side, rz]) => {
+      const { die } = stage(tray, side); const [rx, ry] = FACE_ROT[v];
+      die.style.transform = `rotateX(${rx - 14}deg) rotateY(${ry + 18 * side}deg) rotateZ(${rz}deg)`;
+    });
+  }
+  // dice already landed (landing-choice screen)
+  function settled(tray, dice) {
+    if (!tray || !Array.isArray(dice)) return; clear(tray);
+    dice.forEach((v, i) => { const { die } = stage(tray, i ? 1 : -1); const [rx, ry] = FACE_ROT[v] || [0, 0]; die.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`; });
+  }
+  // shake the resting dice while the phone waits for the server; returns a stop function
+  function shake(tray) {
+    const anims = [...tray.querySelectorAll('.dt-stage')].map(st => st.animate([
+      { transform: 'translate(0,0) rotate(0)' }, { transform: 'translate(-4px,-6px) rotate(-8deg)' },
+      { transform: 'translate(4px,-3px) rotate(7deg)' }, { transform: 'translate(0,0) rotate(0)' }], { duration: 260, iterations: Infinity }));
+    return () => anims.forEach(a => { try { a.cancel(); } catch (e) {} });
+  }
+  function ring(tray, x, y, size, color) {
+    const d = mk(tray, 'dt-fx', { width: size + 'px', height: size + 'px', left: (x - size / 2) + 'px', top: (y - size / 2) + 'px', border: `3px solid ${color}`, boxShadow: `0 0 18px ${color}, inset 0 0 12px ${color}` });
+    const a = d.animate([{ transform: 'scale(.2)', opacity: 0 }, { transform: 'scale(.6)', opacity: 1, offset: .15 }, { transform: 'scale(2.1)', opacity: 0 }], { duration: 600, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'both' });
+    a.onfinish = () => d.remove();
+  }
+  function sparks(tray, x, y, color, n, dist) {
+    for (let i = 0; i < n; i++) {
+      const ang = (i / n) * Math.PI * 2 + Math.random() * .5, r = dist * (.6 + Math.random() * .6), s = 4 + Math.random() * 4;
+      const d = mk(tray, 'dt-fx', { width: s + 'px', height: s + 'px', left: (x - s / 2) + 'px', top: (y - s / 2) + 'px', background: color, boxShadow: `0 0 ${s * 2}px ${color}` });
+      const a = d.animate([{ transform: 'translate(0,0)', opacity: 1 }, { transform: `translate(${Math.cos(ang) * r}px,${Math.sin(ang) * r}px) scale(.2)`, opacity: 0 }], { duration: 800, easing: 'cubic-bezier(.15,.8,.3,1)', fill: 'both' });
+      a.onfinish = () => d.remove();
+    }
+  }
+  // tumble in from above, two bounces, land on the server's faces
+  function throwDice(tray, dice, color, onLand) {
+    clear(tray);
+    const red = reduced(), dur = red ? 650 : 1150, { sz } = geo(tray), stages = [];
+    setTimeout(playRoll, red ? 0 : 120);
+    dice.forEach((v, i) => {
+      const side = i ? 1 : -1, { st, sh, die } = stage(tray, side); stages.push(st);
+      st.style.opacity = 0;
+      const [rx, ry] = FACE_ROT[v] || [0, 0];
+      const spinX = (red ? 360 : 720 + Math.floor(Math.random() * 2) * 360) * (Math.random() < .5 ? 1 : -1), spinY = (red ? 360 : 1080) * side;
+      const sx = side * (70 + Math.random() * 40), sy = -(140 + Math.random() * 30);
+      const T = (x, y, f, sc = 1) => `translate(${x}px,${y}px) rotateX(${rx + spinX * (1 - f)}deg) rotateY(${ry + spinY * (1 - f)}deg) scale(${sc})`;
+      die.animate(red ? [{ transform: T(0, -30, 0) }, { transform: T(0, 0, 1) }] : [
+        { transform: T(sx, sy, 0, 1.15), offset: 0 }, { transform: T(sx * .35, sy * .1, .45, 1.05), offset: .38 },
+        { transform: T(sx * .08, 0, .75), offset: .58 }, { transform: T(sx * .03, -18, .9), offset: .72 },
+        { transform: T(0, 0, .98), offset: .86 }, { transform: T(0, -6, 1), offset: .93 }, { transform: T(0, 0, 1), offset: 1 }
+      ], { duration: dur + i * 90, easing: 'cubic-bezier(.3,.1,.3,1)', fill: 'forwards' });
+      // fade on the stage, never on the die (opacity on a preserve-3d element flattens it)
+      st.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur * .3, fill: 'forwards' });
+      sh.animate([{ opacity: 0, transform: 'scale(.4)' }, { opacity: 1, transform: 'scale(1)' }], { duration: dur * .6, fill: 'forwards' });
+    });
+    setTimeout(() => {
+      if (!red) stages.forEach(st => ring(tray, parseFloat(st.style.left) + sz / 2, parseFloat(st.style.top) + sz / 2, sz, color || '#c9a05a'));
+      try { onLand && onLand(); } catch (e) {}
+    }, dur + 90);
+  }
+  // pill above the dice: Stumble note, or DOUBLES! when this roll earned a Wild Card
+  function callout(tray, game, { fresh = false } = {}) {
+    if (!tray || !game) return;
+    tray.querySelectorAll('.dt-callout').forEach(e => e.remove());
+    const me = game.players ? game.players[myIdx] : null; if (!me) return;
+    const t = game.wcTable;
+    let html = '';
+    if (me.lastStumble) html = `<div class="stumble-callout"${fresh ? '' : ' style="animation:none"'}>🃏 Stumbled — you move exactly 3</div>`;
+    else if (t && t.playerIdx === myIdx && !t.pick && !t.skipped) html = `<div class="dbl-callout"${fresh ? '' : ' style="animation:none"'}>DOUBLES!<small>Wild Card at the end of your turn</small></div>`;
+    if (!html) return;
+    const o = mk(tray, 'dt-callout'); o.innerHTML = html;
+    if (fresh && !me.lastStumble && !reduced()) sparks(tray, tray.clientWidth / 2, 34, '#ffd77a', 14, 90);
+  }
+  return { idle, settled, shake, throwDice, callout };
+})();
+
 function doRoll() {
   if (rollAnimating) return;
-  const die = document.getElementById('die-btn');
-  if (!die) return;
+  const tray = document.getElementById('die-btn');
+  if (!tray) return;
 
   rollAnimating = true;
   pendingGameState = null;
   pendingRollValue = null;
   rollShowCallback = null;
 
-  const face = die.querySelector('.die-face');
-  const hint = document.querySelector('.roll-hint');
-  if (hint) hint.textContent = 'Rolling…';
+  tray.classList.remove('idle'); tray.onclick = null;
+  const lbl = tray.querySelector('.dt-label'); if (lbl) lbl.remove();
+  const line = document.getElementById('roll-line');
+  if (line) line.textContent = 'Rolling…';
+  const stopShake = DT.shake(tray);
 
-  const seq = [1,2,3,4,5,6,1,2,3,4,5,6];
-  let step = 0;
-
-  function cycleStep() {
-    if (step < seq.length) {
-      SFX.dieTick();
-      if (face) {
-        face.textContent = seq[step];
-        face.classList.remove('die-flash');
-        void face.offsetWidth;
-        face.classList.add('die-flash');
-      }
-      die.classList.remove('die-cycling');
-      void die.offsetWidth;
-      die.classList.add('die-cycling');
-      step++;
-      setTimeout(cycleStep, 85);
-    } else {
-      die.classList.remove('die-cycling');
-      showFinalResult();
+  function finish() {
+    rollAnimating = false;
+    if (pendingGameState) {
+      G = pendingGameState.game;
+      myIdx = pendingGameState.myIdx;
+      myHand = pendingGameState.hand;
+      pendingGameState = null;
     }
+    render();
   }
-
-  function showFinalResult() {
-    if (pendingRollValue != null) {
-      displayResult(pendingRollValue);
-    } else {
-      rollShowCallback = displayResult;
-    }
-  }
+  // safety: if the server never answers, don't leave the screen frozen
+  const guard = setTimeout(() => { if (rollAnimating && rollShowCallback) { rollShowCallback = null; stopShake(); finish(); } }, 8000);
 
   function displayResult(val) {
-    SFX.dieLand(val);
-    if (face) {
-      face.textContent = val;
-      face.classList.remove('die-flash');
-      void face.offsetWidth;
-      face.classList.add('die-flash');
-    }
-    die.classList.add('die-landed');
-    if (hint) {
-      hint.style.color = 'var(--gold-glow)';
-      hint.style.fontSize = '16px';
-      hint.textContent = `You rolled a ${val}!`;
-    }
-    setTimeout(() => {
-      rollAnimating = false;
-      if (pendingGameState) {
-        G = pendingGameState.game;
-        myIdx = pendingGameState.myIdx;
-        myHand = pendingGameState.hand;
-        pendingGameState = null;
-        render();
-      }
-    }, 2500);
+    clearTimeout(guard);
+    stopShake();
+    const g = pendingGameState ? pendingGameState.game : G;
+    const me = g && g.players ? g.players[myIdx] : null;
+    const dice = me && Array.isArray(me.lastDice) && me.lastDice.length === 2 ? me.lastDice : null;
+    const landed = () => {
+      if (line) { line.classList.remove('waiting'); line.textContent = `You rolled a ${val}!`; }
+      DT.callout(tray, g, { fresh: true });
+      setTimeout(finish, 1500);
+    };
+    if (dice) DT.throwDice(tray, dice, me.color, landed);
+    else landed();
   }
 
   send('roll');
-  setTimeout(cycleStep, 40);
+  if (pendingRollValue != null) displayResult(pendingRollValue);
+  else rollShowCallback = displayResult;
 }
 
 // ─── LANDING CHOICE ─────────────────────────────────────────────────────────
@@ -2915,12 +3079,8 @@ function renderLandingChoice() {
   document.getElementById('main-content').innerHTML = `
     <div class="roll-hero" style="padding-bottom:8px">
       <div class="roll-position-chip">Currently on tile <span>${me.position}</span></div>
-      <div class="big-die die-landed" id="die-landed-display">
-        <div class="die-pip pip-tl"></div><div class="die-pip pip-tr"></div>
-        <div class="die-pip pip-bl"></div><div class="die-pip pip-br"></div>
-        <span class="die-face">${pl.roll}</span>
-      </div>
-      <div class="roll-hint" style="color:var(--gold-glow);font-size:16px">You rolled a ${pl.roll}!</div>
+      <div class="dice-tray" id="dice-tray-landed"></div>
+      <div class="roll-result-line">You rolled a ${pl.roll}!</div>
     </div>
     <div class="lc-section">
       <div class="lc-header">Choose Your Destination</div>
@@ -2928,6 +3088,9 @@ function renderLandingChoice() {
       <div class="lc-tap-hint">Tap a tile to see details, then confirm with <b>Land here</b></div>
     </div>
     ${synergyBannerHTML()}`;
+  // v0.5.30: the dice stay where they landed
+  const _dt = document.getElementById('dice-tray-landed');
+  if (_dt) { DT.settled(_dt, me.lastDice); DT.callout(_dt, G); }
 }
 
 // v0.5.07: landing goes through the shared detail sheet — a tap previews, only "Land here" commits
@@ -4405,7 +4568,7 @@ function renderWildCardPick() {
 
   document.getElementById('main-content').innerHTML = `
     <div class="wc-header">🃏 Wild Card Event</div>
-    <div class="wc-sub">Choose a card or skip</div>
+    <div class="wc-sub">You rolled doubles! Choose a card or skip</div>
     <div class="wc-cards">${cardsHtml}</div>
     <button class="action-btn secondary" onclick="doWildCardSkip()" style="margin:16px auto;display:block;min-width:160px">Skip</button>`;
 }

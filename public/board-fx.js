@@ -1,5 +1,6 @@
 /* ─────────────────────────────────────────────────────────────────────────────
- * Summoner's Gambit — board-fx.js  (v0.6.20, Tier 1–3 board interaction effects)
+ * Summoner's Gambit — board-fx.js  (v0.6.29, Tier 1–3 board interaction effects)
+ *  v0.6.26: BoardFX.wcTable() — face-down Wild Card table dealt on doubles (grey → live → flip / pass)
  *
  *  BoardFX.rollDice(anchorEl, dice, total, opts) → Promise (resolves when dice land)
  *  BoardFX.claim(tileInnerEl, { owner, elem, name })
@@ -63,6 +64,20 @@
   .fx-wc-tier{font-family:'Cinzel',serif;letter-spacing:.3em;font-size:.6em;color:var(--tc);margin-bottom:4px;}
   .fx-wc-desc{font-size:.62em;line-height:1.35;color:#d8d8e4;margin-top:6px;font-family:Inter,sans-serif;}
   .fx-wc-back{transform:rotateY(180deg);border:3px solid var(--tc);background:radial-gradient(circle at 50% 50%,#2a2048 0,#120c26 70%);display:flex;align-items:center;justify-content:center;font-size:3.2em;color:var(--tc);text-shadow:0 0 20px var(--tc);}
+  /* v0.6.26: Wild Card table */
+  .wct-stage{position:absolute;left:0;top:0;width:100%;height:100%;transition:opacity .45s ease;}
+  .wct-slot{position:absolute;will-change:transform,opacity;}
+  .wct-breath{position:absolute;inset:0;perspective:1100px;}
+  .wct-slot .fx-wc{position:absolute;inset:0;}
+  .wct-slot .fx-wc-face{transition:filter .9s ease,box-shadow .9s ease;}
+  .wct-slot .fx-wc-back{background:#120c26 center/cover no-repeat;font-size:0;box-shadow:0 0 18px var(--tc);}
+  .wct-grey .fx-wc-face{filter:grayscale(1) brightness(.5);box-shadow:none;}
+  .wct-live .wct-breath{animation:wct-breathe 2.4s ease-in-out infinite;animation-delay:var(--bd,0s);}
+  .wct-live .fx-wc-back{animation:wct-glow 2.4s ease-in-out infinite;animation-delay:var(--bd,0s);}
+  .wct-live.wct-high .fx-wc-back{animation-name:wct-glow-hi;}
+  @keyframes wct-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+  @keyframes wct-glow{0%,100%{box-shadow:0 0 14px var(--tc)}50%{box-shadow:0 0 34px var(--tc)}}
+  @keyframes wct-glow-hi{0%,100%{box-shadow:0 0 20px var(--tc)}50%{box-shadow:0 0 56px var(--tc),0 0 90px rgba(255,215,122,.35)}}
   .fx-crown{position:absolute;transform:translate(-50%,-50%);line-height:1;filter:drop-shadow(0 0 8px #ffd77a) drop-shadow(0 2px 2px rgba(0,0,0,.5));}
     `;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
@@ -567,10 +582,20 @@
         <div class="fx-wc-face fx-wc-back">🃏</div>`;
       wrap.appendChild(cardEl);
       const fx = a.x - bc.x, fy = a.y - bc.y, ex = end.x - bc.x, ey = end.y - bc.y;
-      const D = reduced ? 2400 : 3400;
+      const ft = !!opts.fromTable;   // v0.6.26: card is already face-up in the centre (Wild Card table)
+      const D = ft ? (reduced ? 2000 : 2800) : (reduced ? 2400 : 3400);
       const t = (x, y, ry, sc, rz = 0) => `translate(${x}px,${y}px) rotateY(${ry}deg) rotateZ(${rz}deg) scale(${sc})`;
-      done(wrap.animate([{ opacity: 0 }, { opacity: 1, offset: .05 }, { opacity: 1, offset: .9 }, { opacity: 0 }], { duration: D, fill: 'both' }), wrap);
-      cardEl.animate([
+      done(wrap.animate(ft ? [{ opacity: 1 }, { opacity: 1, offset: .88 }, { opacity: 0 }]
+        : [{ opacity: 0 }, { opacity: 1, offset: .05 }, { opacity: 1, offset: .9 }, { opacity: 0 }], { duration: D, fill: 'both' }), wrap);
+      cardEl.animate(ft ? [
+        { transform: t(0, 0, 720, TABLE_W / 210), offset: 0 },
+        { transform: t(0, 0, 720, 1.08), offset: .08 },
+        { transform: t(0, 0, 720, 1), offset: .14 },
+        { transform: t(0, -8 * k, 720, 1), offset: .55 },          // hold so the room can read it
+        { transform: t(ex * .7, ey * .7, 720, .45, 8), offset: .8 },
+        { transform: t(ex, ey, 720, .12, 14), offset: .86 },
+        { transform: t(ex, ey, 720, .05, 14), offset: 1 }
+      ] : [
         { transform: t(fx, fy, 180, .15, -20), offset: 0 },
         { transform: t(fx * .3, fy * .3 - 40 * k, 180 + 360, .8, 6), offset: .16 },
         { transform: t(0, 0, 360 + 180, 1.08, 0), offset: .24 },
@@ -587,7 +612,7 @@
         if (!reduced) sparks(bc.x, bc.y, T.c, card.tier === 'high' ? 30 : 16, 220 * k, { dur: 1000, size: 7 });
         if (card.tier === 'high') { shake(7, 420); ring(bc.x, bc.y, 160 * k, '#ffffff', { dur: 700, grow: 3.5, width: 2, delay: 80 }); }
         try { opts.onReveal && opts.onReveal(); } catch (e) {}
-      }, D * .3);
+      }, D * (ft ? .06 : .3));
       // impact on every target
       setTimeout(() => {
         tg.forEach((c, i) => setTimeout(() => {
@@ -597,9 +622,170 @@
         targets.forEach(el => { if (el && el.isConnected) glow(el, T.c, 900); });
         try { opts.onImpact && opts.onImpact(); } catch (e) {}
         resolve();
-      }, D * .89);
+      }, D * (ft ? .85 : .89));
     });
   }
+  // ═══════════════ v0.6.26: Wild Card table (doubles) ═══════════════
+  // Three face-down tier cards dealt into the board centre when a player rolls doubles.
+  // grey (turn in progress) → live (choosing: colour + breathing) → picked (chosen card flips
+  // face-up, the others sink away unrevealed) → consumed by wildCard({fromTable}) — or passed.
+  // State-driven: board.html calls wcTable(G.wcTable, phase, …) on every render.
+  // v0.6.28: WC_TABLE_SCALE sizes the three table cards (1 = original 150×214 px; 0.80 → 120×171 px). Text scales with it.
+  // WC_TABLE_GAP = space between the cards in board px (was 34 × scale; v0.6.29: 10).
+  const WC_TABLE_SCALE = 0.80;
+  const WC_TABLE_GAP = 10;
+  const TABLE_W = 150 * WC_TABLE_SCALE, TABLE_H = 214 * WC_TABLE_SCALE, TABLE_GAP = WC_TABLE_GAP;
+  const TIERS = ['low', 'mid', 'high'];
+  const HIDE_PHASES = new Set(['resolve:battle', 'resolve:battle_result', 'stalemate', 'resolve:chest', 'resolve:temple',
+    'resolve:round_callout', 'resolve:turn_summary', 'game_over']);
+  const WCT = { seq: 0, stage: null, slots: {}, state: '', consumed: false, pickedAt: 0, pickTier: null };
+  // preload the three tier backs so the first deal never shows empty frames
+  try { TIERS.forEach(t => { const im = new Image(); im.src = `/img/wildcards/wc-mask-${t}.png`; }); } catch (e) {}
+  function _wctPos(tier) {
+    const k = scale(), bc = boardCenter(), i = TIERS.indexOf(tier);
+    const w = TABLE_W * k, h = TABLE_H * k, gap = TABLE_GAP * k;
+    return { x: bc.x + (i - 1) * (w + gap) - w / 2, y: bc.y - h / 2, w, h, k, bc };
+  }
+  function _wctLayout() {
+    TIERS.forEach(tier => {
+      const s = WCT.slots[tier]; if (!s) return;
+      const p = _wctPos(tier);
+      Object.assign(s.style, { left: p.x + 'px', top: p.y + 'px', width: p.w + 'px', height: p.h + 'px', fontSize: Math.round(11 * WC_TABLE_SCALE * p.k) + 'px' });
+    });
+  }
+  function _wctClear(fade) {
+    const st = WCT.stage;
+    WCT.stage = null; WCT.slots = {}; WCT.state = ''; WCT.pickTier = null;
+    if (!st) return;
+    if (fade) { st.style.opacity = '0'; setTimeout(() => st.remove(), 500); } else st.remove();
+  }
+  function _wctBuild(t, animate, sfx) {
+    _wctClear(false);
+    const stage = mk('wct-stage', {}); stage.classList.remove('fx-abs');
+    WCT.stage = stage; WCT.seq = t.seq; WCT.consumed = false; WCT.state = '';
+    const reduced = level === 'reduced';
+    TIERS.forEach((tier, i) => {
+      const T = TIER[tier];
+      const slot = document.createElement('div'); slot.className = 'wct-slot wct-grey wct-' + tier;
+      slot.style.setProperty('--tc', T.c); slot.style.setProperty('--bd', (i * .35) + 's');
+      slot.innerHTML = `<div class="wct-breath"><div class="fx-wc" style="transform:rotateY(180deg)">
+          <div class="fx-wc-face fx-wc-front"></div>
+          <div class="fx-wc-face fx-wc-back" style="background-image:url('/img/wildcards/wc-mask-${tier}.png')"></div></div></div>`;
+      stage.appendChild(slot); WCT.slots[tier] = slot;
+    });
+    _wctLayout();
+    if (!animate) return;
+    TIERS.forEach((tier, i) => {
+      const slot = WCT.slots[tier], p = _wctPos(tier), k = p.k, delay = i * 230;
+      if (reduced) { slot.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, delay, fill: 'backwards' }); return; }
+      slot.animate([
+        { transform: `translate(${-(i - 1) * 120 * k}px,${-380 * k}px) rotate(${(i - 1) * -24 - 10}deg) scale(1.25)`, opacity: 0 },
+        { opacity: 1, offset: .25 },
+        { transform: `translate(0,${10 * k}px) rotate(${(i - 1) * 2}deg) scale(.98)`, offset: .78 },
+        { transform: 'translate(0,0) rotate(0) scale(1)', opacity: 1 }
+      ], { duration: 520, delay, easing: 'cubic-bezier(.25,.7,.3,1)', fill: 'backwards' });
+      setTimeout(() => {
+        const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
+        try { sfx.deal && sfx.deal(i); } catch (e) {}
+        ring(cx, cy + p.h * .4, 70 * k, TIER[tier].c, { dur: 500, grow: 1.8, width: 3 });
+        if (tier === 'high') { shake(5, 300); sparks(cx, cy, TIER.high.c, 14, 120 * k, { dur: 800, size: 5 }); }
+      }, delay + 400);
+    });
+  }
+  function _wctSetState(state, t, sfx) {
+    if (state === WCT.state) return;
+    const prev = WCT.state; WCT.state = state;
+    const reduced = level === 'reduced';
+    TIERS.forEach(tier => {
+      const s = WCT.slots[tier]; if (!s) return;
+      s.classList.toggle('wct-grey', state === 'grey');
+      s.classList.toggle('wct-live', state === 'live');
+    });
+    if (state === 'live' && prev && !reduced) {
+      const bc = boardCenter(); ring(bc.x, bc.y, 220 * scale(), '#ffd77a', { dur: 900, grow: 2, width: 3 });
+      try { sfx.live && sfx.live(); } catch (e) {}
+    }
+    if (state === 'picked' && t.pick) {
+      const tier = t.pick.tier, slot = WCT.slots[tier]; if (!slot) return;
+      WCT.pickTier = tier; WCT.pickedAt = Date.now();
+      const T = TIER[tier];
+      slot.querySelector('.fx-wc-front').style.backgroundImage = `url('/img/wildcards/wc-${t.pick.id}.png')`;
+      slot.querySelector('.fx-wc-front').innerHTML = `<div class="fx-wc-band"><div class="fx-wc-tier">${T.label}</div><div class="fx-wc-name">${t.pick.name}</div>
+          ${t.pick.desc ? `<div class="fx-wc-desc">${t.pick.desc}</div>` : ''}</div>`;
+      const p = _wctPos(tier), k = p.k, dx = p.bc.x - (p.x + p.w / 2);
+      const card = slot.querySelector('.fx-wc');
+      // the unchosen two sink away, still face-down
+      TIERS.filter(x => x !== tier).forEach(x => {
+        const o = WCT.slots[x];
+        o.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: `translateY(${70 * k}px) scale(.9)`, opacity: 0 }],
+          { duration: 500, easing: 'ease-in', fill: 'forwards' });
+      });
+      slot.animate([{ transform: 'translate(0,0)' }, { transform: `translate(${dx}px,0)` }], { duration: 450, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'forwards' });
+      if (reduced) { card.style.transform = 'rotateY(360deg)'; slot.animate([{ opacity: .3 }, { opacity: 1 }], { duration: 350 }); }
+      else card.animate([{ transform: 'rotateY(180deg) scale(1)' }, { transform: 'rotateY(270deg) scale(1.15)', offset: .5 }, { transform: 'rotateY(360deg) scale(1)' }],
+        { duration: 700, delay: 250, easing: 'cubic-bezier(.4,.1,.3,1)', fill: 'forwards' });
+      setTimeout(() => {
+        const cx = p.bc.x, cy = p.bc.y;
+        ring(cx, cy, 120 * k, T.c, { dur: 800, grow: 2.2, width: 4 });
+        if (!reduced) sparks(cx, cy, T.c, tier === 'high' ? 24 : 12, 160 * k, { dur: 900, size: 6 });
+        if (tier === 'high') shake(5, 320);
+        try { sfx.reveal && sfx.reveal(tier); } catch (e) {}
+      }, reduced ? 100 : 600);
+    }
+    if (state === 'skipped') {
+      WCT.consumed = true;
+      const bc = boardCenter(), k = scale();
+      TIERS.forEach((tier, i) => {
+        const s = WCT.slots[tier]; if (!s) return;
+        s.classList.remove('wct-live');
+        s.animate([{ transform: 'translate(0,0) rotate(0)', opacity: 1 },
+          { transform: `translate(${(i - 1) * 60 * k}px,${420 * k}px) rotate(${(i - 1) * 14}deg)`, opacity: 0 }],
+          { duration: reduced ? 400 : 650, delay: i * 70, easing: 'cubic-bezier(.5,0,.8,.4)', fill: 'forwards' });
+      });
+      banner(bc.x, bc.y, 'PASSED', '#9397ab', { size: 22, dur: 1400, rise: 20 });
+      try { sfx.skip && sfx.skip(); } catch (e) {}
+      const st = WCT.stage; setTimeout(() => { if (WCT.stage === st) _wctClear(false); else if (st) st.remove(); }, 1000);
+    }
+  }
+  // t = G.wcTable (or null). opts: { instant, deal, sfx }
+  //   instant → (re)build silently in the right state (first state after a reload)
+  //   deal    → new table: deal it in (called from the board's FX queue once the dice settle)
+  function wcTable(t, phase, opts = {}) {
+    const sfx = opts.sfx || {};
+    if (!t) { if (WCT.stage) _wctClear(true); WCT.seq = 0; return; }
+    if (t.seq !== WCT.seq) {
+      if (!opts.deal && !opts.instant) return;            // wait for the queued deal
+      if (opts.instant && (t.skipped)) { WCT.seq = t.seq; WCT.consumed = true; return; }
+      _wctBuild(t, !!opts.deal, sfx);
+      if (opts.instant && t.pick) {                        // reload mid-targeting: show the picked card, no anim
+        WCT.state = 'picked'; WCT.pickTier = t.pick.tier; WCT.pickedAt = 0;
+        const slot = WCT.slots[t.pick.tier], T = TIER[t.pick.tier];
+        TIERS.filter(x => x !== t.pick.tier).forEach(x => WCT.slots[x].style.opacity = '0');
+        const p = _wctPos(t.pick.tier); slot.style.transform = `translate(${p.bc.x - (p.x + p.w / 2)}px,0)`;
+        slot.classList.remove('wct-grey');
+        const fr = slot.querySelector('.fx-wc-front');
+        fr.style.backgroundImage = `url('/img/wildcards/wc-${t.pick.id}.png')`;
+        fr.innerHTML = `<div class="fx-wc-band"><div class="fx-wc-tier">${T.label}</div><div class="fx-wc-name">${t.pick.name}</div></div>`;
+        slot.querySelector('.fx-wc').style.transform = 'rotateY(360deg)';
+      }
+    }
+    if (WCT.consumed || !WCT.stage) return;
+    WCT.stage.style.opacity = HIDE_PHASES.has(phase) ? '0' : '1';   // battles etc. cover the cards
+    if (!WCT.state || WCT.state === 'grey' || WCT.state === 'live') _wctLayout();
+    const want = t.skipped ? 'skipped' : t.pick ? 'picked' : phase === 'resolve:wildcard_cards' ? 'live' : 'grey';
+    _wctSetState(want, t, sfx);
+  }
+  // The picked card is about to fly to its target: wait for its flip to finish, then hand over.
+  // Resolves true if the table owned this card (so wildCard() should start from the centre).
+  function wcTableConsume(card) {
+    return new Promise(resolve => {
+      if (!WCT.stage || WCT.consumed || WCT.pickTier !== card.tier) { resolve(false); return; }
+      WCT.consumed = true;
+      const wait = Math.max(0, (level === 'reduced' ? 700 : 1500) - (Date.now() - WCT.pickedAt));
+      setTimeout(() => { _wctClear(false); resolve(true); }, wait);
+    });
+  }
+
   // Plague: sickly pulse rising off each tile
   function plague(tileInner) {
     if (!tileInner || !tileInner.isConnected) return;
@@ -673,6 +859,7 @@
     rollDice, claim, hop, ripple,
     challenge, takeover, held, clash, manaRoll, manaFloat, flow, chest, temple, heal, well,
     wildCard, plague, shatterTile, eliminated, crown,
+    wcTable, wcTableConsume,   // v0.6.26
     get level() { return level; },
     setLevel(v) { level = v === 'reduced' ? 'reduced' : 'full'; try { localStorage.setItem(LS_KEY, level); } catch (e) {} },
   };
