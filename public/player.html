@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.5.24</title>
+<title>Summoners Gambit — Player v0.5.28</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -59,6 +59,9 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .screen-sub { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; line-height: 1.5; }
 /* Join */
 .join-logo { text-align: center; padding: 28px 16px 16px; }
+/* v0.5.25: logo art + splash behind the join screen (only while .join-logo is on screen) */
+.join-logo-art { display: block; width: 92%; max-width: 360px; height: auto; margin: -6px auto 2px; filter: drop-shadow(0 8px 18px rgba(0,0,0,.7)); }
+#app:has(.join-logo) { background: linear-gradient(180deg, rgba(8,6,16,.35) 0%, rgba(8,6,16,.78) 34%, rgba(8,6,16,.94) 62%), url(/img/backgrounds/splash-sm.webp) 50% 0 / auto 62% no-repeat, var(--bg); }
 .join-logo-mark { width: 60px; height: 60px; border-radius: 14px; background: linear-gradient(145deg, #2a1f4a, #1a1230); border: 2px solid var(--gold); box-shadow: 0 0 28px rgba(145,132,217,.35); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; }
 .join-logo-sigil { }
 .join-logo-name { font-family: 'Cinzel', serif; font-size: 17px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
@@ -77,10 +80,13 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .field-input { width: 100%; padding: 13px 15px; border-radius: 8px; border: 1px solid var(--border2); background: var(--surface); color: var(--text); font-size: 16px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 120ms; }
 .field-input:focus { border-color: var(--accent); }
 .starter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
-.starter-card { border-radius: 10px; border: 1px solid var(--border2); background: var(--surface); padding: 12px; cursor: pointer; transition: all 120ms; }
-.starter-card.selected { border-color: var(--accent); background: rgba(145,132,217,.1); box-shadow: 0 0 0 1px var(--accent); }
+.starter-card { border-radius: 10px; border: 1px solid var(--border2); background: var(--surface); padding: 0; overflow: hidden; cursor: pointer; transition: border-color 120ms, box-shadow 120ms; }
+.starter-card.selected { border-color: var(--gold-glow); box-shadow: 0 0 0 1px var(--gold-glow), 0 0 18px rgba(201,160,90,.35); }
+/* v0.5.26: lettered banner art on each starter card (img/starters/starter-banner-<set>.webp, 600×250) */
+.starter-banner { display: block; width: 100%; aspect-ratio: 12 / 5; object-fit: cover; background: var(--surface2); }
+.starter-card-body { padding: 8px 10px 10px; }
 .starter-card-title { font-size: 13px; font-weight: 600; font-family: 'Cinzel', serif; margin-bottom: 4px; }
-.starter-card-sub { font-size: 11px; color: var(--text-dim); line-height: 1.4; margin-bottom: 8px; }
+.starter-card-sub { font-size: 10.5px; color: var(--text-dim); line-height: 1.4; margin-bottom: 7px; min-height: 2.8em; }
 .starter-pips { display: flex; gap: 3px; }
 .starter-pip { width: 10px; height: 10px; border-radius: 2px; }
 /* Turn Summary (player view) */
@@ -1232,6 +1238,15 @@ function homeField(m, el) {
 }
 
 // ─── MONSTER LORE ───────────────────────────────────────────────────────────
+// v0.5.27: fallback unlock text (server sends conditionDesc for hand cards; this covers any view that doesn't)
+const ASCENDANT_CONDITIONS = {
+  'Ardent Saint':'Healed 2+ summons this game',
+  'Succubus':'Have at least 40✦ Mana',
+  'Arcane Arbiter':'Changed 1+ tile to Arcane element this game',
+  'Demon Lord':'Had 2+ summons destroyed in battle this game',
+  'Red Dragon':'Have 3+ summons stationed on board',
+  'World Tree':'Own 2+ Nature tiles currently',
+};
 const MONSTER_LORE = {
   // ── LIGHT ──
   'Solar Knight':   { role:'Assailant',lore:'A warrior wreathed in living sunfire, the Solar Knight charges into battle with reckless brilliance. Their armor blazes so brightly that enemies are blinded before the blade even lands — but the intensity that makes them lethal also burns through their endurance fast.', ability:'Radiant Strike — on claim or battle win, tile converts to Light element.' },
@@ -1404,6 +1419,18 @@ function _cardDetailBody(m) {
           <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:${m.rarity==='rare'?'#c8aaff':m.isSpecial?'var(--gold-glow)':elColor};font-family:'Cinzel',serif;margin-bottom:5px;">${m.rarity==='rare'?'★ Rare Ability':m.isSpecial?'✦ Ascendant Ability':'◆ Ability'}</div>
           <div style="font-size:12px;color:var(--text);line-height:1.5;">${lore.ability}</div>
         </div>` : ''}
+
+        ${m.isSpecial ? (() => {
+          // v0.5.27: Ascendant unlock condition on the detail sheet
+          const cond = m.conditionDesc || ASCENDANT_CONDITIONS[m.name] || '';
+          if (!cond) return '';
+          const st = m.canUse === true ? `<span style="color:#7dba81">✓ Met</span>` : m.canUse === false ? `<span style="color:#e08080">🔒 Not met</span>` : '';
+          return `<div style="margin-bottom:14px;padding:10px 12px;background:rgba(169,123,64,.08);border:1px dashed rgba(169,123,64,.45);border-radius:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-glow);font-family:'Cinzel',serif;margin-bottom:5px;"><span>⛩ Unlock Condition</span>${st ? `<span style="font-family:inherit;letter-spacing:.08em">${st}</span>` : ''}</div>
+            <div style="font-size:12px;color:var(--text);line-height:1.5;">${cond}</div>
+            <div style="font-size:10px;color:var(--text-mute);margin-top:4px;">Checked each time you try to station it.</div>
+          </div>`;
+        })() : ''}
 
         <!-- Lore text -->
         <div>
@@ -1782,36 +1809,34 @@ function renderJoin() {
   document.getElementById('action-bar').classList.remove('visible');
   document.getElementById('main-content').classList.add('no-hand');
 
+  // v0.5.28: hands are randomised server-side — 1 Guardian + 4 random cards from the set's elements
   const starterDefs = {
-    A:{title:'The Cabal',        sub:'2 Assailants + 2 Guardians + 1 Vanguard',        types:['Dark','Undead','Arcane','Dark','Arcane']},
-    B:{title:'The Warpack',      sub:'2 Assailants + 2 Guardians + 1 Vanguard',        types:['Dark','Beast','Beast','Undead','Undead']},
-    C:{title:'The Order',        sub:'2 Assailants + 2 Guardians + 1 Vanguard',        types:['Light','Arcane','Light','Nature','Nature']},
-    D:{title:'The Arcane Watch', sub:'1 Assailant + 1 Guardian + 3 Vanguards',         types:['Arcane','Arcane','Arcane','Arcane','Arcane']},
-    E:{title:'Divine Guard',     sub:'2 Guardians + 1 Assailant + 2 Vanguards',        types:['Light','Light','Light','Light','Light']},
-    F:{title:'Chaos Legion',     sub:'3 Assailants + 2 Vanguards — pure dark aggression', types:['Dark','Dark','Dark','Dark','Dark']},
+    A:{title:'The Cabal',        types:['Dark','Undead','Arcane']},
+    B:{title:'The Warpack',      types:['Dark','Beast','Undead']},
+    C:{title:'The Order',        types:['Light','Arcane','Nature']},
+    D:{title:'The Arcane Watch', types:['Arcane']},
+    E:{title:'Divine Guard',     types:['Light']},
+    F:{title:'Chaos Legion',     types:['Dark']},
+    G:{title:'Dead Covenant',    types:['Undead']},
+    H:{title:'Ancient Guard',    types:['Nature','Beast']},
   };
+  Object.values(starterDefs).forEach(v => { v.sub = v.types.join(' / ') + '<br>1 Guardian + 4 random'; });
   const starters = Object.entries(starterDefs).map(([k,v])=>`
     <div class="starter-card${joinSet===k?' selected':''}" onclick="joinSet='${k}';renderJoin()">
-      <div class="starter-card-title">${k} — ${v.title}</div>
+      <img class="starter-banner" src="/img/starters/starter-banner-${k}.webp" alt="${k} — ${v.title}" onerror="this.nextElementSibling.querySelector('.starter-card-title').hidden=false;this.remove()">
+      <div class="starter-card-body">
+      <div class="starter-card-title" hidden>${k} — ${v.title}</div>
       <div class="starter-card-sub">${v.sub}</div>
       <div class="starter-pips">${v.types.map(t=>`<div class="starter-pip" style="background:${TYPE_COLOR[t]}88;border:1px solid ${TYPE_COLOR[t]}"></div>`).join('')}</div>
+      </div>
     </div>`).join('');
 
   const codeHasError = !!joinError;
 
   document.getElementById('main-content').innerHTML = `
     <div class="join-logo">
-      <div class="join-logo-mark">
-        <svg class="join-logo-sigil" width="36" height="36" viewBox="0 0 36 36" fill="none">
-          <polygon stroke="#a97b40" stroke-width="2" stroke-linejoin="round" points="18,4 32,28 4,28"/>
-          <circle stroke="#9184d9" stroke-width="1.5" cx="18" cy="18" r="7"/>
-          <line stroke="#9184d9" stroke-width="1.5" x1="18" y1="4" x2="18" y2="11"/>
-          <line stroke="#9184d9" stroke-width="1.5" x1="32" y1="28" x2="26.06" y2="24.5"/>
-          <line stroke="#9184d9" stroke-width="1.5" x1="4" y1="28" x2="9.94" y2="24.5"/>
-        </svg>
-      </div>
-      <div class="join-logo-name">Summoners Gambit</div>
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.24</div>
+      <img class="join-logo-art" src="/img/logos/logo-main.webp" alt="Summoner's Gambit">
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.28</div>
     </div>
 
     <div class="room-code-group">
@@ -1911,7 +1936,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.24</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.28</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">

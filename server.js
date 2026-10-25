@@ -11,7 +11,10 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.104';
+const SERVER_VERSION = 'v1.0.109';   // v1.0.109: randomised starter sets (8 pools, 1 Guardian + 4 random) + sets G Dead Covenant / H Ancient Guard
+// prev: v1.0.108   // v1.0.108: version bump — player v0.5.27 (Ascendant unlock condition on detail sheet)
+// prev: v1.0.107   // v1.0.107: version bump — player v0.5.26 (starter-set banner art)
+// prev: v1.0.106   // v1.0.106: version bump — board v0.6.25 / player v0.5.25 (new art + big-moment animations)
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -171,21 +174,61 @@ function _voice(monsterId, moment) {
   G.lastVoice = { seq: G.voiceSeq, id: monsterId, moment, playerIdx: G.currentPlayer };
 }
 
-// Starter sets — 6 sets × 5 cards each (no Mana cost during setup phase)
+// Starter sets — v1.0.109: 8 randomised element pools (no Mana cost during setup phase).
+// Each hand = 1 Guardian + 4 random Assailants/Vanguards from the set's elements.
+// Rules: max 2 Assailants, max 2 copies of any card; never Ascendants, Rares or Support.
+// Two players on the same set are rerolled until their hands differ by at least 2 cards.
 const STARTER_SETS = {
-  A: { name:'The Cabal',        theme:'Dark / Undead / Arcane',  desc:'2 Assailants + 2 Guardians + 1 Vanguard — shadow magic trinity',
-       summons:['nightshard','grave_specter','void_sentinel','rune_priestess','mana_weaver'] },
-  B: { name:'The Warpack',      theme:'Dark / Beast / Undead',   desc:'2 Assailants + 2 Guardians + 1 Vanguard — primal hunter force',
-       summons:['void_reaper','feral_striker','iron_hide','death_knight','cursed_revenant'] },
-  C: { name:'The Order',        theme:'Light / Arcane / Nature', desc:'2 Assailants + 2 Guardians + 1 Vanguard — holy nature alliance',
-       summons:['dawn_striker','spell_wraith','dawnguard','ancient_oak','vine_stalker'] },
-  D: { name:'The Arcane Watch', theme:'Arcane',                  desc:'1 Assailant + 1 Guardian + 3 Vanguards — versatile arcane mastery',
-       summons:['spell_wraith','rune_priestess','arch_mage','runic_duelist','mana_weaver'] },
-  E: { name:'Divine Guard',     theme:'Light',                   desc:'2 Guardians + 1 Assailant + 2 Vanguards — impenetrable light fortress',
-       summons:['dawnguard','dawnguard','dawn_striker','radiant_lancer','sunfire_herald'] },
-  F: { name:'Chaos Legion',     theme:'Dark',                    desc:'3 Assailants + 2 Vanguards — pure dark aggression',
-       summons:['nightshard','nightshard','void_reaper','dusk_blade','umbral_stalker'] },
+  A: { name:'The Cabal',        theme:'Dark / Undead / Arcane',  elements:['Dark','Undead','Arcane'] },
+  B: { name:'The Warpack',      theme:'Dark / Beast / Undead',   elements:['Dark','Beast','Undead'] },
+  C: { name:'The Order',        theme:'Light / Arcane / Nature', elements:['Light','Arcane','Nature'] },
+  D: { name:'The Arcane Watch', theme:'Arcane',                  elements:['Arcane'] },
+  E: { name:'Divine Guard',     theme:'Light',                   elements:['Light'] },
+  F: { name:'Chaos Legion',     theme:'Dark',                    elements:['Dark'] },
+  G: { name:'Dead Covenant',    theme:'Undead',                  elements:['Undead'] },
+  H: { name:'Ancient Guard',    theme:'Nature / Beast',          elements:['Nature','Beast'] },
 };
+const STARTER_SET_KEYS = Object.keys(STARTER_SETS);
+const STARTER_HAND_SIZE = 5, STARTER_MAX_ASSAILANTS = 2, STARTER_MAX_COPIES = 2, STARTER_MIN_DIFF = 2;
+
+function _pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+// One random hand (array of template ids) for a set.
+function rollStarterHand(setKey) {
+  const els = STARTER_SETS[setKey].elements;
+  const inSet = r => els.includes(r.type);
+  const guardians = ROSTER.filter(r => r.arch === 'guardian' && inSet(r)).map(r => r.id);
+  const flex      = ROSTER.filter(r => (r.arch === 'assailant' || r.arch === 'vanguard') && inSet(r));
+  const hand = [_pick(guardians)];
+  const count = id => hand.filter(h => h === id).length;
+  while (hand.length < STARTER_HAND_SIZE) {
+    const assailants = hand.filter(id => ROSTER.find(r => r.id === id).arch === 'assailant').length;
+    const ok = flex.filter(r => count(r.id) < STARTER_MAX_COPIES &&
+                                !(r.arch === 'assailant' && assailants >= STARTER_MAX_ASSAILANTS));
+    hand.push(_pick(ok).id);
+  }
+  return hand;
+}
+
+// Cards that differ between two hands (multiset difference, one direction — sizes are equal).
+function _handDiff(a, b) {
+  const rest = [...b]; let diff = 0;
+  for (const id of a) { const i = rest.indexOf(id); if (i >= 0) rest.splice(i, 1); else diff++; }
+  return diff;
+}
+
+// Rolls a hand that differs by 2+ cards from every hand already dealt from the same set.
+function dealStarterHand(setKey, existingPlayers) {
+  const others = (existingPlayers || []).filter(p => p.starterSet === setKey && p.starterHand).map(p => p.starterHand);
+  let best = null, bestScore = -1;
+  for (let tries = 0; tries < 200; tries++) {
+    const h = rollStarterHand(setKey);
+    const score = others.length ? Math.min(...others.map(o => _handDiff(h, o))) : STARTER_HAND_SIZE;
+    if (score >= STARTER_MIN_DIFF) return h;
+    if (score > bestScore) { best = h; bestScore = score; }
+  }
+  return best;   // fallback — closest we found
+}
 
 const PLAYER_COLORS = ['#e05252','#5ca8e0','#5dc97d','#e0b050','#c07fd8','#60cdc0'];
 const CHANGE_ELEMENT_COST = 18;
@@ -399,10 +442,11 @@ function scheduleRoomAction(roomCode, fn, ms) {
 
 function addPlayer(name, color, starterSet) {
   const idx = G.players.length;
-  const hand = STARTER_SETS[starterSet].summons.map(id => makeSummon(id));
+  const starterHand = dealStarterHand(starterSet, G.players);   // v1.0.109: randomised
+  const hand = starterHand.map(id => makeSummon(id));
   const sessionKey = crypto.randomBytes(8).toString('hex');
   return {
-    idx, name, color, starterSet, sessionKey,
+    idx, name, color, starterSet, starterHand, sessionKey,
     isConnected: true,
     mana: 40,
     hand,            // summon instances
@@ -2119,7 +2163,7 @@ const handlers = {
     }
 
     if (G.players.length >= 6) return sendError(ws, 'Game full (max 6 players)');
-    const set   = ['A','B','C','D','E','F'].includes(data.starterSet) ? data.starterSet : 'C';
+    const set   = STARTER_SET_KEYS.includes(data.starterSet) ? data.starterSet : 'C';
     const color = PLAYER_COLORS[G.players.length];
     const p = addPlayer(name, color, set);
     G.players.push(p);

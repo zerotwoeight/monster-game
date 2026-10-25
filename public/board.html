@@ -221,7 +221,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 
 /* Lobby splash screen */
 .lobby-splash{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 40px;}
-.lobby-brand{text-align:center;margin-bottom:14px;}
+.lobby-brand{text-align:center;margin-bottom:10px;}
+/* v0.6.25: logo art replaces the text title */
+.lobby-brand-logo{display:block;width:360px;height:auto;margin:0 auto -4px;filter:drop-shadow(0 8px 22px rgba(0,0,0,.65));animation:lobbyLogoFloat 6s ease-in-out infinite;}
+@keyframes lobbyLogoFloat{50%{transform:translateY(-6px);}}
+.lobby-circle-glow{position:absolute;left:50%;top:63%;width:320px;height:100px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(255,220,150,.4),transparent);mix-blend-mode:screen;z-index:1;pointer-events:none;animation:lobbyGlow 3.2s ease-in-out infinite;}
+@keyframes lobbyGlow{50%{opacity:.35;transform:translate(-50%,-50%) scale(1.08);}}
+@media (prefers-reduced-motion:reduce){.lobby-brand-logo,.lobby-circle-glow{animation:none;}}
 .lobby-brand-title{font-family:'Cinzel',serif;font-size:40px;font-weight:700;letter-spacing:.14em;color:var(--gold-glow);text-shadow:0 0 50px rgba(201,160,90,.45);}
 .lobby-brand-sub{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--text-mute);margin-top:6px;font-family:'Cinzel',serif;}
 .lobby-panels{display:flex;gap:18px;align-items:stretch;width:100%;max-width:960px;}
@@ -254,8 +260,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 @keyframes bounce{0%,100%{transform:translateY(0);opacity:.45}50%{transform:translateY(-6px);opacity:1}}
 
 /* Game over / Winners screen */
-.winners-overlay{position:absolute;inset:0;z-index:30;background:rgba(6,6,16,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;overflow:hidden;}
+.winners-overlay{position:absolute;inset:0;z-index:30;background:linear-gradient(rgba(6,4,12,.8),rgba(6,4,12,.88)),url(/img/backgrounds/splash.webp) center/cover no-repeat;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;overflow:hidden;}
 .winners-bg-art{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(145,132,217,.08) 0%,transparent 65%),radial-gradient(ellipse at 80% 80%,rgba(201,160,90,.05) 0%,transparent 50%);pointer-events:none;}
+.winners-logo{display:block;width:340px;height:auto;margin:-20px 0 4px;position:relative;filter:drop-shadow(0 0 24px rgba(170,90,255,.35));}  /* v0.6.25 */
 .winners-eyebrow{font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent-pale);font-family:'Cinzel',serif;margin-bottom:10px;position:relative;}
 .winners-title{font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--text-mute);margin-bottom:4px;position:relative;}
 .winners-champion{font-family:'Cinzel',serif;font-size:54px;font-weight:700;letter-spacing:.06em;text-shadow:0 0 60px currentColor;position:relative;line-height:1.05;text-align:center;}
@@ -432,6 +439,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 
 <script src="/common.js"></script>
 <script src="/board-fx.js"></script>
+<script src="/moments.js"></script>  <!-- v0.6.25: big-moment animations -->
 <script>
 'use strict';
 
@@ -1876,12 +1884,16 @@ function renderLobby(app){
 
   // Background image
   const bg = document.createElement('div');
-  bg.style.cssText = `position:absolute;inset:0;background:url(${BKG_SRC}) center/cover no-repeat;z-index:0;`;
+  // v0.6.25: new splash art behind the lobby (summoning circle glow pulses beneath the panels)
+  bg.style.cssText = `position:absolute;inset:0;background:url(/img/backgrounds/splash.webp) center/cover no-repeat;z-index:0;`;
   root.appendChild(bg);
+  const glow = document.createElement('div');
+  glow.className = 'lobby-circle-glow';
+  root.appendChild(glow);
 
-  // Dark overlay
+  // Overlay: light at the top so the art shows, darker behind the panels
   const ov = document.createElement('div');
-  ov.style.cssText = 'position:absolute;inset:0;background:rgba(6,6,16,.76);z-index:1;';
+  ov.style.cssText = 'position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,6,16,.15) 0%,rgba(8,6,16,.05) 28%,rgba(8,6,16,.55) 55%,rgba(8,6,16,.88) 100%);z-index:1;';
   root.appendChild(ov);
 
   const splash = document.createElement('div');
@@ -1898,8 +1910,8 @@ function renderLobby(app){
   const brand = document.createElement('div');
   brand.className = 'lobby-brand';
   brand.innerHTML = `
-    <div class="lobby-brand-title">Summoners Gambit</div>
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.23 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.23</div>
+    <img class="lobby-brand-logo" src="/img/logos/logo-main.webp" alt="Summoner's Gambit">
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.25 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.25</div>
     <div style="margin-top:6px;"><button class="mute-btn" id="mute-btn" onclick="openAudioSettings()" title="Sound settings" style="width:auto;padding:0 14px;gap:6px;display:inline-flex;align-items:center;font-size:14px;">${_musicLvl()<=0 && _sfxLvl()<=0 ? '🔇' : '⚙'}&nbsp;Sound Settings</button></div>`;
   splash.appendChild(brand);
 
@@ -2078,7 +2090,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.6.23</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.6.25</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -2424,7 +2436,8 @@ function renderGame(app){
     addAward(statMax(p=>p.peakTiles||0), '📍 Peak Tiles');
 
     const wo = document.createElement('div');
-    wo.className = 'winners-overlay';
+    wo.className = 'winners-overlay' + ((window._goEnterUntil && Date.now() < window._goEnterUntil) ? ' go-enter' : '');
+    wo.style.setProperty('--n', rankings.length);
     wo.style.cssText = 'position:absolute;inset:0;z-index:30;';
 
     const wasLastStanding = rankings[0]?.wasLastStanding || false;
@@ -2435,19 +2448,22 @@ function renderGame(app){
       const awardBadge = playerAwards.length ? `<span class="wt-award">${playerAwards.join(' · ')}</span>` : '';
       const elimBadge = isElim ? `<span class="wt-award" style="color:#e05252">${p.forfeited ? '🏳 Left' : '💀 Eliminated'}</span>` : '';
       const medal = rank===0 ? '🥇' : rank===1 ? '🥈' : rank===2 ? '🥉' : `${rank+1}.`;
-      const rowStyle = isElim ? `color:${p.color};padding-left:16px;opacity:.5;` : `color:${p.color};padding-left:16px;`;
+      let rowStyle = isElim ? `color:${p.color};padding-left:16px;opacity:.5;` : `color:${p.color};padding-left:16px;`;
+      rowStyle += `--r:${rank};`;
+      const rv = `--r:${rank};`;
       return `<div class="wt-cell wt-row-${rank+1}" style="${rowStyle}">${medal} ${p.name}${awardBadge}${elimBadge}</div>
-        <div class="wt-cell wt-row-${rank+1}" style="${isElim?'opacity:.5':'}'}">${tiles}</div>
-        <div class="wt-cell wt-row-${rank+1}" style="${isElim?'opacity:.5':'}'}">${p.mana ?? '—'}</div>
-        <div class="wt-cell wt-row-${rank+1}" style="${isElim?'opacity:.5':'}'}">${p.battlesWon ?? '—'}</div>
-        <div class="wt-cell wt-row-${rank+1}" style="${isElim?'opacity:.5':'}'}">${p.battlesLost ?? '—'}</div>
-        <div class="wt-cell wt-row-${rank+1}" style="${isElim?'opacity:.5':'}'}">${p.peakTiles ?? '—'}</div>
-        <div class="wt-cell wt-row-${rank+1}" style="${isElim?'opacity:.5':'}'}">${p.totalManaEarned ?? '—'}</div>`;
+        <div class="wt-cell wt-row-${rank+1}" style="${rv}${isElim?'opacity:.5':''}">${tiles}</div>
+        <div class="wt-cell wt-row-${rank+1}" style="${rv}${isElim?'opacity:.5':''}">${p.mana ?? '—'}</div>
+        <div class="wt-cell wt-row-${rank+1}" style="${rv}${isElim?'opacity:.5':''}">${p.battlesWon ?? '—'}</div>
+        <div class="wt-cell wt-row-${rank+1}" style="${rv}${isElim?'opacity:.5':''}">${p.battlesLost ?? '—'}</div>
+        <div class="wt-cell wt-row-${rank+1}" style="${rv}${isElim?'opacity:.5':''}">${p.peakTiles ?? '—'}</div>
+        <div class="wt-cell wt-row-${rank+1}" style="${rv}${isElim?'opacity:.5':''}">${p.totalManaEarned ?? '—'}</div>`;
     }).join('');
 
     wo.innerHTML = `
       <div class="winners-bg-art"></div>
-      <div class="winners-eyebrow">${wasLastStanding ? '⚔️ Last Player Standing' : 'Game Over — Final Standings'}</div>
+      <img class="winners-logo" src="/img/logos/logo-gameover.webp" alt="Game Over">
+      <div class="winners-eyebrow">${wasLastStanding ? '⚔️ Last Player Standing' : 'Final Standings'}</div>
       <div class="winners-title">Champion</div>
       <div class="winners-champion" style="color:${champ?.color||'var(--gold-glow)'}">
         ${champ?.name||'—'}
@@ -2463,7 +2479,7 @@ function renderGame(app){
         <div class="wt-head">Earned</div>
         ${tableRows}
       </div>
-      <div style="margin-top:28px;display:flex;gap:12px;position:relative;align-items:center;">
+      <div class="winners-actions" style="margin-top:24px;display:flex;gap:12px;position:relative;align-items:center;">
         <button onclick="doNewGame()" style="
           font-family:'Cinzel',serif;font-size:13px;letter-spacing:.12em;text-transform:uppercase;
           background:linear-gradient(135deg,#3a2e5e,#2a1e4e);
@@ -2684,7 +2700,7 @@ function _playSfx(audio) {
 // Server sets G.lastVoice {seq, id, moment} on claim / swap / temple / chest free summon.
 // Clips: /audio/voices/<id>_line.mp3 (spoken) or <id>_sfx.mp3 (creature sound). Line wins when both exist.
 // Rules: one voice at a time (new stops old) · 3.5 s cooldown per monster · music ducks while it plays.
-const VOICE_HAS_LINE = new Set(['ancient_oak','arcane_arbiter','arch_mage','ardent_saint','briar_sprite','cursed_revenant','dawn_striker','dawnguard','death_knight','demon_lord','dusk_blade','field_medic','grave_specter','grove_warden','hex_stalker','high_paladin','luminar_operative','mana_weaver','pack_hunter','plague_herald','radiant_lancer','rune_priestess','runic_duelist','shade_walker','shadow_paladin','solar_knight','sorcerer','spell_wraith','succubus','sunfire_herald','thornling','verdant_sorcerer','void_reaper','weapon_smith','world_tree']);
+const VOICE_HAS_LINE = new Set(['ancient_oak','arcane_arbiter','arch_mage','ardent_saint','briar_sprite','cursed_revenant','dawn_striker','dawnguard','death_knight','demon_lord','dusk_blade','field_medic','grave_specter','grove_warden','high_paladin','luminar_operative','mana_weaver','pack_hunter','plague_herald','radiant_lancer','rune_priestess','runic_duelist','shade_walker','shadow_paladin','solar_knight','sorcerer','spell_wraith','succubus','sunfire_herald','thornling','verdant_sorcerer','void_reaper','weapon_smith','world_tree']);   // v0.6.24: Hex Stalker sound-only
 const VOICE_HAS_SFX = new Set(['bone_wraith','cursed_revenant','feral_striker','forge','hex_stalker','iron_hide','mana_refinery','moss_golem','nightshard','razorclaw','red_dragon','spell_wraith','stoneback','stormtalon','umbral_stalker','vine_stalker','void_reaper','void_sentinel']);   // v0.6.23: battles prefer the creature sound
 const VOICE_COOLDOWN_MS = 3500, VOICE_DUCK = 0.35;
 let _voiceCur = null;
@@ -2777,7 +2793,16 @@ function _fireRoundCallout(type) {
   }
   _playSfx(_sfxWarnSting);
   if (type === 'final') _crossfadeToFinal();
-  const holdMs = type === 'final' ? 2000 : 1500;
+  // v0.6.25: animated art callouts (moments.js) — longer holds so the moment lands
+  let holdMs = type === 'final' ? 2000 : 1500;
+  if (window.SGMoments) {
+    ov.className = '';                                   // old text overlay stays hidden
+    holdMs = type === 'final' ? 4500 : 3500;
+    if (type === 'final') SGMoments.final(holdMs, 'This is the last round');
+    else SGMoments.penultimate(holdMs, 'One more round after this');
+    setTimeout(() => send('round_callout_complete'), holdMs + 450);
+    return;
+  }
   setTimeout(() => {
     ov.classList.add('fade-out');
     setTimeout(() => { ov.className = ''; }, 400);
@@ -2788,7 +2813,14 @@ function _fireRoundCallout(type) {
 function _fireGameOverFanfare() {
   _bgAudio.pause(); _bgFinal.pause(); _musicTrack = null;
   const fo = document.getElementById('go-fanfare-overlay');
-  if (fo) {
+  // v0.6.25: animated Game Over (moments.js) hands off into the winners screen
+  if (window.SGMoments) {
+    const cols = (G && G.players ? G.players.map(p => p.color).filter(Boolean) : []);
+    SGMoments.gameOver(() => {
+      window._goEnterUntil = Date.now() + 4000;
+      document.querySelectorAll('.winners-overlay').forEach(w => w.classList.add('go-enter'));
+    }, cols);
+  } else if (fo) {
     fo.className = 'visible';
     const holdMs = 4500;
     setTimeout(() => {
