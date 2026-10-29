@@ -1,5 +1,11 @@
 /* ─────────────────────────────────────────────────────────────────────────────
- * Summoner's Gambit — board-fx.js  (v0.6.29, Tier 1–3 board interaction effects)
+ * Summoner's Gambit — board-fx.js  (v0.6.35, Tier 1–3 board interaction effects)
+ *  v0.6.35: sxMoment — tarot Sanctioned / Redeemed moments (card flips to Sanctioned, turns over to Life)
+ *  v0.6.34: Sanction table SFX hooks (opts.sfx: fanfare / blessing / curse / jackpot / fly)
+ *  v0.6.33: Omen reveals on the Sanction card table
+ *  v0.6.32: Sacrifice reveal holds the summon on its tile until the card lands (sxTileHold)
+ *  v0.6.31: BoardFX.sxTable() — Sanction turn card table (deal → carousel → card back → reveal), spec in SANCTION_REVEAL_SPEC.md
+ *  v0.6.30: ring + sparks exported (Wheel of Fortune flip on the board)
  *  v0.6.26: BoardFX.wcTable() — face-down Wild Card table dealt on doubles (grey → live → flip / pass)
  *
  *  BoardFX.rollDice(anchorEl, dice, total, opts) → Promise (resolves when dice land)
@@ -20,6 +26,29 @@
   // ── Styles ────────────────────────────────────────────────────────────────
   const css = `
   #fx-layer{position:fixed;inset:0;pointer-events:none;z-index:9000;overflow:hidden;}
+  .sxt-stage{position:absolute;inset:0;perspective:1500px;}
+  .sxt-vign{position:absolute;inset:0;opacity:0;background:radial-gradient(ellipse at var(--vx) var(--vy), transparent 18%, rgba(0,0,0,.72) 68%);}
+  .sxt-card{position:absolute;left:0;top:0;will-change:transform;}
+  .sxt-in{position:relative;width:100%;height:100%;transform-style:preserve-3d;}
+  .sxt-face{position:absolute;inset:0;border-radius:10px;overflow:hidden;backface-visibility:hidden;background:#151627 center/cover no-repeat;box-shadow:0 8px 22px rgba(0,0,0,.65);}
+  .sxt-face img{width:100%;height:100%;object-fit:cover;display:block;}
+  .sxt-fb{transform:rotateY(180deg);}
+  .sxt-glow{position:absolute;inset:-2px;border-radius:12px;opacity:0;transition:opacity .3s;box-shadow:0 0 0 2px var(--gc,#ffd77a),0 0 34px var(--gc,#ffd77a);}
+  .sxt-card.glow .sxt-glow{opacity:1;}
+  .sxt-sm{position:absolute;inset:0;border:2px solid var(--ec,#c9a05a);border-radius:10px;display:flex;flex-direction:column;justify-content:flex-end;}
+  .sxt-band{background:linear-gradient(180deg,transparent,rgba(9,9,22,.95) 40%);padding:1.6em .5em .5em;text-align:center;}
+  .sxt-name{font-family:'Cinzel',serif;font-weight:700;font-size:1.05em;color:var(--ec,#e8c26e);}
+  .sxt-own{font-size:.8em;font-weight:600;margin-top:.15em;font-family:Inter,sans-serif;}
+  .sxt-lbl{position:absolute;left:50%;top:-1.9em;transform:translateX(-50%);font-family:'Cinzel',serif;font-weight:700;font-size:1em;padding:.2em .6em;border-radius:5px;background:#2a1418;border:1px solid #a8434a;color:#ff8a80;white-space:nowrap;}
+  .sxt-lbl.own{background:#3a2a10;border-color:#c9a05a;color:#ffcc80;}
+  .sxt-rays{position:absolute;border-radius:50%;opacity:0;background:repeating-conic-gradient(from 0deg, var(--rc) 0deg 6deg, transparent 6deg 18deg);-webkit-mask:radial-gradient(circle,#000 0 28%,transparent 70%);mask:radial-gradient(circle,#000 0 28%,transparent 70%);}
+  .sxt-status,.sxt-cap{position:absolute;transform:translate(-50%,0);text-align:center;font-family:'Cinzel',serif;font-weight:900;letter-spacing:.14em;white-space:nowrap;text-shadow:0 2px 6px #000;}
+  .sxt-status{color:#ecebf2;}
+  .sxt-status em{font-style:normal;}
+  .sxt-status small,.sxt-cap small{display:block;font-family:Inter,sans-serif;font-weight:500;letter-spacing:.02em;color:#a3a6bb;margin-top:.45em;font-size:.8em;}
+  .sxt-cap{opacity:0;}
+  .sxt-cap small{color:#ecebf2;letter-spacing:.14em;font-family:'Cinzel',serif;font-weight:700;font-size:.5em;}
+  .sxt-flash{position:absolute;border-radius:50%;}
   .fx-abs{position:absolute;left:0;top:0;will-change:transform,opacity;}
   .fx-dice-stage{position:absolute;perspective:900px;}
   .fx-die{position:absolute;transform-style:preserve-3d;}
@@ -786,6 +815,313 @@
     });
   }
 
+  // ═══════════════ v0.6.31: Sanction card table ═══════════════
+  // State-driven from board.html: sxTable(G, { tileEl(pos), onRevealDone(seq), myColor }) on every render.
+  // pick_tile: one summon card lands, fans out to the three offers; the carousel follows sanction.previewPos.
+  // own / omen: the other two slide behind, neutral fanfare, flip to the Wheel / Omen card back, breathe.
+  // reveal: neutral fanfare, flip to the result art (colour only after it's face-up), caption, fly to the tile.
+  const SXT = { seq: 0, stage: null, cards: [], offers: [], idx: 1, state: '', revealSeq: 0, q: Promise.resolve(), breath: null, busy: false, hold: null, tileHold: null, lastBoard: null };
+  const SXT_NEUTRAL = '#d8d2ff';
+  const sxT = () => (typeof SX_TIMING !== 'undefined' ? SX_TIMING : { speed: 1.5, cardW: 100, revealScale: 1.5, spread: 120, land: 520, fan: 620, turn: 420, gather: 480, fanfare: 1100, flip: 820, result: 1400, settle: 650 });
+  const sxD = b => (level === 'reduced' ? .55 : 1) * (sxT()[b] || 0) / sxT().speed;
+  function _sxtGeo() {
+    const k = scale(), bc = boardCenter(), w = sxT().cardW * k, h = w * 532 / 300;
+    return { k, cx: bc.x, cy: bc.y - 10 * k, w, h };
+  }
+  function _sxtAt(x, y, sc = 1, rot = 0, ry = 0) { const g = _sxtGeo(); return `translate(${x - g.w / 2}px,${y - g.h / 2}px) rotate(${rot}deg) rotateY(${ry}deg) scale(${sc})`; }
+  function _sxtAnim(el, frames, ms, opt = {}) { return el.animate(frames, { duration: Math.max(1, ms), easing: opt.ease || 'cubic-bezier(.3,.7,.3,1)', fill: 'forwards', delay: opt.delay || 0 }).finished.catch(() => {}); }
+  function _sxtClear(fade) {
+    const st = SXT.stage; SXT.stage = null; SXT.cards = []; SXT.state = ''; SXT.busy = false; SXT.hold = null; SXT.tileHold = null;
+    if (SXT.breath) { try { SXT.breath.cancel(); } catch (e) {} SXT.breath = null; }
+    if (!st) return;
+    if (fade) { st.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 450, fill: 'forwards' }).finished.then(() => st.remove(), () => st.remove()); } else st.remove();
+  }
+  function _sxtSlot(j) { let d = (j - SXT.idx + 3) % 3; return d === 2 ? -1 : d; }
+  function _sxtSlotT(s) { const g = _sxtGeo(), sp = sxT().spread * g.k; return s === 0 ? _sxtAt(g.cx, g.cy, 1.28) : _sxtAt(g.cx + s * sp, g.cy + 14 * g.k, .86, s * 4, s * -22); }
+  function _sxtStatus(html) { if (!SXT.stage) return; const el = SXT.stage.querySelector('.sxt-status'); if (el) el.innerHTML = html || ''; }
+  function _sxtVign(on) { const v = SXT.stage && SXT.stage.querySelector('.sxt-vign'); if (v) _sxtAnim(v, [{ opacity: getComputedStyle(v).opacity }, { opacity: on ? 1 : 0 }], 400); }
+  function _sxtBuild(G, opts) {
+    _sxtClear(false);
+    const g = _sxtGeo(), sx = G.sanction;
+    const stage = mk('sxt-stage', {}); stage.classList.remove('fx-abs'); SXT.stage = stage;
+    stage.innerHTML = `<div class="sxt-vign" style="--vx:${g.cx}px;--vy:${g.cy}px"></div><div class="sxt-status" style="left:${g.cx}px;top:${g.cy + 172 * g.k}px;font-size:${Math.round(15 * g.k)}px"></div>`;
+    SXT.seq = sx.seq; SXT.offers = sx.offers.slice(); SXT.idx = Math.min(1, SXT.offers.length - 1); SXT.state = 'built'; SXT.revealSeq = sx.revealSeq || 0;
+    const cur = G.players.find(p => p.idx === sx.playerIdx);
+    SXT.cards = SXT.offers.map(pos => {
+      const t = G.board[pos], m = t.summon || {}, ow = G.players.find(p => p.idx === t.ownerId), own = t.ownerId === sx.playerIdx;
+      const ec = (typeof TYPE_COLOR !== 'undefined' && TYPE_COLOR[m.type]) || '#c9a05a';
+      const src = m.id && typeof monsterAnimSrc === 'function' ? monsterAnimSrc(m.id) : '';
+      const fallback = m.id && typeof monsterCardSrc === 'function' ? monsterCardSrc(m.id) : '';
+      const c = document.createElement('div'); c.className = 'sxt-card';
+      Object.assign(c.style, { width: g.w + 'px', height: g.h + 'px', fontSize: Math.round(12 * g.k) + 'px' });
+      c.innerHTML = `<div class="sxt-lbl${own ? ' own' : ''}">Tile ${pos}</div><div class="sxt-in">
+          <div class="sxt-face sxt-fa">${src ? `<img src="${src}" alt="" onerror="this.onerror=null;this.src='${fallback}'">` : ''}<div class="sxt-sm" style="--ec:${ec}"><div class="sxt-band"><div class="sxt-name">${m.name || ''}</div><div class="sxt-own" style="color:${own ? '#5dc97d' : (ow ? ow.color : '#a3a6bb')}">${own ? 'Their own tile' : (ow ? ow.name : '')}</div></div></div></div>
+          <div class="sxt-face sxt-fb"></div></div><div class="sxt-glow"></div>`;
+      c._ry = 0; c._pos = pos; c._own = own;
+      stage.appendChild(c); return c;
+    });
+    _sxtStatus(`<em style="color:${cur ? cur.color : '#e05252'}">${cur ? cur.name.toUpperCase() : ''}'S</em> SANCTION TURN<small>Choosing one of three tiles</small>`);
+    SXT.curName = cur ? cur.name : '';
+    SXT.curColor = cur ? cur.color : '#e05252';
+  }
+  function _sxtPlace(animate) {
+    const g = _sxtGeo();
+    return Promise.all(SXT.cards.map((c, j) => {
+      const s = _sxtSlot(j), to = _sxtSlotT(s), from = c._t || to;
+      c.style.zIndex = s === 0 ? 30 : 10;
+      c.classList.toggle('glow', s === 0); c.style.setProperty('--gc', '#ffd77a');
+      c.style.filter = s === 0 ? '' : 'brightness(.6) saturate(.7)';
+      c.querySelector('.sxt-lbl').style.opacity = s === 0 ? 1 : .55;
+      const wrap = c._s !== undefined && Math.abs(c._s - s) === 2; c._s = s; c._t = to;
+      if (!animate) { c.getAnimations().forEach(a => a.cancel()); c.style.transform = to; return Promise.resolve(); }
+      return _sxtAnim(c, wrap ? [{ transform: from, opacity: 1 }, { transform: _sxtAt(g.cx, g.cy - 30 * g.k, .6), opacity: .35, offset: .5 }, { transform: to, opacity: 1 }] : [{ transform: from }, { transform: to }], sxD('turn'), { ease: 'cubic-bezier(.35,.7,.3,1)' });
+    }));
+  }
+  async function _sxtDeal() {
+    const g = _sxtGeo(); SXT.busy = true;
+    SXT.cards.forEach((c, j) => { c.style.zIndex = j === SXT.idx ? 30 : 10 + j; c.querySelector('.sxt-lbl').style.opacity = 0; });
+    if (level === 'reduced') { _sxtPlace(false); await Promise.all(SXT.cards.map(c => _sxtAnim(c, [{ opacity: 0 }, { opacity: 1 }], 350))); SXT.busy = false; return; }
+    await Promise.all(SXT.cards.map(c => _sxtAnim(c, [{ transform: _sxtAt(g.cx + 60 * g.k, g.cy - 560 * g.k, 1.1, -16), opacity: 0 }, { opacity: 1, offset: .3 }, { transform: _sxtAt(g.cx, g.cy + 8 * g.k, 1, 1), offset: .82 }, { transform: _sxtAt(g.cx, g.cy) }], sxD('land'))));
+    ring(g.cx, g.cy + g.h / 2, 70 * g.k, '#c9a05a', { dur: 500, grow: 2, width: 3 });
+    await Promise.all(SXT.cards.map((c, j) => {
+      const s = _sxtSlot(j), to = _sxtSlotT(s); c._t = to; c._s = s;
+      _sxtAnim(c.querySelector('.sxt-lbl'), [{ opacity: 0 }, { opacity: s === 0 ? 1 : .55 }], sxD('fan'));
+      return _sxtAnim(c, [{ transform: _sxtAt(g.cx, g.cy) }, { transform: _sxtAt(g.cx + s * sxT().spread * g.k * .5, g.cy - 20 * g.k, 1.05, s * 10), offset: .45 }, { transform: to }], sxD('fan'), { ease: 'cubic-bezier(.3,.8,.3,1)' });
+    }));
+    _sxtPlace(false); SXT.busy = false;
+  }
+  // fanfare (neutral) → flip to img → colour lands. Returns once the card is face-up.
+  async function _sxtFlip(c, img, color, o = {}) {
+    const g = _sxtGeo(), x = g.cx, y = g.cy - 10 * g.k, base = o.base || 1.28, big = o.big || base, reduced = level === 'reduced';
+    _sxtVign(true);
+    let rays = null;
+    if (o.sfx && sxD('fanfare') > 0) o.sfx('fanfare');
+    if (!reduced && sxD('fanfare') > 0) {
+      rays = document.createElement('div'); rays.className = 'sxt-rays'; rays.style.setProperty('--rc', SXT_NEUTRAL + '55');
+      const R = 300 * g.k; Object.assign(rays.style, { left: x - R + 'px', top: y - R + 'px', width: R * 2 + 'px', height: R * 2 + 'px' });
+      SXT.stage.insertBefore(rays, SXT.stage.querySelector('.sxt-card'));
+      rays.animate([{ transform: 'rotate(0)', opacity: 0 }, { opacity: 1, offset: .3 }, { transform: 'rotate(60deg)', opacity: 1 }], { duration: sxD('fanfare') + sxD('flip'), fill: 'forwards' });
+      c.classList.add('glow'); c.style.setProperty('--gc', SXT_NEUTRAL);
+      const n = 10;
+      await _sxtAnim(c, [...Array(n + 1)].map((_, i) => ({ transform: _sxtAt(x + (i % 2 ? 1.8 : -1.8) * (i / n) * g.k, y - 18 * g.k * (i / n), base + (big - base) * .4 * (i / n), (i % 2 ? .9 : -.9) * (i / n)) })), sxD('fanfare'), { ease: 'linear' });
+    } else if (sxD('fanfare') > 0) await new Promise(r => setTimeout(r, sxD('fanfare') * .5));
+    const inner = c.querySelector('.sxt-in'), cur = c._ry, next = cur + 180, odd = (next / 180) % 2 === 1;
+    const face = odd ? c.querySelector('.sxt-fb') : c.querySelector('.sxt-fa');
+    face.innerHTML = ''; face.style.backgroundImage = `url('${img}')`;
+    face.style.transform = (odd ? 'rotateY(180deg)' : 'rotateY(0deg)') + (o.upsideDown ? ' rotateZ(180deg)' : '');
+    c._ry = next;
+    const fromS = base + (big - base) * .4;
+    await Promise.all([
+      _sxtAnim(c, [{ transform: _sxtAt(x, y - 18 * g.k, fromS) }, { transform: _sxtAt(x, y - 40 * g.k, big + .15), offset: .5 }, { transform: _sxtAt(x, y - 24 * g.k, big) }], sxD('flip')),
+      reduced ? (inner.style.transform = `rotateY(${next}deg)`, Promise.resolve()) :
+        _sxtAnim(inner, [{ transform: `rotateY(${cur}deg)` }, { transform: `rotateY(${cur + 90}deg)`, offset: .5 }, { transform: `rotateY(${next}deg)` }], sxD('flip'), { ease: 'cubic-bezier(.5,0,.3,1)' }),
+    ]);
+    // face-up: now the colour lands
+    if (o.sfx && o.landSfx) o.landSfx.forEach(k => o.sfx(k));
+    c.classList.add('glow'); c.style.setProperty('--gc', color);
+    if (!reduced) {
+      const f = document.createElement('div'); f.className = 'sxt-flash'; const F = 260 * g.k;
+      Object.assign(f.style, { left: x - F + 'px', top: y - 24 * g.k - F + 'px', width: F * 2 + 'px', height: F * 2 + 'px', background: `radial-gradient(circle, ${color} 0%, transparent 60%)` });
+      SXT.stage.appendChild(f); f.animate([{ opacity: .9, transform: 'scale(.4)' }, { opacity: 0, transform: 'scale(1.2)' }], { duration: 650, easing: 'ease-out' }).finished.then(() => f.remove(), () => f.remove());
+      ring(x, y - 24 * g.k, 130 * g.k, color, { dur: 900, grow: 2.3, width: 4 });
+      sparks(x, y - 24 * g.k, color, o.sparks || 20, 240 * g.k, { dur: 950, size: 6 });
+    }
+    if (rays) { rays.style.setProperty('--rc', color + '66'); rays.animate([{ opacity: 1, transform: 'rotate(60deg) scale(1)' }, { opacity: 1, transform: 'rotate(75deg) scale(1.08)', offset: .5 }, { opacity: 0, transform: 'rotate(90deg) scale(1.12)' }], { duration: 1300, fill: 'forwards' }).finished.then(() => rays.remove(), () => rays.remove()); }
+    c._t = _sxtAt(x, y - 24 * g.k, big);
+  }
+  async function _sxtChoose(G, pickedPos) {
+    const g = _sxtGeo(); SXT.busy = true;
+    const ci = SXT.offers.indexOf(pickedPos); if (ci < 0) { SXT.busy = false; return; }
+    SXT.idx = ci; await _sxtPlace(true);
+    const c = SXT.cards[ci], others = SXT.cards.filter((_, j) => j !== ci);
+    SXT.chosen = c;
+    others.forEach(o => { o.style.zIndex = 5; o.querySelector('.sxt-lbl').style.opacity = 0; });
+    _sxtAnim(c.querySelector('.sxt-lbl'), [{ opacity: 1 }, { opacity: 0 }], 200);
+    await Promise.all([
+      ...others.map((o, k) => _sxtAnim(o, [{ transform: o._t }, { transform: _sxtAt(g.cx + (k ? 10 : -10) * g.k, g.cy - 4 * g.k, 1.18, k ? 4 : -4), filter: 'brightness(.45)' }], sxD('gather'), { ease: 'cubic-bezier(.4,0,.2,1)' })),
+      _sxtAnim(c, [{ transform: c._t }, { transform: _sxtAt(g.cx, g.cy - 10 * g.k, 1.28) }], sxD('gather')),
+    ]);
+    others.forEach(o => _sxtAnim(o, [{ opacity: 1 }, { opacity: 0 }], 300));
+    const own = c._own, t = G.board[pickedPos], ow = G.players.find(p => p.idx === t.ownerId);
+    _sxtStatus(`<em style="color:${SXT.curColor}">${SXT.curName.toUpperCase()}</em> CHOSE TILE ${pickedPos}<small>${own ? 'Their own tile' : `${ow ? ow.name + "'s" : 'A rival\'s'} ${t.summon ? t.summon.name : 'tile'}`}</small>`);
+    await _sxtFlip(c, own ? '/img/omens/omen-back-wheel.webp' : '/img/omens/omen-back-omen.webp', own ? '#ffd77a' : '#b5abfc', { base: 1.28, big: 1.36, sparks: 12, sfx: SXT.sfx });
+    _sxtVign(false);
+    _sxtStatus(`<em style="color:${SXT.curColor}">${SXT.curName.toUpperCase()}</em> IS DECIDING<small>${own ? 'Sacrifice, Redeem or turn the Wheel' : `Placing an Omen on ${ow ? ow.name + "'s" : 'a rival\'s'} tile`}</small>`);
+    const rest = _sxtAt(g.cx, g.cy - 34 * g.k, 1.36);
+    if (level !== 'reduced') SXT.breath = c.animate([{ transform: rest }, { transform: _sxtAt(g.cx, g.cy - 40 * g.k, 1.39) }, { transform: rest }], { duration: 2600, iterations: Infinity, easing: 'ease-in-out' });
+    c._t = rest; SXT.state = 'chosen'; SXT.busy = false;
+  }
+  const FORT = { 1: 'Glimmer', 2: 'Radiance', 3: 'Exaltation', '-1': 'Tarnish', '-2': 'Blight', '-3': 'Doom' };
+  async function _sxtReveal(G, opts) {
+    const sx = G.sanction, r = sx.result || {}, g = _sxtGeo(), c = SXT.chosen; SXT.busy = true;
+    if (!c) { SXT.busy = false; return; }
+    if (SXT.breath) { SXT.breath.cancel(); SXT.breath = null; c.style.transform = c._t; }
+    const sign = v => v > 0 ? '+' + v : v < 0 ? '−' + Math.abs(v) : '0';
+    let R;
+    if (r.kind === 'sacrifice') R = { img: '/img/omens/omen-sacrifice.webp', col: '#ff6b6b', title: 'SACRIFICE', sub: `${r.summonName || 'Summon'} destroyed · +${r.gain}✦ · Tile ${r.pos} goes neutral` };
+    else if (r.kind === 'redeem') R = { img: '/img/omens/omen-redeem.webp', col: '#ffd77a', title: 'REDEEMED', sub: `${SXT.curName} is back in the game` };
+    else if (r.kind === 'wheel') R = r.jackpot
+      ? { img: '/img/omens/omen-wheel-of-fortune.webp', col: r.upright ? '#ffd77a' : '#ff6b6b', title: `JACKPOT +${r.jackpot}✦`, sub: `Tile ${r.pos} stays at ${FORT[r.after]} ${sign(r.after)}`, upsideDown: !r.upright, jack: true }
+      : { img: '/img/omens/omen-wheel-of-fortune.webp', col: r.upright ? '#ffd77a' : '#ff6b6b', title: r.upright ? 'BLESSING' : 'CURSE', sub: `Tile ${r.pos} · ${r.after ? FORT[r.after] + ' ' + sign(r.after) : 'Neutral 0'}`, upsideDown: !r.upright };
+    else if (r.kind === 'omen') { const b = r.omenKind === 'blessing', ow = G.players.find(p => p.idx === r.ownerIdx);
+      R = { img: `/img/omens/omen-${r.id}.webp`, col: b ? '#ffd77a' : '#ff6b6b', title: (r.name || 'OMEN').toUpperCase(), sub: `${b ? 'Blessing' : 'Curse'} on ${ow ? ow.name + "'s" : 'the'} tile ${r.pos}`, pin: true }; }
+    else R = { img: '/img/omens/omen-back-omen.webp', col: '#b5abfc', title: 'OMEN', sub: '' };
+    // hold the tile's Fortune number at its old value until the card lands
+    SXT.hold = r.kind === 'wheel' ? { pos: r.pos, val: r.before } : r.kind === 'omen' ? { pos: r.pos, omen: r.replaced ? { id: r.replaced } : null, omenHold: true } : null;
+    // Sacrifice: keep drawing the summon on its tile (from the board as it was before the action)
+    SXT.tileHold = r.kind === 'sacrifice' && SXT.lastBoard && SXT.lastBoard[r.pos] ? { pos: r.pos, tile: SXT.lastBoard[r.pos] } : null;
+    opts.onHold && opts.onHold();
+    _sxtStatus('');
+    const big = sxT().revealScale;
+    const land = r.kind === 'redeem' ? ['blessing'] : [R.col === '#ff6b6b' ? 'curse' : 'blessing'].concat(R.jack ? ['jackpot'] : []);
+    await _sxtFlip(c, R.img, R.col, { base: 1.36, big, upsideDown: R.upsideDown, sparks: R.jack ? 34 : 22, sfx: opts.sfx, landSfx: land });
+    const cap = document.createElement('div'); cap.className = 'sxt-cap';
+    Object.assign(cap.style, { left: g.cx + 'px', top: (g.cy - 24 * g.k + g.h * big / 2 + 14 * g.k) + 'px', color: R.col, fontSize: Math.round(30 * g.k) + 'px', textShadow: `0 0 18px ${R.col}99, 0 2px 4px #000` });
+    cap.innerHTML = `${R.title}${R.sub ? `<small>${R.sub}</small>` : ''}`;
+    SXT.stage.appendChild(cap);
+    await _sxtAnim(cap, [{ opacity: 0, transform: 'translate(-50%,10px)' }, { opacity: 1, transform: 'translate(-50%,0)' }], 380);
+    await new Promise(res => setTimeout(res, Math.max(0, sxD('result') - 380)));
+    _sxtAnim(cap, [{ opacity: 1 }, { opacity: 0 }], 250);
+    _sxtVign(false);
+    const tEl = opts.tileEl && opts.tileEl(r.pos), tr = tEl && tEl.getBoundingClientRect();
+    if (r.kind === 'redeem' || !tr) {
+      ring(g.cx, g.cy - 24 * g.k, 160 * g.k, '#ffd77a', { dur: 1000, grow: 2.3, width: 4 });
+      if (level !== 'reduced') sparks(g.cx, g.cy - 24 * g.k, '#ffd77a', 40, 320 * g.k, { dur: 1100, size: 6 });
+      await _sxtAnim(c, [{ transform: c._t, opacity: 1 }, { transform: _sxtAt(g.cx, g.cy - 60 * g.k, big * 1.15), opacity: 0 }], sxD('settle'));
+    } else {
+      const tx = tr.left + tr.width / 2, ty = tr.top + tr.height / 2, rot = r.pos / 28 * 360;
+      opts.sfx && opts.sfx('fly');
+      await _sxtAnim(c, [{ transform: c._t, opacity: 1 }, { transform: _sxtAt(tx, ty, .22, rot), opacity: .2 }], sxD('settle'), { ease: 'cubic-bezier(.55,0,.6,1)' });
+      ring(tx, ty, 46 * g.k, R.col, { dur: 700, grow: 2, width: 3 });
+      if (r.kind === 'sacrifice' && level !== 'reduced') sparks(tx, ty, '#ff6b6b', 20, 90 * g.k, { dur: 800, size: 5 });
+      if (R.jack) { banner(tx, ty - 30 * g.k, `+${r.jackpot}✦`, '#ffe7a8', { size: 22, dur: 1500, rise: 40 }); if (level !== 'reduced') sparks(tx, ty, '#ffd77a', 22, 90 * g.k, { dur: 800, size: 5 }); }
+    }
+    SXT.hold = null; SXT.tileHold = null; opts.onHold && opts.onHold();
+    c.remove(); SXT.state = 'revealed'; SXT.busy = false;
+    opts.onRevealDone && opts.onRevealDone(sx.revealSeq);
+  }
+  function sxTable(G, opts = {}) {
+    SXT.sfx = opts.sfx || null;
+    const sx = G && G.sanction, ph = G ? String(G.phase) : '';
+    const inTurn = ph.startsWith('sanction:') && sx;
+    if (!inTurn) {
+      // turn ended without a reveal (pass / skip / turn moved on): let a running reveal finish, otherwise drop the table
+      if (SXT.stage && SXT.state !== 'revealing') SXT.q = SXT.q.then(() => { if (!G || !String(G.phase).startsWith('sanction:')) _sxtClear(true); });
+      return;
+    }
+    if (sx.seq !== SXT.seq) {
+      const instant = !!opts.instant;
+      SXT.q = Promise.resolve().then(async () => {
+        _sxtBuild(G, opts);
+        if (instant || ph !== 'sanction:pick_tile') { _sxtPlace(false); if (ph !== 'sanction:pick_tile' && sx.pickedPos != null) { SXT.instantChoose = true; } }
+        else await _sxtDeal();
+      });
+    }
+    if (ph === 'sanction:pick_tile') {
+      const want = sx.previewPos != null ? SXT.offers.indexOf(sx.previewPos) : null;
+      SXT.q = SXT.q.then(async () => {
+        if (SXT.seq !== sx.seq || SXT.state !== 'built') return;
+        const w = want == null || want < 0 ? Math.min(1, SXT.cards.length - 1) : want;
+        if (w !== SXT.idx) { SXT.idx = w; await _sxtPlace(true); }
+      });
+    } else if ((ph === 'sanction:own' || ph === 'sanction:omen' || ph === 'sanction:reveal') && SXT.state === 'built' || SXT.instantChoose) {
+      if (SXT.state === 'built' || SXT.instantChoose) { SXT.state = 'choosing'; SXT.instantChoose = false; SXT.q = SXT.q.then(() => _sxtChoose(G, sx.pickedPos)); }
+    }
+    if (ph === 'sanction:own' || ph === 'sanction:omen') SXT.lastBoard = JSON.parse(JSON.stringify(G.board));   // pre-action snapshot
+    if (ph === 'sanction:reveal' && (sx.revealSeq || 0) !== SXT.revealSeq) {
+      SXT.revealSeq = sx.revealSeq || 0; SXT.state = SXT.state === 'chosen' || SXT.state === 'choosing' ? SXT.state : SXT.state;
+      const snap = JSON.parse(JSON.stringify(G));   // reveal from the state at the moment of the action
+      SXT.q = SXT.q.then(() => { SXT.state = 'revealing'; return _sxtReveal(snap, opts); });
+    }
+  }
+  function sxFortuneHold() { return SXT.hold; }
+  function sxTileHold() { return SXT.tileHold; }
+  function sxBusy() { return !!SXT.busy || SXM.busy; }
+  // ── v0.6.35: Sanctioned / Redeemed tarot moment (locked in the Sanction Moments Lab: speed 0.8, hold 1600) ──
+  const SXM = { busy: false };
+  const SXM_SPEED = 0.8, SXM_HOLD = 1600;
+  const SXM_IMG = { back: '/img/omens/omen-back-omen.webp', sanc: '/img/omens/omen-sanctioned.webp', life: '/img/omens/omen-life.webp' };
+  Object.values(SXM_IMG).forEach(src => { const i = new Image(); i.src = src; });
+  async function sxMoment(kind, p, opts = {}) {
+    SXM.busy = true;
+    try { await _sxmRun(kind, p, opts); } catch (e) { console.warn('sxMoment', e); }
+    SXM.busy = false; opts.onDone && opts.onDone();
+  }
+  async function _sxmRun(kind, p, opts) {
+    const reduced = level === 'reduced', k = scale(), root = document.getElementById('scale-root');
+    const R = root ? root.getBoundingClientRect() : { left: 0, top: 0 };
+    const X = v => R.left + v * k, Y = v => R.top + v * k;
+    const D = ms => ms / SXM_SPEED, wait = ms => new Promise(res => setTimeout(res, D(ms)));
+    const A = (el, kf, ms, o = {}) => el.animate(kf, { duration: D(ms), easing: o.ease || 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' }).finished.catch(() => {});
+    const W = 200 * k, H = 355 * k, CX = X(720), CY = Y(455);
+    const at = (x, y, sc = 1, rot = 0) => `translate(${x - W / 2}px,${y - H / 2}px) scale(${sc}) rotate(${rot}deg)`;
+    const sanc = kind === 'sanc', col = sanc ? '#ff5a5f' : '#ffd77a';
+    const root2 = mk('sxm', { position: 'absolute', inset: '0' });
+    const add = (tag, st, html) => { const e = document.createElement('div'); Object.assign(e.style, st); if (html) e.innerHTML = html; root2.appendChild(e); return e; };
+    // veil + name
+    const veil = add('', { position: 'absolute', inset: '0', opacity: 0, background: 'radial-gradient(ellipse at 50% 42%,rgba(11,12,26,.82),rgba(5,5,12,.96) 70%)' });
+    A(veil, [{ opacity: 0 }, { opacity: 1 }], 450);
+    const nm = add('', { position: 'absolute', left: CX + 'px', top: Y(78) + 'px', transform: 'translateX(-50%)', opacity: 0, whiteSpace: 'nowrap', textAlign: 'center',
+      font: `900 ${46 * k}px Cinzel,serif`, letterSpacing: '.14em', color: p.color, textShadow: '0 2px 6px #000', filter: sanc ? 'none' : 'saturate(.1) brightness(.6)' },
+      `<small style="display:block;font:600 ${12 * k}px Cinzel,serif;letter-spacing:.4em;color:#9397ab;margin-bottom:${6 * k}px">${sanc ? 'PLAYER' : 'SANCTIONED'}</small>${String(p.name).toUpperCase()}`);
+    await A(nm, [{ opacity: 0, transform: `translate(-50%,${-24 * k}px)` }, { opacity: 1, transform: 'translate(-50%,0)' }], 450);
+    // card
+    const c = add('', { position: 'absolute', left: '0', top: '0', width: W + 'px', height: H + 'px', perspective: 1400 * k + 'px' });
+    const face = (img, back) => `<div style="position:absolute;inset:0;border-radius:${12 * k}px;background:center/cover url('${img}');backface-visibility:hidden;${back ? 'transform:rotateY(180deg);' : ''}box-shadow:0 0 0 ${2 * k}px var(--gc,transparent),0 0 ${40 * k}px var(--gc,transparent),0 ${18 * k}px ${40 * k}px rgba(0,0,0,.8)"></div>`;
+    c.innerHTML = `<div class="in" style="position:absolute;inset:0;transform-style:preserve-3d">${face(sanc ? SXM_IMG.back : SXM_IMG.sanc)}${face(sanc ? SXM_IMG.sanc : SXM_IMG.life, true)}</div>`;
+    const inner = c.firstChild;
+    if (!sanc) c.style.setProperty('--gc', 'rgba(255,90,95,.55)');
+    await A(c, [{ transform: at(CX, Y(1300), 1.1, -8) }, { transform: at(CX, CY - 22 * k, 1.15, 1.5), offset: .8 }, { transform: at(CX, CY, 1.15) }], 620, { ease: 'cubic-bezier(.2,.9,.3,1)' });
+    if (!sanc) opts.sfx && opts.sfx('redeem');
+    // neutral build-up
+    c.style.setProperty('--gc', 'rgba(216,210,255,.55)');
+    let rays = null;
+    if (!reduced) {
+      const RR = 600 * k; rays = add('', { position: 'absolute', left: CX - RR + 'px', top: CY - RR + 'px', width: RR * 2 + 'px', height: RR * 2 + 'px', borderRadius: '50%', opacity: 0,
+        background: 'repeating-conic-gradient(from 0deg,var(--rc) 0 6deg,transparent 6deg 22deg)', webkitMask: 'radial-gradient(circle,#000 0,transparent 62%)', mask: 'radial-gradient(circle,#000 0,transparent 62%)' });
+      rays.style.setProperty('--rc', 'rgba(216,210,255,.2)');
+      A(rays, [{ opacity: 0, transform: 'rotate(0) scale(.7)' }, { opacity: 1, transform: 'rotate(20deg) scale(1)', offset: .3 }, { opacity: 0, transform: 'rotate(50deg) scale(1.1)' }], 1800);
+      await A(c, [...Array(11)].map((_, i) => ({ transform: at(CX + (i % 2 ? 2 : -2) * k * i / 10, CY - 14 * k * i / 10, 1.15 + .05 * i / 10, (i % 2 ? .9 : -.9) * i / 10) })), 900, { ease: 'linear' });
+    } else await wait(450);
+    if (sanc) opts.sfx && opts.sfx('sanctioned');
+    // flip
+    await Promise.all([
+      reduced ? (inner.style.transform = 'rotateY(180deg)', Promise.resolve()) : A(inner, [{ transform: 'rotateY(0deg)' }, { transform: 'rotateY(180deg)' }], sanc ? 520 : 560, { ease: 'cubic-bezier(.5,0,.3,1)' }),
+      A(c, [{ transform: at(CX, CY, 1.2) }, { transform: at(CX, CY - 24 * k, 1.38) }, { transform: at(CX, CY, 1.3) }], sanc ? 520 : 560),
+    ]);
+    // colour lands
+    c.style.setProperty('--gc', col);
+    if (rays) rays.style.setProperty('--rc', sanc ? 'rgba(255,90,95,.27)' : 'rgba(255,215,122,.33)');
+    if (!reduced) {
+      if (sanc && root) root.animate([...Array(8)].map((_, i) => ({ translate: `${(i % 2 ? 1 : -1) * 12 * (1 - i / 8)}px ${(i % 3 - 1) * 7 * (1 - i / 8)}px` })), { duration: D(420) });
+      const F = 280 * k, fl = add('', { position: 'absolute', left: CX - F + 'px', top: CY - F + 'px', width: F * 2 + 'px', height: F * 2 + 'px', background: `radial-gradient(circle,${col} 0,transparent 60%)` });
+      A(fl, [{ opacity: .9, transform: 'scale(.4)' }, { opacity: 0, transform: 'scale(1.25)' }], 700);
+      ring(CX, CY, 280 * k, col, { dur: D(900), grow: 2.2, width: 4 });
+      sparks(CX, CY, sanc ? '#ff7a7a' : '#ffe7a8', sanc ? 26 : 44, (sanc ? 280 : 340) * k, { dur: D(1000), size: 6 });
+      if (!sanc) { const RR = 600 * k, r2 = add('', { position: 'absolute', left: CX - RR + 'px', top: CY - RR + 'px', width: RR * 2 + 'px', height: RR * 2 + 'px', borderRadius: '50%', opacity: 0,
+        background: 'repeating-conic-gradient(from 0deg,rgba(255,215,122,.27) 0 6deg,transparent 6deg 22deg)', webkitMask: 'radial-gradient(circle,#000 0,transparent 62%)', mask: 'radial-gradient(circle,#000 0,transparent 62%)' });
+        A(r2, [{ opacity: 0, transform: 'rotate(0) scale(.7)' }, { opacity: 1, transform: 'rotate(20deg) scale(1)', offset: .3 }, { opacity: 0, transform: 'rotate(50deg) scale(1.1)' }], 2200); }
+    }
+    A(nm, [{ filter: sanc ? 'none' : 'saturate(.1) brightness(.6)' }, { filter: sanc ? 'saturate(.1) brightness(.6)' : 'none' }], 750);
+    nm.firstChild.textContent = sanc ? 'SANCTIONED' : 'REDEEMED';
+    if (!sanc) nm.style.textShadow = `0 0 ${24 * k}px ${p.color}, 0 2px 6px #000`;
+    const cap = add('', { position: 'absolute', left: CX + 'px', top: Y(730) + 'px', transform: 'translateX(-50%)', opacity: 0, whiteSpace: 'nowrap', textAlign: 'center',
+      font: `700 ${26 * k}px Cinzel,serif`, letterSpacing: '.3em', color: sanc ? '#ff8a80' : '#ffd77a', textShadow: '0 2px 6px #000' },
+      `${sanc ? 'IS SANCTIONED' : 'IS REDEEMED'}<small style="display:block;font:500 ${15 * k}px Inter,sans-serif;letter-spacing:.02em;color:#c8c9d6;margin-top:${8 * k}px">${opts.sub || (sanc ? 'Out of Mana. No income, but they still take Sanction turns. Redeem to come back.' : 'Back in the game.')}</small>`);
+    await A(cap, [{ opacity: 0, transform: `translate(-50%,${10 * k}px)` }, { opacity: 1, transform: 'translate(-50%,0)' }], 380);
+    await wait(SXM_HOLD);
+    [veil, nm, cap].forEach(e => A(e, [{ opacity: 1 }, { opacity: 0 }], 400));
+    // fly into the standings chip
+    const chip = opts.chipEl && opts.chipEl(), cr = chip && chip.getBoundingClientRect();
+    if (cr && cr.width) {
+      await A(c, [{ transform: at(CX, CY, 1.3), opacity: 1 }, { transform: at(cr.left + 18 * k, cr.top + cr.height / 2, .08, -30), opacity: .4 }], 620, { ease: 'cubic-bezier(.55,0,.6,1)' });
+      opts.onLand && opts.onLand();
+      const ch = opts.chipEl && opts.chipEl();
+      if (ch) ch.animate([{ transform: 'scale(1.12)', boxShadow: `0 0 24px ${col}` }, { transform: 'scale(1)' }], { duration: D(450) });
+    } else { await A(c, [{ opacity: 1 }, { opacity: 0 }], 400); opts.onLand && opts.onLand(); }
+    root2.remove();
+  }
+
   // Plague: sickly pulse rising off each tile
   function plague(tileInner) {
     if (!tileInner || !tileInner.isConnected) return;
@@ -860,6 +1196,8 @@
     challenge, takeover, held, clash, manaRoll, manaFloat, flow, chest, temple, heal, well,
     wildCard, plague, shatterTile, eliminated, crown,
     wcTable, wcTableConsume,   // v0.6.26
+    ring, sparks,              // v0.6.30: exposed for the board's Wheel of Fortune flip
+    sxTable, sxFortuneHold, sxTileHold, sxBusy, sxMoment,   // v0.6.31: Sanction card table (v0.6.32: sxTileHold)
     get level() { return level; },
     setLevel(v) { level = v === 'reduced' ? 'reduced' : 'full'; try { localStorage.setItem(LS_KEY, level); } catch (e) {} },
   };

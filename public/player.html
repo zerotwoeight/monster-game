@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.5.31</title>
+<title>Summoners Gambit — Player v0.5.40</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -49,6 +49,54 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .action-btn.primary { background: var(--accent); color: #fff; box-shadow: 0 0 20px var(--accent-glow); }
 .action-btn.primary:hover { background: var(--accent-lit); }
 .action-btn.primary:active { transform: scale(.96); }
+.turn-badge.sanctioned { background:#a8434a !important; color:#fff !important; border-color:#e0565b !important; }   /* v0.5.33 */
+.sx-hero { display:flex; flex-direction:column; align-items:center; gap:10px; padding:22px 16px 4px; text-align:center; }
+.sx-seal { width:64px; height:64px; border-radius:50%; background:#2a1418; border:2px solid #e0565b; box-shadow:0 0 26px rgba(224,86,91,.45); display:flex; align-items:center; justify-content:center; }
+.sx-title { font-family:'Cinzel',serif; font-size:20px; font-weight:900; letter-spacing:.1em; color:#f5efe0; }
+.sx-sub { font-size:13px; color:var(--text-dim); }
+.sx-card { margin:14px 16px 0; display:flex; flex-direction:column; gap:8px; background:var(--surface2); border:1px solid var(--border2); border-radius:12px; padding:14px 16px; }
+.sx-lbl { font-family:'Cinzel',serif; font-size:10px; letter-spacing:.2em; color:var(--gold-glow); text-transform:uppercase; }
+.sx-row { display:flex; justify-content:space-between; font-size:13px; }
+.sx-redeem { display:flex; align-items:center; gap:10px; padding:11px 14px; border-radius:10px; font-size:12px; }
+.sx-redeem.ok { background:rgba(201,160,90,.1); border:1px solid rgba(201,160,90,.45); color:#e8d5b0; }
+.sx-redeem.no { background:var(--surface); border:1px solid var(--border); color:var(--text-mute); }
+.sx-grid { padding:14px 12px 0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.sx-opt { display:flex; flex-direction:column; gap:8px; padding:0; border:0; background:transparent; color:inherit; cursor:pointer; font-family:inherit; }
+.sx-art { position:relative; width:100%; aspect-ratio:300/532; border-radius:8px; overflow:hidden; box-shadow:0 0 0 2px var(--gold-glow),0 8px 20px rgba(0,0,0,.5); }
+.sx-art img { width:100%; height:100%; object-fit:cover; display:block; }
+.sx-art.off { box-shadow:0 0 0 1px var(--border2); } .sx-art.off img { filter:grayscale(.85) brightness(.5); }
+.sx-art-cap { position:absolute; left:0; right:0; bottom:0; padding:22px 6px 8px; background:linear-gradient(180deg,transparent,rgba(9,9,26,.95)); display:flex; flex-direction:column; align-items:center; gap:2px; }
+.sx-art-name { font-family:'Cinzel',serif; font-size:12px; font-weight:700; color:#f5efe0; }
+.sx-art-val { font-size:13px; font-weight:700; color:var(--gold-glow); }
+.sx-note { font-size:11px; line-height:1.4; color:var(--text-mute); text-align:center; }
+.sx-note.bad { color:#ff8a80; }
+.sx-warn { margin:16px 16px 0; display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:10px; background:rgba(176,80,80,.12); border:1px solid #b05050; font-size:13px; line-height:1.5; color:#f3c2c2; }
+.sx-detail-art { width:62%; max-width:240px; margin:6px auto 14px; display:block; border-radius:10px; box-shadow:0 0 0 2px var(--gold-glow),0 10px 26px rgba(0,0,0,.55); }
+.fl-wrap{margin:4px 0 2px;display:flex;flex-direction:column;gap:6px}   /* v0.5.35: Fortune ladder */
+.fl-row{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.fl-cell{height:38px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-weight:900;font-size:15px;border:1px solid var(--border2);color:var(--text-mute);background:var(--surface)}
+.fl-cell.cur{transform:scale(1.12);color:#fff}
+.fl-cell.b{border-color:rgba(201,160,90,.45);color:#e0c07a}.fl-cell.b.cur{background:#7a5a20;border-color:#ffd77a;box-shadow:0 0 14px rgba(255,215,122,.6)}
+.fl-cell.c{border-color:rgba(224,86,91,.4);color:#ff8a80}.fl-cell.c.cur{background:#6e2228;border-color:#ff8a80;box-shadow:0 0 14px rgba(224,86,91,.6)}
+.fl-cell.z.cur{background:var(--surface2);border-color:var(--text-lo)}
+.fl-ends{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-family:'Cinzel',serif}
+.fl-eff{font-size:12px;line-height:1.5;color:var(--text-lo);text-align:center}
+.fb-block{margin:0 0 12px;padding:10px 12px;border-radius:10px;display:flex;flex-direction:column;gap:4px}
+.fb-block.b{background:rgba(201,160,90,.1);border:1px solid rgba(201,160,90,.45)}.fb-block.c{background:rgba(176,80,80,.12);border:1px solid #b05050}
+.wr-ov{position:fixed;inset:0;z-index:400;background:rgba(6,6,18,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center}
+.wr-card{width:165px;aspect-ratio:300/532;perspective:900px}
+.wr-in{position:relative;width:100%;height:100%;transform-style:preserve-3d;animation:wrFlip 1.1s cubic-bezier(.4,.1,.3,1) .25s both}
+.wr-in.rev{animation-name:wrFlipRev}
+.wr-face{position:absolute;inset:0;border-radius:12px;background-size:cover;background-position:center;backface-visibility:hidden}
+.wr-front{transform:rotateY(180deg)}
+@keyframes wrFlip{from{transform:rotateY(0)}to{transform:rotateY(180deg)}}
+@keyframes wrFlipRev{from{transform:rotateY(0)}to{transform:rotateY(180deg) rotateZ(180deg)}}
+.wr-title{font-family:'Cinzel',serif;font-size:26px;font-weight:900;letter-spacing:.12em;opacity:0;animation:wrIn .4s 1.3s forwards}
+.wr-sub{font-size:14px;line-height:1.6;color:var(--text-lo);max-width:310px;opacity:0;animation:wrIn .4s 1.45s forwards}
+@keyframes wrIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.p-wait-glow{animation:pWaitG 1.6s ease-in-out infinite;}
+@keyframes pWaitG{0%,100%{box-shadow:0 0 0 2px #d8d2ff,0 0 16px #d8d2ff66}50%{box-shadow:0 0 0 2px #d8d2ff,0 0 32px #d8d2ffaa}}
+.wc-sanc-tag { font-size:9px; font-weight:700; letter-spacing:.1em; padding:1px 5px; border-radius:3px; background:#a8434a; color:#fff; }
 .action-btn.secondary { background: transparent; color: var(--text-lo); border: 1px solid var(--border2); }
 .action-btn.secondary:hover { background: rgba(255,255,255,.05); }
 .action-btn.danger-btn { background: rgba(176,80,80,.15); color: #e08080; border: 1px solid rgba(176,80,80,.35); }
@@ -678,7 +726,8 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
       <div class="sb-mana-val" id="sb-mana-val">0</div>
       <div class="sb-mana-lbl">Mana</div>
     </div>
-    <button class="help-btn" onclick="openGameMenu()" title="Menu">☰</button>
+    <button class="help-btn" id="sb-sum-btn" onclick="openSummaryRecall()" title="Turn summary" aria-label="Turn summary" style="display:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"></rect><path d="M9 8h6M9 12h6M9 16h4"></path></svg></button>
+    <button class="help-btn" id="sb-menu-btn" onclick="openGameMenu()" title="Menu">☰</button>
   </div>
   <button class="help-btn" id="menu-fab" onclick="openGameMenu()" title="Menu">☰</button>
   <div id="game-menu" onclick="if(event.target===this)closeGameMenu()"><div class="gm-sheet" id="gm-sheet"></div></div>
@@ -994,6 +1043,7 @@ function connect() {
           msg.game.turnSummary && msg.game.turnSummary.roundTally && msg.game.turnSummary.roundTally.length > 0) {
         _tallyComplete = false;
       }
+      if (msg.mySummary !== undefined) mySummary = msg.mySummary;   // v0.5.38
       if (rollAnimating) {
         const ng = msg.game, ni = msg.myIdx !== undefined ? msg.myIdx : myIdx, nh = msg.hand !== undefined ? msg.hand : myHand;
         pendingGameState = { game: ng, myIdx: ni, hand: nh };
@@ -1258,9 +1308,16 @@ function updateStatusBar(showIt = true) {
   const isMyTurn = G.currentPlayer === myIdx;
   document.getElementById('sb-name').textContent = me.name;
   document.getElementById('sb-turn-info').textContent = `Turn ${G.turnCount + 1} · Tile ${me.position}`;
-  document.getElementById('sb-badge').innerHTML = `<span class="turn-badge ${isMyTurn ? 'yours' : 'waiting'}">${isMyTurn ? 'Your Turn' : 'Waiting'}</span>`;
+  document.getElementById('sb-badge').innerHTML = me.sanctioned   // v0.5.33
+    ? `<span class="turn-badge sanctioned">⛓ Sanctioned</span>`
+    : `<span class="turn-badge ${isMyTurn ? 'yours' : 'waiting'}">${isMyTurn ? 'Your Turn' : 'Waiting'}</span>`;
   document.getElementById('sb-mana-val').textContent = me.mana;
   document.getElementById('sb-sigil-svg').innerHTML = sigilShape(myIdx, 15, 15, 6, me.color);
+  // v0.5.38: summary recall button sits left of ☰
+  const _sb = document.getElementById('sb-sum-btn'), _avail = _summaryRecallAvailable();
+  _sb.style.display = _avail ? 'flex' : 'none';
+  document.getElementById('sb-menu-btn').style.marginLeft = _avail ? '6px' : '';
+  _refreshSummaryRecall();
 }
 
 // v0.5.12: optional mode → { label, tap:'fnName' (called with hand index), opts:(m)=>renderCard opts }
@@ -1780,9 +1837,34 @@ function render() {
     _elimWarnTurn = G.turnCount;
   }
 
+  // v0.5.36: Wheel results are revealed in sync with the board (sanction:reveal) — no separate overlay
+
+  // v0.5.33: full-screen notice the first time you become Sanctioned (again after each new Sanction)
+  // v0.5.39: never mid-battle — wait for the battle (and its result screen) to finish, then a short beat so the board's moment lands first
+  if (me.sanctioned && _sanctionNoticeSeen !== me.sanctionedAt && G.phase !== 'game_over') {
+    const inBattle = G.phase === 'resolve:battle' || G.phase === 'resolve:battle_result' || _battleResultPending;
+    if (inBattle) _sancHeldByBattle = true;
+    else if (_sancHeldByBattle) {
+      _sancHeldByBattle = false;
+      _sancShowAt = Date.now() + 1600;
+      setTimeout(render, 1650);
+    }
+    if (!inBattle && Date.now() >= _sancShowAt) { renderSanctionNotice(); return; }
+  }
+
+  // v0.5.33: a Sanctioned player never sees normal turn screens (shop/roll/landing) — wait instead
+  if (me.sanctioned && !String(G.phase).startsWith('sanction:') && !['resolve:battle_result','resolve:round_callout','game_over','lobby'].includes(G.phase)) {
+    renderWaiting();
+    return;
+  }
+
   switch (G.phase) {
     case 'lobby':     renderLobby(); break;
-    case 'setup':     !_setupClaimSeen ? renderSetupInstructions(isMyTurn) : (isMyTurn ? renderSetup() : renderSetupWaiting()); break;
+    case 'sanction:pick_tile': isMyTurn ? renderSanctionPick() : renderWaiting(); break;   // v0.5.33
+    case 'sanction:own':       isMyTurn ? (_sxBoardWaiting() ? renderSanctionWatch('choose') : renderSanctionOwn())  : renderWaiting(); break;
+    case 'sanction:omen':      isMyTurn ? (_sxBoardWaiting() ? renderSanctionWatch('choose') : renderSanctionOmen()) : renderWaiting(); break;
+    case 'sanction:reveal':    isMyTurn ? renderSanctionWatch('reveal') : renderWaiting(); break;
+    case 'setup':     G.autoSetupRunning ? renderSetupWaiting() : !_setupClaimSeen ? renderSetupInstructions(isMyTurn) : (isMyTurn ? renderSetup() : renderSetupWaiting()); break;
     case 'shop': {
       // Show elimination warning if player starts their turn with 0 tiles (post-setup)
       const myTileCount = me ? G.board.filter(t => t.ownerId === myIdx).length : 0;
@@ -1891,7 +1973,7 @@ function renderJoin() {
   document.getElementById('main-content').innerHTML = `
     <div class="join-logo">
       <img class="join-logo-art" src="/img/logos/logo-main.webp" alt="Summoner's Gambit">
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.31</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.37</div>
     </div>
 
     <div class="room-code-group">
@@ -2015,7 +2097,8 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.30</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.37</div>
+      <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;text-transform:uppercase;margin-top:10px;color:${G.skipSetup?'var(--accent)':'var(--text-mute)'}">Setup: ${G.skipSetup?'Auto':'Normal'}</div>
     </div>
     <div class="lobby-players">${rows}</div>
     <div style="padding:16px 20px 24px">
@@ -2030,6 +2113,153 @@ function renderLobby() {
 
 // ─── WAITING SCREEN ──────────────────────────────────────────────────────────
 // ─── TURN SUMMARY ────────────────────────────────────────────────────────────
+// ─── TURN SUMMARY (v0.5.38) ──────────────────────────────────────────────────
+// One long scroll: Since your last turn → Your Summons → Income.
+// Summons, HP, Omens and Fortune are read live from the board, so the recall sheet (header button) stays current.
+const _TS_BEATS = { Light:'Undead', Dark:'Beast', Arcane:'Dark', Undead:'Arcane', Beast:'Nature', Nature:'Light' };
+const _tsLbl = (t) => `<div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;color:#a5a3b8;">${t}</div>`;
+const _tsChip = (txt, bg, fg) => `<span style="font-size:11px;padding:2px 8px;border-radius:999px;background:${bg};color:${fg};white-space:nowrap;">${txt}</span>`;
+const _tsChipCol = {
+  bad:  ['rgba(224,90,90,.16)', '#ff9ea2'],
+  good: ['rgba(201,168,76,.16)', '#f0d38f'],
+  heal: ['rgba(76,175,130,.14)', '#8fe0b0'],
+  acc:  ['rgba(145,132,217,.18)', '#c3b8f5'],
+};
+function _tsPlayerName(i) { const p = G && G.players[i]; return p ? `<b style="color:${p.color || 'var(--text)'}">${p.name}</b>` : 'someone'; }
+
+function _tsSinceHTML(ts) {
+  const items = [];
+  const card = (img, bad, title, sub) => `<div style="display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:8px;
+      background:${bad ? 'rgba(224,90,90,.08)' : 'rgba(201,168,76,.08)'};border:1px solid ${bad ? 'rgba(224,90,90,.4)' : 'rgba(201,168,76,.4)'};">
+      ${img ? `<img src="${img}" alt="" style="width:26px;height:46px;object-fit:cover;border-radius:3px;flex-shrink:0">` : ''}
+      <div style="font-size:13px;line-height:1.4;min-width:0;">${title}<br><span style="color:#a5a3b8;font-size:12px;">${sub}</span></div></div>`;
+  // Omens standing on my tiles right now
+  for (const t of G.board) {
+    const o = t.omen;
+    if (t.ownerId !== myIdx || !o || !OMEN_INFO[o.id] || !t.summon) continue;
+    const info = OMEN_INFO[o.id], bad = info.kind === 'curse';
+    items.push(card(omenImg(o.id), bad,
+      `<b style="color:${bad ? '#ff9ea2' : '#f0d38f'}">${info.name}</b> on ${t.summon.name} (Tile ${t.pos}) · from ${_tsPlayerName(o.byIdx)}`,
+      `${info.desc} · ends on ${G.players[o.byIdx] ? G.players[o.byIdx].name : 'their'}'s next turn`));
+  }
+  // Omens spent at this income
+  for (const u of (ts.omensUsed || [])) {
+    const info = OMEN_INFO[u.id]; if (!info) continue;
+    const bad = u.id === 'hollow_hunger';
+    items.push(card(omenImg(u.id), bad,
+      `<b style="color:${bad ? '#ff9ea2' : '#f0d38f'}">${info.name}</b> on ${u.summonName} (Tile ${u.pos}) · from ${_tsPlayerName(u.byIdx)}`,
+      bad ? 'Its Gen was 0 this income · now used up' : `Its Gen was doubled (+${u.gen}✦) · now used up`));
+  }
+  // Wild Cards affecting me this turn
+  const wcBad = { stumble:1, delay:1, rattle:1, jinx:1 };
+  for (const e of (ts.activeWcEffects || [])) {
+    items.push(card(`/img/wildcards/wc-${e.id}.png`, !!wcBad[e.id], `<b style="color:${wcBad[e.id] ? '#ff9ea2' : '#f0d38f'}">${e.label}</b> · Wild Card`, e.desc));
+  }
+  if (!items.length) return '';
+  return `<div style="display:flex;flex-direction:column;gap:6px;">${_tsLbl('SINCE YOUR LAST TURN')}${items.join('')}</div>`;
+}
+
+function _tsSummonRow(m, t, ts, stationed) {
+  const gain = Math.min(Math.max(0, (ts.hpGain && ts.hpGain[m.iid]) || 0), m.hp);
+  const before = m.hp - gain;
+  const pct = m.hp / m.maxHp;
+  const col = pct > .6 ? '#5cc795' : pct > .3 ? '#d8b85e' : '#ef7a7a';
+  const hpTxt = `<span style="font-size:14px;color:${col};font-variant-numeric:tabular-nums;white-space:nowrap;">${gain ? `${before}<span>+${gain}</span>` : m.hp}/${m.maxHp}</span>`;
+  if (!stationed) {
+    return `<div style="display:flex;justify-content:space-between;font-size:13px;"><span>${m.name}</span>${hpTxt.replace('font-size:14px', 'font-size:13px')}</div>`;
+  }
+  const g = ts.genByIid ? ts.genByIid[m.iid] : undefined;
+  const genTxt = g === undefined ? `+${m.gen || 0}✦ Gen <span style="color:#a5a3b8">(next income)</span>` : `${g < 0 ? '−' : '+'}${Math.abs(g)}✦ Gen`;
+  // modifiers
+  const chips = []; let cursed = false;
+  const o = t.omen && OMEN_INFO[t.omen.id];
+  if (o) { const c = o.kind === 'curse'; cursed = cursed || c; chips.push(_tsChip(`${o.name}: ${o.desc.replace(/ on this tile$/, '')}`, ..._tsChipCol[c ? 'bad' : 'good'])); }
+  if (t.fortune && FORTUNE_INFO[t.fortune]) { const c = t.fortune < 0; cursed = cursed || c; chips.push(_tsChip(`Fortune: ${FORTUNE_INFO[t.fortune].name}`, ..._tsChipCol[c ? 'bad' : 'good'])); }
+  if ((G.bonusRuns || []).some(r => r.playerIdx === myIdx && r.tiles.includes(t.pos))) chips.push(_tsChip('Synergy', ..._tsChipCol.acc));
+  if (_TS_BEATS[m.type] !== undefined || m.type2) {
+    if (t.element === m.type || (m.type2 && t.element === m.type2)) chips.push(_tsChip('Home +15% DEF', ..._tsChipCol.heal));
+    else if (!m.type2 && _TS_BEATS[t.element] === m.type) chips.push(_tsChip('Off-element −15% DEF', ..._tsChipCol.bad));
+  }
+  if (m.charm) chips.push(_tsChip('Battle Charm +25%', ..._tsChipCol.good));
+  const w1 = Math.round(before / m.maxHp * 1000) / 10, w2 = Math.round(gain / m.maxHp * 1000) / 10;
+  return `<div style="display:flex;flex-direction:column;gap:5px;${cursed ? 'padding:8px;margin:0 -8px;border-radius:8px;background:rgba(224,90,90,.07);' : ''}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+      <div style="min-width:0;"><div style="font-size:14px;font-weight:600;">${m.name}</div>
+        <div style="font-size:12px;color:#a5a3b8;">Tile ${t.pos} · <span style="color:#c99a55;">${genTxt}</span></div></div>${hpTxt}</div>
+    <div style="height:5px;background:#2a2d4a;border-radius:3px;display:flex;overflow:hidden;">
+      <div style="width:${w1}%;background:${col};"></div><div style="width:${w2}%;background:${col};opacity:.4;"></div></div>
+    ${chips.length ? `<div style="display:flex;flex-wrap:wrap;gap:5px;">${chips.join('')}</div>` : ''}
+  </div>`;
+}
+
+function _tsSummonsHTML(ts) {
+  const mine = G.board.filter(t => t.ownerId === myIdx && t.summon);
+  // player-wide passives
+  const pc = [];
+  if ((ts.medicHeal || 0) > 0) pc.push(_tsChip(`Field Medic: +${ts.medicHeal} HP each`, ..._tsChipCol.heal));
+  if ((ts.auraHeal || 0) > 0) pc.push(_tsChip(`Aura of Renewal: +${ts.auraHeal} HP each`, ..._tsChipCol.heal));
+  if ((ts.forgeCount || 0) > 0) pc.push(_tsChip(`Forge: +${ts.forgeCount * 5} DEF stationed`, ..._tsChipCol.good));
+  if ((ts.weaponSmithCount || 0) > 0) pc.push(_tsChip(`Weapon Smith: +${ts.weaponSmithCount * 5} ATK attacking`, ..._tsChipCol.good));
+  if ((ts.manaRefineryBonus || 0) > 0) pc.push(_tsChip(`Mana Refinery: +${ts.manaRefineryBonus}✦`, ..._tsChipCol.good));
+  if ((G.monoElementBonus || []).some(r => r.playerIdx === myIdx)) pc.push(_tsChip('Mono Mastery: +20% counter, +1 HP', ..._tsChipCol.acc));
+  let genTotal = 0;
+  for (const t of mine) { const g = ts.genByIid ? ts.genByIid[t.summon.iid] : undefined; genTotal += g === undefined ? 0 : g; }
+  const rows = mine.map(t => _tsSummonRow(t.summon, t, ts, true)).join('');
+  const hand = myHand.map(m => _tsSummonRow(m, null, ts, false)).join('');
+  return `<div style="background:#151627;border:1px solid #2a2d4a;border-top:2px solid #9184d9;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px;">
+    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #2a2d4a;padding-bottom:4px;">${_tsLbl('YOUR SUMMONS')}
+      <span style="font-size:11px;color:#a5a3b8;">${mine.length} stationed · ${myHand.length} in hand</span></div>
+    ${pc.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;">${pc.join('')}</div>` : ''}
+    ${rows || '<div style="font-size:13px;color:#a5a3b8;">Nothing stationed.</div>'}
+    ${mine.length ? `<div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;border-top:1px solid #2a2d4a;padding-top:8px;"><span>Gen total</span><span style="color:#c99a55;">${genTotal < 0 ? '−' : '+'}${Math.abs(genTotal)} ✦</span></div>` : ''}
+    ${myHand.length ? `<div style="font-size:11px;letter-spacing:.12em;color:#a5a3b8;padding-top:2px;">IN HAND</div>${hand}` : ''}
+  </div>`;
+}
+
+function _tsIncomeHTML(ts, summonTotal, netMana) {
+  const row = (lbl, val, col) => `<div style="display:flex;justify-content:space-between;font-size:14px;"><span>${lbl}</span><span style="color:${col};font-variant-numeric:tabular-nums;">${val}</span></div>`;
+  const sgn = (n) => `${n < 0 ? '−' : '+'}${Math.abs(n)} ✦`;
+  const G_ = '#c99a55', GR = '#5cc795', R = '#ef7a7a';
+  let h = row('Baseline', sgn(ts.baseline), G_);
+  if (summonTotal) h += row('Summons', sgn(summonTotal), summonTotal < 0 ? R : G_);
+  if (ts.wellBonus > 0) h += row('Mana Well', sgn(ts.wellBonus), GR);
+  const bw = ts.battleManaGain || 0, bl = ts.battleManaLoss || 0;
+  if (bw || bl) {
+    const n = bw - bl, detail = bw && bl ? ` <span style="color:#a5a3b8;font-size:12px;">(+${bw} won, −${bl} lost)</span>` : '';
+    h += row(`Battles${detail}`, sgn(n), n < 0 ? R : GR);
+  }
+  if (ts.upkeep > 0) h += row(`Upkeep (${ts.tileCount} tile${ts.tileCount !== 1 ? 's' : ''})`, sgn(-ts.upkeep), R);
+  if (ts.intimidateLoss > 0) h += row('Red Dragon Intimidate', sgn(-ts.intimidateLoss), R);
+  if (ts.jinxActive) h += row('Jinx <span style="color:#a5a3b8;font-size:12px;">(income ½)</span>', 'applied', R);
+  if (ts.windfallActive) h += row('Windfall <span style="color:#a5a3b8;font-size:12px;">(income ×3)</span>', 'applied', GR);
+  if (ts.softCapped) h += row('Soft cap <span style="color:#a5a3b8;font-size:12px;">(150✦+, income ½)</span>', 'applied', R);
+  const nc = netMana >= 0 ? GR : R;
+  return `<div style="background:#151627;border:1px solid #2a2d4a;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px;">
+    <div style="border-bottom:1px solid #2a2d4a;padding-bottom:4px;">${_tsLbl('INCOME')}</div>${h}
+    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;border-top:1px solid #2a2d4a;padding-top:8px;margin-top:2px;color:${nc};"><span>Net</span><span>${sgn(netMana)}</span></div>
+  </div>`;
+}
+
+// recall = opened later from the header button (no Begin Turn; summons live)
+function buildTurnSummaryHTML(ts, recall) {
+  const tally = ts.roundTally || [];
+  const summonTotal = tally.length ? tally.reduce((s, e) => s + e.netMana, 0) : (ts.summonGen || 0) + (ts.manaRefineryBonus || 0);
+  const netMana = (ts.baseline + summonTotal + ts.wellBonus + (ts.battleManaGain || 0)) - ts.intimidateLoss - ts.upkeep - (ts.battleManaLoss || 0);
+  const roundsRemLabel = ts.roundsRemaining === 1 ? '1 LEFT' : `${ts.roundsRemaining} LEFT`;
+  return `<div style="padding:14px 16px ${recall ? '24px' : '120px'};display:flex;flex-direction:column;gap:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;padding:4px 2px;">
+      <div><div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.12em;color:#a5a3b8;">ROUND ${ts.round} OF ${ts.roundLimit} · ${roundsRemLabel}</div>
+        <div style="font-family:'Cinzel',serif;font-size:22px;font-weight:700;margin-top:2px;">${recall ? 'Turn Summary' : 'Your Turn'}</div></div>
+      <div style="text-align:right;"><div style="font-family:'Cinzel',serif;font-size:30px;font-weight:700;color:#b0a6ec;line-height:1;">${ts.manaAfter} ✦</div>
+        <div style="font-size:13px;font-weight:600;color:${netMana >= 0 ? '#5cc795' : '#ef7a7a'};margin-top:4px;">${netMana >= 0 ? '+' : '−'}${Math.abs(netMana)} this turn</div></div>
+    </div>
+    ${_tsSinceHTML(ts)}
+    ${_tsSummonsHTML(ts)}
+    ${_tsIncomeHTML(ts, summonTotal, netMana)}
+    ${recall ? '' : `<div style="font-size:12px;color:#a5a3b8;text-align:center;">Reopen this any time until your next turn from the summary button at the top.</div>`}
+  </div>`;
+}
+
 function renderTurnSummary() {
   const ts = G.turnSummary;
   if (!ts) { renderWaiting(); return; }
@@ -2041,139 +2271,81 @@ function renderTurnSummary() {
   updateHandStrip(false);
   document.getElementById('action-bar').classList.remove('visible');
   document.getElementById('main-content').classList.add('no-hand');
-
-  const netMana = (ts.baseline + ts.summonGen + ts.wellBonus + (ts.battleManaGain||0)) - ts.intimidateLoss - ts.upkeep - (ts.battleManaLoss||0);
-  const netSign = netMana >= 0 ? '+' : '';
-  const netColor = netMana >= 0 ? '#4caf82' : '#e05a5a';
-  const roundsRemLabel = ts.roundsRemaining === 1 ? '1 round left' : `${ts.roundsRemaining} rounds left`;
-
-  // Income rows
-  let incomeRows = `<div class="ts-p-row"><span class="ts-p-lbl">🏦 Baseline income</span><span class="ts-p-val" style="color:#a97b40">+${ts.baseline} ✦</span></div>`;
-  const _tally = G.turnSummary?.roundTally;
-  if (_tally && _tally.length > 0) {
-    // Per-summon income breakdown from roundTally
-    const summonTotal = _tally.reduce((s, e) => s + e.netMana, 0);
-    let tallyDetail = '';
-    for (const entry of _tally) {
-      if (entry.netMana === 0 && !entry.spellWraithDrain) continue;
-      const isNeg = entry.netMana < 0;
-      const sign = isNeg ? '' : '+';
-      const valCol = isNeg ? '#e05a5a' : '#b89448';
-      const icon = entry.isPlayerBonus ? '🏭' : '·';
-      let tags = '';
-      for (const bd of (entry.genBreakdown || [])) {
-        if (bd.bonus > 0) tags += `<span style="background:rgba(145,132,217,.18);color:#b09fe8;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:4px;">${bd.label}</span>`;
-      }
-      if (entry.spellWraithDrain > 0) tags += `<span style="background:rgba(224,90,90,.15);color:#e05a5a;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:4px;">⛧ −${entry.spellWraithDrain}✦ drained</span>`;
-      tallyDetail += `<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0 3px 14px;">
-        <span style="font-size:11px;color:#8a88a0;flex:1;min-width:0;line-height:1.4;">${icon} ${entry.monsterName}${tags}</span>
-        <span style="font-size:11px;color:${valCol};white-space:nowrap;margin-left:8px;">${sign}${entry.netMana} ✦</span>
-      </div>`;
-    }
-    if (summonTotal > 0 || tallyDetail) {
-      incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">👹 Summon income</span><span class="ts-p-val" style="color:#a97b40">+${summonTotal} ✦</span></div>`;
-      if (tallyDetail) incomeRows += `<div style="border-left:2px solid rgba(145,132,217,.2);margin:2px 0 6px 6px;">${tallyDetail}</div>`;
-    }
-  } else {
-    if (ts.summonGen > 0) incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">👹 Summon passive</span><span class="ts-p-val" style="color:#a97b40">+${ts.summonGen} ✦</span></div>`;
-    if ((ts.manaRefineryBonus||0) > 0) incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">🏭 Mana Refinery bonus</span><span class="ts-p-val" style="color:#a97b40">+${ts.manaRefineryBonus} ✦</span></div>`;
-  }
-  if (ts.wellBonus > 0) incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">💎 Mana Well (last turn)</span><span class="ts-p-val" style="color:#4caf82">+${ts.wellBonus} ✦</span></div>`;
-  if ((ts.battleManaGain||0) > 0) incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">⚔️ Battle outcomes</span><span class="ts-p-val" style="color:#4caf82">+${ts.battleManaGain} ✦</span></div>`;
-  if (ts.windfallActive) incomeRows += `<div class="ts-p-row"><span class="ts-p-lbl">🃏 Windfall (×3 income)</span><span class="ts-p-val" style="color:#4caf82">active</span></div>`;
-
-  // Loss rows
-  let lossRows = '';
-  if (ts.intimidateLoss > 0) lossRows += `<div class="ts-p-row"><span class="ts-p-lbl">🐉 Red Dragon Intimidate</span><span class="ts-p-val" style="color:#e05a5a">−${ts.intimidateLoss} ✦</span></div>`;
-  if (ts.upkeep > 0) lossRows += `<div class="ts-p-row"><span class="ts-p-lbl">🏗️ Tile upkeep (${ts.tileCount} tiles)</span><span class="ts-p-val" style="color:#e05a5a">−${ts.upkeep} ✦</span></div>`;
-  if ((ts.battleManaLoss||0) > 0) lossRows += `<div class="ts-p-row"><span class="ts-p-lbl">⚔️ Battle losses</span><span class="ts-p-val" style="color:#e05a5a">−${ts.battleManaLoss} ✦</span></div>`;
-  if (ts.jinxActive) lossRows += `<div class="ts-p-row"><span class="ts-p-lbl">🃏 Jinx (income halved)</span><span class="ts-p-val" style="color:#e05a5a">active</span></div>`;
-
-  // Active WC effect tags
-  let effectTags = '';
-  if (ts.activeWcEffects && ts.activeWcEffects.length) {
-    for (const e of ts.activeWcEffects) {
-      effectTags += `<span class="ts-p-tag ${e.color}">🃏 ${e.label}</span>`;
-    }
-  }
-  if (ts.tileSynergyCount > 0) effectTags += `<span class="ts-p-tag acc">✨ Tile Synergy ×${ts.tileSynergyCount}</span>`;
-  if (ts.monoHealCount > 0) effectTags += `<span class="ts-p-tag acc">⭐ Mono Mastery ×${ts.monoHealCount}</span>`;
-  if ((ts.medicHeal||0) > 0) effectTags += `<span class="ts-p-tag green">🏥 Field Medic +${ts.medicHeal} HP/summon</span>`;
-  if ((ts.auraHeal||0) > 0) effectTags += `<span class="ts-p-tag green">✨ Aura of Renewal +${ts.auraHeal} HP/summon</span>`;
-  if ((ts.weaponSmithCount||0) > 0) effectTags += `<span class="ts-p-tag gold">⚒️ Hand +${(ts.weaponSmithCount||0) * 5} ATK</span>`;
-  if ((ts.forgeCount||0) > 0) effectTags += `<span class="ts-p-tag gold">🔩 Stationed +${(ts.forgeCount||0) * 5} DEF</span>`;
-
-  // Active passive abilities block
-  let passiveTags = '';
-  if (ts.activePassives && ts.activePassives.length) {
-    for (const ap of ts.activePassives) {
-      const icon = ap.id === 'ardent_saint' ? '✨' : ap.id === 'field_medic' ? '🏥' : ap.id === 'weapon_smith' ? '⚒️' : ap.id === 'forge' ? '🔩' : '🏭';
-      const descColor = (ap.id === 'weapon_smith' || ap.id === 'forge') ? '#c9a84c' : '#9184d9';
-      passiveTags += `<div class="ts-p-row"><span class="ts-p-lbl">${icon} ${ap.label}</span><span class="ts-p-val" style="color:${descColor};font-size:11px;">${ap.desc}</span></div>`;
-    }
-  }
-  const passivesBlock = passiveTags ? `<div class="ts-p-section-lbl" style="margin-top:8px;">Active Abilities</div>${passiveTags}` : '';
-
-  const effectsBlock = (effectTags || passivesBlock) ? `${passivesBlock}<div class="ts-p-section-lbl" style="margin-top:8px;">Effects This Turn</div><div class="ts-p-effects">${effectTags}</div>` : '';
-
-  // Summon HP After Healing section — only shown when healing actually occurred this turn
-  const totalHeal = (ts.medicHeal||0) + (ts.auraHeal||0);
-  let hpRows = '';
-  if (totalHeal > 0 && G && G.board) {
-    for (const tile of G.board) {
-      if (tile.ownerId !== myIdx || !tile.summon) continue;
-      const s = tile.summon;
-      // Skip summons that were already at full HP and could not have benefited
-      const hpBeforeHeal = s.hp - totalHeal;
-      const wasHealed = hpBeforeHeal < s.maxHp;
-      if (!wasHealed) continue;
-      const pct = Math.round((s.hp / s.maxHp) * 100);
-      const barColor = pct > 60 ? '#4caf82' : pct > 30 ? '#c9a84c' : '#e05a5a';
-      // Actual heal received = min(totalHeal, maxHp - (hp before heal)) clamped to >= 0
-      const actualHeal = Math.max(0, Math.min(totalHeal, s.maxHp - Math.max(0, hpBeforeHeal)));
-      hpRows += `<div class="ts-hp-row">
-        <span class="ts-hp-name">${s.name}</span>
-        <div class="ts-hp-bar-wrap"><div class="ts-hp-bar" style="width:${pct}%;background:${barColor}"></div></div>
-        <span class="ts-hp-val" style="color:${barColor}">${s.hp}/${s.maxHp}</span>
-        <span class="ts-hp-heal">(+${actualHeal})</span>
-      </div>`;
-    }
-  }
-  const hpBlock = hpRows ? `<div class="ts-p-section-lbl" style="margin-top:8px;">Summon HP After Healing</div><div class="ts-hp-section">${hpRows}</div>` : '';
-
-  document.getElementById('main-content').innerHTML = `
-    <div style="padding:14px 16px 120px;display:flex;flex-direction:column;gap:12px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.12em;color:#8b899a;">ROUND ${ts.round} OF ${ts.roundLimit}</span>
-        <span style="font-size:12px;color:#d4a017;">⏳ ${roundsRemLabel}</span>
-      </div>
-
-      <div style="background:#151627;border:1px solid #2a2d4a;border-top:2px solid #9184d9;border-radius:12px;padding:14px;">
-        <div style="font-family:'Cinzel',serif;font-size:15px;font-weight:700;color:#e8e6f0;margin-bottom:2px;">Your Turn</div>
-        <div style="font-size:11px;color:#8b899a;">${ts.tileCount} tile${ts.tileCount!==1?'s':''} · ${ts.stationedCount} stationed</div>
-
-        <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(145,132,217,.12);border-radius:8px;padding:10px 12px;margin:12px 0 8px;">
-          <span style="font-family:'Cinzel',serif;font-size:12px;color:#9184d9;">Mana</span>
-          <span style="font-family:'Cinzel',serif;font-size:26px;font-weight:700;color:#9184d9;font-variant-numeric:tabular-nums;">${ts.manaAfter} <span style="font-size:14px;">✦</span></span>
-        </div>
-
-        <div class="ts-p-section-lbl">Income</div>
-        ${incomeRows}
-        ${lossRows ? `<div class="ts-p-section-lbl" style="margin-top:8px;">Penalties</div>${lossRows}` : ''}
-        ${effectsBlock}
-        ${hpBlock}
-
-        <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(76,175,130,.1);border:1px solid rgba(76,175,130,.2);border-radius:8px;padding:10px 14px;margin-top:10px;">
-          <span style="font-size:13px;font-weight:600;color:${netColor};">Net mana this turn</span>
-          <span style="font-size:18px;font-weight:700;color:${netColor};font-variant-numeric:tabular-nums;">${netSign}${netMana} ✦</span>
-        </div>
-      </div>
-    </div>`;
+  document.getElementById('main-content').innerHTML = buildTurnSummaryHTML(ts, false);
 
   // BEGIN TURN button pinned at bottom
   const ab = document.getElementById('action-bar');
   ab.innerHTML = `<button class="btn-primary" style="width:100%;font-family:'Cinzel',serif;font-size:16px;letter-spacing:.08em;padding:18px;" onclick="send('dismiss_turn_summary')">⚔️ BEGIN TURN</button>`;
   ab.classList.add('visible');
+}
+
+// v0.5.38: recall sheet — own phone only, until this player's next summary
+let mySummary = null;
+function _summaryRecallAvailable() {
+  const me = G && myIdx !== null ? G.players[myIdx] : null;
+  return !!(mySummary && me && !me.sanctioned && !me.eliminated && G.phase !== 'game_over' &&
+            !(G.phase === 'resolve:turn_summary' && G.currentPlayer === myIdx));
+}
+function openSummaryRecall() {
+  if (!_summaryRecallAvailable()) return;
+  let ov = document.getElementById('ts-recall');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'ts-recall';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(5,6,12,.72);display:flex;flex-direction:column;justify-content:flex-end;';
+    ov.onclick = (e) => { if (e.target === ov) closeSummaryRecall(); };
+    document.body.appendChild(ov);
+  }
+  _refreshSummaryRecall();
+}
+function _refreshSummaryRecall() {
+  const ov = document.getElementById('ts-recall');
+  if (!ov) return;
+  if (!_summaryRecallAvailable()) { closeSummaryRecall(); return; }
+  const sc = ov.querySelector('.tsr-scroll'), top = sc ? sc.scrollTop : 0;
+  ov.innerHTML = `<div role="dialog" aria-label="Turn summary" style="max-height:88vh;display:flex;flex-direction:column;background:#0d0e1a;border-top:1px solid #9184d9;border-radius:18px 18px 0 0;color:#e8e6f0;">
+      <div style="width:44px;height:5px;border-radius:3px;background:#3a3d52;margin:10px auto 0;flex-shrink:0;"></div>
+      <div class="tsr-scroll" style="overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1;">${buildTurnSummaryHTML(mySummary, true)}</div>
+      <div style="padding:10px 16px 16px;flex-shrink:0;"><button class="btn-primary" style="width:100%;min-height:52px;font-family:'Cinzel',serif;letter-spacing:.08em;" onclick="closeSummaryRecall()">Close</button></div>
+    </div>`;
+  const sc2 = ov.querySelector('.tsr-scroll'); if (sc2) sc2.scrollTop = top;
+}
+function closeSummaryRecall() { const ov = document.getElementById('ts-recall'); if (ov) ov.remove(); }
+
+// v0.5.38: Omen notice — the tile owner's phone, after the board's reveal
+function renderOmenNotification(n) {
+  updateStatusBar(false);
+  updateHandStrip(false);
+  document.getElementById('main-content').classList.add('no-hand');
+  document.getElementById('action-bar').classList.remove('visible');
+  const bad = n.omenKind === 'curse';
+  const col = bad ? '#e0565b' : '#e0c07a', soft = bad ? '#ff9ea2' : '#f0d38f';
+  const extra = [
+    n.healed ? `Healed ${n.healed} HP.` : '',
+    n.replaced ? `Replaces ${n.replaced}.` : '',
+  ].filter(Boolean).join(' ');
+  document.getElementById('main-content').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;padding:22px 20px 28px;gap:14px;text-align:center">
+      <div style="font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif">Omen · ${bad ? 'Curse' : 'Blessing'}</div>
+      <div style="font-size:13px;color:var(--text-mute)">Placed by <span style="color:${n.castByColor || col};font-weight:700">${n.castByName}</span> <span style="color:#e0565b">⛓ Sanctioned</span></div>
+      <div onclick="_dismissNotif()" style="position:relative;width:160px;height:282px;border-radius:12px;border:2px solid ${col};overflow:hidden;cursor:pointer;
+           box-shadow:0 0 28px ${col}77,0 4px 24px rgba(0,0,0,.5);flex-shrink:0;background:#14101a;-webkit-tap-highlight-color:transparent">
+        <img src="${omenImg(n.cardId)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block">
+        <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top,rgba(8,8,18,.96) 55%,transparent);padding:12px 10px 12px">
+          <div style="font-size:14px;font-family:'Cinzel',serif;font-weight:700;color:${soft};margin-bottom:3px">${n.cardName}</div>
+          <div style="font-size:9px;letter-spacing:.14em;color:${col};text-transform:uppercase">${bad ? 'Curse' : 'Blessing'}</div>
+        </div>
+      </div>
+      <div style="font-size:15px;line-height:1.5;color:var(--text);max-width:300px">${n.cardDesc}${extra ? `<br><span style="font-size:13px;color:var(--text-mute)">${extra}</span>` : ''}</div>
+      <div style="width:100%;max-width:300px;box-sizing:border-box;padding:12px 14px;border-radius:10px;background:var(--surface);border:1px solid ${col}55;text-align:left">
+        <div style="font-weight:600;font-size:14px">Tile ${n.pos} · ${n.summonName}</div>
+        <div style="font-size:12px;color:var(--text-mute)">${n.summonHp}/${n.summonMaxHp} HP</div>
+      </div>
+      <div style="font-size:12px;color:var(--text-mute);max-width:300px">Lasts until ${n.castByName}'s next Sanction turn. You'll also see it in your turn summary.</div>
+      <button id="notif-dismiss-btn" onclick="_dismissNotif()"
+        style="width:100%;max-width:300px;min-height:52px;border-radius:12px;border:1px solid ${col};background:linear-gradient(135deg,${col}38,${col}14);color:var(--text);
+               font-family:'Cinzel',serif;font-size:15px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;-webkit-tap-highlight-color:transparent">Dismiss</button>
+    </div>`;
 }
 
 // ─── TILE CAROUSEL HELPERS ───────────────────────────────────────────────────
@@ -2290,7 +2462,7 @@ function _tileDetailBody(tilePos) {
   try { openTileDetail(tilePos); } finally {}
   const h = _tdCapture.html || '';
   _tdCapture = null;
-  return `<div class="tdm-sheet ds-tile-sheet">${h}</div>`;
+  return `<div class="tdm-sheet ds-tile-sheet">${_fortuneBlockHTML(G.board[tilePos])}${_omenBlockHTML(G.board[tilePos])}${h}</div>`;   // v0.5.35 Fortune · v0.5.37 Omen
 }
 function _tileColor(tilePos) {
   const t = G.board[tilePos];
@@ -2648,6 +2820,7 @@ function _ringRerender() { _ringClaimMode() ? renderSetup() : (_ringIsSetup() ? 
 function ringStep(dir) {
   _ringFollow = false;
   _ringSetSel(_ringClaimMode() ? _nextFreeTile(_ringGetSel(), dir) : _ringGetSel() + dir);
+  _uiTick();   // v0.5.40
   _ringRerender();
 }
 function ringSetFollow(on) {
@@ -2656,6 +2829,15 @@ function ringSetFollow(on) {
   _ringRerender();
 }
 // Forgiving input: anywhere in the ring band picks the nearest tile by angle; drag scrubs.
+// v0.5.40: UI tick when a tile is picked on the mini board (tap, drag-scrub or arrows). Small pool so fast scrubs don't cut each other off.
+const _uiTickPool = [0, 1, 2].map(() => { const a = new Audio('/audio/ui-tick.mp3'); a.preload = 'auto'; return a; });
+let _uiTickI = 0, _uiTickAt = 0;
+function _uiTick() {
+  const L = _sfxLvl(); if (L <= 0) return;
+  const now = performance.now(); if (now - _uiTickAt < 35) return; _uiTickAt = now;
+  const a = _uiTickPool[_uiTickI++ % _uiTickPool.length];
+  try { a.volume = Math.min(1, 0.6 * L); a.currentTime = 0; a.play().catch(() => {}); } catch (e) {}
+}
 function attachBoardRing() {
   const box = document.getElementById('br-box');
   if (!box) return;
@@ -2669,7 +2851,7 @@ function attachBoardRing() {
     return Math.round(a / (Math.PI * 2) * n) % n;
   };
   let drag = false;
-  const pick = (i) => { if (i == null || i === _ringGetSel()) return; _ringFollow = false; _ringSetSel(i); _ringRerender(); };
+  const pick = (i) => { if (i == null || i === _ringGetSel()) return; _ringFollow = false; _ringSetSel(i); _uiTick(); _ringRerender(); };   // v0.5.40: tick
   box.addEventListener('pointerdown', (e) => {
     if (e.target.closest('.br-card,.br-arrow')) return;
     const i = idxAt(e); if (i == null) return;
@@ -2681,12 +2863,370 @@ function attachBoardRing() {
   box.addEventListener('pointercancel', () => { drag = false; });
 }
 
+// ─── SANCTIONED (v0.5.33) ────────────────────────────────────────────────────
+const SX_REDEEM_COST = 15, SX_REDEEM_BACK = 5;
+const SX_SEAL_SVG = (sz, col) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M9 15l6-6"/><path d="M11 6l1.5-1.5a3.5 3.5 0 0 1 5 5L16 11"/><path d="M13 18l-1.5 1.5a3.5 3.5 0 0 1-5-5L8 13"/></svg>`;
+let _sancHeldByBattle = false, _sancShowAt = 0;   // v0.5.39
+let _sanctionNoticeSeen = (() => { try { const v = sessionStorage.getItem('sg_sanc_seen'); return v === null ? undefined : Number(v); } catch (e) { return undefined; } })();
+let _sxSacConfirm = false;
+function _sxFinalRound() { return Math.floor(G.turnCount / G.players.length) + 1 >= (G.roundLimit || 20); }
+function _sxMyTiles() { return G.board.filter(t => t.ownerId === myIdx).length; }
+// mirrors the server's redeemBlockReason()
+function _sxRedeemBlock(me) {
+  if (me.redeemUsed) return 'Already used this game';
+  if (_sxFinalRound()) return 'Not allowed in the final round';
+  if (me.mana < SX_REDEEM_COST) return `Need ${SX_REDEEM_COST}✦ · you have ${me.mana}✦`;
+  if (!_sxMyTiles()) return 'Need at least 1 tile';
+  return null;
+}
+function _sxSellValue(m) { return m ? Math.floor(m.cost * (m.hp / m.maxHp)) : 0; }
+
+// ─── WHEEL OF FORTUNE (v0.5.35) — mirrors server FORTUNE table ────────────────
+const FORTUNE_INFO = {
+   1: { name:'Glimmer',    eff:'+10% DEF · holding it pays +2✦' },
+   2: { name:'Radiance',   eff:'+20% DEF · +10% counter-strike · holding it pays +4✦' },
+   3: { name:'Exaltation', eff:'+30% DEF · +20% counter-strike · holding it pays +8✦ and heals 10 HP' },
+  '-1': { name:'Tarnish', eff:'−10% DEF · whoever takes it gets +2✦' },
+  '-2': { name:'Blight',  eff:'−20% DEF · whoever takes it gets +4✦' },
+  '-3': { name:'Doom',    eff:'−30% DEF · loses 5 HP every turn · whoever takes it gets +8✦' },
+};
+function _fortuneLabel(f) { return f ? `${FORTUNE_INFO[f].name} ${f > 0 ? '+' : '−'}${Math.abs(f)}` : 'Neutral 0'; }
+function _fortuneLadderHTML(f) {
+  const cells = [-3,-2,-1,0,1,2,3].map(v => `<div class="fl-cell ${v > 0 ? 'b' : v < 0 ? 'c' : 'z'}${v === f ? ' cur' : ''}">${v > 0 ? '+' + v : v}</div>`).join('');
+  return `<div class="fl-wrap"><div class="fl-ends"><span style="color:#ff8a80">Curse</span><span style="color:#e0c07a">Blessing</span></div>
+    <div class="fl-row">${cells}</div>
+    <div class="fl-eff">${f ? `<b style="color:${f > 0 ? '#e0c07a' : '#ff8a80'}">${FORTUNE_INFO[f].name}:</b> ${FORTUNE_INFO[f].eff}` : 'No Fortune on this tile yet.'}</div></div>`;
+}
+// shown at the top of any tile's detail sheet when it carries a Fortune meter
+function _fortuneBlockHTML(t) {
+  const f = t && t.fortune;
+  if (!f) return '';
+  return `<div class="fb-block ${f > 0 ? 'b' : 'c'}"><div class="sx-lbl" style="color:${f > 0 ? '#e0c07a' : '#ff8a80'}">🎡 Wheel of Fortune · ${_fortuneLabel(f)}</div>
+    <div style="font-size:12px;line-height:1.5;color:var(--text-lo)">${FORTUNE_INFO[f].eff}</div></div>`;
+}
+// result screen after your own flip
+let _wheelSeenSeq = null;
+function _maybeWheelResult() {
+  const w = G && G.lastWheel;
+  if (_wheelSeenSeq === null) { _wheelSeenSeq = w ? w.seq : 0; return false; }   // first state after (re)connect: don't replay
+  if (!w) return false;
+  if (w.seq === _wheelSeenSeq || w.playerIdx !== myIdx) { _wheelSeenSeq = w.seq; return false; }
+  _wheelSeenSeq = w.seq;
+  const col = w.upright ? '#e0c07a' : '#ff8a80';
+  const title = w.jackpot ? `JACKPOT +${w.jackpot}✦` : w.upright ? 'BLESSING' : 'CURSE';
+  const sub = w.jackpot
+    ? `Tile ${w.pos} is already at ${_fortuneLabel(w.after)}. The Wheel pays you ${w.jackpot}✦ instead.`
+    : `Tile ${w.pos} is now <b style="color:${w.after ? (w.after > 0 ? '#e0c07a' : '#ff8a80') : 'var(--text)'}">${_fortuneLabel(w.after)}</b>.` + (w.after ? `<br>${FORTUNE_INFO[w.after].eff}` : '<br>The Blessing and Curse cancelled out.');
+  const ov = document.createElement('div');
+  ov.className = 'wr-ov'; ov.id = 'wheel-result';
+  ov.innerHTML = `<div class="wr-card"><div class="wr-in${w.upright ? '' : ' rev'}">
+      <div class="wr-face" style="background-image:url('img/omens/omen-back-wheel.webp')"></div>
+      <div class="wr-face wr-front" style="background-image:url('img/omens/omen-wheel-of-fortune.webp');box-shadow:0 0 0 3px ${col},0 0 40px ${col}88"></div></div></div>
+    <div class="wr-title" style="color:${col}">${title}</div>
+    <div class="wr-sub">${w.upright ? 'Upright' : 'Reversed'} · ${sub}</div>
+    <div style="width:100%;max-width:340px;opacity:0;animation:wrIn .4s 1.6s forwards">${_fortuneLadderHTML(w.after)}</div>
+    <button class="action-btn gold-btn" style="flex:none;width:100%;max-width:340px;opacity:0;animation:wrIn .4s 1.8s forwards" onclick="document.getElementById('wheel-result').remove()">Continue</button>`;
+  document.body.appendChild(ov);
+  return true;
+}
+
+// ─── OMENS (v0.5.37) — mirrors server OMENS ───────────────────────────────────
+const OMEN_INFO = {
+  saints_ward:       { name: "Saint's Ward",      kind: 'blessing', desc: '+20% DEF on this tile' },
+  kindled_blade:     { name: 'Kindled Blade',     kind: 'blessing', desc: "+20% damage on this summon's next strike" },
+  mercys_touch:      { name: "Mercy's Touch",     kind: 'blessing', desc: 'Heals the summon 15 HP now' },
+  golden_tithe:      { name: 'Golden Tithe',      kind: 'blessing', desc: "This tile's Gen ×2 at its owner's next income" },
+  veil_of_stillness: { name: 'Veil of Stillness', kind: 'blessing', desc: "Can't be attacked: landing here just ends the move" },
+  echoing_hymn:      { name: 'Echoing Hymn',      kind: 'blessing', desc: 'If attacked, the attacker takes 8 damage before the battle' },
+  withering_brand:   { name: 'Withering Brand',   kind: 'curse',    desc: '−20% DEF on this tile' },
+  hollow_hunger:     { name: 'Hollow Hunger',     kind: 'curse',    desc: "This tile's Gen is 0 at its owner's next income" },
+  bleeding_sigil:    { name: 'Bleeding Sigil',    kind: 'curse',    desc: 'Summon loses 5 HP at the start of each turn (never below 1)' },
+  shackled_will:     { name: 'Shackled Will',     kind: 'curse',    desc: "This summon's counter-strike deals half damage" },
+  toll_of_the_bell:  { name: 'Toll of the Bell',  kind: 'curse',    desc: 'The owner pays 5✦ whenever a rival lands here' },
+  betrayers_mark:    { name: "Betrayer's Mark",   kind: 'curse',    desc: 'If the tile is taken, the attacker gets +5✦' },
+};
+const omenImg = id => `img/omens/omen-${id}.webp`;
+function _omenBlockHTML(t) {
+  const o = t && t.omen; if (!o || !OMEN_INFO[o.id]) return '';
+  const O = OMEN_INFO[o.id], b = O.kind === 'blessing', by = G.players.find(p => p.idx === o.byIdx);
+  return `<div class="fb-block ${b ? 'b' : 'c'}" style="flex-direction:row;gap:10px;align-items:center">
+    <img src="${omenImg(o.id)}" alt="" style="width:34px;height:60px;object-fit:cover;border-radius:4px;flex-shrink:0">
+    <div style="display:flex;flex-direction:column;gap:3px"><div class="sx-lbl" style="color:${b ? '#e0c07a' : '#ff8a80'}">🔮 ${O.name} · ${b ? 'Blessing' : 'Curse'}</div>
+    <div style="font-size:12px;line-height:1.5;color:var(--text-lo)">${O.desc}. Placed by ${by ? by.name : '?'}, lasts until their next turn.</div></div></div>`;
+}
+
+function renderSanctionNotice() {
+  const me = G.players[myIdx];
+  updateStatusBar(false);
+  updateHandStrip(false);
+  document.getElementById('action-bar').classList.remove('visible');
+  document.getElementById('main-content').classList.add('no-hand');
+  const again = me.redeemUsed ? `<div class="sx-redeem no" style="margin-top:4px">Redeem is used up, so this time it's for good. Hold your tiles.</div>` : '';
+  document.getElementById('main-content').innerHTML = `
+    <div style="min-height:100%;box-sizing:border-box;background:radial-gradient(ellipse at 50% 22%,#3a151b 0%,transparent 62%);display:flex;flex-direction:column;align-items:center;padding:56px 24px 28px;gap:18px;text-align:center">
+      <div class="sx-seal" style="width:104px;height:104px">${SX_SEAL_SVG(52, '#ff8a80')}</div>
+      <div style="font-family:'Cinzel',serif;font-size:28px;font-weight:900;letter-spacing:.1em;color:#f5efe0">SANCTIONED</div>
+      <div style="font-size:15px;line-height:1.6;color:var(--text-lo)">Your Mana ran out. You're not out of the game, but you're bound.</div>
+      <div class="sx-card" style="margin:0;width:100%;box-sizing:border-box;text-align:left;gap:9px">
+        <div class="sx-lbl">While Sanctioned</div>
+        <div style="font-size:14px;line-height:1.5">• No income, shop or dice.</div>
+        <div style="font-size:14px;line-height:1.5">• Your summons still defend your tiles.</div>
+        <div style="font-size:14px;line-height:1.5">• Each turn you get a <b>Sanction turn</b>: pick 1 of 3 tiles to bless, curse or cash in.</div>
+        <div style="font-size:14px;line-height:1.5">• Lose your last tile and you're Eliminated.</div>
+      </div>
+      <div style="width:100%;box-sizing:border-box;display:flex;gap:12px;align-items:center;text-align:left;background:rgba(201,160,90,.08);border:1px solid rgba(201,160,90,.35);border-radius:12px;padding:14px 16px">
+        <img src="img/omens/omen-redeem.webp" alt="" style="width:44px;height:78px;object-fit:cover;border-radius:4px">
+        <div style="font-size:13px;line-height:1.5;color:#e8d5b0"><b style="color:#f5efe0">Redeem</b> once per game: pick your own tile with ${SX_REDEEM_COST}✦ or more and come back with ${SX_REDEEM_BACK}✦. Not in the final round.</div>
+      </div>
+      ${again}
+      <button class="action-btn gold-btn" style="margin-top:auto;width:100%;flex:none" onclick="dismissSanctionNotice()">Dismiss</button>
+    </div>`;
+}
+function dismissSanctionNotice() {
+  const me = G.players[myIdx];
+  _sanctionNoticeSeen = me ? me.sanctionedAt : undefined;
+  try { sessionStorage.setItem('sg_sanc_seen', String(_sanctionNoticeSeen)); } catch (e) {}
+  render();
+}
+
+// Shown at the top of the waiting screen while you are Sanctioned
+function _sanctionStandingHTML(me) {
+  const why = _sxRedeemBlock(me);
+  const redeem = why
+    ? `<div class="sx-redeem no"><b>Redeem</b><span style="margin-left:auto">${why}</span></div>`
+    : `<div class="sx-redeem ok"><b style="color:#f5efe0">Redeem ${SX_REDEEM_COST}✦</b><span style="margin-left:auto">Ready: pick your own tile</span></div>`;
+  return `<div class="sx-card" style="margin:0 0 12px">
+      <div class="sx-lbl" style="color:#ff8a80">⛓ You are Sanctioned</div>
+      <div class="sx-row"><span style="color:var(--text-lo)">Tiles held</span><b>${_sxMyTiles()}</b></div>
+      <div class="sx-row"><span style="color:var(--text-lo)">Income</span><b style="color:#ff8a80">None while Sanctioned</b></div>
+      ${redeem}
+    </div>`;
+}
+
+function _sxHero(sub) {
+  return `<div class="sx-hero">
+      <div class="sx-seal">${SX_SEAL_SVG(32, '#ff8a80')}</div>
+      <div class="sx-title">YOUR SANCTION TURN</div>
+      <div class="sx-sub">${sub}</div>
+    </div>`;
+}
+
+// sanction:pick_tile — same cards + detail sheet as the landing choice
+function renderSanctionPick() {
+  const sx = G.sanction;
+  if (!sx) { renderWaiting(); return; }
+  render._sxPickSeen = sx.seq;   // v0.5.36: this phone saw the pick, so it waits for the board's flip after Choose
+  updateStatusBar(true);
+  updateHandStrip(false);   // v0.5.34: no hand strip while Sanctioned
+  document.getElementById('main-content').classList.add('no-hand');
+  document.getElementById('action-bar').classList.remove('visible');
+  _sxSacConfirm = false;
+  document.getElementById('main-content').innerHTML = `
+    ${_sxHero('The same three tiles pulse on the board')}
+    <div class="lc-section">
+      <div class="lc-header">Choose a Tile</div>
+      <div class="lc-opts">${_lcOptCardsHTML(sx.offers, 'openSanctionPickDetail')}</div>
+      <div class="lc-tap-hint">Tap a tile to see details, then confirm with <b>Choose</b></div>
+      <div style="padding:14px 16px 0;display:flex"><button class="action-btn secondary" onclick="send('sanction_pass')">Pass turn</button></div>
+    </div>`;
+}
+function _sanctionPickAction(pos) {
+  const t = G.board[pos];
+  const run = () => send('sanction_pick_tile', { tilePos: pos });
+  if (t.ownerId === myIdx) return { label: 'Choose · Your tile', kind: 'gold', hint: 'Then: Sacrifice, Redeem or the Wheel', run };
+  const ow = G.players.find(p => p.idx === t.ownerId);
+  return { label: 'Choose · Place an Omen', kind: 'battle',
+    hint: `On ${ow ? ow.name + "'s" : 'a rival\'s'} ${t.summon ? t.summon.name : 'tile'}: bless or curse it for a round`, run };
+}
+function openSanctionPickDetail(i) {
+  const sx = G.sanction;
+  if (!sx) return;
+  openDetailSheet(sx.offers, i, _sanctionPickAction, { title: 'Choose a Tile', renderItem: _tileDetailBody, colorOf: _tileColor,
+    // v0.5.34: the board scales up the tile you're looking at (like the battle attacker preview)
+    onChange: pos => send('sanction_preview', { tilePos: pos }),
+    onClose: () => { if (G && G.phase === 'sanction:pick_tile' && G.currentPlayer === myIdx) send('sanction_preview', { tilePos: null }); } });
+}
+
+// sanction:own — Sacrifice / Redeem / Wheel cards; tapping opens the detail sheet
+const SX_OWN = ['sacrifice', 'redeem', 'wheel'];
+function _sxOwnInfo(id) {
+  const me = G.players[myIdx];
+  const t = G.board[G.sanction.pickedPos];
+  const m = t && t.summon;
+  const last = _sxMyTiles() <= 1;
+  if (id === 'sacrifice') {
+    const gain = _sxSellValue(m);
+    return { name: 'Sacrifice', img: 'img/omens/omen-sacrifice.webp', val: `+${gain}✦`, off: false,
+      note: `Destroy ${m ? m.name : 'the summon'}, tile goes neutral`,
+      desc: `Destroy ${m ? m.name : 'your summon'} (${m ? m.hp + '/' + m.maxHp + ' HP' : ''}) and gain its sell value, <b>+${gain}✦</b>. Tile ${t.pos} goes neutral.` + (last ? `<br><br><b style="color:#ff8a80">This is your last tile. Sacrificing it Eliminates you.</b>` : ''),
+      act: () => last && !_sxSacConfirm
+        ? { label: 'Sacrifice · last tile', kind: 'battle', hint: 'Tap again to confirm: you will be Eliminated', run: () => { _sxSacConfirm = true; openSanctionOwnDetail(0); } }
+        : { label: last ? 'Confirm · Sacrifice and leave' : `Sacrifice · +${gain}✦`, kind: 'battle', run: () => send('sanction_sacrifice') } };
+  }
+  if (id === 'redeem') {
+    const why = _sxRedeemBlock(me);
+    return { name: 'Redeem', img: 'img/omens/omen-redeem.webp', val: `${SX_REDEEM_COST}✦`, off: !!why,
+      note: why || `Back in the game with ${me.mana - SX_REDEEM_COST + SX_REDEEM_BACK}✦`,
+      desc: `Pay ${SX_REDEEM_COST}✦ and return to normal play next turn, keeping your tiles, summons and hand. You come back with ${SX_REDEEM_BACK}✦ on top of what's left. Once per game, not in the final round.`,
+      act: () => why ? { label: 'Redeem', disabled: true, reason: why } : { label: `Redeem · ${SX_REDEEM_COST}✦`, kind: 'gold', run: () => send('sanction_redeem') } };
+  }
+  const f = t.fortune || 0;
+  return { name: 'Wheel', img: 'img/omens/omen-wheel-of-fortune.webp', val: f ? `${f > 0 ? '+' : '−'}${Math.abs(f)} ${FORTUNE_INFO[f].name}` : 'Meter 0', off: false,
+    note: 'Bless or curse this tile',
+    desc: `Flip the tarot card. <b style="color:#e0c07a">Upright</b> moves this tile one step toward Blessing, <b style="color:#ff8a80">reversed</b> one step toward Curse (50/50). At ±3 a matching flip pays <b>+5✦</b> instead.${_fortuneLadderHTML(f)}`,
+    act: () => ({ label: 'Turn the Wheel', kind: 'gold', run: () => send('sanction_wheel') }) };
+}
+function renderSanctionOwn() {
+  const sx = G.sanction;
+  if (!sx || sx.pickedPos == null) { renderWaiting(); return; }
+  const t = G.board[sx.pickedPos];
+  updateStatusBar(true);
+  updateHandStrip(false);
+  document.getElementById('main-content').classList.add('no-hand');
+  document.getElementById('action-bar').classList.remove('visible');
+  const cards = SX_OWN.map((id, i) => {
+    const o = _sxOwnInfo(id);
+    return `<button class="sx-opt" onclick="openSanctionOwnDetail(${i})">
+        <div class="sx-art${o.off ? ' off' : ''}"><img src="${o.img}" alt="">
+          <div class="sx-art-cap"><span class="sx-art-name">${o.name}</span><span class="sx-art-val"${o.off ? ' style="color:var(--text-lo)"' : ''}>${o.val}</span></div></div>
+        <span class="sx-note${o.off && id === 'redeem' ? ' bad' : ''}">${o.note}</span>
+      </button>`;
+  }).join('');
+  const last = _sxMyTiles() <= 1;
+  document.getElementById('main-content').innerHTML = `
+    <div class="sx-hero" style="padding-bottom:0">
+      <div class="sx-lbl">Tile ${t.pos} · Your tile</div>
+      <div style="font-size:17px;font-weight:600">${t.summon ? `${t.summon.name} · ${t.summon.hp}/${t.summon.maxHp} HP` : 'Empty'}</div>
+    </div>
+    <div class="sx-grid">${cards}</div>
+    ${last ? `<div class="sx-warn"><span>⚠</span><span><b>Last tile.</b> Sacrificing it Eliminates you.</span></div>` : ''}
+    <div style="padding:18px 16px;display:flex"><button class="action-btn secondary" onclick="send('sanction_pass')">Pass turn</button></div>`;
+}
+function openSanctionOwnDetail(i) {
+  if (!G.sanction) return;
+  openDetailSheet(SX_OWN, i, id => _sxOwnInfo(id).act(), {
+    title: 'Your Tile',
+    renderItem: id => { const o = _sxOwnInfo(id); return `<div style="padding:16px 18px 20px"><img class="sx-detail-art" src="${o.img}" alt="" style="${o.off ? 'filter:grayscale(.8) brightness(.6)' : ''}">
+      <div style="font-family:'Cinzel',serif;font-size:22px;font-weight:700;text-align:center;color:#f5efe0;margin-bottom:10px">${o.name}</div>
+      <div style="font-size:14px;line-height:1.6;color:var(--text-lo);text-align:center">${o.desc}</div></div>`; },
+    colorOf: () => 'var(--gold-glow)',
+  });
+}
+
+// v0.5.36: while the board plays its flips, the phone says "Watch the board" — timings from common.js SX_TIMING
+let _sxWatch = { seq: null, chooseEnd: 0, revealSeq: null, revealAt: 0 };
+function _sxBoardWaiting() {
+  const sx = G.sanction; if (!sx) return false;
+  if (_sxWatch.seq !== sx.seq) {
+    // first time we see this tile chosen: wait for gather + fanfare + flip (skip the wait after a reload)
+    const fresh = render._sxPickSeen === sx.seq;
+    _sxWatch.seq = sx.seq;
+    _sxWatch.chooseEnd = fresh ? Date.now() + sxMs('turn') + sxMs('gather') + sxMs('fanfare') + sxMs('flip') : 0;
+  }
+  const left = _sxWatch.chooseEnd - Date.now();
+  if (left > 0) { clearTimeout(_sxWatch.t); _sxWatch.t = setTimeout(render, left + 30); return true; }
+  return false;
+}
+function renderSanctionWatch(mode) {
+  const sx = G.sanction; if (!sx) { renderWaiting(); return; }
+  const t = G.board[sx.pickedPos], own = t && t.ownerId === myIdx;
+  updateStatusBar(true); updateHandStrip(false);
+  document.getElementById('main-content').classList.add('no-hand');
+  document.getElementById('action-bar').classList.remove('visible');
+  const r = sx.result || {};
+  let face = own ? 'img/omens/omen-back-wheel.webp' : 'img/omens/omen-back-omen.webp';
+  if (mode === 'choose' && t && t.summon && t.summon.id) face = monsterCardSrc(t.summon.id);
+  const line = mode === 'choose' ? 'Your card is turning over…' : r.kind === 'wheel' ? 'The Wheel is turning…' : 'Revealing your choice…';
+  // reveal: flip at the moment the board's card turns face-up
+  let flipIn = -1;
+  if (mode === 'reveal') {
+    if (_sxWatch.revealSeq !== sx.revealSeq) { _sxWatch.revealSeq = sx.revealSeq; _sxWatch.revealAt = Date.now() + sxMs('fanfare') + sxMs('flip'); _sxWatch.flipped = false; }
+    flipIn = _sxWatch.revealAt - Date.now();
+  }
+  document.getElementById('main-content').innerHTML = `
+    <div class="sx-hero" style="padding-top:34px"><div class="sx-title">${flipIn <= 0 && mode === 'reveal' ? 'REVEALED' : 'WATCH THE BOARD'}</div><div class="sx-sub" id="sxw-sub">${flipIn <= 0 && mode === 'reveal' ? 'Also showing on the board' : line}</div></div>
+    <div class="wr-card" style="margin:12px auto 0;width:58%"><div class="wr-in" id="sxw-in" style="animation:none"><div class="wr-face p-wait-glow" style="background-image:url('${face}')"></div><div class="wr-face wr-front" id="sxw-front"></div></div></div>
+    <div id="sxw-res"></div>`;
+  if (mode !== 'reveal') return;
+  const R = _sxResultInfo(r);
+  const show = animate => {
+    const f = document.getElementById('sxw-front'), inn = document.getElementById('sxw-in'); if (!f || !inn) return;
+    f.style.backgroundImage = `url('${R.img}')`; f.style.boxShadow = `0 0 0 3px ${R.col},0 0 36px ${R.col}aa`;
+    if (R.upsideDown) f.style.transform = 'rotateY(180deg) rotateZ(180deg)';
+    if (animate) inn.animate([{ transform: 'rotateY(0)' }, { transform: 'rotateY(180deg)' }], { duration: 500, easing: 'cubic-bezier(.4,.1,.3,1)', fill: 'forwards' });
+    else inn.style.transform = 'rotateY(180deg)';
+    const t = document.querySelector('.sx-title'); if (t) t.textContent = 'REVEALED';
+    const sb = document.getElementById('sxw-sub'); if (sb) sb.textContent = 'Also showing on the board';
+    const res = document.getElementById('sxw-res');
+    if (res) res.innerHTML = `<div class="wr-title" style="color:${R.col};opacity:1;animation:none;text-align:center;margin-top:14px">${R.title}</div><div class="wr-sub" style="opacity:1;animation:none;margin:6px auto 0;text-align:center">${R.sub}</div>${R.ladder != null ? `<div style="padding:12px 16px 0">${_fortuneLadderHTML(R.ladder)}</div>` : ''}`;
+  };
+  if (flipIn <= 0) show(false);
+  else setTimeout(() => { if (G.phase === 'sanction:reveal' && G.sanction && G.sanction.revealSeq === _sxWatch.revealSeq) show(true); }, flipIn);
+}
+function _sxResultInfo(r) {
+  if (r.kind === 'sacrifice') return { img: 'img/omens/omen-sacrifice.webp', col: '#ff6b6b', title: 'SACRIFICED', sub: `${r.summonName || 'Your summon'} destroyed. You gain ${r.gain}✦ and Tile ${r.pos} goes neutral.` };
+  if (r.kind === 'redeem') return { img: 'img/omens/omen-redeem.webp', col: '#ffd77a', title: 'REDEEMED', sub: `You're back in the game next turn with ${r.mana}✦.` };
+  if (r.kind === 'wheel') {
+    const col = r.upright ? '#ffd77a' : '#ff6b6b';
+    if (r.jackpot) return { img: 'img/omens/omen-wheel-of-fortune.webp', col, upsideDown: !r.upright, title: `JACKPOT +${r.jackpot}✦`, sub: `Tile ${r.pos} is already at ${_fortuneLabel(r.after)}. The Wheel pays you ${r.jackpot}✦ instead.`, ladder: r.after };
+    return { img: 'img/omens/omen-wheel-of-fortune.webp', col, upsideDown: !r.upright, title: r.upright ? 'BLESSING' : 'CURSE',
+      sub: `${r.upright ? 'Upright' : 'Reversed'} · Tile ${r.pos} is now <b style="color:${r.after ? (r.after > 0 ? '#e0c07a' : '#ff8a80') : 'var(--text)'}">${_fortuneLabel(r.after)}</b>.` + (r.after ? `<br>${FORTUNE_INFO[r.after].eff}` : '<br>The Blessing and Curse cancelled out.'), ladder: r.after };
+  }
+  if (r.kind === 'omen' && OMEN_INFO[r.id]) {
+    const O = OMEN_INFO[r.id], b = O.kind === 'blessing', ow = G.players.find(p => p.idx === r.ownerIdx);
+    return { img: omenImg(r.id), col: b ? '#ffd77a' : '#ff6b6b', title: O.name.toUpperCase(),
+      sub: `${b ? 'Blessing' : 'Curse'} on ${ow ? ow.name + "'s" : 'the'} tile ${r.pos}.<br>${O.desc}${r.healed ? ` (healed ${r.healed} HP)` : ''}.` };
+  }
+  return { img: 'img/omens/omen-back-omen.webp', col: '#b5abfc', title: 'DONE', sub: '' };
+}
+
+// sanction:omen — three Omens to place on the rival's tile (v0.5.37)
+function renderSanctionOmen() {
+  const sx = G.sanction;
+  if (!sx || sx.pickedPos == null) { renderWaiting(); return; }
+  const t = G.board[sx.pickedPos];
+  const ow = G.players.find(p => p.idx === t.ownerId);
+  updateStatusBar(true);
+  updateHandStrip(false);
+  document.getElementById('main-content').classList.add('no-hand');
+  document.getElementById('action-bar').classList.remove('visible');
+  const ids = (sx.omenOffers || []).filter(id => OMEN_INFO[id]);
+  const cards = ids.map((id, i) => { const O = OMEN_INFO[id], b = O.kind === 'blessing';
+    return `<button class="sx-opt" onclick="openSanctionOmenDetail(${i})">
+        <div class="sx-art" style="box-shadow:0 0 0 2px ${b ? '#c9a05a' : '#e0565b'},0 8px 20px rgba(0,0,0,.5)"><img src="${omenImg(id)}" alt="">
+          <div class="sx-art-cap"><span class="sx-art-name" style="font-size:11px;text-align:center">${O.name}</span><span class="sx-art-val" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:${b ? '#e0c07a' : '#ff8a80'}">${b ? 'Blessing' : 'Curse'}</span></div></div>
+        <span class="sx-note">${O.desc}</span>
+      </button>`; }).join('');
+  document.getElementById('main-content').innerHTML = `
+    <div class="sx-hero" style="padding-bottom:0">
+      <div class="sx-lbl" style="color:${ow ? ow.color : 'var(--text-lo)'}">Tile ${t.pos} · ${ow ? ow.name + "'s" : 'Rival'} tile</div>
+      <div style="font-size:17px;font-weight:600">Choose an Omen to place</div>
+      <div class="sx-sub">Lasts until your next turn</div>
+    </div>
+    <div class="sx-grid">${cards}</div>
+    ${t.omen && OMEN_INFO[t.omen.id] ? `<div class="sx-warn" style="background:rgba(145,132,217,.1);border-color:#6b5fc0;color:var(--text-lo)">This tile already has ${OMEN_INFO[t.omen.id].name}. A new Omen replaces it.</div>` : ''}
+    <div style="padding:18px 16px;display:flex"><button class="action-btn secondary" onclick="send('sanction_omen_skip')">Pass</button></div>`;
+}
+function openSanctionOmenDetail(i) {
+  const sx = G.sanction; if (!sx) return;
+  const ids = (sx.omenOffers || []).filter(id => OMEN_INFO[id]);
+  openDetailSheet(ids, i, id => { const O = OMEN_INFO[id]; return { label: 'Place ' + O.name, kind: O.kind === 'blessing' ? 'gold' : 'battle', run: () => send('sanction_omen', { id }) }; }, {
+    title: 'Omens',
+    renderItem: id => { const O = OMEN_INFO[id], b = O.kind === 'blessing'; return `<div style="padding:16px 18px 20px"><img class="sx-detail-art" src="${omenImg(id)}" alt="" style="box-shadow:0 0 0 2px ${b ? '#c9a05a' : '#e0565b'},0 10px 26px rgba(0,0,0,.55)">
+      <div style="font-family:'Cinzel',serif;font-size:22px;font-weight:700;text-align:center;color:#f5efe0;margin-bottom:6px">${O.name}</div>
+      <div style="text-align:center;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:${b ? '#e0c07a' : '#ff8a80'};margin-bottom:10px">${b ? 'Blessing' : 'Curse'} · one round</div>
+      <div style="font-size:14px;line-height:1.6;color:var(--text-lo);text-align:center">${O.desc}.</div></div>`; },
+    colorOf: id => OMEN_INFO[id].kind === 'blessing' ? 'var(--gold-glow)' : '#ff8a80',
+  });
+}
+
 function renderWaiting() {
   const me = G.players[myIdx];
+  const _sx = !!(me && me.sanctioned);   // v0.5.34: no hand strip while Sanctioned
   updateStatusBar(true);
-  updateHandStrip(true);
+  updateHandStrip(!_sx);
   document.getElementById('action-bar').classList.remove('visible');
-  document.getElementById('main-content').classList.remove('no-hand');
+  document.getElementById('main-content').classList.toggle('no-hand', _sx);
 
   // v0.5.11: ring auto-follows the active player until the viewer browses
   if (_ringFollow) { const t = _ringFollowTarget(false); if (t != null) _waitCarouselIdx = t; }
@@ -2696,6 +3236,7 @@ function renderWaiting() {
     <div class="wc-player-chip${p.idx===G.currentPlayer?' active':''}">
       <svg width="14" height="14" viewBox="0 0 20 20">${sigilShape(p.idx,10,10,5,p.color)}</svg>
       <span style="color:${p.color}">${p.name}${p.idx===myIdx?' (you)':''}</span>
+      ${p.sanctioned ? '<span class="wc-sanc-tag">⛓</span>' : ''}
       <span style="color:var(--text-mute);font-size:11px">${p.tileCount}✦${p.mana}</span>
     </div>`).join('');
 
@@ -2711,6 +3252,7 @@ function renderWaiting() {
         <span style="color:var(--text-mute)">'s turn</span>
         <button class="br-follow wc-follow${_ringFollow ? ' on' : ''}" onclick="ringSetFollow(${!_ringFollow})"><span class="br-dot"></span>${_ringFollow ? 'Following' : `Follow ${currentP ? currentP.name : ''}`}</button>
       </div>
+      ${me && me.sanctioned ? _sanctionStandingHTML(me) : ''}
       ${buildBoardRing(_waitCarouselIdx, false, false, true)}
       <div class="wc-players-strip">${chips}</div>
       ${synergyBannerHTML()}
@@ -2995,8 +3537,28 @@ function renderLandingChoice() {
   document.getElementById('main-content').classList.remove('no-hand');
   document.getElementById('action-bar').classList.remove('visible');
 
-  // Build each option card
-  const optCards = pl.options.map((pos, i) => {
+  const optCards = _lcOptCardsHTML(pl.options, 'openLandingDetail');
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="roll-hero" style="padding-bottom:8px">
+      <div class="roll-position-chip">Currently on tile <span>${me.position}</span></div>
+      <div class="dice-tray" id="dice-tray-landed"></div>
+      <div class="roll-result-line">You rolled a ${pl.roll}!</div>
+    </div>
+    <div class="lc-section">
+      <div class="lc-header">Choose Your Destination</div>
+      <div class="lc-opts">${optCards}</div>
+      <div class="lc-tap-hint">Tap a tile to see details, then confirm with <b>Land here</b></div>
+    </div>
+    ${synergyBannerHTML()}`;
+  // v0.5.30: the dice stay where they landed
+  const _dt = document.getElementById('dice-tray-landed');
+  if (_dt) { DT.settled(_dt, me.lastDice); DT.callout(_dt, G); }
+}
+
+// v0.5.33: tile option cards shared by the landing choice and the Sanction turn pick
+function _lcOptCardsHTML(options, openFn) {
+  return options.map((pos, i) => {
     const tile = G.board[pos];
     const elColor = tile.element ? (TYPE_COLOR[tile.element] || '#888') : '#888';
     const tileImgSrc = TILE_IMG[tile.element] || TILE_IMG[tile.kind] || '';
@@ -3065,7 +3627,7 @@ function renderLandingChoice() {
     const elLabel = tile.element || (tile.kind === 'start' ? 'Well' : tile.kind || '');
 
     return `
-      <div class="lc-opt" style="animation-delay:${i * 80}ms" onclick="openLandingDetail(${i})">
+      <div class="lc-opt" style="animation-delay:${i * 80}ms" onclick="${openFn}(${i})">
         <div class="lc-tile-num">${pos}</div>
         <div class="lc-tile-card" style="border-color:${elColor}88;">
           <div class="lc-tile-card-bg" style="${artStyle}"></div>
@@ -3075,22 +3637,6 @@ function renderLandingChoice() {
         ${statusHtml}
       </div>`;
   }).join('');
-
-  document.getElementById('main-content').innerHTML = `
-    <div class="roll-hero" style="padding-bottom:8px">
-      <div class="roll-position-chip">Currently on tile <span>${me.position}</span></div>
-      <div class="dice-tray" id="dice-tray-landed"></div>
-      <div class="roll-result-line">You rolled a ${pl.roll}!</div>
-    </div>
-    <div class="lc-section">
-      <div class="lc-header">Choose Your Destination</div>
-      <div class="lc-opts">${optCards}</div>
-      <div class="lc-tap-hint">Tap a tile to see details, then confirm with <b>Land here</b></div>
-    </div>
-    ${synergyBannerHTML()}`;
-  // v0.5.30: the dice stay where they landed
-  const _dt = document.getElementById('dice-tray-landed');
-  if (_dt) { DT.settled(_dt, me.lastDice); DT.callout(_dt, G); }
 }
 
 // v0.5.07: landing goes through the shared detail sheet — a tap previews, only "Land here" commits
@@ -3370,7 +3916,7 @@ function renderSetupWaiting() {
 
   document.getElementById('main-content').innerHTML = `
     <div class="wc-wrap">
-      <div class="wc-phase-hdr">Setup Phase · Round ${G.setupRound||1} of 3${G.setupTotalTurns > 0 ? ` · Turn ${(G.setupTurnIdx||0)+1}/${G.setupTotalTurns}` : ''}</div>
+      <div class="wc-phase-hdr">${G.autoSetupRunning ? 'Auto Setup' : 'Setup Phase'} · Round ${G.setupRound||1} of 3${G.setupTotalTurns > 0 ? ` · Turn ${(G.setupTurnIdx||0)+1}/${G.setupTotalTurns}` : ''}</div>
       <div class="wc-whose">
         <div class="waiting-pulse"></div>
         <span style="color:${cp?.color||'var(--text)'};font-weight:600">${cp?.name||'?'}</span>
@@ -3554,6 +4100,7 @@ function openTempleSacDetail(i) {
 
 // ─── NOTIFICATION OVERLAY ────────────────────────────────────────────────────
 function renderNotification(notif) {
+  if (notif && notif.kind === 'omen') { renderOmenNotification(notif); return; }   // v0.5.38
   updateStatusBar(false);
   updateHandStrip(false);
   document.getElementById('main-content').classList.add('no-hand');
@@ -3621,6 +4168,18 @@ _battleAudio.loop = false;
 const BATTLE_MUSIC_BASE = 0.55;
 _battleAudio.volume = BATTLE_MUSIC_BASE * _musicLvl();
 let _battleMusicKey = null; // tracks which battle we played music for (prevent re-trigger on rebroadcast)
+// v0.5.39: phones (iOS especially) only let an <audio> start from a socket message if it was started once inside a tap.
+// Prime the battle track silently on the first tap so it can play when the battle screen opens.
+(() => {
+  const prime = () => {
+    if (!_battleAudio.paused) return;
+    _battleAudio.muted = true;
+    const p = _battleAudio.play();
+    const done = () => { _battleAudio.pause(); _battleAudio.currentTime = 0; _battleAudio.muted = false; };
+    if (p && p.then) p.then(done).catch(() => { _battleAudio.muted = false; }); else done();
+  };
+  document.addEventListener('pointerdown', prime, { once: true, capture: true });
+})();
 
 function _tryPlayBattleMusic() {
   if (!G || myIdx === null) return;

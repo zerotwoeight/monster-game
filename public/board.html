@@ -189,6 +189,53 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 /* Player chips */
 .players-list{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;flex-shrink:0;}
 .player-chip{display:flex;align-items:center;gap:8px;padding:7px 9px;background:rgba(255,255,255,.38);border:1px solid rgba(169,123,64,.28);border-radius:7px;}
+.player-chip.sanctioned{border-color:#b84a51 !important;box-shadow:0 0 0 1px rgba(224,86,91,.45),0 0 12px rgba(224,86,91,.25);background:rgba(255,236,236,.5);}   /* v0.6.33 */
+.chip-sanc-tag{font-family:'Cinzel',serif;font-size:8px;font-weight:700;letter-spacing:.12em;padding:2px 5px;border-radius:3px;background:#a8434a;color:#fff;margin-left:4px;vertical-align:middle;}
+.chip-dot.sanc{border-radius:50%;box-shadow:0 0 0 2px #e0565b;filter:saturate(.55) brightness(.85);}
+.tile-inner.sx-offer{animation:sxPulse 1.4s ease-in-out infinite;}
+.tile-inner.sx-picked{box-shadow:0 0 0 3px #ffb74d,0 0 26px 6px rgba(255,183,77,.7) !important;}
+@keyframes sxPulse{0%,100%{box-shadow:0 0 0 2px #e0565b,0 0 14px 2px rgba(224,86,91,.55)}50%{box-shadow:0 0 0 4px #ff8a80,0 0 32px 10px rgba(224,86,91,.85)}}
+.fortune-num{position:absolute;left:50%;top:50%;z-index:6;pointer-events:none;font-family:'Cinzel',serif;font-weight:900;line-height:1;transform:translate(-50%,-50%) rotate(var(--fr,0deg));}   /* v0.6.35 Fortune */
+.omen-pin{position:absolute;right:3px;top:3px;z-index:7;width:22px;height:39px;border-radius:3px;background:center/cover;pointer-events:none;transform:rotate(var(--fr,0deg));}   /* v0.6.38 */
+.omen-pin.b{box-shadow:0 0 0 1.5px #ffd77a,0 0 10px #ffd77a;}.omen-pin.c{box-shadow:0 0 0 1.5px #ff6b6b,0 0 10px #ff6b6b;}
+.fortune-num.b{color:#ffe7a8;}.fortune-num.c{color:#ffb0aa;}
+.fortune-num.l1{font-size:34px;}.fortune-num.l2{font-size:40px;}.fortune-num.l3{font-size:48px;animation:fnPulse 1.6s ease-in-out infinite;}
+.fortune-num.b.l1{text-shadow:0 0 6px #c9a05a,0 2px 3px #000;}.fortune-num.b.l2{text-shadow:0 0 10px #ffd77a,0 0 20px #c9a05a,0 2px 3px #000;}.fortune-num.b.l3{text-shadow:0 0 12px #fff3c4,0 0 26px #ffd77a,0 0 44px #c9a05a,0 2px 3px #000;}
+.fortune-num.c.l1{text-shadow:0 0 6px #b84a51,0 2px 3px #000;}.fortune-num.c.l2{text-shadow:0 0 10px #ff6b6b,0 0 20px #b84a51,0 2px 3px #000;}.fortune-num.c.l3{text-shadow:0 0 12px #ffd0cc,0 0 26px #ff4d4d,0 0 44px #a8202a,0 2px 3px #000;}
+@keyframes fnPulse{0%,100%{opacity:1}50%{opacity:.82}}
+.tile-inner.has-fortune > *:not(.fortune-num){filter:brightness(.5) saturate(.7);}
+.wheel-flip{position:fixed;z-index:58;pointer-events:none;perspective:1000px;}
+.wheel-flip .wf-in{position:relative;width:100%;height:100%;transform-style:preserve-3d;}
+.wheel-flip .wf-face{position:absolute;inset:0;border-radius:12px;background-size:cover;background-position:center;backface-visibility:hidden;}
+.wheel-flip .wf-front{transform:rotateY(180deg);}
+.wheel-flip-cap{position:fixed;z-index:59;pointer-events:none;transform:translate(-50%,0);font-family:'Cinzel',serif;font-weight:900;letter-spacing:.12em;text-align:center;white-space:nowrap;opacity:0;transition:opacity .3s;}
+.sx-table{display:flex;flex-direction:column;align-items:center;gap:30px;}   /* v0.6.34: Sanction card table */
+.sx-table-title{font-family:'Cinzel',serif;font-size:15px;font-weight:900;letter-spacing:.12em;color:#f5efe0;display:flex;align-items:center;gap:8px;}
+.sx-table-row{position:relative;display:flex;gap:10px;align-items:flex-start;justify-content:center;}
+.sx-tcol{display:flex;flex-direction:column;align-items:center;gap:6px;transition:transform .35s cubic-bezier(.3,.7,.3,1),opacity .35s,filter .35s;transform-origin:50% 60%;}
+.sx-tcol .board-summon-card{transform:scale(.82);transform-origin:50% 0;margin:0 -12px -34px;}   /* -12px sides = the 18% the scale leaves empty */
+.sx-tcol.dim{opacity:.45;filter:saturate(.5);transform:scale(.92);}
+.sx-tcol.hot{transform:translateX(var(--sxdx,0px)) scale(1.2);z-index:3;}
+.sx-tcol.hot .board-summon-card{box-shadow:0 0 0 2px #ffb74d,0 0 26px 6px rgba(255,183,77,.55) !important;}
+.sx-tcol.gone{opacity:0;transform:translateY(50px) scale(.85);}
+.sx-tcol.deal{animation:sxDeal .55s cubic-bezier(.25,.7,.3,1) backwards;}
+@keyframes sxDeal{0%{transform:translateY(-260px) rotate(-12deg) scale(1.2);opacity:0}25%{opacity:1}80%{transform:translateY(6px) rotate(1deg) scale(.98)}100%{transform:none;opacity:1}}
+.sx-tlbl{font-family:'Cinzel',serif;font-size:11px;font-weight:700;letter-spacing:.06em;padding:3px 8px;border-radius:5px;background:#2a1418;border:1px solid #a8434a;color:#ff8a80;}
+.sx-tcol.own .sx-tlbl{background:#3a2a10;border-color:#c9a05a;color:#ffcc80;}
+.sx-towner{font-size:10px;font-weight:600;letter-spacing:.04em;}
+.sx-center{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;max-width:300px;}
+.sx-center-seal{width:62px;height:62px;border-radius:50%;background:#2a1418;border:2px solid #e0565b;box-shadow:0 0 30px rgba(224,86,91,.45);display:flex;align-items:center;justify-content:center;}
+.sx-center-title{font-family:'Cinzel',serif;font-size:19px;font-weight:900;letter-spacing:.1em;color:#f5efe0;line-height:1.25;}
+.sx-center-sub{font-size:12px;color:var(--text-lo);line-height:1.5;}
+.sx-pills{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.sx-pill{font-family:'Cinzel',serif;font-size:12px;font-weight:700;padding:5px 10px;border-radius:6px;background:#2a1418;border:1px solid #a8434a;color:#ff8a80;}
+.sx-pill.on{background:#3a2a10;border-color:#ffb74d;color:#ffcc80;}
+.sx-skip{position:absolute;right:18px;bottom:18px;z-index:22;font-family:'Cinzel',serif;font-size:12px;font-weight:700;letter-spacing:.1em;padding:10px 16px;border-radius:8px;border:1px solid var(--border2);background:rgba(28,30,43,.92);color:var(--text);cursor:pointer;}
+.sx-skip.armed{background:#8e2f2f;border-color:#e05555;}
+.sx-moment{position:fixed;left:50%;top:22%;transform:translate(-50%,-50%) scale(.9);z-index:60;padding:16px 34px;border-radius:12px;font-family:'Cinzel',serif;font-size:28px;font-weight:900;letter-spacing:.12em;opacity:0;transition:opacity .35s,transform .35s;pointer-events:none;white-space:nowrap;}
+.sx-moment.show{opacity:1;transform:translate(-50%,-50%) scale(1);}
+.sx-moment.sanc{background:rgba(42,20,24,.95);border:1.5px solid #e0565b;color:#f5efe0;box-shadow:0 0 40px rgba(224,86,91,.4);}
+.sx-moment.redeem{background:rgba(42,32,12,.95);border:1.5px solid #c9a05a;color:#fff3d6;box-shadow:0 0 40px rgba(201,160,90,.5);}
 .player-chip.active{background:rgba(255,255,255,.56);border-color:rgba(169,123,64,.6);}
 .chip-dot{width:20px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
 .chip-info{flex:1;min-width:0;}
@@ -659,7 +706,8 @@ const PHASE_LABELS = {
   'resolve:landing':'Choose Landing',
   'resolve:turn_summary':'Turn Summary',
   'resolve:battle_result':'Battle Result',
-  'resolve:round_callout':'Round Callout'
+  'resolve:round_callout':'Round Callout',
+  'sanction:pick_tile':'⛓ Sanction Turn','sanction:own':'⛓ Sanction Turn','sanction:omen':'⛓ Sanction Turn','sanction:reveal':'⛓ Sanction Turn','resolve:veil':'🌫 Veil of Stillness'   // v0.6.33
 };
 
 // ─── State ────────────────────────────────────────────────────────────────────────────────
@@ -1623,8 +1671,12 @@ function render(){
   if (!G) { renderConnecting(app); return; }
   if (G.phase === 'lobby') { renderLobby(app); _fxPrev = null; return; }
   _fxDiff();
-  renderGame(app);
+  // v0.6.37: during a Sacrifice reveal, draw the tile as it was until the card lands
+  const _th = window.BoardFX && BoardFX.sxTileHold && BoardFX.sxTileHold();
+  if (_th && G.board[_th.pos]) { const real = G.board[_th.pos]; G.board[_th.pos] = _th.tile; try { renderGame(app); } finally { G.board[_th.pos] = real; } }
+  else renderGame(app);
   _wctSync();   // v0.6.26: after renderGame so the wheel centre exists to measure
+  _sxSync();    // v0.6.33
   _fxPump();
 }
 
@@ -1639,7 +1691,7 @@ function _wctSync() {
   try { BoardFX.wcTable(G.wcTable, G.phase, { instant: inst, sfx: _wctSfx }); } catch (e) { console.warn('wct', e); }
 }
 const _wctSfx = { deal: i => SFX.wildCardDeal(i), live: () => SFX.wildCardLive(), reveal: t => SFX.wildCardReveal(t), skip: () => SFX.wildCardPass() };   // v0.6.26
-function _fxBusy() { return !!(boardTokenAnim || boardRollAnimating || boardShowIdleDie); }
+function _fxBusy() { return !!(boardTokenAnim || boardRollAnimating || boardShowIdleDie || (window.BoardFX && BoardFX.sxBusy && BoardFX.sxBusy())); }
 function _fxTile(pos) { const c = tileElCache.get(pos); return c ? c.el.querySelector('.tile-inner') : null; }
 function _fxChip(idx) { return document.querySelector(`.player-chip[data-pidx="${idx}"] .chip-mana-val`); }
 function _fxPl(idx) { return G && G.players.find(p => p.idx === idx); }
@@ -1664,6 +1716,8 @@ function _fxDiff() {
     wct: G.wcTable ? G.wcTable.seq : 0,          // v0.6.26: doubles → Wild Card table
     voice: G.lastVoice ? G.lastVoice.seq : 0,   // v0.6.22
     elim: G.players.map(p => !!p.eliminated),
+    sanc: G.players.map(p => !!p.sanctioned && !p.eliminated),   // v0.6.33
+    wheel: G.lastWheel ? G.lastWheel.seq : 0,                     // v0.6.35
     hp: G.board.map(t => (t.summon && t.ownerId != null) ? { o: t.ownerId, id: t.summon.iid ?? t.summon.id, hp: t.summon.hp } : null),
   };
   const P = _fxPrev; _fxPrev = snap;
@@ -1683,6 +1737,23 @@ function _fxDiff() {
       _fxQ.push(() => { BoardFX.eliminated(_fxChipEl(p.idx), { name: p.name, color: p.color, left: !!p.forfeited }); p.forfeited ? SFX.playerLeft() : SFX.playerFallen(); });
     }
   });
+  // 🎡 Wheel of Fortune flip (v0.6.35)
+  // v0.6.36: the Wheel is revealed by the Sanction card table (BoardFX.sxTable) — no separate flip
+  // ⛓ Sanctioned / ✨ Redeemed (v0.6.33 — simple banner; full moments come later)
+  G.players.forEach((p, i) => {
+    if (!P.sanc) return;
+    if (snap.sanc[i] && P.sanc[i] === false) {   // v0.6.40: chip holds its old look until the card lands
+      _sxChipHold[p.idx] = false;
+      if (_sxBattleShowing(snap.phase)) _sxAfterBattle.push(p.idx);   // v0.6.42: not until the battle has played out
+      else _fxQ.push(() => _sxMoment('sanc', p));
+    }
+    else if (!snap.sanc[i] && P.sanc[i] === true && !snap.elim[i]) { _sxChipHold[p.idx] = true; _fxQ.push(() => _sxMoment('redeem', p)); }
+  });
+  // v0.6.42: battle over → now play the Sanctioned moments it caused (after the takeover / held effect)
+  if (_sxAfterBattle.length && !_sxBattleShowing(snap.phase)) {
+    const ids = _sxAfterBattle; _sxAfterBattle = [];
+    _fxQ.push(() => setTimeout(() => ids.forEach(idx => { const pl = _fxPl(idx); if (pl && pl.sanctioned && !pl.eliminated) _sxMoment('sanc', pl); else { delete _sxChipHold[idx]; render(); } }), SX_AFTER_BATTLE_MS));
+  }
   // 🃏 wild card played
   if (snap.wc && snap.wc !== P.wc && G.lastWildCard) {
     const wc = G.lastWildCard, caster = _fxPl(wc.casterIdx), tgt = wc.targetIdx != null ? _fxPl(wc.targetIdx) : null;
@@ -1802,6 +1873,147 @@ function updateDisconnectOverlay(){
     } catch(e) { /* QR lib not ready */ }
   }
   ov.classList.add('visible');
+}
+
+// v0.6.33: two-tap host Skip Sanction turn
+let _sxSkipArmed = 0;
+function sxSkipClick() {
+  const b = document.getElementById('sx-skip-btn');
+  if (!b || isSpectator) return;
+  if (Date.now() - _sxSkipArmed > 4000) {
+    _sxSkipArmed = Date.now();
+    b.classList.add('armed'); b.textContent = 'Tap again to skip';
+    setTimeout(() => { const bb = document.getElementById('sx-skip-btn'); if (bb && Date.now() - _sxSkipArmed >= 4000) { bb.classList.remove('armed'); bb.textContent = 'Skip Sanction turn'; } }, 4100);
+    return;
+  }
+  _sxSkipArmed = 0;
+  try { ws.send(JSON.stringify({ action: 'sanction_skip' })); } catch (e) {}
+}
+// v0.6.33: offered tiles pulse; the picked one glows
+let _sxTableSeen = false;   // v0.6.36: first sxTable call after (re)connect builds without the deal
+function _fortuneSync() {   // v0.6.35: big glowing Fortune number centred on each tile
+  for (let i = 0; i < 28; i++) {
+    const c = tileElCache.get(i); const inner = c && c.el.querySelector('.tile-inner');
+    if (!inner) continue;
+    const hold = window.BoardFX && BoardFX.sxFortuneHold && BoardFX.sxFortuneHold();   // v0.6.36: old value until the card lands
+    const f = (hold && hold.pos === i && !hold.omenHold) ? (hold.val || 0) : ((G.board[i] && G.board[i].fortune) || 0);
+    let el = inner.querySelector(':scope > .fortune-num');
+    inner.classList.toggle('has-fortune', !!f);
+    // v0.6.38: Omen pinned on the tile (held back during its own reveal until the card lands)
+    const om = (hold && hold.pos === i && hold.omenHold) ? hold.omen : (G.board[i] && G.board[i].omen);
+    let pin = inner.querySelector(':scope > .omen-pin');
+    if (!om) { if (pin) pin.remove(); }
+    else {
+      if (!pin) { pin = document.createElement('div'); inner.appendChild(pin); }
+      const curse = /withering|hollow|bleeding|shackled|toll|betrayer/.test(om.id);
+      pin.className = 'omen-pin ' + (curse ? 'c' : 'b');
+      pin.style.backgroundImage = `url('/img/omens/omen-${om.id}.webp')`;
+      pin.style.setProperty('--fr', `${-(i / 28) * 360}deg`);
+    }
+    if (!f) { if (el) el.remove(); continue; }
+    if (!el) { el = document.createElement('div'); inner.appendChild(el); }
+    el.className = `fortune-num ${f > 0 ? 'b' : 'c'} l${Math.abs(f)}`;
+    el.style.setProperty('--fr', `${-(i / 28) * 360}deg`);   // stay upright on the wheel
+    el.textContent = (f > 0 ? '+' : '−') + Math.abs(f);
+  }
+}
+function _sxSync() {
+  if (!G) return;
+  _fortuneSync();
+  // v0.6.36: the card table itself lives in BoardFX.sxTable (board-fx.js)
+  if (window.BoardFX && BoardFX.sxTable) {
+    try {
+      BoardFX.sxTable(G, {
+        instant: !_sxTableSeen, tileEl: _fxTile, onHold: () => setTimeout(render, 0),   // v0.6.37: holds released → redraw tiles
+        sfx: k => _sxSfx(k),   // v0.6.39
+        onRevealDone: seq => { if (!isSpectator) send('sanction_reveal_done', { seq }); },
+      });
+    } catch (e) { console.warn('sxTable', e); }
+    _sxTableSeen = true;
+  }
+  const on = G.phase && G.phase.startsWith('sanction:') && G.sanction;
+  for (let i = 0; i < 28; i++) {
+    const c = tileElCache.get(i); const inner = c && c.el.querySelector('.tile-inner');
+    if (!inner) continue;
+    inner.classList.toggle('sx-offer', !!(on && G.phase === 'sanction:pick_tile' && G.sanction.offers.includes(i)));
+    inner.classList.toggle('sx-picked', !!(on && G.phase !== 'sanction:pick_tile' && G.sanction.pickedPos === i));
+  }
+}
+// v0.6.35: tarot card flips in the board centre — upright (gold) or reversed (red) — then drops onto its tile
+function _wheelFlipFX(w) {
+  const wcEl = document.querySelector('.wheel-center'); if (!wcEl) return;
+  const r = wcEl.getBoundingClientRect();
+  const wh = document.querySelector('.wheel'), k = wh ? wh.getBoundingClientRect().width / 720 : 1;   // board scale
+  const W = 128 * k, H = W * 532 / 300, cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const reduced = window.BoardFX && BoardFX.level === 'reduced';
+  const col = w.upright ? '#ffd77a' : '#ff6b6b';
+  const el = document.createElement('div');
+  el.className = 'wheel-flip';
+  Object.assign(el.style, { left: (cx - W / 2) + 'px', top: (cy - H / 2 - 20 * k) + 'px', width: W + 'px', height: H + 'px' });
+  el.innerHTML = `<div class="wf-in"><div class="wf-face" style="background-image:url('/img/omens/omen-back-wheel.webp')"></div>
+    <div class="wf-face wf-front" style="background-image:url('/img/omens/omen-wheel-of-fortune.webp');box-shadow:0 0 0 3px ${col},0 0 40px ${col}aa"></div></div>`;
+  document.body.appendChild(el);
+  const lvl = w.after ? ({1:'Glimmer',2:'Radiance',3:'Exaltation','-1':'Tarnish','-2':'Blight','-3':'Doom'})[w.after] : 'Neutral';
+  const cap = document.createElement('div');
+  cap.className = 'wheel-flip-cap';
+  Object.assign(cap.style, { left: cx + 'px', top: (cy + H / 2 - 4 * k) + 'px', color: col, fontSize: Math.round(22 * k) + 'px', textShadow: `0 0 18px ${col}88, 0 2px 4px #000` });
+  cap.innerHTML = w.jackpot ? `JACKPOT +${w.jackpot}✦` : `${w.upright ? 'BLESSING' : 'CURSE'}<div style="font-size:.6em;letter-spacing:.16em;margin-top:4px;color:#f5efe0">Tile ${w.pos} · ${lvl} ${w.after > 0 ? '+' + w.after : w.after}</div>`;
+  document.body.appendChild(cap);
+  const inner = el.querySelector('.wf-in');
+  const endRot = w.upright ? 'rotateY(180deg)' : 'rotateY(180deg) rotateZ(180deg)';
+  if (reduced) { inner.style.transform = endRot; el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300 }); }
+  else {
+    el.animate([{ transform: 'translateY(-240px) scale(.8)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 450, easing: 'cubic-bezier(.25,.7,.3,1)' });
+    inner.animate([{ transform: 'rotateY(0)' }, { transform: (w.upright ? 'rotateY(90deg)' : 'rotateY(90deg) rotateZ(90deg)') + ' scale(1.15)', offset: .5 }, { transform: endRot }],
+      { duration: 900, delay: 450, easing: 'cubic-bezier(.4,.1,.3,1)', fill: 'both' });
+  }
+  setTimeout(() => {
+    cap.style.opacity = '1';
+    if (window.BoardFX) {
+      try { BoardFX.ring && BoardFX.ring(cx, cy, 130 * k, col, { dur: 800, grow: 2.2, width: 4 }); } catch (e) {}
+      if (w.jackpot) { try { BoardFX.sparks && BoardFX.sparks(cx, cy, '#ffd77a', 24, 170 * k, { dur: 900, size: 6 }); } catch (e) {} }
+    }
+  }, reduced ? 200 : 1300);
+  // drop onto the tile
+  setTimeout(() => {
+    cap.style.opacity = '0';
+    const t = typeof _fxTile === 'function' ? _fxTile(w.pos) : null;
+    if (t && !reduced) {
+      const tr = t.getBoundingClientRect(), dx = tr.left + tr.width / 2 - cx, dy = tr.top + tr.height / 2 - (cy - 20 * k);
+      el.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${dx}px,${dy}px) scale(.18)`, opacity: .2 }], { duration: 550, easing: 'cubic-bezier(.5,0,.7,1)', fill: 'forwards' });
+      setTimeout(() => { try { window.BoardFX && BoardFX.ring && BoardFX.ring(tr.left + tr.width / 2, tr.top + tr.height / 2, 50 * k, col, { dur: 600, grow: 2, width: 3 }); } catch (e) {} }, 520);
+    } else el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 400, fill: 'forwards' });
+  }, reduced ? 1800 : 2900);
+  setTimeout(() => { el.remove(); cap.remove(); }, reduced ? 2300 : 3600);
+}
+// v0.6.39: Sanction-turn sound effects (/audio/sx-*.mp3)
+const _SX_SFX = { sanctioned: .75, redeem: .7, fanfare: .6, blessing: .6, curse: .65, jackpot: .6, fly: .5 };
+const _sxSfxPool = {};
+Object.keys(_SX_SFX).forEach(k => { const a = new Audio('/audio/sx-' + k + '.mp3'); a.preload = 'auto'; _sxSfxPool[k] = a; });
+function _sxSfx(k) {
+  const L = _sfxLvl(), base = _SX_SFX[k]; if (!base || L <= 0) return;
+  try { const a = _sxSfxPool[k].cloneNode(); a.volume = Math.min(1, base * L); a.play().catch(() => {}); } catch (e) {}
+}
+// v0.6.40: tarot Sanctioned / Redeemed moment (BoardFX.sxMoment); placeholder banner kept as a fallback
+const _sxChipHold = {};
+// v0.6.42: a Sanction caused by a battle waits until the battle overlay is gone, then plays after the tile effect
+let _sxAfterBattle = [];
+const SX_AFTER_BATTLE_MS = 1600;
+const _sxBattleShowing = (ph) => ph === 'resolve:battle' || ph === 'resolve:battle_result';
+function _sxMoment(kind, p) {
+  const release = () => { delete _sxChipHold[p.idx]; setTimeout(render, 0); };
+  if (window.BoardFX && BoardFX.sxMoment) {
+    BoardFX.sxMoment(kind, p, { sfx: k => _sxSfx(k), chipEl: () => _fxChipEl(p.idx), onLand: release, onDone: () => { if (p.idx in _sxChipHold) release(); _fxPump(); } });
+    return;
+  }
+  _sxSfx(kind === 'sanc' ? 'sanctioned' : 'redeem'); release();
+  const el = document.createElement('div');
+  el.className = 'sx-moment ' + kind;
+  el.innerHTML = kind === 'sanc' ? `⛓ <span style="color:${p.color}">${p.name.toUpperCase()}</span> IS SANCTIONED` : `✨ <span style="color:${p.color}">${p.name.toUpperCase()}</span> IS REDEEMED`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => el.classList.remove('show'), 2600);
+  setTimeout(() => el.remove(), 3100);
 }
 
 // v0.5.04: two-tap Remove Player — first tap arms (4s), second tap sends remove_player.
@@ -1933,8 +2145,7 @@ function renderLobby(app){
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <img class="lobby-brand-logo" src="/img/logos/logo-main.webp" alt="Summoner's Gambit">
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.30 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.29</div>
-    <div style="margin-top:6px;"><button class="mute-btn" id="mute-btn" onclick="openAudioSettings()" title="Sound settings" style="width:auto;padding:0 14px;gap:6px;display:inline-flex;align-items:center;font-size:14px;">${_musicLvl()<=0 && _sfxLvl()<=0 ? '🔇' : '⚙'}&nbsp;Sound Settings</button></div>`;
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.42 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.39</div>`;  // v0.6.31: Sound Settings moved to the bottom-left row
   splash.appendChild(brand);
 
   // ── Two panels
@@ -2018,7 +2229,13 @@ function renderLobby(app){
 
   // ── Ko-fi link — flush under right panel
   const kofiRow = document.createElement('div');
-  kofiRow.style.cssText = 'width:100%;max-width:960px;display:flex;justify-content:flex-end;margin-top:4px;';
+  kofiRow.style.cssText = 'width:100%;max-width:960px;display:flex;justify-content:space-between;align-items:center;margin-top:4px;';
+  const sndBtn = document.createElement('button');   // v0.6.31: Sound Settings bottom-left, opposite Ko-fi
+  sndBtn.className = 'mute-btn'; sndBtn.id = 'mute-btn'; sndBtn.title = 'Sound settings';
+  sndBtn.onclick = openAudioSettings;
+  sndBtn.style.cssText = 'width:auto;padding:0 14px;gap:6px;display:inline-flex;align-items:center;font-size:14px;';
+  sndBtn.innerHTML = (_musicLvl()<=0 && _sfxLvl()<=0 ? '🔇' : '⚙') + '&nbsp;Sound Settings';
+  kofiRow.appendChild(sndBtn);
   const kofiLink = document.createElement('a');
   kofiLink.className = 'kofi-corner';
   kofiLink.href = 'https://ko-fi.com/fortyonethoughts';
@@ -2043,6 +2260,22 @@ function renderLobby(app){
         rlWrap.querySelectorAll('.round-limit-btn').forEach(b => b.classList.toggle('selected', Number(b.dataset.limit) === selectedRoundLimit));
       };
     });
+    // v0.6.32: Skip setup toggle (host only) — server holds G.skipSetup so phones can show it
+    const ssWrap = document.createElement('div');
+    ssWrap.className = 'round-limit-wrap';
+    ssWrap.innerHTML = `<div class="round-limit-lbl">Setup Phase</div>
+      <div class="round-limit-btns">
+        <button class="round-limit-btn${!G.skipSetup?' selected':''}" data-skip="0">Normal</button>
+        <button class="round-limit-btn${G.skipSetup?' selected':''}" data-skip="1">Auto (skip)</button>
+      </div>`;
+    ssWrap.querySelectorAll('.round-limit-btn').forEach(btn => {
+      btn.onclick = () => {
+        const on = btn.dataset.skip === '1';
+        ssWrap.querySelectorAll('.round-limit-btn').forEach(b => b.classList.toggle('selected', b === btn));
+        send('set_skip_setup', { on });
+      };
+    });
+    rlWrap.appendChild(ssWrap);
     splash.appendChild(rlWrap);
   }
 
@@ -2098,7 +2331,9 @@ function renderGame(app){
   const setupTurnDisplay = G.setupTotalTurns > 0
     ? ` · Turn ${(G.setupTurnIdx || 0) + 1}/${G.setupTotalTurns}`
     : '';
-  const phaseLabel = isSetup
+  const phaseLabel = isSetup && G.autoSetupRunning
+    ? `Auto Setup — placing summons${setupTurnDisplay}`   // v0.6.32
+    : isSetup
     ? `Setup Phase — Round ${G.setupRound || 1} of 3${setupTurnDisplay}`
     : (PHASE_LABELS[G.phase] || G.phase);
   const roundLabel = isSetup
@@ -2112,7 +2347,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.6.30</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.6.42</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -2293,6 +2528,7 @@ function renderGame(app){
     tok.innerHTML = playerTokenSVG(p, 140)
       + (p.idx === _leaderIdx && !p.eliminated ? `<div style="position:absolute;left:50%;top:6px;transform:translateX(-50%);font-size:24px;filter:drop-shadow(0 0 6px #ffd77a) drop-shadow(0 2px 2px rgba(0,0,0,.6));">👑</div>` : '');
     if (p.eliminated) tok.style.cssText += 'opacity:.28;filter:grayscale(1);';   // v0.6.20
+    else if (p.sanctioned) tok.style.cssText += 'opacity:.75;filter:saturate(.5) drop-shadow(0 0 3px #e0565b) drop-shadow(0 0 8px rgba(224,86,91,.8));';   // v0.6.33
     tokLayer.appendChild(tok);
   });
   wheel.appendChild(tokLayer); // append layer to wheel after tiles
@@ -2340,6 +2576,8 @@ function renderGame(app){
       </div>
       <div class="battle-foot">Tile ${curPlayer ? curPlayer.position : '?'}</div>
     </div>`;
+  } else if (G.phase && G.phase.startsWith('sanction:') && G.sanction && curPlayer) {   // v0.6.36: centre left clear — BoardFX.sxTable draws the card table
+    wc.innerHTML = `<div class="center-idle"></div>`;
   } else {
     wc.innerHTML = `<div class="center-idle">
       <div class="arcane-die" id="board-anim-die" style="position:relative;overflow:visible;">
@@ -2368,6 +2606,16 @@ function renderGame(app){
     overlay.style.cssText = 'position:absolute;inset:0;z-index:15;background:rgba(8,8,20,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;';
     boardArea.appendChild(overlay);
     runBattleAnimation(lb, attPlayer, defPlayer, overlay);
+  }
+
+  // ── v0.6.33: host-only Skip Sanction turn (no timer on Sanction turns)
+  if (G.phase && G.phase.startsWith('sanction:') && !isSpectator) {
+    const sk = document.createElement('button');
+    sk.className = 'sx-skip';
+    sk.id = 'sx-skip-btn';
+    sk.textContent = 'Skip Sanction turn';
+    sk.onclick = sxSkipClick;
+    boardArea.appendChild(sk);
   }
 
   // ── Wild Card banner overlay ──
@@ -2468,7 +2716,7 @@ function renderGame(app){
       const isElim = p.eliminated || false;
       const playerAwards = awards[p.name] || [];
       const awardBadge = playerAwards.length ? `<span class="wt-award">${playerAwards.join(' · ')}</span>` : '';
-      const elimBadge = isElim ? `<span class="wt-award" style="color:#e05252">${p.forfeited ? '🏳 Left' : '💀 Eliminated'}</span>` : '';
+      const elimBadge = isElim ? `<span class="wt-award" style="color:#e05252">${p.forfeited ? '🏳 Left' : '💀 Eliminated'}</span>` : p.sanctioned ? `<span class="wt-award" style="color:#e0565b">⛓ Sanctioned</span>` : '';   // v0.6.33
       const medal = rank===0 ? '🥇' : rank===1 ? '🥈' : rank===2 ? '🥉' : `${rank+1}.`;
       let rowStyle = isElim ? `color:${p.color};padding-left:16px;opacity:.5;` : `color:${p.color};padding-left:16px;`;
       rowStyle += `--r:${rank};`;
@@ -2546,12 +2794,14 @@ function renderPaper(){
     chip.className = 'player-chip' + (isActive ? ' active' : '');
     chip.dataset.pidx = p.idx;
     if (isElim) chip.style.cssText = 'opacity:.38;filter:grayscale(.7);';
+    const isSanc = !isElim && (p.idx in _sxChipHold ? _sxChipHold[p.idx] : !!p.sanctioned);   // v0.6.33 (v0.6.40: held during the moment)
+    if (isSanc) chip.classList.add('sanctioned');
     const monoEl = monoElementPlayers.get(p.idx);
     const monoTag = monoEl ? `<span class="chip-mono-badge" title="Mono-Element Mastery: ${monoEl}">⭐</span><span class="chip-mono-label" style="color:${TYPE_COLOR[monoEl]||'#ffc840'}">${monoEl}</span>` : '';
-    chip.innerHTML = `<div class="chip-dot">${isElim ? `<span style="font-size:16px">${p.forfeited ? '🏳' : '💀'}</span>` : playerSigilSVG(p, 18)}</div>
+    chip.innerHTML = `<div class="chip-dot${isSanc ? ' sanc' : ''}">${isElim ? `<span style="font-size:16px">${p.forfeited ? '🏳' : '💀'}</span>` : playerSigilSVG(p, 18)}</div>
       <div class="chip-info">
         <div class="chip-name" style="color:${isElim ? 'var(--text-mute)' : (isActive ? p.color : 'var(--parch-ink)')}">
-          ${p.idx === _leaderIdx && !isElim ? '<span title="Most tiles" style="margin-right:3px">👑</span>' : ''}${p.name}${isActive ? ' ◄' : ''}${isElim ? ` <span style="font-size:9px;color:#e05252;font-family:Inter,sans-serif">${p.forfeited ? 'LEFT' : 'ELIMINATED'}</span>` : monoTag}
+          ${p.idx === _leaderIdx && !isElim ? '<span title="Most tiles" style="margin-right:3px">👑</span>' : ''}${p.name}${isActive ? ' ◄' : ''}${isElim ? ` <span style="font-size:9px;color:#e05252;font-family:Inter,sans-serif">${p.forfeited ? 'LEFT' : 'ELIMINATED'}</span>` : isSanc ? '<span class="chip-sanc-tag">⛓ SANCTIONED</span>' : monoTag}
         </div>
         <div class="chip-sub">${isElim ? 'Out of the game' : `${p.tileCount} tiles · ${p.stationedCount} stationed · <span style="color:#5dc97d">⚔${p.battlesWon??0}W</span> <span style="color:#e05252">${p.battlesLost??0}L</span>`}</div>
       </div>
@@ -2561,7 +2811,7 @@ function renderPaper(){
       </div>`;
     plist.appendChild(chip);
     // v0.6.10: rolling mana counter (holds the old number while the die/token is animating)
-    if (window.BoardFX && !isElim) BoardFX.manaRoll(p.idx, chip.querySelector('.chip-mana-val'), _fxBusy() ? null : p.mana);
+    if (window.BoardFX && !isElim) BoardFX.manaRoll(p.idx, chip.querySelector('.chip-mana-val'), (_fxBusy() || p.idx in _sxChipHold) ? null : p.mana);   // v0.6.41: held during the Sanction moment
   });
   paper.appendChild(plist);
 

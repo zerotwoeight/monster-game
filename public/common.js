@@ -1,4 +1,5 @@
-// Summoner's Gambit — shared client helpers (common.js v0.1.1)
+// Summoner's Gambit — shared client helpers (common.js v0.1.2)
+// v0.1.2: SX_TIMING — Sanction reveal beats shared by the board animation and the phone
 // Loaded by board.html AND player.html before their inline scripts.
 // Anything here must be IDENTICAL for both views — page-specific variants stay in the page.
 
@@ -63,3 +64,11 @@ function battleFxRow(e) {
     ${e.value ? `<div class="bfx-val">${escHtml(e.value)}</div>` : ''}
   </div>`;
 }
+
+// ── v0.1.2: Sanction turn reveal timing (locked 2026-10-27 in the Wheel Reveal Lab — see claude/SANCTION_REVEAL_SPEC.md)
+// ms at 1.0×; real time = ms / SX_TIMING.speed. The board animates with these; the phone waits on the same numbers.
+const SX_TIMING = {
+  speed: 1.5, cardW: 100, revealScale: 1.5, spread: 120,
+  land: 520, fan: 620, turn: 420, gather: 480, fanfare: 1100, flip: 820, result: 1400, settle: 650,
+};
+function sxMs(beat) { return (SX_TIMING[beat] || 0) / SX_TIMING.speed; }

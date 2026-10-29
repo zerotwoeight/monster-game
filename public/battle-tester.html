@@ -128,7 +128,7 @@ textarea:focus{border-color:var(--accent)}
   <div class="topbar-right">
     <span id="topbar-matchup">Select both summons</span>
     <a href="/board">← Board</a>
-    <span style="font-family:monospace">v1.0.103</span>
+    <span style="font-family:monospace">v1.0.104</span>
   </div>
 </div>
 
@@ -350,6 +350,20 @@ textarea:focus{border-color:var(--accent)}
       <span class="buff-lbl">💀 Demon Lord: Last Rite</span><span class="buff-mod-gold">survive at 15 HP</span>
     </div>
     <div class="spin-row">
+      <span class="spin-lbl">🎡 Fortune on tile</span>
+      <select id="def-fortune" onchange="refreshPreview()" style="margin-left:auto">
+        <option value="0">Neutral 0</option><option value="1">+1 Glimmer (+10% DEF)</option><option value="2">+2 Radiance (+20% DEF, +10% counter)</option><option value="3">+3 Exaltation (+30% DEF, +20% counter)</option>
+        <option value="-1">−1 Tarnish (−10% DEF)</option><option value="-2">−2 Blight (−20% DEF)</option><option value="-3">−3 Doom (−30% DEF)</option>
+      </select>
+    </div>
+    <div class="spin-row">
+      <span class="spin-lbl">🔮 Omen on tile</span>
+      <select id="def-omen" onchange="refreshPreview()" style="margin-left:auto">
+        <option value="">None</option><option value="saints_ward">Saint's Ward (+20% DEF)</option><option value="withering_brand">Withering Brand (−20% DEF)</option>
+        <option value="kindled_blade">Kindled Blade (next strike +20%)</option><option value="shackled_will">Shackled Will (counter ½)</option><option value="echoing_hymn">Echoing Hymn (8 dmg to attacker first)</option>
+      </select>
+    </div>
+    <div class="spin-row">
       <span class="spin-lbl">🔨 Forge copies (def)</span>
       <button class="spin-btn" onclick="spin('def-fg',-1)">−</button>
       <span class="spin-val" id="def-fg">0</span>
@@ -542,7 +556,7 @@ function typeMultiplier(att, def){
 }
 
 // doStrike mirrors server v1.0.71 signature
-function doStrike(att, def, tileEl, charm, ambush, bonusRun, monoBuff, forgeBonus=0, attIsRadiantLancer=false){
+function doStrike(att, def, tileEl, charm, ambush, bonusRun, monoBuff, forgeBonus=0, attIsRadiantLancer=false, extra=[]){
   const steps=[];
   const tileEff=tileEffectOnDefender(tileEl, def);
   const rawDef=def.def+forgeBonus;
@@ -575,6 +589,7 @@ function doStrike(att, def, tileEl, charm, ambush, bonusRun, monoBuff, forgeBonu
     dmg=Math.round(dmg*1.20);
     steps.push({cls:'le-buff',t:`  🔥 Tile Synergy +20% → ${dmg}`});
   }
+  extra.forEach(x=>{ dmg=Math.round(dmg*x.m); steps.push({cls:x.m<1?'le-ability':'le-buff',t:`  ${x.t} → ${dmg}`}); });   // v1.0.104: Omen / Fortune strike mods (server order)
   if(monoBuff){
     dmg=Math.round(dmg*1.20);
     steps.push({cls:'le-buff',t:`  ⭐ Mono-Element Mastery +20% → ${dmg}`});
@@ -599,10 +614,18 @@ function calcBattle(){
   const defLastDarkness=$('def-lastdarkness').checked, defLayOnHands=$('def-layonhands').checked;
   const defBoneWraith=$('def-bonewraith').checked, defThornling=$('def-thornling').checked, defLastRite=$('def-lastrip').checked;
   const attLancer = attM.id==='radiant_lancer', defLancer = defM.id==='radiant_lancer';
+  // v1.0.104: Fortune + Omen on the defending tile (mirrors server v1.0.119)
+  const FORT={1:{n:'Glimmer',d:.10,c:0},2:{n:'Radiance',d:.20,c:.10},3:{n:'Exaltation',d:.30,c:.20},'-1':{n:'Tarnish',d:-.10,c:0},'-2':{n:'Blight',d:-.20,c:0},'-3':{n:'Doom',d:-.30,c:0}};
+  const fLvl=+$('def-fortune').value||0, fI=fLvl?FORT[fLvl]:null, omen=$('def-omen').value;
+  let kindled = omen==='kindled_blade';
 
   // Same pre-battle stat prep as server attack handler: Weapon Smith → att ATK, Forge → def DEF
   const att={...attM, atk:attM.atk + ws*5 + attVH};
   const def={...defM, atk:defM.atk + defVH, def:defM.def + fg*5};
+  const defPre=def.def;
+  if(omen==='saints_ward'||omen==='withering_brand') def.def=Math.max(0,Math.round(def.def*(omen==='saints_ward'?1.2:0.8)));
+  const defOmen=def.def;
+  if(fI) def.def=Math.max(0,Math.round(def.def*(1+fI.d)));
   let attLoH=false, defLoH=false, attRite=false, defRite=false;
   const T30=m=>Math.floor(m.maxHp*0.30);
   const log=[]; const L=(cls,t)=>log.push({cls,t});
@@ -610,7 +633,13 @@ function calcBattle(){
     const charm = isAtt ? attCharm : defCharm;
     const amb = isAtt ? ambush : false;
     const pierce = isAtt ? attLancer : defLancer;
-    const r=doStrike(a,d,tileEl,charm,amb,bonusRun,monoB,0,pierce);
+    const ex=[];
+    if(!isAtt){
+      if(kindled){ ex.push({m:1.2,t:'🔮 Kindled Blade +20%'}); kindled=false; }
+      if(omen==='shackled_will') ex.push({m:0.5,t:'🔮 Shackled Will ½'});
+      if(fI&&fI.c) ex.push({m:1+fI.c,t:`🎡 ${fI.n} counter +${Math.round(fI.c*100)}%`});
+    }
+    const r=doStrike(a,d,tileEl,charm,amb,bonusRun,monoB,0,pierce,ex);
     if(isAtt){ attCharm=false; ambush=false; } else defCharm=false;   // consumed on first strike
     r.steps.forEach(x=>log.push(x)); return r.dmg;
   };
@@ -622,9 +651,12 @@ function calcBattle(){
   if(attVH) L('le-buff',`   ⚡ Void Hunger: +${attVH} ATK on attacker`);
   if(fg)    L('le-buff',`   🔨 Forge ×${fg}: +${fg*5} DEF on defender (${defM.def} → ${def.def})`);
   if(defVH) L('le-buff',`   ⚡ Void Hunger: +${defVH} ATK on defender`);
+  if(defOmen!==defPre) L(omen==='saints_ward'?'le-buff':'le-ability',`   🔮 ${omen==='saints_ward'?"Saint's Ward":'Withering Brand'}: DEF ${defPre} → ${defOmen}`);
+  if(fI) L(fI.d>0?'le-buff':'le-ability',`   🎡 ${fI.n}: DEF ${defOmen} → ${def.def}`);
   L('le-info','');
 
   let attHp=att.hp, defHp=def.hp, preDmg=0, atkDmg=0, ctrDmg=0, preKilled=false;
+  if(omen==='echoing_hymn'){ const h0=attHp; attHp=Math.max(1,attHp-8); L('le-cdmg',`🔮 Echoing Hymn: ${att.name} takes ${h0-attHp} before the battle (${h0} → ${attHp} HP, can't drop below 1)`); L('le-info',''); }   // v1.0.104
 
   // ─ Stormtalon defending: pre-emptive strike ─
   if(defStormtalon){

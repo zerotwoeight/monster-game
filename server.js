@@ -11,7 +11,19 @@ const path = require('path');
 const os   = require('os');
 
 const PORT = process.env.PORT || 3000;
-const SERVER_VERSION = 'v1.0.111';   // v1.0.111: players[].lastStumble for the phone dice tray (player v0.5.30)
+const SERVER_VERSION = 'v1.0.123';   // v1.0.123: version bump — phones reload for player v0.5.40 (mini-board UI tick)
+// prev: v1.0.122;   // v1.0.122: version bump — clients reload for board v0.6.42 / player v0.5.39 (Sanction moment + notice wait for the battle to finish; phone battle music primed)
+// prev: v1.0.121;   // v1.0.121: Omen notices on the target's phone; turn summary gets Omens, per-summon Gen/heal, recallable per player (mySummary)
+// prev: v1.0.120;   // v1.0.120: version bump — clients reload for board v0.6.41 / board-fx v0.6.35 / battle-tester v1.0.104 (Sanction SFX + tarot moments)
+// prev: v1.0.119;   // v1.0.119: Omens — 12 one-round Blessings/Curses a Sanctioned player places on a rival's tile
+// prev: v1.0.118;   // v1.0.118: sanction:reveal phase — the turn holds while the board reveals the result (card-game flow)
+// prev: v1.0.117;   // v1.0.117: Wheel of Fortune — tile Fortune meter, battle effects, bounties, jackpot, Doom
+// prev: v1.0.116;   // v1.0.116: sanction_preview — board mirrors the tile the Sanctioned player is looking at
+// prev: v1.0.115;   // v1.0.115: Sanction turn — pick 1 of 3 claimed tiles → own: Sacrifice / Redeem / pass; opponent: Omen (pass only until Omens land)
+// prev: v1.0.114;   // v1.0.114: Redeem refunds a 5✦ base (card shows 15✦, net cost 10✦)
+// prev: v1.0.113;   // v1.0.113: Sanctioned (Mana 0 no longer eliminates) — rules only
+// prev: v1.0.112;   // v1.0.112: Skip Setup lobby toggle (G.skipSetup) + autoSetup()
+// prev: v1.0.111;   // v1.0.111: players[].lastStumble for the phone dice tray (player v0.5.30)
 // prev: v1.0.110;   // v1.0.110: Wild Cards trigger on rolling doubles (replaces passing the Mana Well) + board wild-card table signals
 // prev: v1.0.109;   // v1.0.109: randomised starter sets (8 pools, 1 Guardian + 4 random) + sets G Dead Covenant / H Ancient Guard
 // prev: v1.0.108   // v1.0.108: version bump — player v0.5.27 (Ascendant unlock condition on detail sheet)
@@ -420,6 +432,8 @@ function freshGame(roomCode) {
     setupTotalTurns: 0,      // = 3 * N, set when setup starts
     pendingWildCard: false,  // v1.0.110: set true when the player rolls doubles
     wcTable: null,           // v1.0.110: { seq, playerIdx, dice, pick, skipped } — drives the board's wild-card table
+    skipSetup: false,        // v1.0.112: host lobby toggle — replace setup phase with Auto Setup
+    autoSetupRunning: false, // v1.0.112: true while autoSetup() is placing (setup actions blocked)
     pendingLanding: null,    // { roll, options:[pos,pos,pos] } — set after roll, cleared on choose_landing
     wildCardDrawn: null,     // { low: card, mid: card, high: card }
     wildCardPending: null,   // { cardId, step } for multi-step cards (coup/shatter)
@@ -472,6 +486,9 @@ function addPlayer(name, color, starterSet) {
     notification: null,  // { cardId, cardName, cardDesc, castByName, castByColor, tier }
     eliminated: false,   // true once player owns 0 tiles at end of their own turn (post-setup)
     eliminatedRank: null, // set when eliminated — higher = survived longer (e.g. last eliminated = 1)
+    sanctioned: false,    // v1.0.113: Mana hit 0 — sub-player, no income, can Redeem once
+    sanctionedAt: null,   // v1.0.113: turnCount when last Sanctioned
+    redeemUsed: false,    // v1.0.113: Redeem is once per game
     lastTurnBattleManaGain: 0,   // mana received from battle outcomes last turn
     lastTurnBattleManaLoss: 0,   // mana paid/lost from battle outcomes last turn
   };
@@ -554,6 +571,19 @@ function doStrike(attacker, defender, tile, nullify = false, bonusRun = false, m
     dmg = Math.round(dmg * 1.20);
     log(`🔥 Tile Synergy! ${attacker.name} strikes for +20% damage`);
     fxM(attacker, 'Tile Synergy', '3-tile element run: +20% damage', '+20%', 'good');
+  }
+  if (attacker._kindled && !attacker._kindledUsed) {   // v1.0.119: Kindled Blade — next strike +20%
+    dmg = Math.round(dmg * 1.20); attacker._kindledUsed = true;
+    fxM(attacker, 'Kindled Blade (Omen)', 'Strike deals +20% damage', '+20%', 'good');
+  }
+  if (attacker._shackled) {   // v1.0.119: Shackled Will — counter-strike at half damage
+    dmg = Math.round(dmg * 0.5);
+    fxM(attacker, 'Shackled Will (Omen)', 'Counter-strike deals half damage', '½ dmg', 'bad');
+  }
+  if (attacker._fortuneCounter) {   // v1.0.117: Radiance / Exaltation counter-strike bonus
+    const fc = attacker._fortuneCounter;
+    dmg = Math.round(dmg * (1 + fc.pct));
+    fxM(attacker, `${fc.name} counter`, `Counter-strike +${Math.round(fc.pct * 100)}%`, `+${Math.round(fc.pct * 100)}%`, 'good');
   }
   if (monoBuff) {
     dmg = Math.round(dmg * 1.20);
@@ -1098,8 +1128,10 @@ function processTurnStartEffects(playerIdx) {
 
 function collectPassiveIncome(playerIdx) {
   const p = G.players[playerIdx];
+  if (p && p.sanctioned) return 0;   // v1.0.113: no income while Sanctioned
   let earned = 5; // baseline
   let summonGen = 0;
+  const _omensUsed = [];   // v1.0.121: Golden Tithe / Hollow Hunger spent at this income (for the summary)
 
   for (const tile of G.board) {
     if (tile.ownerId !== playerIdx || !tile.summonId) continue;
@@ -1144,6 +1176,12 @@ function collectPassiveIncome(playerIdx) {
       gen += mi.abilityData.sorcererGenBonus;
     }
 
+    // v1.0.119: Omens on this tile — applied once, at this income
+    const _om = tileOmen(tile);
+    if (_om && (_om.id === 'golden_tithe' || _om.id === 'hollow_hunger')) _omensUsed.push({ id: _om.id, pos: tile.pos, byIdx: _om.byIdx, summonName: mi.name, gen: _om.id === 'golden_tithe' ? gen : -gen });
+    if (_om && _om.id === 'golden_tithe') { _tallyBreakdown.push({ label: '🔮 Golden Tithe', bonus: gen }); gen *= 2; log(`🔮 Golden Tithe: ${mi.name}'s Gen doubled to ${gen}✦`); tile.omen = null; }
+    else if (_om && _om.id === 'hollow_hunger') { _tallyBreakdown.push({ label: '🔮 Hollow Hunger', bonus: -gen }); log(`🔮 Hollow Hunger: ${mi.name} earns nothing this turn`); gen = 0; tile.omen = null; }
+
     // Store actual gen for tally display (reflects all ability bonuses)
     mi._tallyGen = gen;
     mi._tallyGenBreakdown = _tallyBreakdown;
@@ -1163,6 +1201,7 @@ function collectPassiveIncome(playerIdx) {
       const wt = G.board[np];
       if (!wt || !wt.summonInstance || wt.summonInstance.id !== 'spell_wraith') continue;
       if (wt.ownerId == null || wt.ownerId === playerIdx) continue;
+      if (G.players[wt.ownerId] && G.players[wt.ownerId].sanctioned) continue;   // v1.0.113: Sanctioned owners earn no drain
       const want = mi.gen || 0;
       const take = Math.max(0, Math.min(want, earned));
       if (take <= 0) continue;
@@ -1368,7 +1407,9 @@ function collectPassiveIncome(playerIdx) {
     // Battle mana from previous turn
     battleManaGain: p.lastTurnBattleManaGain,
     battleManaLoss: p.lastTurnBattleManaLoss,
+    omensUsed: _omensUsed,   // v1.0.121
   };
+  p.lastSummary = G.turnSummary;   // v1.0.121: kept for the phone's recall button until the next summary
 
   // Reset battle mana trackers for next turn
   p.lastTurnBattleManaGain = 0;
@@ -1436,6 +1477,7 @@ function serializeShopMonster(m) { return { ...monCore(m), ...monExt(m), isSpeci
 function serializeTempleMonster(m) { return { ...monCore(m), ...monSpecial(m), isSpecial:true, charm:false }; }
 
 function publicState() {
+  if (G && G.board) for (const t of G.board) { tileFortune(t); tileOmen(t); }   // v1.0.117/119: drop stale Fortune meters + Omens before export
   // Safe copy of board (summonInstance as summary)
   const board = G.board.map(t => {
     const ti = { ...t };
@@ -1479,6 +1521,9 @@ function publicState() {
     eliminated: p.eliminated || false,
     eliminatedRank: p.eliminatedRank || null,
     forfeited: p.forfeited || false,
+    sanctioned: !!p.sanctioned,          // v1.0.113
+    sanctionedAt: p.sanctionedAt ?? null,
+    redeemUsed: !!p.redeemUsed,
   }));
 
   return {
@@ -1512,6 +1557,11 @@ function publicState() {
     tileFlashes: G.tileFlashes || [],
     lastWildCard: G.lastWildCard || null,
     wcTable: G.wcTable || null,   // v1.0.110
+    skipSetup: !!G.skipSetup,               // v1.0.112
+    sanction: G.sanction || null,
+    lastWheel: G.lastWheel || null,          // v1.0.117: { seq, playerIdx, pos, upright, before, after, jackpot }            // v1.0.115: { seq, playerIdx, offers, pickedPos, omenOffers, result }
+    rankings: G.rankings || null,           // v1.0.113: was built in endGame() but never exported — board fell back to its own sort
+    autoSetupRunning: !!G.autoSetupRunning, // v1.0.112
     lastVoice: G.lastVoice || null,
     serverVersion: SERVER_VERSION,
   };
@@ -1540,6 +1590,7 @@ function checkElimination(playerIdx) {
   const elimCount = G.players.filter(pl => pl.eliminated).length;
   p.eliminated = true;
   p.eliminatedRank = elimCount + 1; // lower = eliminated earlier (1 = first out)
+  p.sanctioned = false;             // v1.0.113: Sanctioned → Eliminated
 
   log(`💀 ${p.name} owns 0 tiles and is ELIMINATED! (rank: out at ${p.eliminatedRank})`);
 
@@ -1555,11 +1606,55 @@ function checkManaElimination(playerIdx) {
   if (!p || p.eliminated) return false;
   if (p.mana > 0) return false;
   p.mana = 0;
-  const elimCount = G.players.filter(pl => pl.eliminated).length;
-  p.eliminated = true;
-  p.eliminatedRank = elimCount + 1;
-  log(`💸 ${p.name} ran out of Mana and is ELIMINATED!`);
+  if (p.sanctioned) return false;   // v1.0.113: already Sanctioned — Mana just floors at 0
+  return sanctionPlayer(playerIdx);
+}
+
+// v1.0.113: Mana hit 0 → Sanctioned (was: Eliminated). Keeps tiles, summons and hand.
+function sanctionPlayer(playerIdx) {
+  const p = G.players[playerIdx];
+  if (!p || p.eliminated || p.sanctioned) return false;
+  p.sanctioned = true;
+  p.sanctionedAt = G.turnCount;
+  p.mana = 0;
+  if (G.stalemateData && G.stalemateData.attackerIdx === playerIdx) G.stalemateData = null;   // they won't resolve it
+  log(`⛓ ${p.name} ran out of Mana and is SANCTIONED!`);
   return true;
+}
+
+// v1.0.113: a Sanctioned player who has lost their last tile (on anyone's turn) is Eliminated.
+function checkSanctionedTileLoss() {
+  if (G.phase === 'setup' || G.turnCount < G.players.length) return;
+  for (const p of G.players) {
+    if (p.sanctioned && !p.eliminated) checkElimination(p.idx);
+  }
+}
+
+// v1.0.113: Redeem — 15✦, needs a tile, once per game, not in the final round.
+const REDEEM_COST = 15;      // shown on the card; need at least this much to Redeem
+const REDEEM_RETURN_BASE = 5; // v1.0.114: come back with +5✦ so Redeem never leaves you at 0 (net cost 10✦)
+function isFinalRound() {
+  return Math.floor(G.turnCount / G.players.length) + 1 >= G.roundLimit;
+}
+function redeemBlockReason(playerIdx) {
+  const p = G.players[playerIdx];
+  if (!p || !p.sanctioned || p.eliminated) return 'Not Sanctioned';
+  if (p.redeemUsed) return 'Redeem already used this game';
+  if (isFinalRound()) return 'Redeem is not allowed in the final round';
+  if (p.mana < REDEEM_COST) return `Need ${REDEEM_COST}✦ to Redeem`;
+  if (!G.board.some(t => t.ownerId === playerIdx)) return 'Need at least 1 tile to Redeem';
+  return null;
+}
+function redeemPlayer(playerIdx) {
+  const why = redeemBlockReason(playerIdx);
+  if (why) return why;
+  const p = G.players[playerIdx];
+  p.mana = p.mana - REDEEM_COST + REDEEM_RETURN_BASE;
+  p.sanctioned = false;
+  p.redeemUsed = true;
+  for (const t of G.board) if (t.ownerId === playerIdx) clearFortune(t);   // Wheel of Fortune meters clear
+  log(`✨ ${p.name} pays ${REDEEM_COST}✦ (+${REDEEM_RETURN_BASE}✦ back) and is REDEEMED — back in the game!`);
+  return null;
 }
 
 // ─── FORFEIT (v1.0.96) ───────────────────────────────────────────────────────
@@ -1577,9 +1672,11 @@ function forfeitPlayer(idx, reason) {
   p.eliminated = true;
   p.eliminatedRank = elimCount + 1;
   p.forfeited = true;
+  p.sanctioned = false;   // v1.0.113: leavers are Eliminated, never Sanctioned
   p.hand = [];
   p.mana = 0;
   p.notification = null;
+  p.notifQueue = [];
   if (p.wcEffects) for (const k of Object.keys(p.wcEffects)) p.wcEffects[k] = (typeof p.wcEffects[k] === 'number') ? 0 : false;
   p.hemorrhageStacks = 0; p.hemorrhageAmt = 0; p._hemorrhageIncomeReduction = 0;
   if (G.stalemateData && G.stalemateData.attackerIdx === idx) G.stalemateData = null;
@@ -1603,7 +1700,7 @@ function forfeitPlayer(idx, reason) {
     G.pendingWildCard = false; G.wildCardDrawn = null; G.wildCardPending = null; G.wcTable = null;
     G.pendingTemple = null; G.pendingChest = null; G.pendingLanding = null;
     G.pendingAttackerMonster = null;
-    if (G.phase === 'setup') { advanceSetupTurn(); return true; }
+    if (G.phase === 'setup') { if (!G.autoSetupRunning) advanceSetupTurn(); return true; }   // v1.0.112: Auto Setup skips leavers itself
     if (G.phase === 'resolve:round_callout') {
       // Turn hasn't started yet — hand it to the next active player; callout continues
       let n = idx, guard = 0;
@@ -1621,7 +1718,7 @@ function forfeitPlayer(idx, reason) {
 
 // Call after every turn. If only 1 non-eliminated player remains, end the game immediately.
 function checkLastStanding() {
-  const active = G.players.filter(p => !p.eliminated);
+  const active = G.players.filter(p => !p.eliminated && !p.sanctioned);   // v1.0.113
   if (active.length <= 1) {
     endGame();
     return true;
@@ -1729,6 +1826,9 @@ function computeRoundTally(playerIdx, hpSnapshot, milestoneSnapshot) {
 
 function startShopPhase() {
   const p = G.players[G.currentPlayer];
+  if (p && p.sanctioned) { p.lastSummary = null; startSanctionTurn(); return; }   // v1.0.115 · v1.0.121: no summary while Sanctioned
+  tickDoom();   // v1.0.117
+  omenTurnStart(G.currentPlayer);   // v1.0.119
   p.lastDice = null;
   p.lastDiceRoll = null;  // reset so stale roll values don't trigger false animations
   G.wcTable = null;       // v1.0.110: last turn's wild-card table is done
@@ -1753,14 +1853,26 @@ function startShopPhase() {
         };
       }
     }
+    // v1.0.121: HP by summon iid (stationed + hand) so the summary can show what each one healed
+    const _hpByIid = {};
+    for (const tile of G.board) if (tile.ownerId === G.currentPlayer && tile.summonInstance) _hpByIid[tile.summonInstance.iid] = tile.summonInstance.hp;
+    for (const m of p.hand) _hpByIid[m.iid] = m.hp;
     processTurnStartEffects(G.currentPlayer); // Phase 1 + 2: ability ticks before income
     collectPassiveIncome(G.currentPlayer);
     // Attach round tally for pre-round animation on the client
     if (G.turnSummary) {
       G.turnSummary.roundTally = computeRoundTally(G.currentPlayer, _hpSnapshot, _milestoneSnapshot);
+      const hpGain = {}, genByIid = {};
+      const _all = G.board.filter(t => t.ownerId === G.currentPlayer && t.summonInstance).map(t => t.summonInstance).concat(p.hand);
+      for (const m of _all) { const b = _hpByIid[m.iid]; if (b !== undefined && m.hp > b) hpGain[m.iid] = m.hp - b; }
+      for (const t of G.board) if (t.ownerId === G.currentPlayer && t.summonInstance) genByIid[t.summonInstance.iid] = 0;
+      for (const e of G.turnSummary.roundTally) { const t = G.board[e.tilePos]; if (t && t.summonInstance) genByIid[t.summonInstance.iid] = (genByIid[t.summonInstance.iid] || 0) + e.netMana; }
+      G.turnSummary.hpGain = hpGain;
+      G.turnSummary.genByIid = genByIid;
     }
   } else {
     G.turnSummary = null; // no summary in round 1
+    p.lastSummary = null;   // v1.0.121
     log(`⏳ ${p.name} — income starts Round 2`);
   }
   G.shopOffers = pickShopOffers(); // always generate offers (needed for stalemate buy option too)
@@ -1808,14 +1920,256 @@ function _startActualTurn() {
   broadcast();
 }
 
+// ─── WHEEL OF FORTUNE (v1.0.117) ─────────────────────────────────────────────
+// Each tile carries a Fortune meter (−3 Curse … +3 Blessing) set by its Sanctioned owner's flips.
+// It belongs to that owner + that summon: a new owner, a destroyed/sacrificed/swapped summon or a
+// Redeem clears it (checked lazily by tileFortune, so every path that changes a tile is covered).
+const FORTUNE = {
+   1: { name: 'Glimmer',    def: 0.10, counter: 0,    payout: 2, heal: 0 },
+   2: { name: 'Radiance',   def: 0.20, counter: 0.10, payout: 4, heal: 0 },
+   3: { name: 'Exaltation', def: 0.30, counter: 0.20, payout: 8, heal: 10 },
+  '-1': { name: 'Tarnish', def: -0.10, bounty: 2 },
+  '-2': { name: 'Blight',  def: -0.20, bounty: 4 },
+  '-3': { name: 'Doom',    def: -0.30, bounty: 8, doom: 5 },
+};
+const WHEEL_JACKPOT = 5;
+function tileFortune(tile) {
+  if (!tile || !tile.fortune) return 0;
+  const m = tile.summonInstance;
+  if (tile.ownerId == null || tile.ownerId !== tile.fortuneOwner || !m || m.iid !== tile.fortuneIid) {
+    tile.fortune = 0; tile.fortuneOwner = null; tile.fortuneIid = null;
+    return 0;
+  }
+  return tile.fortune;
+}
+function clearFortune(tile) { if (tile) { tile.fortune = 0; tile.fortuneOwner = null; tile.fortuneIid = null; } }
+// Doom: the cursed summon loses 5 HP at the start of every turn (never below 1)
+function tickDoom() {
+  for (const t of G.board) {
+    const f = tileFortune(t);
+    if (f !== -3) continue;
+    const m = t.summonInstance;
+    const before = m.hp;
+    m.hp = Math.max(1, m.hp - FORTUNE['-3'].doom);
+    if (m.hp < before) log(`☠ Doom: ${m.name} on tile ${t.pos} loses ${before - m.hp} HP (${m.hp}/${m.maxHp})`);
+  }
+}
+
+// v1.0.121: one notice at a time per player — later ones queue behind it
+function pushNotification(pl, n) {
+  if (!pl || pl.eliminated) return;
+  if (pl.notification) (pl.notifQueue = pl.notifQueue || []).push(n);
+  else pl.notification = n;
+}
+
+// ─── OMENS (v1.0.119) ────────────────────────────────────────────────────────
+// Placed by a Sanctioned player on a rival's tile. One per tile (a new one replaces the old).
+// Lasts until the start of the placer's next turn. Tied to that tile's owner + summon, like Fortune.
+const OMENS = {
+  saints_ward:       { name: "Saint's Ward",      kind: 'blessing', desc: '+20% DEF on this tile' },
+  kindled_blade:     { name: 'Kindled Blade',     kind: 'blessing', desc: "+20% damage on this summon's next strike" },
+  mercys_touch:      { name: "Mercy's Touch",     kind: 'blessing', desc: 'Heals the summon 15 HP now' },
+  golden_tithe:      { name: 'Golden Tithe',      kind: 'blessing', desc: "This tile's Gen ×2 at its owner's next income" },
+  veil_of_stillness: { name: 'Veil of Stillness', kind: 'blessing', desc: "Can't be attacked — landing here just ends the move", weight: 0.5 },
+  echoing_hymn:      { name: 'Echoing Hymn',      kind: 'blessing', desc: 'If attacked, the attacker takes 8 damage before the battle' },
+  withering_brand:   { name: 'Withering Brand',   kind: 'curse',    desc: '−20% DEF on this tile' },
+  hollow_hunger:     { name: 'Hollow Hunger',     kind: 'curse',    desc: "This tile's Gen is 0 at its owner's next income" },
+  bleeding_sigil:    { name: 'Bleeding Sigil',    kind: 'curse',    desc: 'Summon loses 5 HP at the start of each turn (never below 1)' },
+  shackled_will:     { name: 'Shackled Will',     kind: 'curse',    desc: "This summon's counter-strike deals half damage" },
+  toll_of_the_bell:  { name: 'Toll of the Bell',  kind: 'curse',    desc: 'Owner pays 5✦ whenever a rival lands here (fight or retreat)' },
+  betrayers_mark:    { name: "Betrayer's Mark",   kind: 'curse',    desc: 'If the tile is taken, the attacker gets +5✦' },
+};
+function drawOmens(n = 3) {
+  const pool = Object.keys(OMENS).map(id => ({ id, w: OMENS[id].weight || 1 })), out = [];
+  while (out.length < n && pool.length) {
+    const tot = pool.reduce((a, o) => a + o.w, 0); let r = Math.random() * tot, i = 0;
+    for (; i < pool.length - 1; i++) { r -= pool[i].w; if (r <= 0) break; }
+    out.push(pool.splice(i, 1)[0].id);
+  }
+  return out;
+}
+function tileOmen(tile) {
+  const o = tile && tile.omen;
+  if (!o) return null;
+  const m = tile.summonInstance;
+  if (tile.ownerId == null || tile.ownerId !== o.ownerIdx || !m || m.iid !== o.iid) { tile.omen = null; return null; }
+  return o;
+}
+const omenIs = (tile, id) => { const o = tileOmen(tile); return !!(o && o.id === id); };
+function clearOmen(tile) { if (tile) tile.omen = null; }
+// at the start of a player's turn (normal or Sanction): their Omens expire; Bleeding Sigil ticks
+function omenTurnStart(playerIdx) {
+  for (const t of G.board) {
+    const o = tileOmen(t); if (!o) continue;
+    if (o.byIdx === playerIdx) { log(`🔮 ${OMENS[o.id].name} fades from tile ${t.pos}`); t.omen = null; continue; }
+    if (o.id === 'bleeding_sigil') {
+      const m = t.summonInstance, b = m.hp; m.hp = Math.max(1, m.hp - 5);
+      if (m.hp < b) log(`🩸 Bleeding Sigil: ${m.name} on tile ${t.pos} loses ${b - m.hp} HP (${m.hp}/${m.maxHp})`);
+    }
+  }
+}
+
+// ─── SANCTION TURN (v1.0.115) ────────────────────────────────────────────────
+// Replaces a Sanctioned player's normal turn: no income, shop, roll or Wild Card.
+// sanction:pick_tile → sanction:own   (Sacrifice / Redeem / pass; Wheel of Fortune in v1.0.116)
+//                    → sanction:omen  (Omen offers arrive in v1.0.117 — skip only for now)
+const SANCTION_TILE_OFFERS = 3;
+function sanctionSellValue(m) { return m ? Math.floor(m.cost * (m.hp / m.maxHp)) : 0; }   // same as the shop sell refund
+function startSanctionTurn() {
+  const p = G.players[G.currentPlayer];
+  tickDoom();   // v1.0.117
+  omenTurnStart(G.currentPlayer);   // v1.0.119
+  p.lastDice = null; p.lastDiceRoll = null;
+  G.wcTable = null; G.lastBattle = null; G.pendingAttackerSummon = null;
+  G.pendingWildCard = false;
+  const claimed = G.board.filter(t => t.ownerId !== null && t.ownerId !== undefined && t.summonInstance).map(t => t.pos);
+  for (let i = claimed.length - 1; i > 0; i--) { const j = rand(0, i); [claimed[i], claimed[j]] = [claimed[j], claimed[i]]; }
+  G.sanction = {
+    seq: ((G.sanction && G.sanction.seq) || 0) + 1,
+    playerIdx: G.currentPlayer,
+    offers: claimed.slice(0, SANCTION_TILE_OFFERS).sort((a, b) => a - b),
+    pickedPos: null,
+    previewPos: null,   // v1.0.116: tile the player is viewing in the detail sheet (board scales it up)
+    omenOffers: [],
+    result: null,
+  };
+  G.phase = 'sanction:pick_tile';
+  log(`⛓ ${p.name}'s Sanction turn — choose a tile: ${G.sanction.offers.join(', ') || 'none'}`);
+  if (!G.sanction.offers.length) { endSanctionTurn({ kind: 'pass', auto: true }); return; }
+  broadcast();
+}
+function endSanctionTurn(result) {
+  if (G.sanction) G.sanction.result = result;
+  advanceTurn();
+}
+// v1.0.118: Sacrifice / Redeem / Wheel (and Omens later) are revealed on the board first.
+// The turn waits in sanction:reveal until the board says it's done (or a safety timer fires).
+const SANCTION_REVEAL_MAX_MS = 9000;
+function startSanctionReveal(result) {
+  G.sanction.result = result;
+  G.sanction.revealSeq = (G.sanction.revealSeq || 0) + 1;
+  G.phase = 'sanction:reveal';
+  const code = G.roomCode, seq = G.sanction.seq, rseq = G.sanction.revealSeq;
+  scheduleRoomAction(code, () => {
+    if (G.phase === 'sanction:reveal' && G.sanction && G.sanction.seq === seq && G.sanction.revealSeq === rseq) {
+      log('⏱ Sanction reveal timed out — moving on');
+      advanceTurn();
+    }
+  }, SANCTION_REVEAL_MAX_MS);
+  broadcast();
+}
+
+// v1.0.112: shared by setup_claim and autoSetup() so per-claim abilities (Radiant Strike…) fire the same way
+function _doSetupClaim(pIdx, tilePos, m) {
+  const p = G.players[pIdx];
+  const tile = G.board[tilePos];
+    // Free claim — no mana cost
+    p.hand.splice(p.hand.indexOf(m), 1);
+    tile.ownerId = pIdx;
+    tile.summonId = m.iid;
+    tile.summonInstance = m;
+    tile.neverOwned = false; // Phase 1: mark tile as ever-claimed
+    _updatePeakTiles(pIdx);
+    log(`🌟 ${p.name} claimed tile ${tilePos} (${tile.element}) with ${m.name} [Setup]`);
+    // Per-claim ability triggers (setup phase)
+    // Feral Striker: Territorial is now dynamic (tile count) — no per-claim stack
+    // Stoneback: Granite Hide is now dynamic (tile count) — no per-claim stack
+    // Solar Knight — Radiant Strike: on claim, tile converts to Light element
+    if (m.id === 'solar_knight') {
+      _convertTile(tile, 'Light', 'Radiant Strike');
+      log(`☀️ Radiant Strike: Solar Knight converts tile ${tilePos} to Light element (setup)!`);
+    }
+}
+
 function startSetupPhase() {
   G.phase = 'setup';
   G.setupRound = 1;
   G.setupTurnIdx = 0;
   G.setupTotalTurns = 3 * G.players.length;
   G.currentPlayer = 0;
+  if (G.skipSetup) { log(`⚡ Auto Setup — ${G.players.length} players · up to 3 placements each`); autoSetup(); return; }
   log(`🌟 Setup phase! ${G.players.length} players · ${G.setupTotalTurns} turns total.`);
   broadcast();
+}
+
+// v1.0.112: Auto Setup — plan every placement up front, then play them out ~0.3 s apart so the
+// board's normal claim FX stagger. Round-robin in seat order, 3 rounds, free.
+const AUTO_SETUP_ARCH_ORDER = { guardian: 0, vanguard: 1, assailant: 2 };
+const AUTO_SETUP_STEP_MS = 300;
+function _autoSetupMatch(m, el) {           // 0 = home, 1 = neutral, 2 = tile beats summon
+  const types = [m.type, m.type2].filter(Boolean);
+  if (types.includes(el)) return 0;
+  if (types.length > 1) return 1;           // dual-element: never debuffed
+  return TYPE_STRONG[el] === m.type ? 2 : 1;
+}
+function planAutoSetup() {
+  const N = G.players.length;
+  const taken = new Set();
+  const owned = G.players.map(() => []);
+  const hands = G.players.map(p => p.hand.slice());
+  const elem = G.board.filter(t => t.kind === 'element').map(t => t.pos);
+  // every run of 3 consecutive same-element tiles (circular) — no player may own a whole run
+  const runs = [];
+  for (let i = 0; i < 28; i++) {
+    const a = G.board[i], b = G.board[(i + 1) % 28], c = G.board[(i + 2) % 28];
+    if ([a, b, c].every(t => t.kind === 'element') && a.element === b.element && b.element === c.element) runs.push([a.pos, b.pos, c.pos]);
+  }
+  const dist = (x, y) => { const d = Math.abs(x - y) % 28; return Math.min(d, 28 - d); };
+  const plan = [];
+  for (let round = 0; round < 3; round++) {
+    for (let pIdx = 0; pIdx < N; pIdx++) {
+      const hand = hands[pIdx];
+      const free = elem.filter(pos => !taken.has(pos));
+      if (!hand.length || !free.length) continue;
+      const scoreTile = (m, pos) => {
+        const mine = owned[pIdx];
+        const completesRun = runs.some(r => r.includes(pos) && r.every(q => q === pos || mine.includes(q)));
+        const spread = mine.length ? Math.min(...mine.map(q => dist(q, pos))) : 14;
+        return (completesRun ? 10000 : 0) + _autoSetupMatch(m, G.board[pos].element) * 100 - spread + Math.random() * 0.5;
+      };
+      const bestTile = m => free.reduce((b, pos) => { const sc = scoreTile(m, pos); return !b || sc < b.sc ? { pos, sc } : b; }, null);
+      // summon: Guardian → Vanguard → Assailant; within an archetype, the one with the best tile
+      const cands = hand.map(m => ({ m, t: bestTile(m), a: AUTO_SETUP_ARCH_ORDER[m.arch] ?? 3 }))
+        .sort((x, y) => x.a - y.a || x.t.sc - y.t.sc);
+      const pick = cands[0];
+      hand.splice(hand.indexOf(pick.m), 1);
+      taken.add(pick.t.pos);
+      owned[pIdx].push(pick.t.pos);
+      plan.push({ pIdx, iid: pick.m.iid, pos: pick.t.pos, round: round + 1 });
+    }
+  }
+  return plan;
+}
+function autoSetup() {
+  const plan = planAutoSetup();
+  G.autoSetupRunning = true;
+  G.setupTotalTurns = plan.length;
+  G.setupTurnIdx = 0;
+  const code = G.roomCode;
+  const finish = () => {
+    G.autoSetupRunning = false;
+    log(`✅ Auto Setup complete! Game begins.`);
+    G.currentPlayer = 0;
+    startShopPhase();
+  };
+  if (!plan.length) { finish(); return; }
+  broadcast();
+  plan.forEach((st, i) => {
+    setTimeout(() => {   // own timer (not scheduleRoomAction) so a forfeit mid-setup doesn't cancel the rest
+      G = rooms.get(code);
+      if (!G || G.phase !== 'setup' || !G.autoSetupRunning) return;
+      const p = G.players[st.pIdx];
+      const m = p && p.hand.find(h => h.iid === st.iid);
+      const tile = G.board[st.pos];
+      G.currentPlayer = st.pIdx;
+      G.setupRound = st.round;
+      G.setupTurnIdx = i;
+      if (m && tile && tile.kind === 'element' && (tile.ownerId === null || tile.ownerId === undefined) && !p.eliminated) {
+        _doSetupClaim(st.pIdx, st.pos, m);
+      }
+      if (i === plan.length - 1) finish(); else broadcast();
+    }, 400 + i * AUTO_SETUP_STEP_MS);
+  });
 }
 
 function advanceSetupTurn() {
@@ -1843,12 +2197,18 @@ function advanceSetupTurn() {
 function advanceTurn() {
   // Guard: stale scheduleRoomAction timers can fire after endGame() — ignore them
   if (G.phase === 'game_over') return;
+  // v1.0.121: Omen notice for the tile's owner — after the board's reveal, never before
+  if (G.sanction && G.sanction.notifyOmen) {
+    const { targetIdx, n } = G.sanction.notifyOmen;
+    G.sanction.notifyOmen = null;
+    pushNotification(G.players[targetIdx], n);
+  }
 
   // Wild card intercept — fires ONCE after turn resolves if player passed position 0
   // Skip if the current player was eliminated mid-turn (e.g. mana hit 0 in battle)
   if (G.pendingWildCard && G.wildCardDrawn === null) {
     const _wcPlayer = G.players[G.currentPlayer];
-    if (_wcPlayer && !_wcPlayer.eliminated) {
+    if (_wcPlayer && !_wcPlayer.eliminated && !_wcPlayer.sanctioned) {   // v1.0.113: Sanctioned don't trigger Wild Cards
       G.pendingWildCard = false;
       // Draw one card randomly from each tier pool
       const drawFrom = pool => pool[rand(0, pool.length - 1)];
@@ -1874,6 +2234,7 @@ function advanceTurn() {
 
   // ── Elimination check (end of current player's turn) ──────────────────────
   checkElimination(G.currentPlayer);
+  checkSanctionedTileLoss();   // v1.0.113
   if (checkLastStanding()) return; // game ended — don't advance further
 
   G.turnCount++;
@@ -1885,6 +2246,7 @@ function advanceTurn() {
   // Advance to next non-eliminated player
   let nextPlayer = (G.currentPlayer + 1) % G.players.length;
   let loopGuard = 0;
+  // v1.0.115: Sanctioned seats take a Sanction turn (startShopPhase routes them)
   while (G.players[nextPlayer].eliminated) {
     nextPlayer = (nextPlayer + 1) % G.players.length;
     if (++loopGuard > G.players.length) {
@@ -1932,19 +2294,22 @@ function endGame() {
 
   // Survivors sort by tiles → mana; eliminated sort by eliminatedRank descending
   // (higher eliminatedRank = survived longer = better placement among losers)
-  const survivors  = G.players.filter(p => !p.eliminated)
-    .sort((a, b) => {
-      const ta = finalTiles(a), tb = finalTiles(b);
-      if (tb !== ta) return tb - ta;
-      return b.mana - a.mana;
-    });
+  // v1.0.113: three bands — active → Sanctioned (each by tiles, then Mana) → Eliminated
+  const byTilesMana = (a, b) => {
+    const ta = finalTiles(a), tb = finalTiles(b);
+    if (tb !== ta) return tb - ta;
+    return b.mana - a.mana;
+  };
+  const activeP    = G.players.filter(p => !p.eliminated && !p.sanctioned).sort(byTilesMana);
+  const sanctioned = G.players.filter(p => !p.eliminated &&  p.sanctioned).sort(byTilesMana);
+  const survivors  = [...activeP, ...sanctioned];
   const eliminated = G.players.filter(p => p.eliminated)
     .sort((a, b) => (b.eliminatedRank || 0) - (a.eliminatedRank || 0));
   const ranked = [...survivors, ...eliminated];
 
   // Last-standing win: if only 1 survivor remains, announce them as champion
   const champion = ranked[0];
-  const wasLastStanding = survivors.length === 1 && eliminated.length > 0;
+  const wasLastStanding = activeP.length === 1 && (eliminated.length + sanctioned.length) > 0;
   if (wasLastStanding) {
     log(`🏆 Last Player Standing! ${champion.name} wins!`);
   } else {
@@ -1964,6 +2329,7 @@ function endGame() {
     eliminated: p.eliminated || false,
     eliminatedRank: p.eliminatedRank || null,
     forfeited: p.forfeited || false,
+    sanctioned: !!p.sanctioned && !p.eliminated,   // v1.0.113
     wasLastStanding,
   }));
   broadcast();
@@ -2082,6 +2448,21 @@ function resolveLandingTile(playerIdx) {
     broadcast();
   } else {
     // Enemy tile
+    // v1.0.119: Toll of the Bell — the owner pays whenever a rival lands here
+    if (omenIs(tile, 'toll_of_the_bell')) {
+      const ow = G.players[tile.ownerId], pay = Math.min(5, ow.mana);
+      ow.mana -= pay;
+      log(`🔔 Toll of the Bell: ${ow.name} pays ${pay}✦ as ${p.name} lands on tile ${newPos}`);
+      checkManaElimination(ow.idx);
+    }
+    // v1.0.119: Veil of Stillness — can't be attacked; the move just ends
+    if (omenIs(tile, 'veil_of_stillness')) {
+      log(`🌫 Veil of Stillness: tile ${newPos} can't be attacked — ${p.name}'s move ends`);
+      G.phase = 'resolve:veil';
+      broadcast();
+      scheduleRoomAction(G.roomCode, advanceTurn, 1500);
+      return;
+    }
     G.phase = 'resolve:battle';
     broadcast();
   }
@@ -2225,6 +2606,152 @@ const handlers = {
     if (![10, 20, 30].includes(limit)) return sendError(ws, 'Invalid round limit');
     G.roundLimit = limit;
     log(`⏱ Round limit set to ${limit} rounds per player`);
+    broadcast();
+  },
+
+  // ── Sanction turn (v1.0.115) ────────────────────────────────────────────────
+  sanction_pick_tile(ws, conn, data) {
+    if (!guardTurn(ws, conn, ['sanction:pick_tile'], 'Not choosing a tile')) return;
+    const pos = parseInt(data.tilePos, 10);
+    if (!G.sanction || !G.sanction.offers.includes(pos)) return sendError(ws, 'Pick one of the offered tiles');
+    G.sanction.pickedPos = pos;
+    G.sanction.previewPos = pos;
+    const own = G.board[pos].ownerId === G.currentPlayer;
+    G.phase = own ? 'sanction:own' : 'sanction:omen';
+    G.sanction.omenOffers = own ? [] : drawOmens(3);   // v1.0.119
+    log(`⛓ ${G.players[G.currentPlayer].name} picks tile ${pos} (${own ? 'own tile' : 'opponent tile'})`);
+    broadcast();
+  },
+  // v1.0.116: mirror of preview_attacker — which offered tile the player is looking at (null = none)
+  sanction_preview(ws, conn, data) {
+    if (!G || G.phase !== 'sanction:pick_tile' || !G.sanction) return;
+    if (conn.playerIdx !== G.currentPlayer) return;
+    const pos = data.tilePos == null ? null : parseInt(data.tilePos, 10);
+    if (pos !== null && !G.sanction.offers.includes(pos)) return;
+    if (G.sanction.previewPos === pos) return;
+    G.sanction.previewPos = pos;
+    broadcast();
+  },
+  sanction_sacrifice(ws, conn, data) {
+    if (!guardTurn(ws, conn, ['sanction:own'], 'Not on your own tile')) return;
+    const p = G.players[G.currentPlayer];
+    const tile = G.board[G.sanction.pickedPos];
+    if (!tile || tile.ownerId !== G.currentPlayer || !tile.summonInstance) return sendError(ws, 'No summon to sacrifice');
+    const m = tile.summonInstance;
+    const gain = sanctionSellValue(m);
+    tile.ownerId = null; tile.summonId = null; tile.summonInstance = null;
+    clearFortune(tile);
+    p.mana += gain;
+    if (p.totalManaEarned != null) p.totalManaEarned += gain;
+    p.destroyedCount++;
+    const lastTile = !G.board.some(t => t.ownerId === G.currentPlayer);
+    log(`💀 ${p.name} sacrificed ${m.name} for +${gain}✦ — tile ${tile.pos} goes neutral${lastTile ? ' (last tile)' : ''}`);
+    startSanctionReveal({ kind: 'sacrifice', pos: tile.pos, summonId: m.id, summonName: m.name, gain, lastTile });   // 0 tiles → Eliminated at turn end
+  },
+  // v1.0.117: Wheel of Fortune — upright (Blessing) or reversed (Curse), 50/50
+  sanction_wheel(ws, conn, data) {
+    if (!guardTurn(ws, conn, ['sanction:own'], 'Not on your own tile')) return;
+    const p = G.players[G.currentPlayer];
+    const tile = G.board[G.sanction.pickedPos];
+    if (!tile || tile.ownerId !== G.currentPlayer || !tile.summonInstance) return sendError(ws, 'No summon on this tile');
+    const before = tileFortune(tile);
+    const upright = Math.random() < 0.5;
+    let after = before, jackpot = 0;
+    if (upright && before >= 3)       jackpot = WHEEL_JACKPOT;
+    else if (!upright && before <= -3) jackpot = WHEEL_JACKPOT;
+    else after = before + (upright ? 1 : -1);
+    tile.fortune = after;
+    tile.fortuneOwner = after ? tile.ownerId : null;
+    tile.fortuneIid = after ? tile.summonInstance.iid : null;
+    if (jackpot) { p.mana += jackpot; if (p.totalManaEarned != null) p.totalManaEarned += jackpot; }
+    const lvl = after ? FORTUNE[after].name : 'Neutral';
+    log(`🎡 ${p.name} turns the Wheel on tile ${tile.pos}: ${upright ? 'UPRIGHT (Blessing)' : 'REVERSED (Curse)'} → ${jackpot ? `already at ${lvl} — JACKPOT +${jackpot}✦` : `${lvl} (${after > 0 ? '+' : ''}${after})`}`);
+    G.lastWheel = { seq: ((G.lastWheel && G.lastWheel.seq) || 0) + 1, playerIdx: p.idx, pos: tile.pos, upright, before, after, jackpot };
+    startSanctionReveal({ kind: 'wheel', pos: tile.pos, upright, before, after, jackpot });
+  },
+  sanction_redeem(ws, conn, data) {
+    if (!guardTurn(ws, conn, ['sanction:own'], 'Not on your own tile')) return;
+    const why = redeemPlayer(G.currentPlayer);
+    if (why) return sendError(ws, why);
+    startSanctionReveal({ kind: 'redeem', pos: G.sanction.pickedPos, mana: G.players[G.currentPlayer].mana });
+  },
+  // v1.0.118: the board finished revealing — end the turn (host board only)
+  sanction_reveal_done(ws, conn, data) {
+    if (!G || G.phase !== 'sanction:reveal' || !conn.isBoard || conn.isSpectator) return;
+    if (!G.sanction || data.seq !== G.sanction.revealSeq) return;
+    advanceTurn();
+  },
+  // v1.0.119: place one of the three offered Omens on the rival's tile
+  sanction_omen(ws, conn, data) {
+    if (!guardTurn(ws, conn, ['sanction:omen'], 'Not choosing an Omen')) return;
+    const id = String(data.id || '');
+    if (!G.sanction.omenOffers.includes(id) || !OMENS[id]) return sendError(ws, 'Pick one of the offered Omens');
+    const p = G.players[G.currentPlayer], tile = G.board[G.sanction.pickedPos];
+    if (!tile || tile.ownerId == null || tile.ownerId === G.currentPlayer || !tile.summonInstance) return sendError(ws, 'No rival summon on this tile');
+    const prev = tileOmen(tile);
+    tile.omen = { id, byIdx: p.idx, ownerIdx: tile.ownerId, iid: tile.summonInstance.iid, placedTurn: G.turnCount };
+    let healed = 0;
+    if (id === 'mercys_touch') { const m = tile.summonInstance; healed = Math.min(15, m.maxHp - m.hp); m.hp += healed; }
+    const owner = G.players[tile.ownerId];
+    log(`🔮 ${p.name} places ${OMENS[id].name} (${OMENS[id].kind}) on ${owner ? owner.name + "'s" : 'a'} tile ${tile.pos}${prev ? ` — replaces ${OMENS[prev.id].name}` : ''}${healed ? ` · heals ${healed} HP` : ''}`);
+    // v1.0.121: the tile's owner gets a notice once the board has revealed it (delivered in advanceTurn)
+    G.sanction.notifyOmen = { targetIdx: tile.ownerId, n: { kind: 'omen', cardId: id, cardName: OMENS[id].name, cardDesc: OMENS[id].desc,
+      omenKind: OMENS[id].kind, pos: tile.pos, summonName: tile.summonInstance.name, summonHp: tile.summonInstance.hp, summonMaxHp: tile.summonInstance.maxHp,
+      healed, replaced: prev ? OMENS[prev.id].name : null, castByName: p.name, castByColor: p.color } };
+    startSanctionReveal({ kind: 'omen', id, name: OMENS[id].name, omenKind: OMENS[id].kind, desc: OMENS[id].desc, pos: tile.pos, ownerIdx: tile.ownerId, healed, replaced: prev ? prev.id : null });
+  },
+  sanction_omen_skip(ws, conn, data) {
+    if (!guardTurn(ws, conn, ['sanction:omen'], 'Not choosing an Omen')) return;
+    log(`⛓ ${G.players[G.currentPlayer].name} passes on the Omens`);
+    endSanctionTurn({ kind: 'pass', pos: G.sanction.pickedPos });
+  },
+  sanction_pass(ws, conn, data) {
+    if (!guardTurn(ws, conn, ['sanction:pick_tile', 'sanction:own', 'sanction:omen'], 'Not your Sanction turn')) return;
+    log(`⛓ ${G.players[G.currentPlayer].name} passes their Sanction turn`);
+    endSanctionTurn({ kind: 'pass', pos: G.sanction ? G.sanction.pickedPos : null });
+  },
+  // Host safety net (someone stepped away) — no timer on Sanction turns
+  sanction_skip(ws, conn, data) {
+    if (!G || !String(G.phase).startsWith('sanction:')) return sendError(ws, 'No Sanction turn in progress');
+    if (!conn.isBoard || conn.isSpectator) return sendError(ws, 'Only the host can skip a Sanction turn');
+    if (G.phase === 'sanction:reveal') { advanceTurn(); return; }   // already acted — just finish
+    log(`⏭ Host skipped ${G.players[G.currentPlayer].name}'s Sanction turn`);
+    endSanctionTurn({ kind: 'skipped' });
+  },
+
+  // v1.0.113: test hook — only exists when the server is started with SG_DEBUG=1 (never on Railway)
+  ...(process.env.SG_DEBUG === '1' ? { debug(ws, conn, data) {
+    if (!G) return;
+    const p = G.players[data.idx];
+    let res = null;
+    switch (data.op) {
+      case 'mana':      p.mana = data.v; res = checkManaElimination(p.idx); break;
+      case 'drop_tiles':for (const t of G.board) if (t.ownerId === p.idx) { t.ownerId = null; t.summonId = null; t.summonInstance = null; } break;
+      case 'redeem':    res = redeemPlayer(p.idx); break;
+      case 'turn':      G.turnCount = data.v; break;
+      case 'income':    res = collectPassiveIncome(p.idx); break;
+      case 'advance':   advanceTurn(); break;
+      case 'end':       endGame(); break;
+      case 'cur':       G.currentPlayer = data.v; break;
+      case 'land':      G.currentPlayer = p.idx; p.position = data.pos; resolveLandingTile(p.idx); break;
+      case 'give':      p.hand.push(makeSummon(data.v || 'dawnguard')); break;
+      case 'omen':      { const t = G.board[data.pos]; t.omen = { id: data.v, byIdx: data.by, ownerIdx: t.ownerId, iid: t.summonInstance && t.summonInstance.iid, placedTurn: G.turnCount }; } break;
+      case 'fortune':   { const t = G.board[data.pos]; t.fortune = data.v; t.fortuneOwner = t.ownerId; t.fortuneIid = t.summonInstance && t.summonInstance.iid; } break;
+      case 'setbattle': G.currentPlayer = p.idx; p.position = data.pos; G.phase = 'resolve:battle'; break;
+      case 'hpset':     G.board[data.pos].summonInstance.hp = data.v; break;
+      case 'phase':     G.phase = data.v; if (data.pos != null && G.sanction) G.sanction.pickedPos = data.pos; break;
+      case 'hp':        { const t = G.board.find(t => t.ownerId === p.idx && t.summonInstance); if (t) t.summonInstance.hp = data.v; res = t && t.pos; } break;
+    }
+    wsSend(ws, { type: 'debug', res });
+    broadcast();
+  } } : {}),
+
+  // v1.0.112: host-only lobby toggle
+  set_skip_setup(ws, conn, data) {
+    if (!G || G.phase !== 'lobby') return sendError(ws, 'Not in lobby');
+    if (!conn.isBoard || conn.isSpectator) return sendError(ws, 'Only the host can change setup mode');
+    G.skipSetup = !!(data && data.on);
+    log(`⚙ Setup mode: ${G.skipSetup ? 'Auto (skip setup phase)' : 'Normal'}`);
     broadcast();
   },
 
@@ -2427,6 +2954,7 @@ const handlers = {
 
   setup_claim(ws, conn, data) {
     if (!guardTurn(ws, conn, ['setup'], 'Not setup phase')) return;
+    if (G.autoSetupRunning) return sendError(ws, 'Auto Setup in progress');
     const p = G.players[G.currentPlayer];
     const tilePos = parseInt(data.tilePos, 10);
     if (isNaN(tilePos) || tilePos < 0 || tilePos >= 28) return sendError(ws, 'Invalid tile number (0–27)');
@@ -2436,27 +2964,13 @@ const handlers = {
     if (tile.ownerId !== null && tile.ownerId !== undefined) return sendError(ws, 'Tile already claimed');
     const m = p.hand.find(h => h.iid === data.iid);
     if (!m) return sendError(ws, 'Summon not in hand');
-    // Free claim — no mana cost
-    p.hand.splice(p.hand.indexOf(m), 1);
-    tile.ownerId = G.currentPlayer;
-    tile.summonId = m.iid;
-    tile.summonInstance = m;
-    tile.neverOwned = false; // Phase 1: mark tile as ever-claimed
-    _updatePeakTiles(G.currentPlayer);
-    log(`🌟 ${p.name} claimed tile ${tilePos} (${tile.element}) with ${m.name} [Setup]`);
-    // Per-claim ability triggers (setup phase)
-    // Feral Striker: Territorial is now dynamic (tile count) — no per-claim stack
-    // Stoneback: Granite Hide is now dynamic (tile count) — no per-claim stack
-    // Solar Knight — Radiant Strike: on claim, tile converts to Light element
-    if (m.id === 'solar_knight') {
-      _convertTile(tile, 'Light', 'Radiant Strike');
-      log(`☀️ Radiant Strike: Solar Knight converts tile ${tilePos} to Light element (setup)!`);
-    }
+    _doSetupClaim(G.currentPlayer, tilePos, m);
     advanceSetupTurn();
   },
 
   setup_pass(ws, conn, data) {
     if (!guardTurn(ws, conn, ['setup'], 'Not setup phase')) return;
+    if (G.autoSetupRunning) return sendError(ws, 'Auto Setup in progress');
     log(`⏭ ${G.players[G.currentPlayer].name} passed setup turn`);
     advanceSetupTurn();
   },
@@ -2584,7 +3098,39 @@ const handlers = {
       fx('def', 'Forge', `${forgeCount} stationed: +${forgeCount * 5} DEF`, `+${forgeCount * 5} DEF`, 'good');
     }
 
+    // v1.0.119: Omens on the defending tile
+    const _om = tileOmen(tile);
+    if (_om) {
+      const O = OMENS[_om.id];
+      if (_om.id === 'saints_ward' || _om.id === 'withering_brand') {
+        const d0 = defM.def, up = _om.id === 'saints_ward';
+        defM.def = Math.max(0, Math.round(defM.def * (up ? 1.2 : 0.8)));
+        log(`🔮 ${O.name}: ${defM.name} DEF ${d0} → ${defM.def}`);
+        fx('def', `${O.name} (Omen)`, `${up ? '+' : '−'}20% DEF on this tile`, `${up ? '+' : '−'}20% DEF`, up ? 'good' : 'bad');
+      }
+      if (_om.id === 'kindled_blade') { defM._kindled = true; }
+      if (_om.id === 'shackled_will') { defM._shackled = true; }
+      if (_om.id === 'echoing_hymn') {
+        const h0 = attM.hp; attM.hp = Math.max(1, attM.hp - 8);
+        log(`🎶 Echoing Hymn: ${attM.name} takes ${h0 - attM.hp} damage before the battle`);
+        fx('att', 'Echoing Hymn (Omen)', `Took ${h0 - attM.hp} damage before the battle`, `−${h0 - attM.hp} HP`, 'bad');
+      }
+    }
+    // v1.0.117: Wheel of Fortune on the defending tile
+    const _fLvl = tileFortune(tile), _fInfo = _fLvl ? FORTUNE[_fLvl] : null;
+    if (_fInfo) {
+      const d0 = defM.def;
+      defM.def = Math.max(0, Math.round(defM.def * (1 + _fInfo.def)));
+      const pct = Math.round(_fInfo.def * 100);
+      log(`🎡 ${_fInfo.name}: ${defM.name} DEF ${d0} → ${defM.def}`);
+      fx('def', `${_fInfo.name} (Wheel)`, `${pct > 0 ? '+' : '−'}${Math.abs(pct)}% DEF on this tile`, `${pct > 0 ? '+' : '−'}${Math.abs(pct)}% DEF`, pct > 0 ? 'good' : 'bad');
+      if (_fInfo.counter) defM._fortuneCounter = { name: _fInfo.name, pct: _fInfo.counter };
+    }
+
     const { atkDmg, defDmg, outcome } = resolveBattle(attM, defM, tile, rattled);
+    delete defM._fortuneCounter;
+    if (defM._kindledUsed && tileOmen(tile) && tileOmen(tile).id === 'kindled_blade') clearOmen(tile);   // one strike only
+    delete defM._kindled; delete defM._kindledUsed; delete defM._shackled;
 
     // Restore temporarily boosted stats after battle
     attM.atk = origAttAtk;
@@ -2609,6 +3155,28 @@ const handlers = {
       defManaDelta: _defDelta,
     };
     _applyBattleOutcome(outcome, p, attM, defOwner, defM, tile, p.position);
+    // v1.0.117: Fortune payouts — Curse bounty to the taker, Blessing payout (+ Exaltation heal) to the holder
+    if (_fInfo && outcome === 'attacker_wins' && _fInfo.bounty) {
+      p.mana += _fInfo.bounty; if (p.totalManaEarned != null) p.totalManaEarned += _fInfo.bounty;
+      log(`🎡 ${_fInfo.name} bounty: ${p.name} gains +${_fInfo.bounty}✦ for taking the cursed tile`);
+      fx('att', `${_fInfo.name} bounty`, 'Took a cursed tile', `+${_fInfo.bounty}✦`, 'good');
+    }
+    if (_fInfo && outcome === 'defender_wins' && _fInfo.payout) {
+      defOwner.mana += _fInfo.payout; if (defOwner.totalManaEarned != null) defOwner.totalManaEarned += _fInfo.payout;
+      log(`🎡 ${_fInfo.name}: ${defOwner.name} gains +${_fInfo.payout}✦ for holding the blessed tile`);
+      fx('def', _fInfo.name, 'Held a blessed tile', `+${_fInfo.payout}✦`, 'good');
+      if (_fInfo.heal && defM.hp > 0) {
+        const h = Math.min(_fInfo.heal, defM.maxHp - defM.hp);
+        defM.hp += h;
+        if (h > 0) { log(`🎡 Exaltation: ${defM.name} heals ${h} HP`); fx('def', 'Exaltation', `${defM.name} healed after holding`, `+${h} HP`, 'good'); }
+      }
+    }
+    if (_om && _om.id === 'betrayers_mark' && outcome === 'attacker_wins') {
+      p.mana += 5; if (p.totalManaEarned != null) p.totalManaEarned += 5;
+      log(`🔮 Betrayer's Mark: ${p.name} gains +5✦ for taking the marked tile`);
+      fx('att', "Betrayer's Mark (Omen)", 'Took the marked tile', '+5✦', 'good');
+    }
+    if (outcome === 'attacker_wins' || outcome === 'mutual') { clearFortune(tile); clearOmen(tile); }
     G.lastBattle.effects = _fx || [];
     _fx = null; _fxAttM = null; _fxDefM = null;
     G.pendingAttackerSummon = null;
@@ -2977,10 +3545,10 @@ const handlers = {
 
       // Helper: set a notification on the targeted player
       function notifyTarget(cardId, cardName, desc, tier) {
-        target.notification = {
+        pushNotification(target, {
           cardId, cardName, cardDesc: desc,
           castByName: p.name, castByColor: p.color, tier
-        };
+        });
       }
 
       if (pending.cardId === 'stumble') {
@@ -3091,11 +3659,11 @@ const handlers = {
     // summonInstance and summonId remain unchanged — the monster defects in place
 
     // Notify previous owner
-    prevOwner.notification = {
+    pushNotification(prevOwner, {
       cardId: 'coup', cardName: 'Coup',
       cardDesc: `${p.name} executed a Coup! They sacrificed ${sacrifice.name} to seize your tile — ${stolen.name} now fights for them.`,
       castByName: p.name, castByColor: p.color, tier: 'high'
-    };
+    });
 
     log(`🃏 Coup — ${p.name} sacrificed ${sacrifice.name} to seize tile ${tilePos} and steal ${stolen.name} from ${prevOwner.name}`);
     _updatePeakTiles(G.currentPlayer);
@@ -3127,11 +3695,11 @@ const handlers = {
         log(`🃏 Shatter — ${t.summonInstance.name} destroyed on tile ${pos}`);
         if (owner) {
           owner.destroyedCount++;
-          owner.notification = {
+          pushNotification(owner, {
             cardId: 'shatter', cardName: 'Shatter',
             cardDesc: `${p.name} shattered your ${t.summonInstance.name} on tile ${pos}!`,
             castByName: p.name, castByColor: p.color, tier: 'high'
-          };
+          });
         }
         t.summonInstance = null;
         t.summonId = null;
@@ -3147,7 +3715,7 @@ const handlers = {
     if (!G || conn.playerIdx === null) return;
     const p = G.players[conn.playerIdx];
     if (!p) return;
-    p.notification = null;
+    p.notification = (p.notifQueue && p.notifQueue.shift()) || null;   // v1.0.121: next queued notice
     broadcast();
   },
 
@@ -3695,6 +4263,11 @@ function loadState() {
       if (state && state.phase !== 'game_over') {
         rooms.set(code, state);
         console.log(`[persist] restored room ${code} (phase: ${state.phase})`);
+        // v1.0.112: restart mid Auto Setup — timers are gone, so re-plan the remaining placements
+        if (state.phase === 'setup' && state.autoSetupRunning) {
+          const _prevG = G; G = state;
+          try { autoSetup(); } finally { G = _prevG; }
+        }
       }
     }
   } catch (e) {
@@ -3718,7 +4291,7 @@ function broadcast(extra = {}) {
     const p = (conn.playerIdx !== null && conn.playerIdx !== undefined) ? G.players[conn.playerIdx] : null;
     if (!p) { wsSend(socket, spectatorMsg); continue; }
     const hand = p.hand.map(m => serializeHandMonster(m, conn.playerIdx));
-    wsSend(socket, sharedJson + ',"myIdx":' + conn.playerIdx + ',"hand":' + JSON.stringify(hand) + '}');
+    wsSend(socket, sharedJson + ',"myIdx":' + conn.playerIdx + ',"hand":' + JSON.stringify(hand) + ',"mySummary":' + JSON.stringify(p.lastSummary || null) + '}');   // v1.0.121
   }
   // Persist (debounced)
   saveState();
