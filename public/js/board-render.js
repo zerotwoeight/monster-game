@@ -535,7 +535,7 @@ const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Wat
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <img class="lobby-brand-logo" src="/img/logos/logo-main.webp" alt="Summoner's Gambit">
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.64 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.53</div>`;  // v0.6.31: Sound Settings moved to the bottom-left row
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.66 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.54</div>`;  // v0.6.31: Sound Settings moved to the bottom-left row
   splash.appendChild(brand);
 
   // ── Two panels
@@ -574,7 +574,7 @@ const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Wat
   // Right: Player roster
   const rightPanel = document.createElement('div');
   rightPanel.className = 'lobby-panel';
-  rightPanel.style.cssText = 'flex:1;';
+  rightPanel.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;';
   rightPanel.innerHTML = `<div class="lobby-panel-title">Players</div>`;
 
   const grid = document.createElement('div');
@@ -634,6 +634,13 @@ const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Wat
 
   rightPanel.appendChild(grid);
 
+  // v0.6.65: lobby news ticker (filled by news.js) now sits in the empty space under the player slots,
+  // so it no longer pushes the Rounds / Setup / Start rows down
+  const newsSlot = document.createElement('div');
+  newsSlot.id = 'sg-news-ticker';
+  newsSlot.style.cssText = 'width:100%;display:flex;justify-content:center;margin-top:auto;padding-top:12px;';
+  rightPanel.appendChild(newsSlot);
+
   panels.appendChild(rightPanel);
   splash.appendChild(panels);
 
@@ -659,11 +666,6 @@ const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Wat
   kofiLink.rel = 'noopener';
   kofiLink.textContent = '☕ Buy me a coffee';
   kofiRow.appendChild(kofiLink);
-  // v0.6.44: lobby news ticker (filled by news.js) sits between the panels and the Sound / Ko-fi row
-  const newsSlot = document.createElement('div');
-  newsSlot.id = 'sg-news-ticker';
-  newsSlot.style.cssText = 'width:100%;max-width:960px;display:flex;justify-content:center;';
-  splash.appendChild(newsSlot);
   splash.appendChild(kofiRow);
   if (window.SGNews) { SGNews.mountTicker(newsSlot); SGNews.refresh(); }
 
@@ -791,7 +793,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.6.64</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.6.66</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">

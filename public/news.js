@@ -1,4 +1,4 @@
-// Summoner's Gambit — Lobby news (v1.0 · server v1.0.125 / board v0.6.44 / player v0.5.41)
+// Summoner's Gambit — Lobby news (v1.1 · board v0.6.66 / player v0.5.54: fixed-size board ticker, phone pill wraps · server v1.0.125 / board v0.6.44 / player v0.5.41)
 // Shared by board.html and player.html. The server pushes {type:'news'} on connect and whenever /admin/news publishes.
 // Pages: call SGNews.set(msg.news) on the message, SGNews.setContext('lobby'|'game') when the screen changes,
 // and SGNews.refresh() after rendering a screen that holds a slot (#sg-news-ticker on the board, #sg-news-pill on phones).
@@ -45,13 +45,13 @@
   .sgn-x{width:44px;height:44px;flex-shrink:0;border:0;background:transparent;color:inherit;font-size:24px;line-height:1;cursor:pointer;border-radius:8px}
   .sgn-x:hover{background:rgba(0,0,0,.08)}
   @keyframes sgnDrop{from{transform:translateY(-100%)}to{transform:none}}
-  .sgn-ticker{width:100%;max-width:960px;box-sizing:border-box;display:flex;align-items:center;gap:18px;padding:14px 18px;margin-top:6px;background:#e8d5b0;color:#1a1710;border:2px solid #a97b40;border-radius:10px;cursor:pointer;text-align:left;font:inherit;position:relative;z-index:2;transition:transform .15s,box-shadow .15s}
+  .sgn-ticker{width:100%;max-width:960px;min-width:0;height:104px;overflow:hidden;box-sizing:border-box;display:flex;align-items:center;gap:18px;padding:14px 18px;margin-top:6px;background:#e8d5b0;color:#1a1710;border:2px solid #a97b40;border-radius:10px;cursor:pointer;text-align:left;font:inherit;position:relative;z-index:2;transition:transform .15s,box-shadow .15s}
   .sgn-ticker:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.45)}
   .sgn-seal{width:54px;height:54px;flex-shrink:0;border-radius:50%;background:#a97b40;color:#f5efe0;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-weight:900;font-size:11px;letter-spacing:.1em;box-shadow:inset 0 0 0 3px rgba(0,0,0,.15)}
   .sgn-tk-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
   .sgn-meta{font-family:'Cinzel',serif;font-weight:700;font-size:11px;letter-spacing:.16em;color:#7a6040;text-transform:uppercase}
-  .sgn-tk-title{font-family:'Cinzel',serif;font-weight:700;font-size:24px;line-height:1.15}
-  .sgn-tk-body{font-size:14px;color:#6b5a3a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sgn-tk-title{font-family:'Cinzel',serif;font-weight:700;font-size:24px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sgn-tk-body{font-size:14px;color:#6b5a3a;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;line-height:1.35}
   .sgn-tk-all{flex-shrink:0;font-family:'Cinzel',serif;font-weight:700;font-size:13px;letter-spacing:.1em;padding:11px 14px;border:1.5px solid #7a6040;border-radius:8px;color:#7a6040}
   .sgn-overlay{position:fixed;inset:0;z-index:9500;background:rgba(4,4,10,.78);display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;animation:sgnFade .2s}
   @keyframes sgnFade{from{opacity:0}}
@@ -71,8 +71,8 @@
   .sgn-pbody p{margin:0 0 8px}.sgn-pbody ul{margin:0 0 8px;padding-left:22px}
   .sgn-pbody a,.sgn-more{color:#7a6040;font-weight:600}
   .sgn-empty{padding:40px 0;text-align:center;color:#6b5a3a}
-  .sgn-pill{position:relative;display:flex;align-items:center;gap:10px;max-width:100%;box-sizing:border-box;min-height:44px;margin:4px auto 14px;padding:0 18px;border:0;border-radius:22px;background:#e8d5b0;color:#1a1710;font-family:'Cinzel',serif;font-weight:700;font-size:13px;letter-spacing:.1em;cursor:pointer}
-  .sgn-pill span.t{font-family:Inter,sans-serif;font-weight:600;font-size:12px;letter-spacing:0;color:#6b5a3a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+  .sgn-pill{position:relative;display:flex;align-items:center;gap:10px;max-width:100%;box-sizing:border-box;min-height:44px;margin:4px auto 14px;padding:8px 18px;text-align:left;border:0;border-radius:22px;background:#e8d5b0;color:#1a1710;font-family:'Cinzel',serif;font-weight:700;font-size:13px;letter-spacing:.1em;cursor:pointer}
+  .sgn-pill span.t{font-family:Inter,sans-serif;font-weight:600;font-size:12px;letter-spacing:0;color:#6b5a3a;white-space:normal;overflow-wrap:anywhere;min-width:0;line-height:1.3}
   .sgn-badge{position:absolute;top:-5px;right:-5px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:10px;background:#b4473a;color:#fff;font-family:Inter,sans-serif;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
   body.sgn-board .sgn-banner{top:auto;bottom:0;box-shadow:0 -4px 18px rgba(0,0,0,.4);animation-name:sgnRise}
   @keyframes sgnRise{from{transform:translateY(100%)}to{transform:none}}
