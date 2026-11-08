@@ -10,7 +10,9 @@
 
 'use strict';
 
-globalThis.SERVER_VERSION = 'v1.0.141';   // v1.0.141: HP buff for 3 Ascendants + 3 Rares. v1.0.140: L1 — every entry point runs inside inRoom(code); G is null between calls; stale-room broadcasts refused
+globalThis.SERVER_VERSION = 'v1.0.143';   // v1.0.143: bots wait for the board's animations (board_busy), keep the attacker they showed, style hidden from screens
+// prev: v1.0.142;   // v1.0.142: bots — server-side seats with 12 named personalities (server/11-bots.js), Add/Remove Bot + Bot speed in the lobby
+// prev: v1.0.141;   // v1.0.141: HP buff for 3 Ascendants + 3 Rares. v1.0.140: L1 — every entry point runs inside inRoom(code); G is null between calls; stale-room broadcasts refused
 // v1.0.139: L2 — server split into server/01…10 (no behaviour change)
 // prev: v1.0.125;   // v1.0.125: Lobby news — /admin News editor, news.json on DATA_DIR, live push to boards + phones
 // prev: v1.0.124;   // v1.0.124: Omen draws always include 1 Blessing + 1 Curse (third random)
@@ -63,6 +65,7 @@ const SERVER_PARTS = [
   '08-handlers.js',   // Action handlers (every message a phone or board can send)
   '09-battle-outcome.js',   // Shared helpers and battle-outcome helpers
   '10-network.js',   // HTTP + WebSocket server, lobby news, admin, static files, persistence, startup
+  '11-bots.js',   // v1.0.142: bots — personalities, decisions, lobby Add/Remove Bot, bot speed
 ];
 for (const part of SERVER_PARTS) {
   const file = path.join(__dirname, 'server', part);

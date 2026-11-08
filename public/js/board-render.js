@@ -49,6 +49,7 @@ function render(){
 // ─── v0.6.10: Tier 2 board effects — state diff → queued BoardFX calls ────────────────
 // Effects wait (queue) while the die / token animation is running, then play once it settles.
 let _fxPrev = null, _fxQ = [];
+let _battleOv = null;   // v0.6.64: {key, el, at} — the battle overlay survives redraws
 // v0.6.26: Wild Card table state sync (grey / live / picked / passed / hidden under overlays)
 let _wctInstant = false;
 function _wctSync() {
@@ -527,14 +528,14 @@ function renderLobby(app){
   const code = G.roomCode || '????';
   const playerURL = `${location.protocol}//${location.host}/player`;
   const spectatorURL = `${location.protocol}//${location.host}/spectate`;
-  const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Watch',E:'Divine Guard',F:'Chaos Legion'};
+const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Watch',E:'Divine Guard',F:'Chaos Legion',G:'Dead Covenant',H:'Ancient Guard'};
 
   // ── Brand
   const brand = document.createElement('div');
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <img class="lobby-brand-logo" src="/img/logos/logo-main.webp" alt="Summoner's Gambit">
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.62 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.52</div>`;  // v0.6.31: Sound Settings moved to the bottom-left row
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.64 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.53</div>`;  // v0.6.31: Sound Settings moved to the bottom-left row
   splash.appendChild(brand);
 
   // ── Two panels
@@ -588,10 +589,30 @@ function renderLobby(app){
       const dcBadge = p.isConnected === false
         ? `<span style="font-size:9px;color:#e87;letter-spacing:.05em;margin-left:6px;">⚠ reconnecting…</span>` : '';
       slot.style.opacity = p.isConnected === false ? '0.45' : '';
+      // v0.6.63: bots; the host can remove them (✕)
+      const botTag = '';   // v0.6.64: no bot tag or play style — how a bot plays is for players to discover
       slot.innerHTML = `
         <div style="flex-shrink:0;">${playerSigilSVG(p, 30)}</div>
-        <div class="lobby-slot-name" style="color:${p.color};">${p.name}${dcBadge}</div>
+        <div class="lobby-slot-name" style="color:${p.color};">${p.name}${botTag}${dcBadge}</div>
         <div class="lobby-slot-set">${setLabel}</div>`;
+      if (p.isBot && !isSpectator) {
+        slot.style.position = 'relative';
+        const rm = document.createElement('button');
+        rm.title = `Remove ${p.name}`; rm.textContent = '✕';
+        rm.style.cssText = 'position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#e8dcc0;font-size:11px;cursor:pointer;line-height:1;padding:0;';
+        rm.onclick = (e) => { e.stopPropagation(); send('remove_bot', { idx: p.idx }); };
+        slot.appendChild(rm);
+      }
+    } else if (!isSpectator && i === playerCount) {
+      // v0.6.63: first open slot = Add Bot (a random bot from the pool joins)
+      slot.innerHTML = `
+        <div style="width:30px;height:30px;border-radius:50%;border:1px dashed rgba(255,200,64,.5);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:14px;">🤖</span>
+        </div>
+        <div class="lobby-slot-empty-text" style="color:#ffc840;opacity:.9;">+ Add Bot</div>`;
+      slot.style.cursor = 'pointer';
+      slot.title = 'Add a bot to this game';
+      slot.onclick = () => send('add_bot');
     } else {
       slot.innerHTML = `
         <div style="width:30px;height:30px;border-radius:50%;border:1px dashed rgba(255,255,255,.18);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
@@ -676,11 +697,26 @@ function renderLobby(app){
         send('set_skip_setup', { on });
       };
     });
+    // v0.6.63: Bot speed (host only) — Normal waits for the board's animations, Fast halves the pauses, Instant is for testing
+    const bsWrap = document.createElement('div');
+    bsWrap.className = 'round-limit-wrap';
+    const bs = G.botSpeed || 'normal';
+    bsWrap.innerHTML = `<div class="round-limit-lbl">Bot Speed</div>
+      <div class="round-limit-btns">
+        ${['normal','fast','instant'].map(k=>`<button class="round-limit-btn${bs===k?' selected':''}" data-bs="${k}">${k[0].toUpperCase()+k.slice(1)}</button>`).join('')}
+      </div>`;
+    bsWrap.querySelectorAll('.round-limit-btn').forEach(btn => {
+      btn.onclick = () => {
+        bsWrap.querySelectorAll('.round-limit-btn').forEach(b => b.classList.toggle('selected', b === btn));
+        send('set_bot_speed', { speed: btn.dataset.bs });
+      };
+    });
     // v0.6.60: Rounds and Setup side by side on one line so Start sits higher (nothing below the splash art)
     const optRow = document.createElement('div');
     optRow.style.cssText = 'display:flex;justify-content:center;align-items:flex-start;gap:48px;width:100%;max-width:960px;margin-top:8px;';
     rlWrap.style.cssText = 'width:auto;margin-top:0;'; ssWrap.style.cssText = 'width:auto;margin-top:0;';
     optRow.appendChild(rlWrap); optRow.appendChild(ssWrap);
+    if (G.players.some(pl => pl.isBot)) { bsWrap.style.cssText = 'width:auto;margin-top:0;'; optRow.appendChild(bsWrap); }
     // v0.6.61: options sit in the Sound Settings / Ko-fi row (between them) — one row less under the panels
     optRow.style.cssText = 'display:flex;justify-content:center;align-items:flex-start;gap:40px;width:auto;margin:0;';
     kofiRow.style.alignItems = 'center';
@@ -755,7 +791,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.6.62</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.6.64</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -1010,15 +1046,23 @@ function renderGame(app){
   processTileFlashes(); // v0.5.03
 
   // ── Battle result full overlay — 5-beat sequential animation ──
+  // v0.6.64: the overlay is kept across redraws — before, every update during a battle rebuilt it and restarted
+  // the animation (looked like the battle was glitching, worst with bots on Fast)
   if (G.phase === 'resolve:battle_result' && G.lastBattle) {
     const lb = G.lastBattle;
-    const attPlayer = G.players[lb.attackerIdx];
-    const defPlayer = lb.defOwnerIdx != null ? G.players.find(p => p.idx === lb.defOwnerIdx) : null;
-    const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:absolute;inset:0;z-index:15;background:rgba(8,8,20,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;';
-    boardArea.appendChild(overlay);
-    runBattleAnimation(lb, attPlayer, defPlayer, overlay);
-  }
+    const bKey = [G.turnCount, lb.attackerIdx, lb.defOwnerIdx, lb.attM && lb.attM.iid, lb.defM && lb.defM.iid, lb.atkDmg, lb.defDmg, lb.outcome].join('|');
+    if (_battleOv && _battleOv.key === bKey) {
+      boardArea.appendChild(_battleOv.el);
+    } else {
+      const attPlayer = G.players[lb.attackerIdx];
+      const defPlayer = lb.defOwnerIdx != null ? G.players.find(p => p.idx === lb.defOwnerIdx) : null;
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:absolute;inset:0;z-index:15;background:rgba(8,8,20,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;';
+      boardArea.appendChild(overlay);
+      _battleOv = { key: bKey, el: overlay, at: Date.now() };
+      runBattleAnimation(lb, attPlayer, defPlayer, overlay);
+    }
+  } else _battleOv = null;
 
   // ── v0.6.33: host-only Skip Sanction turn (no timer on Sanction turns)
   if (G.phase && G.phase.startsWith('sanction:') && !isSpectator) {
@@ -1297,11 +1341,15 @@ function renderPaper(){
       empty.textContent = 'No events yet.';
       scroll.appendChild(empty);
     } else {
-      [...G.events].reverse().forEach(ev => {
+      // v0.6.64: only the latest few events, each at most 2 lines, no scrollbar — the log no longer
+      // grows and shrinks (that resized the side panel and made the board look like it was redrawing)
+      scroll.style.overflow = 'hidden';
+      G.events.slice(-7).reverse().forEach(ev => {
         const row = document.createElement('div');
         row.className = 'log-row';
         const txt = typeof ev === 'string' ? ev : (ev.text || String(ev));
-        row.innerHTML = `<span class="log-icon">·</span><span class="log-text">${txt}</span>`;
+        row.innerHTML = `<span class="log-icon">·</span><span class="log-text" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${txt}</span>`;
+        row.style.flexShrink = '0';
         scroll.appendChild(row);
       });
     }
@@ -1310,3 +1358,25 @@ function renderPaper(){
   paper.appendChild(scroll);
   return paper;
 }
+
+
+// ─── v0.6.64: tell the server when the board is busy animating, so bots wait their turn ───
+// Busy = dice / token hop / queued or running effects / Wild Card flight / income tally / battle overlay
+// (first 7 s) / big moments. The server holds the next bot action until the board reports idle (15 s cap).
+let _boardBusySent = null;
+function _boardBusyNow() {
+  try {
+    if (typeof isSpectator !== 'undefined' && isSpectator) return false;
+    if (_fxHeld() || _fxQ.length || _tallyRunning) return true;
+    if (_battleOv && _battleOv.el.isConnected && Date.now() - _battleOv.at < 7000) return true;
+    if (document.getElementById('sg-moment')) return true;
+    if (window.BoardFX && BoardFX.wcBusy && BoardFX.wcBusy()) return true;
+  } catch (_) {}
+  return false;
+}
+setInterval(() => {
+  if (!G || G.phase === 'lobby' || !G.players || !G.players.some(p => p.isBot)) { _boardBusySent = null; return; }
+  if (typeof isSpectator !== 'undefined' && isSpectator) return;
+  const b = _boardBusyNow();
+  if (b !== _boardBusySent) { _boardBusySent = b; try { send('board_busy', { busy: b }); } catch (_) {} }
+}, 150);

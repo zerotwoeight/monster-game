@@ -4,7 +4,7 @@
   let n = 0;
   function rep(message, stack) {
     try { if (++n > 10 || typeof ws === 'undefined' || !ws || ws.readyState !== 1) return;
-      ws.send(JSON.stringify({ action: 'client_error', where: 'board v0.6.62', message: String(message || ''), stack: String(stack || ''), phase: (typeof G !== 'undefined' && G && G.phase) || '' })); } catch (_) {}
+      ws.send(JSON.stringify({ action: 'client_error', where: 'board v0.6.64', message: String(message || ''), stack: String(stack || ''), phase: (typeof G !== 'undefined' && G && G.phase) || '' })); } catch (_) {}
   }
   window.addEventListener('error', e => rep(e.message, e.error && e.error.stack));
   window.addEventListener('unhandledrejection', e => rep('Unhandled promise: ' + ((e.reason && e.reason.message) || e.reason), e.reason && e.reason.stack));
