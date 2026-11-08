@@ -1,5 +1,10 @@
 /* ─────────────────────────────────────────────────────────────────────────────
- * Summoner's Gambit — board-fx.js  (v0.6.35, Tier 1–3 board interaction effects)
+ * Summoner's Gambit — board-fx.js  (v0.6.50, Tier 1–3 board interaction effects)
+ *  v0.6.50: curseLand — a delayed Wild Card (Jinx / Delay / Stumble) goes off: the card rises out of the
+ *           target's chip, flips face-up in the centre with a stamp + "courtesy of …", then cracks apart
+ *  v0.6.61: Golden Tithe / Hollow Hunger used up at once → card stays through the tally, then cracks away (GEN ×2 / NO GEN)
+ *  v0.6.59: Omen result card stays on the tile as the Omen marker (board draws it at the same size/angle)
+ *  v0.6.58: Sanction result card lands on its tile at 50% size, no fade, holds 1.2 s (lab option A2)
  *  v0.6.35: sxMoment — tarot Sanctioned / Redeemed moments (card flips to Sanctioned, turns over to Life)
  *  v0.6.34: Sanction table SFX hooks (opts.sfx: fanfare / blessing / curse / jackpot / fly)
  *  v0.6.33: Omen reveals on the Sanction card table
@@ -654,6 +659,62 @@
       }, D * (ft ? .85 : .89));
     });
   }
+  // ═══════════════ v0.6.50: curse lands (U5) ═══════════════
+  let _curseBusy = false;
+  function curseBusy() { return _curseBusy; }
+  function curseLand(card, fromEl, caption, sub, opts = {}) {
+    return new Promise(resolve => {
+      _curseBusy = true;
+      const finish = () => { _curseBusy = false; resolve(); };
+      const k = scale(), bc = boardCenter(), reduced = level === 'reduced';
+      const T = TIER[card.tier] || TIER.low;
+      const w = 190 * k, h = 272 * k;
+      const a = fromEl && fromEl.isConnected ? center(fromEl) : { x: bc.x, y: bc.y + 200 * k };
+      const wrap = mk('fx-dice-stage', { left: 0, top: 0, width: '100%', height: '100%', perspective: '1100px' });
+      const cardEl = document.createElement('div'); cardEl.className = 'fx-wc';
+      Object.assign(cardEl.style, { left: (bc.x - w / 2) + 'px', top: (bc.y - h / 2 - 20 * k) + 'px', width: w + 'px', height: h + 'px', fontSize: Math.round(14 * k) + 'px' });
+      cardEl.style.setProperty('--tc', T.c);
+      cardEl.innerHTML = `<div class="fx-wc-face fx-wc-front" style="background-image:url('/img/wildcards/wc-${card.id}.png')">
+          <div class="fx-wc-band"><div class="fx-wc-tier">${T.label}</div><div class="fx-wc-name">${card.name}</div></div></div>
+        <div class="fx-wc-face fx-wc-back">🃏</div>`;
+      wrap.appendChild(cardEl);
+      // stamp + caption under the card
+      const stamp = document.createElement('div');
+      Object.assign(stamp.style, { position: 'absolute', left: bc.x + 'px', top: (bc.y + h / 2 - 2 * k) + 'px', transform: 'translateX(-50%)', textAlign: 'center',
+        whiteSpace: 'nowrap', pointerEvents: 'none', opacity: '0' });
+      stamp.innerHTML = `<div style="display:inline-block;font:900 ${Math.round(30 * k)}px Cinzel,Georgia,serif;letter-spacing:.08em;color:#ffe9e9;background:linear-gradient(180deg,#c0392b,#7a1818);
+          border:${Math.max(2, 3 * k)}px solid #ffb4b4;border-radius:${10 * k}px;padding:${6 * k}px ${18 * k}px;box-shadow:0 0 ${30 * k}px rgba(192,57,43,.6);transform:rotate(-4deg)">${caption}</div>
+        ${sub ? `<div style="margin-top:${8 * k}px;font:600 ${Math.round(17 * k)}px Inter,system-ui,sans-serif;color:#f2e6c8;text-shadow:0 2px 6px rgba(0,0,0,.8)">${sub}</div>` : ''}
+        ${opts.by ? `<div style="margin-top:${4 * k}px;font:italic 600 ${Math.round(16 * k)}px Inter,system-ui,sans-serif;color:${opts.byColor || '#c9a05a'};text-shadow:0 2px 6px rgba(0,0,0,.8)">courtesy of ${opts.by}</div>` : ''}`;
+      wrap.appendChild(stamp);
+      const D = reduced ? 2600 : 3300;
+      const fx = a.x - bc.x, fy = a.y - bc.y;
+      const t = (x, y, ry, sc, rz = 0) => `translate(${x}px,${y}px) rotateY(${ry}deg) rotateZ(${rz}deg) scale(${sc})`;
+      done(wrap.animate([{ opacity: 0 }, { opacity: 1, offset: .05 }, { opacity: 1, offset: .86 }, { opacity: 0 }], { duration: D, fill: 'both' }), wrap);
+      cardEl.animate(reduced ? [{ transform: t(0, 0, 0, 1) }, { transform: t(0, 0, 0, 1) }] : [
+        { transform: t(fx, fy, 180, .15, 18), offset: 0 },
+        { transform: t(fx * .35, fy * .35 - 50 * k, 180 + 300, .75, -6), offset: .17 },
+        { transform: t(0, 0, 720, 1.14, 0), offset: .28 },        // face-up
+        { transform: t(0, 0, 720, 1, 0), offset: .34 },
+        { transform: t(0, -6 * k, 720, 1, -1), offset: .74 },      // hold so the room can read it
+        { transform: t(0, -10 * k, 720, 1.06, 3), offset: .82 },
+        { transform: t(0, 30 * k, 720, .9, -8), offset: 1 }        // cracks and drops away
+      ], { duration: D, easing: 'cubic-bezier(.3,.6,.35,1)', fill: 'forwards' });
+      stamp.animate([{ opacity: 0, transform: 'translateX(-50%) scale(1.8)' }, { opacity: 0, transform: 'translateX(-50%) scale(1.8)', offset: .3 },
+        { opacity: 1, transform: 'translateX(-50%) scale(.94)', offset: .36 }, { opacity: 1, transform: 'translateX(-50%) scale(1)', offset: .42 },
+        { opacity: 1, transform: 'translateX(-50%) scale(1)', offset: .84 }, { opacity: 0, transform: 'translateX(-50%) scale(1)' }],
+        { duration: D, fill: 'forwards' });
+      setTimeout(() => {
+        ring(bc.x, bc.y - 20 * k, 150 * k, '#e0565b', { dur: 800, grow: 2.2, width: 4 });
+        if (!reduced) { sparks(bc.x, bc.y - 20 * k, '#e0565b', 14, 180 * k, { dur: 900, size: 6 }); shake(4, 260); }
+        try { opts.onStamp && opts.onStamp(); } catch (e) {}
+      }, D * .32);
+      setTimeout(() => { if (!reduced) sparks(bc.x, bc.y, T.c, 22, 160 * k, { dur: 800, size: 7 }); }, D * .84);
+      if (fromEl && fromEl.isConnected) glow(fromEl, '#e0565b', 1200);
+      setTimeout(finish, D);
+    });
+  }
+
   // ═══════════════ v0.6.26: Wild Card table (doubles) ═══════════════
   // Three face-down tier cards dealt into the board centre when a player rolls doubles.
   // grey (turn in progress) → live (choosing: colour + breathing) → picked (chosen card flips
@@ -991,14 +1052,43 @@
     } else {
       const tx = tr.left + tr.width / 2, ty = tr.top + tr.height / 2, rot = r.pos / 28 * 360;
       opts.sfx && opts.sfx('fly');
-      await _sxtAnim(c, [{ transform: c._t, opacity: 1 }, { transform: _sxtAt(tx, ty, .22, rot), opacity: .2 }], sxD('settle'), { ease: 'cubic-bezier(.55,0,.6,1)' });
+      await _sxtAnim(c, [{ transform: c._t, opacity: 1 }, { transform: _sxtAt(tx, ty, .5, rot), opacity: 1 }], sxD('settle'), { ease: 'cubic-bezier(.55,0,.6,1)' });   // v0.6.58 (A2): lands at 50%, fully visible
       ring(tx, ty, 46 * g.k, R.col, { dur: 700, grow: 2, width: 3 });
       if (r.kind === 'sacrifice' && level !== 'reduced') sparks(tx, ty, '#ff6b6b', 20, 90 * g.k, { dur: 800, size: 5 });
+      await new Promise(res => setTimeout(res, level === 'reduced' ? 600 : 1200));   // v0.6.58: card sits on the tile before the tile shows the result
       if (R.jack) { banner(tx, ty - 30 * g.k, `+${r.jackpot}✦`, '#ffe7a8', { size: 22, dur: 1500, rise: 40 }); if (level !== 'reduced') sparks(tx, ty, '#ffd77a', 22, 90 * g.k, { dur: 800, size: 5 }); }
     }
     SXT.hold = null; SXT.tileHold = null; opts.onHold && opts.onHold();
-    c.remove(); SXT.state = 'revealed'; SXT.busy = false;
+    // v0.6.61: Golden Tithe / Hollow Hunger on the NEXT player's tile get used up at their income straight away.
+    // Keep the card on the tile through the income tally, then crack it away with the result.
+    const oneShot = r.kind === 'omen' && (r.id === 'golden_tithe' || r.id === 'hollow_hunger') && tr;
+    SXT.state = 'revealed'; SXT.busy = false;
+    if (oneShot) {
+      c.getAnimations({ subtree: true }).forEach(a => { try { a.commitStyles(); } catch (e) {} a.cancel(); });   // pin card + flipped face before moving
+      c.style.opacity = 1; c.style.zIndex = 9001; layer().appendChild(c);   // survives the table clearing
+    } else c.remove();
     opts.onRevealDone && opts.onRevealDone(sx.revealSeq);
+    if (oneShot) _sxtOneShot(c, r, tr);
+  }
+  async function _sxtOneShot(c, r, tr) {
+    const k = scale(), tx = tr.left + tr.width / 2, ty = tr.top + tr.height / 2;
+    const live = () => (typeof G !== 'undefined' && G) ? G : null;
+    const used = () => { const g = live(); return !!(g && g.board && g.board[r.pos] && !g.board[r.pos].omen); };
+    // wait (max 10 s) for the Omen to be used; then let the income tally play before cracking the card
+    const t0 = Date.now();
+    while (!used() && Date.now() - t0 < 10000) {
+      const g = live(); if (g && g.board && g.board[r.pos] && g.board[r.pos].omen) { c.remove(); return; }   // still active: the tile marker takes over
+      await new Promise(res => setTimeout(res, 150));
+    }
+    await new Promise(res => setTimeout(res, level === 'reduced' ? 800 : 2000));
+    const tithe = r.id === 'golden_tithe', col = tithe ? '#ffd77a' : '#ff6b6b';
+    banner(tx, ty - 40 * k, tithe ? 'GEN ×2' : 'NO GEN', tithe ? '#ffe7a8' : '#ffb3b3', { size: 22, dur: 1600, rise: 40 });
+    ring(tx, ty, 50 * k, col, { dur: 700, grow: 2.2, width: 3 });
+    if (level !== 'reduced') sparks(tx, ty, col, 18, 90 * k, { dur: 800, size: 5 });
+    const from = c.style.transform;
+    await _sxtAnim(c, level === 'reduced' ? [{ opacity: 1 }, { opacity: 0 }] :
+      [{ transform: from, opacity: 1, filter: 'brightness(1)' }, { transform: from + ' scale(1.12) rotate(4deg)', opacity: 1, filter: 'brightness(1.8)', offset: .3 }, { transform: from + ' scale(.6) rotate(-10deg)', opacity: 0, filter: 'brightness(.4)' }], 600);
+    c.remove();
   }
   function sxTable(G, opts = {}) {
     SXT.sfx = opts.sfx || null;
@@ -1197,6 +1287,7 @@
     wildCard, plague, shatterTile, eliminated, crown,
     wcTable, wcTableConsume,   // v0.6.26
     ring, sparks,              // v0.6.30: exposed for the board's Wheel of Fortune flip
+    curseLand, curseBusy,      // v0.6.50 (U5)
     sxTable, sxFortuneHold, sxTileHold, sxBusy, sxMoment,   // v0.6.31: Sanction card table (v0.6.32: sxTileHold)
     get level() { return level; },
     setLevel(v) { level = v === 'reduced' ? 'reduced' : 'full'; try { localStorage.setItem(LS_KEY, level); } catch (e) {} },

@@ -128,7 +128,7 @@ textarea:focus{border-color:var(--accent)}
   <div class="topbar-right">
     <span id="topbar-matchup">Select both summons</span>
     <a href="/board">← Board</a>
-    <span style="font-family:monospace">v1.0.104</span>
+    <span style="font-family:monospace">v1.0.107</span>
   </div>
 </div>
 
@@ -478,7 +478,7 @@ const ROSTER=[
   {id:'shadow_paladin', type:'Dark',   name:'Shadow Paladin',  arch:'vanguard', hp:35, maxHp:35, atk:25,def:9,  gen:2,cost:10},
   {id:'dusk_blade',     type:'Dark',   name:'Dusk Blade',      arch:'vanguard', hp:30, maxHp:30, atk:29,def:8,  gen:2,cost:10},
   {id:'umbral_stalker', type:'Dark',   name:'Umbral Stalker',  arch:'vanguard', hp:42, maxHp:42, atk:21,def:11, gen:2,cost:10},
-  {id:'succubus',       type:'Dark',   name:'Succubus',        arch:'ascendant',hp:45, maxHp:45, atk:32,def:10, gen:5,cost:20,special:'Mana Drain'},
+  {id:'succubus',       type:'Dark',   name:'Succubus',        arch:'ascendant',hp:65, maxHp:65, atk:32,def:10, gen:5,cost:20,special:'Mana Drain'},
   // ── Arcane ──
   {id:'sorcerer',       type:'Arcane', name:'Sorcerer',        arch:'assailant',hp:20, maxHp:20, atk:40,def:5,  gen:2,cost:8},
   {id:'spell_wraith',   type:'Arcane', name:'Spell Wraith',    arch:'assailant',hp:22, maxHp:22, atk:38,def:5,  gen:2,cost:8},
@@ -486,7 +486,7 @@ const ROSTER=[
   {id:'arch_mage',      type:'Arcane', name:'Arch Mage',       arch:'vanguard', hp:35, maxHp:35, atk:25,def:9,  gen:2,cost:10},
   {id:'runic_duelist',  type:'Arcane', name:'Runic Duelist',   arch:'vanguard', hp:32, maxHp:32, atk:27,def:9,  gen:2,cost:10},
   {id:'mana_weaver',    type:'Arcane', name:'Mana Weaver',     arch:'vanguard', hp:38, maxHp:38, atk:23,def:12, gen:2,cost:10},
-  {id:'arcane_arbiter', type:'Arcane', name:'Arcane Arbiter',  arch:'ascendant',hp:40, maxHp:40, atk:40,def:15, gen:5,cost:20,special:'Chaos Flux'},
+  {id:'arcane_arbiter', type:'Arcane', name:'Arcane Arbiter',  arch:'ascendant',hp:60, maxHp:60, atk:40,def:15, gen:5,cost:20,special:'Chaos Flux'},
   // ── Undead ──
   {id:'bone_wraith',    type:'Undead', name:'Bone Wraith',     arch:'assailant',hp:20, maxHp:20, atk:40,def:5,  gen:2,cost:8},
   {id:'grave_specter',  type:'Undead', name:'Grave Specter',   arch:'assailant',hp:18, maxHp:18, atk:42,def:4,  gen:2,cost:8},
@@ -502,7 +502,7 @@ const ROSTER=[
   {id:'pack_hunter',    type:'Beast',  name:'Pack Hunter',     arch:'vanguard', hp:35, maxHp:35, atk:25,def:9,  gen:2,cost:10},
   {id:'stormtalon',     type:'Beast',  name:'Stormtalon',      arch:'vanguard', hp:32, maxHp:32, atk:28,def:9,  gen:2,cost:10},
   {id:'stoneback',      type:'Beast',  name:'Stoneback',       arch:'vanguard', hp:42, maxHp:42, atk:20,def:12, gen:2,cost:10},
-  {id:'red_dragon',     type:'Beast',  name:'Red Dragon',      arch:'ascendant',hp:40, maxHp:40, atk:50,def:9,  gen:5,cost:20,special:'Intimidate'},
+  {id:'red_dragon',     type:'Beast',  name:'Red Dragon',      arch:'ascendant',hp:60, maxHp:60, atk:50,def:9,  gen:5,cost:20,special:'Intimidate'},
   // ── Nature ──
   {id:'thornling',      type:'Nature', name:'Thornling',       arch:'assailant',hp:20, maxHp:20, atk:40,def:5,  gen:2,cost:8},
   {id:'briar_sprite',   type:'Nature', name:'Briar Sprite',    arch:'assailant',hp:22, maxHp:22, atk:37,def:6,  gen:2,cost:8},
@@ -512,9 +512,9 @@ const ROSTER=[
   {id:'moss_golem',     type:'Nature', name:'Moss Golem',      arch:'vanguard', hp:42, maxHp:42, atk:20,def:12, gen:2,cost:10},
   {id:'world_tree',     type:'Nature', name:'World Tree',      arch:'ascendant',hp:65, maxHp:65, atk:12,def:13, gen:5,cost:20,special:'Deep Roots'},
   // ── Dual-Element Rares ──
-  {id:'luminar_operative',         type:'Light',  type2:'Arcane', name:'Luminar Operative',arch:'rare',hp:35,maxHp:35,atk:30,def:12,gen:4,cost:26},
-  {id:'hex_stalker',      type:'Undead', type2:'Beast',  name:'Hex Stalker',      arch:'rare',hp:42,maxHp:42,atk:30,def:11,gen:3,cost:25},
-  {id:'verdant_sorcerer', type:'Arcane', type2:'Nature', name:'Verdant Sorcerer', arch:'rare',hp:30,maxHp:30,atk:30,def:12,gen:4,cost:27},
+  {id:'luminar_operative',         type:'Light',  type2:'Arcane', name:'Luminar Operative',arch:'rare',hp:55,maxHp:55,atk:30,def:12,gen:4,cost:26},
+  {id:'hex_stalker',      type:'Undead', type2:'Beast',  name:'Hex Stalker',      arch:'rare',hp:60,maxHp:60,atk:30,def:11,gen:3,cost:25},
+  {id:'verdant_sorcerer', type:'Arcane', type2:'Nature', name:'Verdant Sorcerer', arch:'rare',hp:55,maxHp:55,atk:30,def:12,gen:4,cost:27},
   // ── Support ──
   {id:'mana_refinery',type:null,name:'Mana Refinery',arch:'support',hp:18,maxHp:18,atk:1,def:10,gen:0,cost:12},
   {id:'weapon_smith', type:null,name:'Weapon Smith', arch:'support',hp:18,maxHp:18,atk:1,def:10,gen:0,cost:12},
@@ -556,9 +556,11 @@ function typeMultiplier(att, def){
 }
 
 // doStrike mirrors server v1.0.71 signature
-function doStrike(att, def, tileEl, charm, ambush, bonusRun, monoBuff, forgeBonus=0, attIsRadiantLancer=false, extra=[]){
+function doStrike(att, def, tileEl, charm, ambush, bonusRun, monoBuff, forgeBonus=0, attIsRadiantLancer=false, extra=[], homeAtk=false){
   const steps=[];
-  const tileEff=tileEffectOnDefender(tileEl, def);
+  const tileEff=homeAtk ? 1 : tileEffectOnDefender(tileEl, def);   // v1.0.106 (server v1.0.129): tile only affects the defender
+  // v1.0.105 (server v1.0.128): the stationed defender's strikes get +15% ATK on its own element tile
+  if(homeAtk && tileEffectOnDefender(tileEl, att)>1){ const a0=att.atk; att={...att, atk:Math.round(att.atk*1.15)}; steps.push({cls:'le-buff',t:`  🏰 Home Ground: +15% ATK (${a0} → ${att.atk})`}); }
   const rawDef=def.def+forgeBonus;
   // Radiant Lancer: Piercing Light — 30% DEF reduction
   const piercedDef = attIsRadiantLancer ? Math.max(0, rawDef - Math.round(rawDef * 0.3)) : rawDef;
@@ -639,7 +641,7 @@ function calcBattle(){
       if(omen==='shackled_will') ex.push({m:0.5,t:'🔮 Shackled Will ½'});
       if(fI&&fI.c) ex.push({m:1+fI.c,t:`🎡 ${fI.n} counter +${Math.round(fI.c*100)}%`});
     }
-    const r=doStrike(a,d,tileEl,charm,amb,bonusRun,monoB,0,pierce,ex);
+    const r=doStrike(a,d,tileEl,charm,amb,bonusRun,monoB,0,pierce,ex,!isAtt);   // v1.0.105: defender strikes get home ATK
     if(isAtt){ attCharm=false; ambush=false; } else defCharm=false;   // consumed on first strike
     r.steps.forEach(x=>log.push(x)); return r.dmg;
   };
@@ -1062,7 +1064,7 @@ function onTileChange(){
   if(!tileEl||!m){ pill.style.display='none'; refreshPreview(); return; }
   const eff=tileEffectOnDefender(tileEl,m);
   if(eff>1){
-    pill.textContent=`+15% DEF — ${tileEl} tile matches ${m.type||''}`;
+    pill.textContent=`+15% ATK & DEF — ${tileEl} tile matches ${m.type||''}`;   // v1.0.105
     pill.className='tile-pill tile-bonus'; pill.style.display='inline-block';
   } else if(eff<1){
     pill.textContent=`−15% DEF — ${tileEl} beats ${m.type}`;

@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin · Lobby News</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  :root{--bg:#10111e;--surface:#1c1e2b;--border:#272a38;--text:#e9e9ed;--dim:#9397ab;--lo:#b2b6ca;--gold:#c9a05a}
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,sans-serif}
+  .wrap{max-width:1280px;margin:0 auto;padding:28px 24px 60px}
+  header{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+  header h1{margin:0;font-family:Cinzel,serif;font-size:24px}
+  header a{color:var(--dim);font-size:13px}
+  .cols{display:flex;flex-wrap:wrap;gap:28px}
+  .col-l{flex:1 1 520px;min-width:0;display:flex;flex-direction:column;gap:12px}
+  .col-r{flex:1 1 420px;min-width:0;display:flex;flex-direction:column;gap:14px}
+  label,.lbl{font-size:12px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
+  input[type=text],input[type=password],input[type=url],textarea{width:100%;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);padding:11px 12px;font:15px Inter,sans-serif}
+  textarea{min-height:160px;resize:vertical;line-height:1.5}
+  input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  button{min-height:42px;padding:0 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--lo);font:600 14px Inter,sans-serif;cursor:pointer}
+  button.on{border:2px solid var(--gold);color:var(--gold);background:#2b2416}
+  button.primary{background:var(--gold);color:#1a1710;border:0}
+  button.danger{color:#ff9ea2}
+  .chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--lo);text-transform:none;letter-spacing:0}
+  .chk input{width:18px;height:18px;accent-color:var(--gold)}
+  .hint{font-size:12px;color:var(--dim)}
+  .msg{min-height:20px;font-size:13px}
+  .msg.ok{color:#8fe0b0}.msg.err{color:#ff9ea2}
+  .item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border-radius:8px;font-size:14px;flex-wrap:wrap}
+  .item .t{flex:1;min-width:140px}
+  .item .tag{width:100px;font-weight:600}
+  .item .st{font-size:12px;color:var(--dim)}
+  .item button{min-height:34px;padding:0 10px;font-size:13px}
+  .pv{background:#0d0e1c;border:1px solid var(--border);border-radius:10px;padding:16px}
+  .pv-l{font-size:11px;color:#75798c;margin-bottom:8px}
+  #pv-ticker .sgn-ticker{cursor:default}#pv-ticker .sgn-ticker:hover{transform:none;box-shadow:none}
+  #pv-ticker .sgn-tk-title{font-size:19px}#pv-ticker .sgn-seal{width:44px;height:44px;font-size:9px}
+  .phone{width:300px;max-width:100%;background:#f5efe0;color:#1a1710;border-radius:12px;padding:14px;font-family:Inter,sans-serif}
+  .phone .sgn-ptitle{font-size:18px}.phone .sgn-pbody{font-size:14px}
+  #imgprev{max-width:220px;max-height:120px;border-radius:6px;display:none}
+  #lock{max-width:420px;margin:80px auto;display:flex;flex-direction:column;gap:12px}
+</style>
+<script src="/news.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Admin · Lobby News</h1><a href="/admin">← Rooms</a><span class="hint" id="who"></span></header>
+
+  <div id="lock" hidden>
+    <label for="key">Admin key</label>
+    <input type="password" id="key" autocomplete="current-password">
+    <button class="primary" id="unlock">Unlock</button>
+    <div class="msg err" id="lockmsg"></div>
+  </div>
+
+  <div class="cols" id="editor" hidden>
+    <div class="col-l">
+      <label for="f-title">Title</label>
+      <input type="text" id="f-title" maxlength="120" placeholder="The Sanctioned have arrived">
+      <div class="lbl">Tag</div>
+      <div class="row" id="tags">
+        <button data-tag="update">Update</button><button data-tag="news">News</button><button data-tag="maintenance">Maintenance</button>
+      </div>
+      <label for="f-body">Body</label>
+      <textarea id="f-body" maxlength="4000" placeholder="Write the post…"></textarea>
+      <div class="hint">**bold** · *italic* · [link text](https://…) · lines starting with "- " make a list · blank line = new paragraph</div>
+      <label for="f-link">Read-more link (optional)</label>
+      <input type="url" id="f-link" placeholder="https://…">
+      <div class="lbl">Image (optional)</div>
+      <div class="row">
+        <button id="imgbtn">Add image</button><button id="imgclear" hidden>Remove image</button>
+        <input type="file" id="imgfile" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+        <img id="imgprev" alt="Post image preview">
+      </div>
+      <label class="chk"><input type="checkbox" id="f-banner"> Also pin as the top banner (replaces any current banner)</label>
+      <input type="text" id="f-bannertext" maxlength="160" placeholder="Banner text (blank = use the title)" hidden>
+      <div class="row" style="margin-top:6px">
+        <button class="primary" id="publish">Publish</button>
+        <button id="draft">Save draft</button>
+        <button id="newpost">New post</button>
+      </div>
+      <div class="msg" id="msg"></div>
+
+      <div class="lbl" style="margin-top:14px">All posts</div>
+      <div id="list" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+
+    <div class="col-r">
+      <div class="lbl">Live preview</div>
+      <div class="pv"><div class="pv-l">Board lobby</div><div id="pv-ticker"></div></div>
+      <div class="pv" style="display:flex;gap:16px;flex-wrap:wrap"><div class="pv-l" style="width:50px">Phone</div>
+        <div class="phone" id="pv-phone"></div></div>
+      <div class="pv" id="pv-banner-wrap" hidden><div class="pv-l">Banner</div><div id="pv-banner" style="position:relative"></div></div>
+    </div>
+  </div>
+</div>
+<script>
+let KEY = '';
+try { KEY = sessionStorage.getItem('sg_admin_key') || ''; } catch (e) {}
+let posts = [], cur = null, tag = 'update', image = '';
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function api(body) {
+  const r = await fetch('/admin/news/api', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': KEY }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({ ok: false, error: 'Bad response' }));
+  if (r.status === 401) { showLock(j.error); throw new Error(j.error); }
+  if (!j.ok) throw new Error(j.error || 'Failed');
+  return j;
+}
+function flash(t, kind) { const m = $('msg'); m.textContent = t; m.className = 'msg' + (kind ? ' ' + kind : ''); }
+function showLock(err) { $('editor').hidden = true; $('lock').hidden = false; $('lockmsg').textContent = err || ''; }
+async function load() {
+  try { const j = await api({ action: 'list' }); posts = j.posts; $('lock').hidden = true; $('editor').hidden = false; renderList(); if (!cur) newPost(); }
+  catch (e) { if ($('lock').hidden) showLock(e.message); }
+}
+$('unlock').onclick = () => { KEY = $('key').value.trim(); try { sessionStorage.setItem('sg_admin_key', KEY); } catch (e) {} load(); };
+$('key').onkeydown = e => { if (e.key === 'Enter') $('unlock').click(); };
+
+function setTag(t) { tag = t; document.querySelectorAll('#tags button').forEach(b => b.classList.toggle('on', b.dataset.tag === t)); preview(); }
+document.querySelectorAll('#tags button').forEach(b => b.onclick = () => setTag(b.dataset.tag));
+function setImage(url) { image = url || ''; $('imgprev').src = image; $('imgprev').style.display = image ? 'block' : 'none'; $('imgclear').hidden = !image; preview(); }
+$('imgbtn').onclick = () => $('imgfile').click();
+$('imgclear').onclick = () => setImage('');
+$('imgfile').onchange = () => {
+  const f = $('imgfile').files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = async () => { try { flash('Uploading image…'); const j = await api({ action: 'image', data: rd.result }); setImage(j.url); flash('Image added', 'ok'); } catch (e) { flash(e.message, 'err'); } };
+  rd.readAsDataURL(f); $('imgfile').value = '';
+};
+$('f-banner').onchange = () => { $('f-bannertext').hidden = !$('f-banner').checked; preview(); };
+['f-title', 'f-body', 'f-link', 'f-bannertext'].forEach(id => $(id).oninput = preview);
+
+function newPost() { cur = null; $('f-title').value = ''; $('f-body').value = ''; $('f-link').value = ''; $('f-banner').checked = false; $('f-bannertext').value = ''; $('f-bannertext').hidden = true; setTag('update'); setImage(''); renderList(); }
+function editPost(id) {
+  const p = posts.find(x => x.id === id); if (!p) return; cur = p;
+  $('f-title').value = p.title || ''; $('f-body').value = p.body || ''; $('f-link').value = p.link || '';
+  $('f-banner').checked = !!p.banner; $('f-bannertext').value = p.bannerText || ''; $('f-bannertext').hidden = !p.banner;
+  setTag(p.tag || 'news'); setImage(p.image); renderList(); window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+$('newpost').onclick = newPost;
+async function save(published) {
+  if (!$('f-title').value.trim()) { flash('Add a title first', 'err'); return; }
+  try {
+    const j = await api({ action: 'save', post: { id: cur && cur.id, title: $('f-title').value.trim(), body: $('f-body').value, tag, link: $('f-link').value.trim(), image, banner: $('f-banner').checked, bannerText: $('f-bannertext').value.trim(), published } });
+    cur = j.post; flash(published ? 'Published — lobbies update now' : 'Draft saved', 'ok'); await load();
+  } catch (e) { flash(e.message, 'err'); }
+}
+$('publish').onclick = () => save(true);
+$('draft').onclick = () => save(false);
+async function setPub(id, on) { const p = posts.find(x => x.id === id); try { await api({ action: 'save', post: { ...p, published: on } }); await load(); } catch (e) { flash(e.message, 'err'); } }
+async function unpin(id) { const p = posts.find(x => x.id === id); try { await api({ action: 'save', post: { ...p, banner: false } }); await load(); } catch (e) { flash(e.message, 'err'); } }
+async function del(id) { if (!confirm('Delete this post for good?')) return; try { await api({ action: 'delete', id }); if (cur && cur.id === id) newPost(); await load(); } catch (e) { flash(e.message, 'err'); } }
+
+function renderList() {
+  const tc = { update: '#c9a05a', news: '#8fa0e8', maintenance: '#e08a7c' };
+  const sorted = posts.slice().sort((a, b) => (b.date || 0) - (a.date || 0));
+  $('list').innerHTML = sorted.length ? sorted.map(p => `
+    <div class="item"${cur && cur.id === p.id ? ' style="outline:1px solid var(--gold)"' : ''}>
+      <span class="tag" style="color:${tc[p.tag] || '#ccc'}">${esc((p.tag || 'news').replace(/^./, c => c.toUpperCase()))}</span>
+      <span class="t">${esc(p.title)}<br><span class="st">${new Date(p.date).toLocaleString()} · ${p.published ? 'Published' : 'Draft'}${p.banner ? ' · Banner' : ''}</span></span>
+      <button onclick="editPost('${p.id}')">Edit</button>
+      <button onclick="setPub('${p.id}', ${!p.published})">${p.published ? 'Unpublish' : 'Publish'}</button>
+      ${p.banner ? `<button onclick="unpin('${p.id}')">Unpin banner</button>` : ''}
+      <button class="danger" onclick="del('${p.id}')">Delete</button>
+    </div>`).join('') : '<div class="hint">No posts yet.</div>';
+}
+function preview() {
+  const p = { id: 'pv', title: $('f-title').value || 'Title', body: $('f-body').value, tag, image, link: $('f-link').value, date: (cur && cur.date) || Date.now() };
+  const bannerOn = $('f-banner').checked;
+  // reuse news.js rendering in a sandboxed way: temporarily swap its data
+  const saved = SGNews.data;
+  const slotT = $('pv-ticker'); slotT.id = 'sg-news-ticker';
+  SGNews.set({ posts: [p, ...saved.posts.filter(x => x.id !== (cur && cur.id))], banner: null });
+  slotT.id = 'pv-ticker';
+  const tagBg = { update: '#a97b40', news: '#4b5fa8', maintenance: '#b4473a' }[tag];
+  $('pv-phone').innerHTML = `<div class="sgn-prow"><span class="sgn-chip" style="background:${tagBg}">${esc(tag)}</span><span class="sgn-date">${new Date(p.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span></div>
+    <h3 class="sgn-ptitle">${esc(p.title)}</h3>${image ? `<img class="sgn-pimg" src="${esc(image)}" alt="">` : ''}<div class="sgn-pbody" id="pv-body"></div>`;
+  // body markdown via the real modal renderer
+  SGNews.open(); const art = document.querySelector('#sgn-overlay .sgn-pbody'); $('pv-body').innerHTML = art ? art.innerHTML : ''; SGNews.close();
+  SGNews.set(saved);
+  $('pv-banner-wrap').hidden = !bannerOn;
+  if (bannerOn) {
+    const bg = { update: '#c9a05a', news: '#b5abfc', maintenance: '#e08a7c' }[tag];
+    $('pv-banner').innerHTML = `<div class="sgn-banner" style="position:static;animation:none;background:${bg};box-shadow:none;border-radius:6px"><span class="sgn-btag">${esc(tag)}</span><span class="sgn-btext">${esc($('f-bannertext').value || p.title)}</span></div>`;
+  }
+}
+load();
+</script>
+</body>
+</html>
