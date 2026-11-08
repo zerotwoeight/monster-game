@@ -535,7 +535,7 @@ const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Wat
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <img class="lobby-brand-logo" src="/img/logos/logo-main.webp" alt="Summoner's Gambit">
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.66 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.54</div>`;  // v0.6.31: Sound Settings moved to the bottom-left row
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.67 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.55</div>`;  // v0.6.31: Sound Settings moved to the bottom-left row
   splash.appendChild(brand);
 
   // ── Two panels
@@ -650,7 +650,7 @@ const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Wat
   const sndBtn = document.createElement('button');   // v0.6.31: Sound Settings bottom-left, opposite Ko-fi
   sndBtn.className = 'mute-btn'; sndBtn.id = 'mute-btn'; sndBtn.title = 'Sound settings';
   sndBtn.onclick = openAudioSettings;
-  sndBtn.style.cssText = 'width:auto;padding:0 14px;gap:6px;display:inline-flex;align-items:center;font-size:14px;';
+  sndBtn.style.cssText = 'width:auto;padding:0 14px;gap:6px;white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;font-size:14px;';
   sndBtn.innerHTML = (_musicLvl()<=0 && _sfxLvl()<=0 ? '🔇' : '⚙') + '&nbsp;Sound Settings';
   kofiRow.appendChild(sndBtn);
   const fsBtn = document.createElement('button');   // v0.6.43: Full screen
@@ -690,7 +690,7 @@ const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Wat
     ssWrap.innerHTML = `<div class="round-limit-lbl">Setup Phase</div>
       <div class="round-limit-btns">
         <button class="round-limit-btn${!G.skipSetup?' selected':''}" data-skip="0">Normal</button>
-        <button class="round-limit-btn${G.skipSetup?' selected':''}" data-skip="1">Auto (skip)</button>
+        <button class="round-limit-btn${G.skipSetup?' selected':''}" data-skip="1" title="Skip the setup phase: summons are placed automatically">Auto</button>
       </div>`;
     ssWrap.querySelectorAll('.round-limit-btn').forEach(btn => {
       btn.onclick = () => {
@@ -721,6 +721,8 @@ const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Wat
     if (G.players.some(pl => pl.isBot)) { bsWrap.style.cssText = 'width:auto;margin-top:0;'; optRow.appendChild(bsWrap); }
     // v0.6.61: options sit in the Sound Settings / Ko-fi row (between them) — one row less under the panels
     optRow.style.cssText = 'display:flex;justify-content:center;align-items:flex-start;gap:40px;width:auto;margin:0;';
+    // v0.6.67: with Bot Speed showing, tighten the row so everything stays on one line (no wrapped labels)
+    if (bsWrap.parentNode === optRow) { optRow.classList.add('lobby-opts-compact'); optRow.style.gap = '22px'; }
     kofiRow.style.alignItems = 'center';
     kofiRow.insertBefore(optRow, kofiLink);
   }
@@ -793,7 +795,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.6.66</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.6.67</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">

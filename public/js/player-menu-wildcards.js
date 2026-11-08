@@ -21,9 +21,22 @@ function openGameMenu() {
     <button class="gm-item" onclick="closeGameMenu();toggleHelp()"><span class="gm-ico">?</span>How to Play</button>
     ${_canLeave() ? `<button class="gm-item danger" onclick="showLeaveConfirm()"><span class="gm-ico">🏳</span>Leave Game</button>` : ''}
     <button class="gm-item ghost" onclick="closeGameMenu()">Close</button>`;
+  _showMenuWheel(true);
   document.getElementById('game-menu').classList.add('visible');
 }
+// v0.5.55: element wheel quick reference in the empty space above the main menu
+function _showMenuWheel(on) {
+  const w = document.getElementById('gm-wheel');
+  if (!w) return;
+  if (on) {
+    w.innerHTML = `<div class="gm-wheel-title">Element Wheel</div><div class="help-wheel-wrap" id="gm-wheel-svg"></div>
+      <div class="help-wheel-caption">Arrows point at what each element beats: <strong style="color:#e8e4f4">2×</strong> damage.<br>Hit the other way: <strong style="color:#e8e4f4">½×</strong>.</div>`;
+    buildHelpWheel('gm-wheel-svg', 250);
+    w.style.display = '';
+  } else { w.style.display = 'none'; w.innerHTML = ''; }
+}
 function showAudioSettings() {
+  _showMenuWheel(false);
   const row = (key, label, icon) => {
     const v = Math.round((+AUD[key] || 0) * 100), m = AUD[key + 'Mute'];
     return `<div style="margin:2px 0 8px">
@@ -65,6 +78,7 @@ function _applyAudio() {
 function _ausTest() { SFX.dieLand(4); }
 function closeGameMenu() { document.getElementById('game-menu').classList.remove('visible'); }
 function showLeaveConfirm() {
+  _showMenuWheel(false);
   document.getElementById('gm-sheet').innerHTML = `
     <div class="gm-title">Leave Game?</div>
     <div class="gm-warn">You'll be <b>out for good</b> and can't rejoin this game.<br>
@@ -128,8 +142,8 @@ function toggleHelp() {
   if (visible) buildHelpWheel();
 }
 
-function buildHelpWheel() {
-  const wrap = document.getElementById('help-wheel');
+function buildHelpWheel(targetId, size) {
+  const wrap = document.getElementById(targetId || 'help-wheel');
   if (!wrap) return;
 
   const W = 230, H = 230, cx = 115, cy = 117, R = 76, nr = 24;
@@ -171,7 +185,7 @@ function buildHelpWheel() {
             <text x="${lx}" y="${ly}" text-anchor="middle" font-family="Cinzel,serif" font-size="9.5" font-weight="700" fill="${p.c}">${p.t}</text>`;
   }).join('');
 
-  wrap.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="210" height="210">
+  wrap.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${size||210}" height="${size||210}">
     <defs>${defs}</defs>
     ${arrows}
     ${nodes}

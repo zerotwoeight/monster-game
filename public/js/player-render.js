@@ -210,7 +210,7 @@ function renderJoin() {
   document.getElementById('main-content').innerHTML = `
     <div class="join-logo">
       <img class="join-logo-art" src="/img/logos/logo-main.webp" alt="Summoner's Gambit">
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.54</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.55</div>
     </div>
     <div id="sg-news-pill" style="display:flex;justify-content:center"></div>
 
@@ -336,7 +336,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.54</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.55</div>
       <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;text-transform:uppercase;margin-top:10px;color:${G.skipSetup?'var(--accent)':'var(--text-mute)'}">Setup: ${G.skipSetup?'Auto':'Normal'}</div>
     </div>
     <div id="sg-news-pill" style="display:flex;justify-content:center"></div>

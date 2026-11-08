@@ -1,17 +1,3 @@
 {
- "posts": [
-  {
-   "id": "e06cdb67cf",
-   "date": 1794172628147,
-   "title": "test news",
-   "body": "hello world we have new updates! check out all the new stuff!",
-   "tag": "update",
-   "link": "",
-   "image": "",
-   "bannerText": "",
-   "published": true,
-   "banner": false,
-   "updated": 1794172628147
-  }
- ]
+ "posts": []
 }
