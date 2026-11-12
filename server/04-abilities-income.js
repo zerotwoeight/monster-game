@@ -423,6 +423,7 @@ function collectPassiveIncome(playerIdx) {
     earned = Math.max(5, Math.floor(earned * 0.5)); // still earn baseline but halved above cap
   }
   p.mana += earned;
+  if (p.totalManaEarned != null) p.totalManaEarned += earned;   // v1.0.144: income counts toward Earned
   if (p.mana > MANA_SOFT_CAP && p.mana - earned < MANA_SOFT_CAP) {
     log(`⚠️ ${p.name} is over the ${MANA_SOFT_CAP}✦ soft cap — income reduced`);
   }
@@ -444,6 +445,12 @@ function collectPassiveIncome(playerIdx) {
   if (p.wcEffects.ambush)   activeWcEffects.push({ id:'ambush',   label:'Ambush',   desc:'Next attack +40%',            color:'accent' });
   if (p.wcEffects.fortify)  activeWcEffects.push({ id:'fortify',  label:'Fortify',  desc:'Next defense −40% damage',    color:'accent' });
   if (p.wcEffects.rattle)   activeWcEffects.push({ id:'rattle',   label:'Rattle',   desc:'Next battle at half ATK',     color:'red' });
+  // v1.0.150
+  if (p.wcEffects.phoenix)  activeWcEffects.push({ id:'phoenix_pact', label:'Phoenix Pact', desc:'If your Mana hits 0 you come back at 30✦', color:'green' });   // v1.0.152
+  if (p.wcEffects.flurry)   activeWcEffects.push({ id:'flurry',   label:'Flurry',   desc:'Next attack strikes twice',   color:'accent' });   // v1.0.151
+  if (p.wcEffects.levy)     activeWcEffects.push({ id:'levy',     label:'Levy',     desc:'Next shop buy costs +50%',    color:'red' });
+  if (p.wcShop && p.wcShop.kind === 'bargain')   activeWcEffects.push({ id:'bargain',   label:'Bargain',   desc:'Next shop buy half price (skip or sell: +3✦)', color:'green' });
+  if (p.wcShop && p.wcShop.kind === 'patronage') activeWcEffects.push({ id:'patronage', label:'Patronage', desc:`Shop buys free · ${p.wcShop.left} shop${p.wcShop.left !== 1 ? 's' : ''} left (skip or sell: +8✦)`, color:'green' });
 
   // Tile synergy runs belonging to this player
   const myRuns = getBonusRuns().filter(r => r.playerIdx === playerIdx);

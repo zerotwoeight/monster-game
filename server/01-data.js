@@ -128,26 +128,98 @@ const SUPPORTS  = ROSTER.filter(m => m.rarity === 'support');
 const NORMALS   = ROSTER.filter(m => !m.isSpecial && !m.rarity);
 
 // ─── WILD CARD POOLS ─────────────────────────────────────────────────────────
+// v1.0.147: Iron tier 15✦ → 5✦ (doubles should always feel lucky)
 const WILD_CARD_POOLS = {
   low: [
-    { id:'mend',    name:'Mend',    cost:15, tier:'low',  target:'own_station', desc:'Heal one of your stationed summons for 20 HP' },
-    { id:'stumble', name:'Stumble', cost:15, tier:'low',  target:'player',      desc:'Curse a target player — they skip their dice roll next turn and move exactly 3 spaces' },
-    { id:'delay',   name:'Delay',   cost:15, tier:'low',  target:'player',      desc:'Force a target player to skip their shop phase next turn' },
-    { id:'jinx',    name:'Jinx',    cost:15, tier:'low',  target:'player',      desc:"Target player's passive mana income next turn is halved" },
+    { id:'mend',    name:'Mend',    cost:5, tier:'low',  target:'own_station', desc:'Heal one of your stationed summons for 20 HP' },
+    { id:'stumble', name:'Stumble', cost:5, tier:'low',  target:'player',      desc:'Curse a target player — they skip their dice roll next turn and move exactly 3 spaces' },
+    { id:'delay',   name:'Delay',   cost:5, tier:'low',  target:'player',      desc:'Force a target player to skip their shop phase next turn' },
+    { id:'jinx',    name:'Jinx',    cost:5, tier:'low',  target:'player',      desc:"Target player's passive mana income next turn is halved" },
+    // v1.0.150 — Wild Cards v2, batch 1
+    { id:'levy',        name:'Levy',        cost:5, tier:'low', target:'player',        desc:"Target player's next shop buy costs +50%" },
+    { id:'keen_edge',   name:'Keen Edge',   cost:5, tier:'low', target:'own_summon',    desc:"One of your summons (hand or stationed) strikes +25% on its next strike" },
+    { id:'wellspring',  name:'Wellspring',  cost:5, tier:'low', target:'self',          desc:'Gain 15✦ right now' },
+    { id:'bane_ground', name:'Bane Ground', cost:5, tier:'low', target:'enemy_station', desc:"An enemy summon's tile permanently becomes the element that beats it" },
+    { id:'bargain',     name:'Bargain',     cost:5, tier:'low', target:'self',          desc:'Your next shop buy is half price. Skip or sell instead: +3✦' },
+    { id:'parry',       name:'Parry',       cost:5, tier:'low', target:'own_station',   desc:'One of your stationed summons: the first strike against it is halved' },   // v1.0.151
   ],
   mid: [
     { id:'ambush',  name:'Ambush',  cost:30, tier:'mid',  target:'self',        desc:'Your next attacker deals +40% damage' },
     { id:'fortify', name:'Fortify', cost:30, tier:'mid',  target:'self',        desc:'Your next defender takes −40% damage' },
     { id:'rattle',  name:'Rattle',  cost:30, tier:'mid',  target:'player',      desc:"Target player's next battle, their summon fights at half ATK" },
     { id:'poach',   name:'Poach',   cost:30, tier:'mid',  target:'player',      desc:"Steal a random summon from a target player's hand" },
+    { id:'patronage', name:'Patronage', cost:30, tier:'mid', target:'self', desc:'Your next two shop buys are free. Each of those shops you skip or sell instead: +8✦' },   // v1.0.150
+    { id:'aegis',     name:'Aegis',     cost:30, tier:'mid', target:'own_station',   desc:'One of your stationed summons: the first strike against it deals 0. It still strikes back' },   // v1.0.151
+    { id:'disarm',    name:'Disarm',    cost:30, tier:'mid', target:'enemy_station', desc:"An enemy summon's next counter-strike deals 0" },   // v1.0.151
+    { id:'sever',     name:'Sever',     cost:30, tier:'mid', target:'enemy_station', desc:'An enemy summon breaks free and goes wild: it belongs to nobody, and whoever lands there must fight it' },   // v1.0.152
   ],
   high: [
     { id:'coup',     name:'Coup',     cost:60, tier:'high', target:'coup',    desc:'Sacrifice one summon from your hand to seize any occupied enemy tile. Their stationed summon defects — it stays on the tile and now fights for you.' },
     { id:'plague',   name:'Plague',   cost:60, tier:'high', target:'player',  desc:"All of a target player's stationed summons lose 20 HP" },
     { id:'windfall', name:'Windfall', cost:60, tier:'high', target:'self',    desc:'Your passive mana income next turn is tripled' },
     { id:'shatter',  name:'Shatter',  cost:60, tier:'high', target:'shatter', desc:'Destroy any 2 stationed summons on the board; both tiles go neutral' },
+    { id:'flurry',   name:'Flurry',   cost:60, tier:'high', target:'self',    desc:'Your next attack strikes twice: attack, counter, then a second strike' },   // v1.0.151
+    { id:'phoenix_pact', name:'Phoenix Pact', cost:60, tier:'high', target:'self', desc:'The next time your Mana hits 0 you come back at 30✦ instead of being Sanctioned' },   // v1.0.152
   ]
 };
+
+// v1.0.150: what a shop offer costs this player right now (Levy +50%, Bargain half, Patronage free; Levy + Bargain cancel)
+const DEATH_SENTENCE_CHANCE = 0.20;   // v1.0.152: Death Knight instant kill (was 0.10)
+const BARGAIN_CONSOLATION = 3, PATRONAGE_CONSOLATION = 8, PATRONAGE_SHOPS = 2, WELLSPRING_MANA = 15;
+function shopPrice(p, o) {
+  const s = p && p.wcShop, lev = !!(p && p.wcEffects && p.wcEffects.levy);
+  if (s && s.kind === 'patronage') return 0;
+  const bar = !!(s && s.kind === 'bargain');
+  if (lev && bar) return o.cost;
+  if (bar) return Math.floor(o.cost / 2);
+  if (lev) return Math.ceil(o.cost * 1.5);
+  return o.cost;
+}
+// v1.0.150: the shop closed (buy / sell / skip) — use up Levy, Bargain or one Patronage shop; consolation if nothing was bought
+function shopClosed(p, bought) {
+  if (p.wcEffects && p.wcEffects.levy) p.wcEffects.levy = false;
+  const s = p.wcShop;
+  if (!s) return;
+  if (!bought) {
+    const bonus = s.kind === 'patronage' ? PATRONAGE_CONSOLATION : BARGAIN_CONSOLATION;
+    p.mana += bonus;
+    log(`🃏 ${p.name} passed on ${s.kind === 'patronage' ? 'Patronage' : 'Bargain'} — +${bonus}✦`);
+  }
+  if (s.kind === 'patronage' && --s.left > 0) return;
+  p.wcShop = null;
+}
+
+// v1.0.150: Bane Ground target check — an enemy (of the current player) single-element summon not already on its bane element
+function _baneOk(t) {
+  if (!t || t.ownerId == null || t.ownerId === G.currentPlayer || !t.summonInstance) return false;
+  const m = t.summonInstance;
+  if (m.type2 || !TYPE_WEAK[m.type]) return false;
+  const owner = G.players[t.ownerId];
+  if (!owner || owner.eliminated) return false;
+  return t.element !== TYPE_WEAK[m.type];
+}
+
+// v1.0.151: Parry / Aegis / Disarm target checks (relative to the current player)
+function _shieldOk(t, kind) {
+  if (!t || t.ownerId !== G.currentPlayer || !t.summonInstance) return false;
+  return !(kind === 'parry' && t.summonInstance.shield === 'aegis');   // Parry never downgrades an Aegis
+}
+function _disarmOk(t) {
+  if (!t || t.ownerId == null || t.ownerId === G.currentPlayer || !t.summonInstance || t.summonInstance.disarmed) return false;
+  const o = G.players[t.ownerId]; return !!(o && !o.eliminated);
+}
+
+// v1.0.152: Sever target check, and the stand-in "owner" of a wild (ownerless) monster during a battle
+const PHOENIX_MANA = 30;
+function _severOk(t) {
+  if (!t || t.ownerId == null || t.ownerId === G.currentPlayer || !t.summonInstance) return false;
+  const o = G.players[t.ownerId]; return !!(o && !o.eliminated);
+}
+function isFeral(t) { return !!(t && t.ownerId == null && t.summonInstance); }
+function _wildOwner() {
+  return { idx: null, name: 'The wild', color: '#8a8a8a', mana: 0, battlesWon: 0, battlesLost: 0, destroyedCount: 0,
+           lastTurnBattleManaGain: 0, lastTurnBattleManaLoss: 0, wcEffects: {}, hand: [], isWild: true };
+}
 
 // v1.0.102: record each resolved Wild Card play so the board can animate it.
 // extra: { targetIdx?, tilePos?, picks?, stolenName? }
@@ -263,7 +335,7 @@ function makeSummon(templateId) {
       cursedRevenantSurvivals: 0,    // Cursed Revenant: survivals → DEF stacks (+2 DEF per survival)
       shadeWalkerCurse: 0,           // Shade Walker: turns remaining on post-battle DoT curse
       shadeWalkerCurseAmt: 0,        // Shade Walker: HP loss per tick
-      deathSentenceEnabled: true,    // Death Knight: 10% instant kill on any damage dealt
+      deathSentenceEnabled: true,    // Death Knight: 20% instant kill on any damage dealt
       // Beast
       apexPredatorBattleWins: 0,     // Razorclaw: battle wins counter (+1 ATK per win)
       ironHideHpBonus: 0,            // Iron Hide: permanent HP bonus from survivals (+3 maxHp per survival)

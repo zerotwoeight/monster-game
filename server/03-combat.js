@@ -109,6 +109,28 @@ function _convertTile(tile, newEl, label) {
   return from;
 }
 
+// v1.0.151: Parry / Aegis — the first battle strike against a shielded summon is halved / blocked. Used up either way.
+function _shieldHit(m, dmg) {
+  if (!m || !m.shield || dmg <= 0) return dmg;
+  const kind = m.shield; m.shield = null;
+  if (kind === 'aegis') {
+    log(`🛡 Aegis! ${m.name} blocks the strike (${dmg} → 0)`);
+    fxM(m, 'Aegis (Wild Card)', `Blocked a ${dmg}-damage strike`, '0 dmg', 'good');
+    return 0;
+  }
+  const half = Math.floor(dmg / 2);
+  log(`🛡 Parry! ${m.name} halves the strike (${dmg} → ${half})`);
+  fxM(m, 'Parry (Wild Card)', `Halved a ${dmg}-damage strike`, '½ dmg', 'good');
+  return half;
+}
+// v1.0.151: Disarm — this summon's next counter-strike (or Stormtalon's first strike) deals 0. Used up.
+function _disarmHit(m, dmg) {
+  if (!m || !m.disarmed) return dmg;
+  m.disarmed = false;
+  log(`🗡 Disarm! ${m.name}'s counter-strike deals 0`);
+  fxM(m, 'Disarm (Wild Card)', `${m.name} was disarmed: its strike dealt 0`, '0 dmg', 'bad');
+  return 0;
+}
 function resolveBattle(attackerM, defenderM, tile, rattled = false) {
   const nullify = false; // Arcane Arbiter now has Chaos Flux instead of Nullify
 
@@ -144,6 +166,7 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
   let stormtalonPreemptiveDmg = 0;
   if (defenderM.id === 'stormtalon') {
     stormtalonPreemptiveDmg = doStrike(defenderM, attackerM, tile, nullify, false, false, true);   // v1.0.128 home ATK
+    stormtalonPreemptiveDmg = _shieldHit(attackerM, _disarmHit(defenderM, stormtalonPreemptiveDmg));   // v1.0.151
     attackerM.hp -= stormtalonPreemptiveDmg;
     log(`⚡ Lightning Strike (pre-emptive): Stormtalon strikes first! Deals ${stormtalonPreemptiveDmg} to ${attackerM.name} (now ${attackerM.hp}/${attackerM.maxHp} HP)`);
     fxM(defenderM, 'Lightning Strike', `Struck first for ${stormtalonPreemptiveDmg} damage`, `${stormtalonPreemptiveDmg} dmg`, 'good');
@@ -171,12 +194,12 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
   // Restore Piercing Light DEF reduction after attacker's strike
   if (piercingLightActive) defenderM.def = pierceRestore;
 
-  const actualAtkDmg = atkDmg;
+  let actualAtkDmg = _shieldHit(defenderM, atkDmg);   // v1.0.151: Parry / Aegis
   defenderM.hp -= actualAtkDmg;
 
-  // Death Knight — Death Sentence: 10% chance to instantly kill defender on any damage dealt
+  // Death Knight — Death Sentence: 20% chance (v1.0.152, was 10%) to instantly kill defender on any damage dealt
   if (attackerM.id === 'death_knight' && actualAtkDmg > 0 && defenderM.hp > 0) {
-    if (Math.random() < 0.10) {
+    if (Math.random() < DEATH_SENTENCE_CHANCE) {
       defenderM.hp = 0;
       log(`💀 Death Sentence: Death Knight instant kill triggers! ${defenderM.name} slain!`);
       fxM(attackerM, 'Death Sentence', `Instantly slew ${defenderM.name}`, 'KO', 'good');
@@ -265,11 +288,12 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
 
     // Fortify: reduce damage dealt to the attacker
     if (attackerM._fortify) { defDmg = Math.round(defDmg * 0.60); attackerM._fortify = false; log(`🃏 Fortify! damage reduced 40%`); fxM(attackerM, 'Fortify (Wild Card)', 'Counter damage reduced 40%', '−40%', 'good'); }
+    defDmg = _shieldHit(attackerM, _disarmHit(defenderM, defDmg));   // v1.0.151: Disarm on the defender, Parry / Aegis on the attacker
     attackerM.hp -= defDmg;
 
     // Death Knight — Death Sentence on counter-strike: 10% chance to instantly kill attacker
     if (defenderM.id === 'death_knight' && defDmg > 0 && attackerM.hp > 0) {
-      if (Math.random() < 0.10) {
+      if (Math.random() < DEATH_SENTENCE_CHANCE) {
         attackerM.hp = 0;
         log(`💀 Death Sentence: Death Knight counter instant kill triggers! ${attackerM.name} slain!`);
         fxM(defenderM, 'Death Sentence', `Instantly slew ${attackerM.name}`, 'KO', 'good');
@@ -303,6 +327,38 @@ function resolveBattle(attackerM, defenderM, tile, rattled = false) {
       attackerM.lastRiteUsed = true;
       log('💀 Last Rite triggers! Demon Lord survives at 15 HP!');
       fxM(attackerM, 'Last Rite', 'Survived a lethal blow at 15 HP', '15 HP', 'good');
+    }
+
+    // v1.0.151: Flurry — the attacker strikes again after the counter, if both are still standing
+    if (attackerM._flurry && attackerM.hp > 0 && defenderM.hp > 0) {
+      if (attackerM._flurryAmbush) attackerM._ambush = true;   // Ambush boosts both strikes
+      let extra = doStrike(attackerM, defenderM, tile, nullify);
+      extra = _shieldHit(defenderM, extra);
+      defenderM.hp -= extra;
+      actualAtkDmg += extra;
+      log(`⚔️ Flurry! ${attackerM.name} strikes again for ${extra}`);
+      fxM(attackerM, 'Flurry (Wild Card)', `Struck a second time for ${extra} damage`, `+${extra} dmg`, 'good');
+      if (attackerM.id === 'death_knight' && extra > 0 && defenderM.hp > 0 && Math.random() < DEATH_SENTENCE_CHANCE) {
+        defenderM.hp = 0;
+        log(`💀 Death Sentence: Death Knight instant kill triggers! ${defenderM.name} slain!`);
+        fxM(attackerM, 'Death Sentence', `Instantly slew ${defenderM.name}`, 'KO', 'good');
+      }
+      if (defenderM.id === 'void_sentinel' && defenderM.hp > 0 && defenderM.hp <= Math.floor(defenderM.maxHp * 0.30) && defenderM.atk !== 36) {
+        defenderM.atk = 36;
+        fxM(defenderM, 'Last Darkness', 'HP critical — ATK surged to 36', 'ATK 36', 'good');
+      }
+      if (defenderM.id === 'high_paladin' && defenderM.abilityData && !defenderM.abilityData.layOnHandsUsed && defenderM.hp > 0 && defenderM.hp <= Math.floor(defenderM.maxHp * 0.30)) {
+        const healed = Math.min(15, defenderM.maxHp - defenderM.hp);
+        defenderM.hp = Math.min(defenderM.maxHp, defenderM.hp + 15);
+        defenderM.abilityData.layOnHandsUsed = true;
+        fxM(defenderM, 'Lay on Hands', `Healed ${healed} HP below 30%`, `+${healed} HP`, 'good');
+      }
+      if (defenderM.hp <= 0 && defenderM.id === 'demon_lord' && !defenderM.lastRiteUsed) {
+        defenderM.hp = 15;
+        defenderM.lastRiteUsed = true;
+        log('💀 Last Rite triggers! Demon Lord survives at 15 HP!');
+        fxM(defenderM, 'Last Rite', 'Survived a lethal blow at 15 HP', '15 HP', 'good');
+      }
     }
   }
 

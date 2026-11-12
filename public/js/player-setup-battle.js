@@ -377,7 +377,7 @@ function renderNotification(notif) {
 
   const ts = TIER_STYLE[notif.tier] || TIER_STYLE.low;
   const wcSvg = WILD_CARD_ART[notif.cardId] || '';
-  const wcPng = `/img/wildcards/wc-${notif.cardId}.png`;
+  const wcPng = `/img/wildcards/wc-${String(notif.cardId).replace(/_/g,"-")}.png`;
 
   document.getElementById('main-content').innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;padding:22px 20px 28px;gap:16px;text-align:center">

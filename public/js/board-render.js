@@ -63,14 +63,19 @@ function _fxTile(pos) { const c = tileElCache.get(pos); return c ? c.el.querySel
 function _fxChip(idx) { return document.querySelector(`.player-chip[data-pidx="${idx}"] .chip-mana-val`); }
 function _fxPl(idx) { return G && G.players.find(p => p.idx === idx); }
 function _fxChipEl(idx) { return document.querySelector(`.player-chip[data-pidx="${idx}"]`); }
-// v0.6.20: tile leader = most tiles; ties keep the current leader if they're still tied at the top, else nobody
+// v0.6.77: the crown follows the game-over ranking — active players before Sanctioned, then most tiles, then most Mana.
+// (v0.6.20 used tiles only and let a tied leader keep it, so a rival level on tiles with more Mana never took the crown.)
+// A dead heat on tiles AND Mana keeps the current holder if they're in it, else nobody.
 let _leaderIdx = null;
 function _computeLeader() {
   if (!G || G.phase === 'lobby' || G.phase === 'setup') return null;
   const alive = G.players.filter(p => !p.eliminated);
-  const top = Math.max(0, ...alive.map(p => p.tileCount || 0));
-  if (top <= 0) return null;
-  const c = alive.filter(p => (p.tileCount || 0) === top);
+  if (!alive.length) return null;
+  const key = p => [p.sanctioned ? 0 : 1, p.tileCount || 0, p.mana || 0];
+  const cmp = (a, b) => { const x = key(a), y = key(b); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return y[i] - x[i]; return 0; };
+  const best = alive.slice().sort(cmp)[0];
+  if ((best.tileCount || 0) <= 0) return null;
+  const c = alive.filter(p => cmp(p, best) === 0);
   if (c.length === 1) return c[0].idx;
   return c.some(p => p.idx === _leaderIdx) ? _leaderIdx : null;
 }
@@ -85,6 +90,7 @@ function _fxDiff() {
     elim: G.players.map(p => !!p.eliminated),
     sanc: G.players.map(p => !!p.sanctioned && !p.eliminated),   // v0.6.33
     wheel: G.lastWheel ? G.lastWheel.seq : 0,                     // v0.6.35
+    phx: G.lastPhoenix ? G.lastPhoenix.seq : 0,                   // v0.6.77: Phoenix Pact
     hp: G.board.map(t => (t.summon && t.ownerId != null) ? { o: t.ownerId, id: t.summon.iid ?? t.summon.id, hp: t.summon.hp } : null),
   };
   const P = _fxPrev; _fxPrev = snap;
@@ -116,6 +122,15 @@ function _fxDiff() {
     }
     else if (!snap.sanc[i] && P.sanc[i] === true && !snap.elim[i]) { _sxChipHold[p.idx] = true; _fxQ.push(() => _sxMoment('redeem', p)); }
   });
+  // 🔥 v0.6.77: Phoenix Pact fired — the Sanctioned card bursts into the Phoenix (after any battle has played out)
+  if (snap.phx && snap.phx !== P.phx && G.lastPhoenix) {
+    const pl = _fxPl(G.lastPhoenix.idx);
+    if (pl) { if (_sxBattleShowing(snap.phase)) _phxAfterBattle.push(pl.idx); else _fxQ.push(() => _sxMoment('phoenix', pl)); }
+  }
+  if (_phxAfterBattle.length && !_sxBattleShowing(snap.phase)) {
+    const ids = _phxAfterBattle; _phxAfterBattle = [];
+    _fxQ.push(() => setTimeout(() => ids.forEach(idx => { const pl = _fxPl(idx); if (pl) _sxMoment('phoenix', pl); }), SX_AFTER_BATTLE_MS));
+  }
   // v0.6.42: battle over → now play the Sanctioned moments it caused (after the takeover / held effect)
   if (_sxAfterBattle.length && !_sxBattleShowing(snap.phase)) {
     const ids = _sxAfterBattle; _sxAfterBattle = [];
@@ -128,7 +143,11 @@ function _fxDiff() {
     _fxQ.push(() => {
       const from = _fxChipEl(wc.casterIdx);
       let targets = [], onImpact = null;
-      if (wc.id === 'mend' && wc.tilePos != null) targets = [_fxTile(wc.tilePos)];
+      if (['mend', 'keen_edge', 'parry', 'aegis', 'disarm', 'sever'].includes(wc.id) && wc.tilePos != null) targets = [_fxTile(wc.tilePos)];   // v0.6.77 / v0.6.77
+      else if (wc.id === 'bane_ground' && wc.tilePos != null) {   // v0.6.77: the tile turns to its bane element
+        targets = [_fxTile(wc.tilePos)];
+        onImpact = () => { try { BoardFX.tileBanner(_fxTile(wc.tilePos), `${wc.from} → ${wc.to}`, TYPE_COLOR[wc.to] || '#e07a7a'); } catch (e) {} };
+      }
       else if (wc.id === 'coup' && wc.tilePos != null) {
         targets = [_fxTile(wc.tilePos)];
         onImpact = () => { BoardFX.takeover(_fxTile(wc.tilePos), { from: tgt ? tgt.color : '#9397ab', to: caster ? caster.color : '#e05252', name: caster ? caster.name : '' }); SFX.takeover(); };
@@ -387,6 +406,7 @@ function _sxSfx(k) {
 const _sxChipHold = {};
 // v0.6.42: a Sanction caused by a battle waits until the battle overlay is gone, then plays after the tile effect
 let _sxAfterBattle = [];
+let _phxAfterBattle = [];   // v0.6.77
 const SX_AFTER_BATTLE_MS = 1600;
 const _sxBattleShowing = (ph) => ph === 'resolve:battle' || ph === 'resolve:battle_result';
 function _sxMoment(kind, p) {
@@ -396,6 +416,7 @@ function _sxMoment(kind, p) {
     return;
   }
   _sxSfx(kind === 'sanc' ? 'sanctioned' : 'redeem'); release();
+  if (kind === 'phoenix') return;   // v0.6.77: no banner fallback for the Phoenix
   const el = document.createElement('div');
   el.className = 'sx-moment ' + kind;
   el.innerHTML = kind === 'sanc' ? `⛓ <span style="color:${p.color}">${p.name.toUpperCase()}</span> IS SANCTIONED` : `✨ <span style="color:${p.color}">${p.name.toUpperCase()}</span> IS REDEEMED`;
@@ -535,7 +556,7 @@ const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Wat
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <img class="lobby-brand-logo" src="/img/logos/logo-main.webp" alt="Summoner's Gambit">
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.67 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.55</div>`;  // v0.6.31: Sound Settings moved to the bottom-left row
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.77 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.62</div>`;  // v0.6.31: Sound Settings moved to the bottom-left row
   splash.appendChild(brand);
 
   // ── Two panels
@@ -795,7 +816,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.6.67</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.6.77</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -877,7 +898,7 @@ function renderGame(app){
 
     // Content key — only changes when tile ownership/summon/HP actually changes.
     // Token moves and animation flags are NOT included so they don't trigger rebuilds.
-    const contentKey = `${tile.element}|${tile.kind}|${tile.ownerId}|${tile.summon?.id}|${tile.summon?.hp}|${tile.summon?.charm}|${isBonus}`;
+    const contentKey = `${tile.element}|${tile.kind}|${tile.ownerId}|${tile.summon?.id}|${tile.summon?.hp}|${tile.summon?.charm}|${tile.summon?.shield}|${tile.summon?.disarmed}|${tile.feral}|${isBonus}`;
 
     const cached = tileElCache.get(i);
     let div;
@@ -895,7 +916,9 @@ function renderGame(app){
           : `<div class="tile-art-icon" style="color:#fff;">${TYPE_ICON[tile.element] || '✦'}</div>`;
 
       let badgeHTML = '';
-      if (tile.summon && tile.ownerId !== null && tile.ownerId !== undefined) {
+      if (tile.summon && tile.feral) {   // v0.6.77: Sever — a wild monster: grey, desaturated, broken chain
+        badgeHTML = `<div class="tile-badge tile-feral" title="Wild ${tile.summon.name}: nobody owns it. Land here to fight it">${tileSummonCard(tile.summon, '#8a8a8a')}<div class="feral-ribbon">WILD</div></div>`;   // v0.6.77: ribbon instead of a tiny chain
+      } else if (tile.summon && tile.ownerId !== null && tile.ownerId !== undefined) {
         const owner = G.players.find(p => p.idx === tile.ownerId);
         if (owner) badgeHTML = `<div class="tile-badge">${tileSummonCard(tile.summon, owner.color)}</div>`;
       } else if (tile.ownerId !== null && tile.ownerId !== undefined) {
@@ -1264,9 +1287,9 @@ function renderPaper(){
     chip.innerHTML = `<div class="chip-dot${isSanc ? ' sanc' : ''}">${isElim ? `<span style="font-size:16px">${p.forfeited ? '🏳' : '💀'}</span>` : playerSigilSVG(p, 18)}</div>
       <div class="chip-info">
         <div class="chip-name" style="color:${isElim ? 'var(--text-mute)' : (isActive ? p.color : 'var(--parch-ink)')}">
-          ${p.idx === _leaderIdx && !isElim ? '<span title="Most tiles" style="margin-right:3px">👑</span>' : ''}${p.name}${isActive ? ' ◄' : ''}${isElim ? ` <span style="font-size:9px;color:#e05252;font-family:Inter,sans-serif">${p.forfeited ? 'LEFT' : 'ELIMINATED'}</span>` : isSanc ? '<span class="chip-sanc-tag">⛓ SANCTIONED</span>' : monoTag}
+          ${p.idx === _leaderIdx && !isElim ? '<span title="Leading: most tiles, then most Mana" style="margin-right:3px">👑</span>' : ''}${p.name}${p.wcEffects && p.wcEffects.phoenix && !isElim ? ' <span class="chip-phoenix" title="Phoenix Pact: if their Mana hits 0 they come back at 30✦">🔥</span>' : ''}${isActive ? ' ◄' : ''}${isElim ? ` <span style="font-size:9px;color:#e05252;font-family:Inter,sans-serif">${p.forfeited ? 'LEFT' : 'ELIMINATED'}</span>` : isSanc ? '<span class="chip-sanc-tag">⛓ SANCTIONED</span>' : monoTag}
         </div>
-        <div class="chip-sub">${isElim ? 'Out of the game' : `${p.tileCount} tiles · ${p.stationedCount} stationed · <span style="color:#5dc97d">⚔${p.battlesWon??0}W</span> <span style="color:#e05252">${p.battlesLost??0}L</span>`}</div>
+        <div class="chip-sub">${isElim ? 'Out of the game' : `${p.tileCount} ${p.tileCount === 1 ? 'tile' : 'tiles'} · ${p.handSize ?? 0} in hand · <span style="color:#5dc97d">⚔${p.battlesWon??0}W</span> <span style="color:#e05252">${p.battlesLost??0}L</span>`}</div>
       </div>
       <div class="chip-mana">
         <div class="chip-mana-val">${isElim ? '—' : p.mana}</div>

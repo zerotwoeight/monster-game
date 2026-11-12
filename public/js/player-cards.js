@@ -1,3 +1,5 @@
+// v0.5.61: broken-sword icon for Disarm (phone + board share the shape)
+const WC_DISARM_SVG = '<svg width="11" height="11" viewBox="0 0 12 12" style="vertical-align:-1px"><path d="M10.5 1.5 6.8 5.2M5.2 6.8 3 9" stroke="#f0a0a0" stroke-width="1.6" stroke-linecap="round"/><path d="M2 8l2 2M1.5 10.5l1-1" stroke="#f0a0a0" stroke-width="1.4" stroke-linecap="round"/><path d="M6.2 4.3l1.5 3.4" stroke="#e05252" stroke-width="1.1"/></svg>';
 // player-cards.js: split from the inline page script (L2). Loaded in order by player.html; all files share one global scope.
 // ─── CARD RENDERER ─────────────────────────────────────────────────────────
 function renderCard(m, {size='full', selected=false, showCost=true, dim=false, onclick='', typeAdvantage=false, typeWeak=false}={}) {
@@ -35,8 +37,13 @@ function renderCard(m, {size='full', selected=false, showCost=true, dim=false, o
     ? `<div class="mc-mini-strip" style="background:linear-gradient(to right,${c} 50%,${c2} 50%)"></div>`
     : `<div class="mc-mini-strip" style="background:${c}"></div>`;
 
+  // v0.5.61: Parry / Aegis / Disarm markers
+  const wcMarks = (m.shield ? `<span class="mc-wc-mark ${m.shield}" title="${m.shield === 'aegis' ? 'Aegis: the next strike against it deals 0' : 'Parry: the next strike against it is halved'}">🛡${size === 'mini' ? '' : ` ${m.shield === 'aegis' ? 'Aegis' : 'Parry'}`}</span>` : '')
+    + (m.disarmed ? `<span class="mc-wc-mark disarm" title="Disarmed: its next counter-strike deals 0">${WC_DISARM_SVG}${size === 'mini' ? '' : ' Disarmed'}</span>` : '');
+  const wcMarksHTML = wcMarks ? `<div class="mc-wc-marks${size === 'mini' ? ' mini' : ''}">${wcMarks}</div>` : '';
   if (size === 'mini') {
     return `<div class="${classes}" style="border-color:${borderColor};${glowShadow}"${clickAttr}>
+      ${wcMarksHTML}
       ${m.charm ? `<svg class="charm-badge-mini" width="17" height="17" viewBox="0 0 17 17" xmlns="http://www.w3.org/2000/svg" aria-label="Battle Charm"><circle cx="8.5" cy="8.5" r="7.5" fill="rgba(150,100,30,0.92)" stroke="#d4a843" stroke-width="1.4"/><path d="M9.5 3.5L6 9.5h3.5L8 13.5l4.5-6h-3.5z" fill="#fff8d0" stroke="#e8c060" stroke-width="0.5" stroke-linejoin="round"/></svg>` : ''}
       <div class="mc-art">${art}</div>
       ${miniStrip}
@@ -52,6 +59,7 @@ function renderCard(m, {size='full', selected=false, showCost=true, dim=false, o
   return `<div class="${classes}" style="border-color:${borderColor};${glowShadow}"${clickAttr}>
     ${m.charm ? `<svg class="charm-badge" width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" aria-label="Battle Charm"><circle cx="14" cy="14" r="12" fill="rgba(150,100,30,0.92)" stroke="#d4a843" stroke-width="1.8"/><path d="M15.5 6.5L9.5 15.5h5.5L13 22l6.5-9.5h-5.5z" fill="#fff8d0" stroke="#e8c060" stroke-width="0.6" stroke-linejoin="round"/></svg>` : ''}
     ${elemBadgeLabel ? `<div class="mc-element-badge" style="background:${elemBadgeBg}">${elemBadgeLabel}</div>` : ''}
+    ${wcMarksHTML}
     ${m.isSpecial && dim && m.conditionDesc ? `<div class="special-lock-overlay"><span class="special-lock-icon">🔒</span><div class="special-lock-text">${m.conditionDesc}</div></div>` : ''}
     <!-- v0.5.10: matchup shown by border/tint + sheet banner only (no on-card ribbon) -->
     ${showCost ? `<div class="mc-cost-strip"><span class="mc-cost-val" style="color:${c}">${m.cost}</span><span class="mc-cost-lbl">Mana</span></div>` : ''}
@@ -277,7 +285,7 @@ const MONSTER_LORE = {
 
   // ── UNDEAD ──
   'Bone Wraith':    { role:'Assailant',lore:'What it lacks in flesh it makes up for in fury. The Bone Wraith is animated by spite and propelled by the memory of every grievance it suffered in life. It hits hard and disintegrates fast — exactly as planned.', ability:'Death Rattle — on death, deals 12 damage to the monster that killed it.' },
-  'Death Knight':   { role:'Guardian',lore:'A paladin who refused to die and cut a deal to keep going. The Death Knight\'s oath binds them to the tile they guard with unnatural persistence. Killing them once isn\'t always enough — they have a way of not staying down.', ability:'Death Sentence — 10% chance to instantly kill on any damage dealt (attack or counter-strike).' },
+  'Death Knight':   { role:'Guardian',lore:'A paladin who refused to die and cut a deal to keep going. The Death Knight\'s oath binds them to the tile they guard with unnatural persistence. Killing them once isn\'t always enough — they have a way of not staying down.', ability:'Death Sentence — 20% chance to instantly kill on any damage dealt (attack or counter-strike).' },
   'Shade Walker':   { role:'Vanguard',lore:'The Shade Walker exists between states — partially corporeal, partially not. This makes them genuinely hard to read in combat: they can absorb a blow or dodge it depending on their angle. Versatile survivors of the Undead roster.', ability:'Cursed Touch — after a stalemate, the opposing monster loses 5 HP per turn for 2 turns (follows the monster, can\'t kill, does not stack).' },
   'Demon Lord':     { role:'Ascendant · Temple Only',lore:'The Demon Lord has died so many times that death simply stopped sticking. Once per game, when their HP drops to zero, they stabilize at 15 and keep fighting — a nightmare to put down permanently.', ability:'Last Rite — survives fatal damage once per game, continuing at 15 HP.' },
 
@@ -622,9 +630,10 @@ function _sellValue(m) { return Math.round(m.cost * (m.hp / m.maxHp)); }
 
 function _shopBuyAction(m) {
   const me = G.players[myIdx];
-  const label = `Buy · ${m.cost} ✦`;
+  const price = m.price ?? m.cost;   // v0.5.60: Levy / Bargain / Patronage
+  const label = price === m.cost ? `Buy · ${price} ✦` : `Buy · ${price} ✦ (was ${m.cost})`;
   if (myHand.length >= 5) return { label, kind:'primary', disabled:true, reason:'Hand full (5/5) — sell a summon first' };
-  if (me.mana < m.cost)  return { label, kind:'primary', disabled:true, reason:`Need ${m.cost - me.mana} more ✦ (you have ${me.mana})` };
+  if (me.mana < price)  return { label, kind:'primary', disabled:true, reason:`Need ${price - me.mana} more ✦ (you have ${me.mana})` };
   return { label, kind:'primary', run: (mm) => { selectedIid = mm.iid; doBuy(); } };
 }
 

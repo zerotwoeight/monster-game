@@ -216,35 +216,47 @@ const WILD_CARD_ART = {
   shatter: `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="30" r="4" fill="#c9922a"/><path d="M30 26 L24 12 M30 26 L38 14" stroke="#c9922a" stroke-width="2" stroke-linecap="round"/><path d="M34 30 L48 26 M34 30 L46 36" stroke="#c9922a" stroke-width="2" stroke-linecap="round"/><path d="M30 34 L34 48 M30 34 L22 46" stroke="#c9922a" stroke-width="2" stroke-linecap="round"/><path d="M26 30 L12 34 M26 30 L14 24" stroke="#c9922a" stroke-width="2" stroke-linecap="round"/></svg>`,
 };
 
-let wcRevealCard = null; // holds chosen card during reveal phase
+// v0.5.57: Wild Card pick reworked — tap a card to open a large detail view, swipe (or ‹ ›) between the three tiers,
+// see the Mana tally (now − cost = left) and back out. The board brings forward whichever card you're viewing (wildcard_preview).
+const WC_TIERS = ['low', 'mid', 'high'];
+// v0.5.60: display names for ids with underscores, and Bane Ground's target element (the type that beats each type)
+const WC_NAMES = { keen_edge: 'Keen Edge', bane_ground: 'Bane Ground', parry: 'Parry', aegis: 'Aegis', disarm: 'Disarm', sever: 'Sever', phoenix_pact: 'Phoenix Pact' };
+const WC_BANE = { Light:'Nature', Dark:'Arcane', Arcane:'Undead', Undead:'Light', Beast:'Dark', Nature:'Beast' };
+const WC_LOW_MANA = 8;          // one retreat — below this after buying, warn
+let wcViewTier = null;          // tier open in the detail view (null = the three cards)
+let wcDrawKey = null;           // resets local state when a new draw (or a back-out) arrives
+
+function _wcSyncKey() {
+  const t = G.wcTable || {};
+  const key = `${t.seq || 0}:${t.backSeq || 0}`;
+  if (key !== wcDrawKey) { wcDrawKey = key; wcViewTier = null; }
+}
+function _wcPreview(tier) { send('wildcard_preview', { tier }); }
 
 function renderWildCardPick() {
-  wcRevealCard = null;
   const drawn = G.wildCardDrawn;
   if (!drawn) { renderWaiting(); return; }
+  _wcSyncKey();
+  if (wcViewTier && drawn[wcViewTier]) { renderWildCardDetail(); return; }
   const me = G.players[myIdx];
   updateStatusBar(true);
   updateHandStrip(false);
   document.getElementById('main-content').classList.add('no-hand');
   document.getElementById('action-bar').classList.remove('visible');
 
-  const cards = ['low','mid','high'].map(tier => drawn[tier]);
   let cardsHtml = '';
-  for (const card of cards) {
+  for (const tier of WC_TIERS) {
+    const card = drawn[tier]; if (!card) continue;
     const ts = TIER_STYLE[card.tier];
     const canAfford = me.mana >= card.cost;
-    // Mask card: full-bleed wc-mask-{tier}.png, GIF→PNG→SVG fallback
     const maskPng = `/img/wildcards/wc-mask-${card.tier}.png`;
     const maskGif = `/img/wildcards/wc-mask-${card.tier}.gif`;
-    const maskSvg = `<div class="wc-mask-svg" style="background:linear-gradient(160deg,${ts.color}33,${ts.color}11);display:flex;align-items:center;justify-content:center;">
-      <span style="font-size:36px;opacity:0.35">🃏</span></div>`;
     cardsHtml += `
     <div class="wc-mask-card${canAfford ? '' : ' wc-disabled'}"
       style="border-color:${ts.color};box-shadow:${canAfford ? `0 0 14px ${ts.glow}` : 'none'}"
-      onclick="${canAfford ? `wcPickCard('${card.tier}')` : ''}">
-      ${maskSvg}
-      <img class="wc-mask-art" src="${maskGif}"
-        onerror="this.src='${maskPng}';this.onerror=function(){this.style.display='none'}" alt="">
+      onclick="wcOpen('${card.tier}')">
+      <div class="wc-mask-svg" style="background:linear-gradient(160deg,${ts.color}33,${ts.color}11);display:flex;align-items:center;justify-content:center;"><span style="font-size:36px;opacity:0.35">🃏</span></div>
+      <img class="wc-mask-art" src="${maskGif}" onerror="this.src='${maskPng}';this.onerror=function(){this.style.display='none'}" alt="">
       <div class="wc-mask-overlay">
         <span class="wc-tier-label" style="color:${ts.color}">${ts.label}</span>
         <span class="wc-cost" style="color:${ts.color}">✦${card.cost}</span>
@@ -252,105 +264,152 @@ function renderWildCardPick() {
       ${!canAfford ? `<div class="wc-cant-afford">Can't afford</div>` : ''}
     </div>`;
   }
-
   document.getElementById('main-content').innerHTML = `
     <div class="wc-header">🃏 Wild Card Event</div>
-    <div class="wc-sub">You rolled doubles! Choose a card or skip</div>
+    <div class="wc-sub">You rolled doubles! You have <b style="color:var(--gold)">${me.mana}✦</b>. Tap a tier to look closer.</div>
     <div class="wc-cards">${cardsHtml}</div>
     <button class="action-btn secondary" onclick="doWildCardSkip()" style="margin:16px auto;display:block;min-width:160px">Skip</button>`;
 }
 
-function wcPickCard(tier) {
-  wcRevealCard = G.wildCardDrawn[tier];
-  renderWildCardReveal();
+function wcOpen(tier) { wcViewTier = tier; _wcPreview(tier); renderWildCardDetail(); }
+function wcClose() { wcViewTier = null; _wcPreview(null); renderWildCardPick(); }
+function wcStep(dir) {
+  const i = WC_TIERS.indexOf(wcViewTier);
+  const n = WC_TIERS[(i + dir + 3) % 3];
+  if (!G.wildCardDrawn || !G.wildCardDrawn[n]) return;
+  wcViewTier = n; _wcPreview(n); renderWildCardDetail(dir);
 }
 
-function renderWildCardReveal() {
-  const card = wcRevealCard;
-  if (!card) { renderWildCardPick(); return; }
-  const ts = TIER_STYLE[card.tier];
+// v0.5.58: the detail card stays face-down — you see the tier, the cost and the tally, never the card itself, until you buy it.
+function _wcFaces(card, ts, faceUp) {
+  const maskPng = `/img/wildcards/wc-mask-${ts.key}.png`;
+  const maskGif = `/img/wildcards/wc-mask-${ts.key}.gif`;
+  const front = `<div class="wc-face wc-face-front" style="border-color:${ts.color}">
+      <div style="position:absolute;inset:0;background:linear-gradient(160deg,${ts.color}33,${ts.color}11);display:flex;align-items:center;justify-content:center;"><span style="font-size:48px;opacity:0.3">🃏</span></div>
+      <img style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;" src="${maskGif}" onerror="this.src='${maskPng}';this.onerror=function(){this.style.display='none'}" alt="">
+      <div class="wc-face-overlay"><div class="wc-face-meta"><span class="wc-tier-label" style="color:${ts.color}">${ts.label}</span><span class="wc-cost" style="color:${ts.color}">✦${card.cost}</span></div></div>
+    </div>`;
+  if (!faceUp) return front;
+  const wcSvg = WILD_CARD_ART[card.id] || '';
+  return front + `<div class="wc-face wc-face-back" style="border-color:${ts.color}">
+      ${wcSvg ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">${wcSvg}</div>` : ''}
+      <img style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;" src="/img/wildcards/wc-${String(card.id).replace(/_/g,"-")}.png" onerror="this.style.display='none'" alt="">
+      <div class="wc-face-overlay">
+        <div class="wc-face-name" style="color:${ts.color}">${card.name}</div>
+        <div class="wc-face-meta"><span class="wc-tier-label" style="color:${ts.color}">${ts.label}</span><span class="wc-cost" style="color:${ts.color}">✦${card.cost}</span></div>
+      </div>
+    </div>`;
+}
+
+function renderWildCardDetail(dir = 0) {
+  const card = G.wildCardDrawn && G.wildCardDrawn[wcViewTier];
+  if (!card) { wcViewTier = null; renderWildCardPick(); return; }
+  const me = G.players[myIdx];
+  const ts = { ...TIER_STYLE[card.tier], key: card.tier };
+  const canAfford = me.mana >= card.cost;
+  const left = me.mana - card.cost;
   updateStatusBar(true);
   updateHandStrip(false);
   document.getElementById('main-content').classList.add('no-hand');
   document.getElementById('action-bar').classList.remove('visible');
+  const dots = WC_TIERS.map(t => `<span class="wc-dot${t === card.tier ? ' on' : ''}" style="${t === card.tier ? `background:${TIER_STYLE[t].color}` : ''}"></span>`).join('');
 
-  // Mask face art
-  const maskPng = `/img/wildcards/wc-mask-${card.tier}.png`;
-  const maskGif = `/img/wildcards/wc-mask-${card.tier}.gif`;
-  const maskSvgFill = `background:linear-gradient(160deg,${ts.color}33,${ts.color}11)`;
-
-  // Wildcard face art — SVG fallback behind PNG
-  const wcSvg = WILD_CARD_ART[card.id] || '';
-  const wcPng = `/img/wildcards/wc-${card.id}.png`;
+  let tally;
+  if (!canAfford) {
+    tally = `<div class="wc-tally bad"><span>${me.mana}✦</span><span class="op">−</span><span style="color:${ts.color}">${card.cost}✦</span><span class="op">=</span><span class="res">short ${card.cost - me.mana}✦</span></div>
+      <div class="wc-tally-note bad">You can't afford this card.</div>`;
+  } else {
+    const cls = left === 0 ? 'bad' : left < WC_LOW_MANA ? 'warn' : 'ok';
+    tally = `<div class="wc-tally ${cls}"><span>${me.mana}✦</span><span class="op">−</span><span style="color:${ts.color}">${card.cost}✦</span><span class="op">=</span><span class="res">${left}✦ left</span></div>`;
+    if (cls === 'bad') tally += `<div class="wc-tally-note bad">This leaves you at 0✦. Your next Mana loss Sanctions you.</div>`;
+    else if (cls === 'warn') tally += `<div class="wc-tally-note warn">Low Mana: a retreat or lost battle could Sanction you.</div>`;
+  }
 
   document.getElementById('main-content').innerHTML = `
-    <div class="wc-header">🃏 Wild Card</div>
-    <div class="wc-sub">Tap the card to reveal</div>
+    <div class="wc-header" style="color:${ts.color}">🃏 ${ts.label} Wild Card</div>
+    <div class="wc-dots">${dots}</div>
+    <div class="wc-detail${dir ? ' slide-' + (dir > 0 ? 'l' : 'r') : ''}" id="wc-detail">
+      <button class="wc-nav" onclick="wcStep(-1)" aria-label="Previous tier">‹</button>
+      <div class="wc-scene wc-scene-lg"><div class="wc-flipper">${_wcFaces(card, ts, false)}</div></div>
+      <button class="wc-nav" onclick="wcStep(1)" aria-label="Next tier">›</button>
+    </div>
+    <div class="wc-tap-hint" style="animation:none">Swipe for the other tiers · you'll see the card once it's yours</div>
+    ${tally}
+    <div class="wc-detail-btns">
+      <button class="action-btn secondary" onclick="wcClose()">‹ Back</button>
+      <button class="action-btn" ${canAfford ? '' : 'disabled'} onclick="doWildCardSelect('${card.tier}')">Buy · ${card.cost}✦</button>
+    </div>`;
+
+  // swipe left / right on the card area
+  const el = document.getElementById('wc-detail');
+  let x0 = null, y0 = null;
+  el.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.3) wcStep(dx < 0 ? 1 : -1);
+  }, { passive: true });
+}
+
+// v0.5.58: bought — the card sits face-down in focus; tap turns it over (like before), then Continue plays it (board flips too).
+let wcRevKey = null, wcRevFlipped = false;
+function renderWildCardReveal() {
+  const card = G.wcBought;
+  if (!card) { renderWaiting(); return; }
+  const key = `${(G.wcTable || {}).seq || 0}:${(G.wcTable || {}).backSeq || 0}:${card.tier}`;
+  if (key !== wcRevKey) { wcRevKey = key; wcRevFlipped = false; }
+  const ts = { ...TIER_STYLE[card.tier], key: card.tier };
+  updateStatusBar(true);
+  updateHandStrip(false);
+  document.getElementById('main-content').classList.add('no-hand');
+  document.getElementById('action-bar').classList.remove('visible');
+  document.getElementById('main-content').innerHTML = `
+    <div class="wc-header" style="color:${ts.color}">🃏 Your ${ts.label} card</div>
+    <div class="wc-sub">${card.cost}✦ paid</div>
     <div class="wc-reveal-wrap">
-      <div class="wc-scene">
-        <div class="wc-flipper" id="wc-flipper" onclick="wcDoFlip()">
-
-          <!-- Front face: mask -->
-          <div class="wc-face wc-face-front" style="border-color:${ts.color}">
-            <div style="position:absolute;inset:0;${maskSvgFill};display:flex;align-items:center;justify-content:center;">
-              <span style="font-size:48px;opacity:0.3">🃏</span>
-            </div>
-            <img style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;"
-              src="${maskGif}"
-              onerror="this.src='${maskPng}';this.onerror=function(){this.style.display='none'}" alt="">
-            <div class="wc-face-overlay">
-              <div class="wc-face-meta">
-                <span class="wc-tier-label" style="color:${ts.color}">${ts.label}</span>
-                <span class="wc-cost" style="color:${ts.color}">✦${card.cost}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Back face: wildcard -->
-          <div class="wc-face wc-face-back" style="border-color:${ts.color}">
-            <div style="position:absolute;inset:0;">${wcSvg ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">${wcSvg}</div>` : ''}</div>
-            <img style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;"
-              src="${wcPng}" onerror="this.style.display='none'" alt="">
-            <div class="wc-face-overlay">
-              <div class="wc-face-name" style="color:${ts.color}">${card.name}</div>
-              <div class="wc-face-meta">
-                <span class="wc-tier-label" style="color:${ts.color}">${ts.label}</span>
-                <span class="wc-cost" style="color:${ts.color}">✦${card.cost}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="wc-scene wc-scene-lg wc-bought">
+        <div class="wc-flipper${wcRevFlipped ? ' flipped' : ''}" id="wc-flipper" onclick="wcDoFlip()">${_wcFaces(card, ts, true)}</div>
       </div>
-
-      <div class="wc-tap-hint" id="wc-tap-hint">Tap to reveal</div>
-      <div class="wc-desc-block" id="wc-desc">${card.desc}</div>
-      <button class="action-btn" id="wc-use-btn"
-        style="display:none;margin-top:14px;min-width:180px"
-        onclick="doWildCardSelect('${card.tier}','${card.id}')">Use</button>
+      <div class="wc-tap-hint" id="wc-tap-hint" style="${wcRevFlipped ? 'display:none' : ''}">Tap the card to turn it over</div>
+      <div class="wc-desc-block${wcRevFlipped ? ' visible' : ''}" id="wc-desc">${card.desc}</div>
+      <div class="wc-detail-btns" id="wc-rev-btns">
+        ${wcRevFlipped
+          ? `<button class="action-btn" onclick="send('wildcard_reveal')">Continue</button>`
+          : `<button class="action-btn secondary" onclick="send('wildcard_back')">‹ Back · refund ${card.cost}✦</button>`}
+      </div>
     </div>`;
 }
 
 function wcDoFlip() {
   const flipper = document.getElementById('wc-flipper');
-  if (!flipper || flipper.classList.contains('flipped')) return;
+  if (!flipper || wcRevFlipped) return;
   flipper.classList.add('flipped');
-  // after flip settles, reveal description + Use button
-  // Use both transitionend AND a setTimeout fallback — transitionend can silently
-  // fail to fire (prefers-reduced-motion, interrupted re-render, browser quirk),
-  // which would leave the player stuck with no "Use" button and no way to advance.
+  wcRevFlipped = true;
+  const btns = document.getElementById('wc-rev-btns'); if (btns) btns.innerHTML = '';
   let revealed = false;
   function revealCard() {
-    if (revealed) return;
-    revealed = true;
-    const hint = document.getElementById('wc-tap-hint');
-    const desc = document.getElementById('wc-desc');
-    const btn  = document.getElementById('wc-use-btn');
+    if (revealed) return; revealed = true;
+    const hint = document.getElementById('wc-tap-hint'), desc = document.getElementById('wc-desc'), b = document.getElementById('wc-rev-btns');
     if (hint) hint.style.display = 'none';
     if (desc) desc.classList.add('visible');
-    if (btn)  btn.style.display = 'block';
+    if (b) b.innerHTML = `<button class="action-btn" onclick="send('wildcard_reveal')">Continue</button>`;
   }
   flipper.addEventListener('transitionend', revealCard, { once: true });
-  setTimeout(revealCard, 750); // fallback: 650ms animation + 100ms buffer
+  setTimeout(revealCard, 750);
+}
+
+// v0.5.59: once the card is face-up there's no refund (it would be a free peek) — Discard throws it away, two taps
+function wcBackBtn() {
+  const cost = (G.wildCardPending && G.wildCardPending.cost) || 0;
+  return `<button class="action-btn secondary" id="wc-discard" data-lbl="Discard card${cost ? ` · ${cost}✦ lost` : ''}" onclick="wcDiscardTap(this)" style="margin:14px auto 4px;display:block;min-width:200px">Discard card${cost ? ` · ${cost}✦ lost` : ''}</button>`;
+}
+let wcDiscardArmed = 0;
+function wcDiscardTap(btn) {
+  if (Date.now() - wcDiscardArmed < 3000) { wcDiscardArmed = 0; send('wildcard_discard'); return; }
+  wcDiscardArmed = Date.now();
+  btn.textContent = 'Tap again to discard';
+  btn.style.borderColor = '#a8434a'; btn.style.color = '#f0a0a0';
+  setTimeout(() => { if (btn.isConnected && wcDiscardArmed && Date.now() - wcDiscardArmed >= 3000) { wcDiscardArmed = 0; btn.textContent = btn.dataset.lbl || 'Discard card'; btn.style.borderColor = ''; btn.style.color = ''; } }, 3100);
 }
 
 function renderWildCardTarget() {
@@ -361,10 +420,68 @@ function renderWildCardTarget() {
   document.getElementById('main-content').classList.add('no-hand');
   document.getElementById('action-bar').classList.remove('visible');
 
-  const cardName = pending.cardId.charAt(0).toUpperCase() + pending.cardId.slice(1);
+  const cardName = WC_NAMES[pending.cardId] || (pending.cardId.charAt(0).toUpperCase() + pending.cardId.slice(1));
   let html = `<div class="wc-header">🃏 ${cardName}</div>`;
 
-  if (pending.cardId === 'mend') {
+  if (pending.cardId === 'keen_edge') {   // v0.5.60: any of your summons without a charm — hand or stationed
+    html += `<div class="wc-sub">Pick a summon: its next strike deals +25%</div><div class="wc-target-list">`;
+    const hand = myHand.filter(m => !m.charm), tiles = G.board.filter(t => t.ownerId === myIdx && t.summon && !t.summon.charm);
+    for (const m of hand) html += `<div class="wc-target-row" onclick="send('wildcard_target',{iid:${JSON.stringify(m.iid)}})">In hand · <strong>${m.name}</strong> <span style="margin-left:auto;font-size:11px;color:var(--text-mute)">ATK ${m.atk}</span></div>`;
+    for (const t of tiles) html += `<div class="wc-target-row" onclick="doWildCardTargetTile(${t.pos})">Tile ${t.pos} · <strong>${t.summon.name}</strong> <span style="margin-left:auto;font-size:11px;color:var(--text-mute)">ATK ${t.summon.atk}</span></div>`;
+    if (!hand.length && !tiles.length) html += `<div style="color:var(--text-mute);font-size:12px;padding:20px 16px;text-align:center">All your summons are already charmed.</div>`;
+    html += `</div>` + wcBackBtn();
+  } else if (pending.cardId === 'parry' || pending.cardId === 'aegis') {   // v0.5.61
+    const isAegis = pending.cardId === 'aegis';
+    html += `<div class="wc-sub">Pick one of your stationed summons: the first strike against it ${isAegis ? 'deals 0 (it still strikes back)' : 'is halved'}</div><div class="wc-target-list">`;
+    const mine = G.board.filter(t => t.ownerId === myIdx && t.summon);
+    for (const t of mine) {
+      const sh = t.summon.shield, blocked = !isAegis && sh === 'aegis';
+      const note = blocked ? 'Has Aegis already' : sh === pending.cardId ? `Has ${isAegis ? 'Aegis' : 'Parry'}: no extra effect` : sh ? 'Replaces Parry' : `${t.summon.hp}/${t.summon.maxHp} HP`;
+      html += `<div class="wc-target-row"${blocked ? ' style="opacity:.45;cursor:default"' : ` onclick="doWildCardTargetTile(${t.pos})"`}>Tile ${t.pos} · <strong>${t.summon.name}</strong><span style="margin-left:auto;font-size:11px;color:var(--text-mute)">${note}</span></div>`;
+    }
+    if (!mine.length) html += `<div style="color:var(--text-mute);font-size:12px;padding:20px 16px;text-align:center">No stationed summons.</div>`;
+    html += `</div>` + wcBackBtn();
+  } else if (pending.cardId === 'sever') {   // v0.5.62: cut an enemy summon loose — it goes wild and the owner loses the tile
+    html += `<div class="wc-sub">Pick an enemy summon: it breaks free and goes wild. Its owner loses the tile, and whoever lands there must fight it.</div><div class="wc-target-list">`;
+    let n = 0;
+    for (const t of G.board) {
+      if (t.ownerId == null || t.ownerId === myIdx || !t.summon) continue;
+      const owner = G.players[t.ownerId]; if (!owner || owner.eliminated) continue;
+      n++;
+      const last = owner.tileCount === 1;
+      html += `<div class="wc-target-row" style="border-left:3px solid ${owner.color}" onclick="doWildCardTargetTile(${t.pos})">Tile ${t.pos} · <strong>${t.summon.name}</strong><span style="margin-left:auto;font-size:11px;color:${last && owner.sanctioned ? '#f0a0a0' : 'var(--text-mute)'}">${owner.name}${last ? (owner.sanctioned ? ' · last tile: Eliminated' : ' · last tile') : ''}</span></div>`;
+    }
+    if (!n) html += `<div style="color:var(--text-mute);font-size:12px;padding:20px 16px;text-align:center">No enemy summon to cut loose.</div>`;
+    html += `</div>` + wcBackBtn();
+  } else if (pending.cardId === 'disarm') {   // v0.5.61
+    html += `<div class="wc-sub">Pick an enemy summon: its next counter-strike deals 0. Anyone who attacks it benefits.</div><div class="wc-target-list">`;
+    let n = 0;
+    for (const t of G.board) {
+      if (t.ownerId == null || t.ownerId === myIdx || !t.summon) continue;
+      const owner = G.players[t.ownerId]; if (!owner || owner.eliminated) continue;
+      if (t.summon.disarmed) { html += `<div class="wc-target-row" style="opacity:.45;cursor:default;border-left:3px solid ${owner.color}">Tile ${t.pos} · <strong>${t.summon.name}</strong><span style="margin-left:auto;font-size:11px;color:var(--text-mute)">Already disarmed</span></div>`; continue; }
+      n++;
+      html += `<div class="wc-target-row" style="border-left:3px solid ${owner.color}" onclick="doWildCardTargetTile(${t.pos})">Tile ${t.pos} · <strong>${t.summon.name}</strong><span style="margin-left:auto;font-size:11px;color:var(--text-mute)">ATK ${t.summon.atk} · ${owner.name}</span></div>`;
+    }
+    if (!n) html += `<div style="color:var(--text-mute);font-size:12px;padding:20px 16px;text-align:center">No enemy summon can be disarmed.</div>`;
+    html += `</div>` + wcBackBtn();
+  } else if (pending.cardId === 'bane_ground') {   // v0.5.60: enemy single-element summons not already on weak ground
+    html += `<div class="wc-sub">Pick an enemy summon: its tile becomes the element that beats it. Permanent.</div><div class="wc-target-list">`;
+    let n = 0;
+    for (const t of G.board) {
+      if (t.ownerId == null || t.ownerId === myIdx || !t.summon) continue;
+      const m = t.summon, owner = G.players[t.ownerId];
+      if (!owner || owner.eliminated) continue;
+      if (m.type2) { html += `<div class="wc-target-row" style="opacity:.45;cursor:default;border-left:3px solid ${owner.color}">Tile ${t.pos} · <strong>${m.name}</strong><span style="margin-left:auto;font-size:11px;color:var(--text-mute)">Dual element: no effect</span></div>`; continue; }
+      const nu = WC_BANE[m.type];
+      if (!nu || t.element === nu) continue;
+      n++;
+      html += `<div class="wc-target-row" style="border-left:3px solid ${owner.color}" onclick="doWildCardTargetTile(${t.pos})">Tile ${t.pos} · <strong>${m.name}</strong>
+        <span style="margin-left:auto;font-size:11px"><span style="color:${TYPE_COLOR[t.element] || 'inherit'}">${t.element}</span> → <span style="color:${TYPE_COLOR[nu]}">${nu}</span></span></div>`;
+    }
+    if (!n) html += `<div style="color:var(--text-mute);font-size:12px;padding:20px 16px;text-align:center">No enemy summon can be hit.</div>`;
+    html += `</div>` + wcBackBtn();
+  } else if (pending.cardId === 'mend') {
     html += `<div class="wc-sub">Pick a stationed summon to heal +20 HP</div><div class="wc-target-list">`;
     const myTiles = G.board.filter(t => t.ownerId === myIdx && t.summon);
     if (myTiles.length === 0) {
@@ -379,11 +496,13 @@ function renderWildCardTarget() {
       </div>`;
     }
     html += `</div>`;
-    // Safety escape hatch — server now blocks Mend when there are no stationed summons,
-    // but if we somehow land here anyway, provide a skip so the game never stalls.
-    if (myTiles.length === 0) {
-      html += `<button class="action-btn secondary" onclick="send('wildcard_skip')" style="margin:16px auto;display:block;min-width:160px">Skip</button>`;
+    // v0.5.56: always offer Convert to Mana (replaces the old Skip, which the server refused in this phase)
+    const allFull = myTiles.length > 0 && myTiles.every(t => t.summon.hp >= t.summon.maxHp);
+    if (allFull || myTiles.length === 0) {
+      html += `<div style="color:var(--text-mute);font-size:12px;padding:8px 16px 0;text-align:center">${myTiles.length ? 'All your summons are at full HP.' : ''} You can turn Mend into Mana instead.</div>`;
     }
+    html += `<button class="action-btn ${allFull || myTiles.length === 0 ? '' : 'secondary'}" onclick="send('wildcard_mend_convert')" style="margin:16px auto;display:block;min-width:200px">Convert to Mana · +10✦</button>`;
+    html += wcBackBtn();
   } else {
     html += `<div class="wc-sub">Pick a target player</div><div class="wc-target-list">`;
     let validTargets = 0;
@@ -395,7 +514,7 @@ function renderWildCardTarget() {
       // Plague: only show players who have stationed summons
       if (pending.cardId === 'plague' && pl.stationedCount === 0) continue;
       // v0.5.49: Jinx / Delay / Stumble do nothing to a Sanctioned player — show them greyed out
-      if (['jinx', 'delay', 'stumble'].includes(pending.cardId) && pl.sanctioned) {
+      if (['jinx', 'delay', 'stumble', 'levy'].includes(pending.cardId) && pl.sanctioned) {
         html += `<div class="wc-target-row" style="border-left:3px solid ${pl.color};opacity:.45;cursor:default" aria-disabled="true">
           <svg width="18" height="18" viewBox="0 0 24 24" style="flex-shrink:0">${sigilShape(pl.idx,12,12,6,pl.color)}</svg>
           <span style="color:${pl.color};font-weight:600">${pl.name}</span>
@@ -404,18 +523,20 @@ function renderWildCardTarget() {
         continue;
       }
       validTargets++;
+      const levied = pending.cardId === 'levy' && pl.wcEffects && pl.wcEffects.levy;   // v0.5.60
       html += `<div class="wc-target-row" style="border-left:3px solid ${pl.color}" onclick="doWildCardTargetPlayer(${pl.idx})">
         <svg width="18" height="18" viewBox="0 0 24 24" style="flex-shrink:0">${sigilShape(pl.idx,12,12,6,pl.color)}</svg>
         <span style="color:${pl.color};font-weight:600">${pl.name}</span>
-        <span style="font-size:11px;color:var(--text-mute);margin-left:auto">${pl.mana}✦ · ${pl.tileCount} tiles</span>
+        <span style="font-size:11px;color:${levied ? '#f0c060' : 'var(--text-mute)'};margin-left:auto">${levied ? 'Already Levied: no extra effect' : `${pl.mana}✦ · ${pl.tileCount} tiles`}</span>
       </div>`;
     }
     if (validTargets === 0) {
       html += `<div style="color:var(--text-mute);font-size:12px;padding:20px 16px;text-align:center">No valid targets available.</div>`;
-      html += `</div><button class="action-btn secondary" onclick="send('wildcard_skip')" style="margin:16px auto;display:block;min-width:160px">Skip</button>`;
+      html += `</div>`;
     } else {
       html += `</div>`;
     }
+    html += wcBackBtn();   // v0.5.57 (the old Skip here was refused by the server in this phase)
   }
   document.getElementById('main-content').innerHTML = html;
 }
@@ -444,8 +565,8 @@ function renderWildCardCoupTile() {
   }
   html += `</div>`;
   if (!hasTargets) {
-    html += `<button onclick="doWildCardCoupCancel()" style="margin:12px 20px 4px;width:calc(100% - 40px);padding:14px;background:var(--surface);border:1px solid var(--border2);border-radius:10px;color:#c9922a;font-size:13px;font-family:'Cinzel',serif;cursor:pointer;letter-spacing:.08em;">Cancel Coup (50% Mana Refund)</button>`;
   }
+  html += wcBackBtn();   // v0.5.57: full refund (replaces the 50% Cancel Coup)
   document.getElementById('main-content').innerHTML = html;
 }
 
@@ -471,6 +592,7 @@ function renderWildCardCoupSummon() {
     }
     html += `</div></div>`;
   }
+  html += wcBackBtn();   // v0.5.57
   document.getElementById('main-content').innerHTML = html;
 }
 
@@ -496,7 +618,7 @@ function renderWildCardShatter() {
       ${isPicked ? '<span style="margin-left:auto;font-size:11px;color:#c9922a">✓ Selected</span>' : ''}
     </div>`;
   }
-  html += `</div>`;
+  html += `</div>` + wcBackBtn();   // v0.5.57
 
   document.getElementById('main-content').innerHTML = html;
   const ab = document.getElementById('action-bar');
@@ -509,7 +631,7 @@ function renderWildCardShatter() {
 }
 
 function doWildCardSkip() { send('wildcard_skip'); }
-function doWildCardSelect(tier, cardId) { send('wildcard_select', { tier, cardId }); }
+function doWildCardSelect(tier) { send('wildcard_select', { tier }); }   // v0.5.58: blind buy — the phone doesn't know the card
 function doWildCardTargetPlayer(idx) { send('wildcard_target', { targetIdx: idx }); }
 function doWildCardTargetTile(pos) { send('wildcard_target', { tilePos: pos }); }
 function doWildCardCoupTile(pos) { send('wildcard_coup_tile', { tilePos: pos }); }

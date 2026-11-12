@@ -341,6 +341,7 @@ function tileSummonCard(summon, ownerColor){
     : '';
   return `<div class="tmc-wrap" style="position:relative;">
     ${summon.charm ? `<div style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#c9a05a;box-shadow:0 0 7px #c9a05acc;z-index:5;display:flex;align-items:center;justify-content:center;font-size:8px;line-height:1;" title="Battle Charm">⚡</div>` : ''}
+    ${(summon.shield || summon.disarmed) ? `<div class="tmc-marks">${summon.shield ? `<div class="tmc-mark tmc-${summon.shield}" title="${summon.shield === 'aegis' ? 'Aegis: next strike against it deals 0' : 'Parry: next strike against it is halved'}"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.3 8 11 4.6-1.7 8-6 8-11V5z" fill="#fff" stroke="#1a1a28" stroke-width="1.2"/></svg></div>` : ''}${summon.disarmed ? `<div class="tmc-mark tmc-disarm" title="Disarmed: its next counter-strike deals 0"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M20 3 13.5 9.5M10.5 12.5 6 17" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><path d="M4 15l5 5M3 21l2-2" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M11 8.5l3 6" stroke="#ffd0d0" stroke-width="1.6"/></svg></div>` : ''}</div>` : ''}
     <div class="tmc-card" style="border-color:${ownerColor};">
       <div class="tmc-art">${svgArt}${imgLayer}</div>
       <div class="tmc-strip" style="background:${c};"></div>

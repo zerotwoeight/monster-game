@@ -286,6 +286,14 @@ const handlers = {
       case 'omen':      { const t = G.board[data.pos]; t.omen = { id: data.v, byIdx: data.by, ownerIdx: t.ownerId, iid: t.summonInstance && t.summonInstance.iid, placedTurn: G.turnCount }; } break;
       case 'fortune':   { const t = G.board[data.pos]; t.fortune = data.v; t.fortuneOwner = t.ownerId; t.fortuneIid = t.summonInstance && t.summonInstance.iid; } break;
       case 'setbattle': G.currentPlayer = p.idx; p.position = data.pos; G.phase = 'resolve:battle'; break;
+      case 'wcdraw':    {   // v1.0.147: put the current player straight into a Wild Card pick — data.v = { low, mid, high } card ids
+        const pick = (tier, id) => WILD_CARD_POOLS[tier].find(c => c.id === id) || WILD_CARD_POOLS[tier][0];
+        const v = data.v || {};
+        G.wcSeq = (G.wcSeq || 0) + 1;
+        G.wcTable = { seq: G.wcSeq, playerIdx: G.currentPlayer, dice: [3, 3], pick: null, skipped: false };
+        G.wildCardDrawn = { low: pick('low', v.low), mid: pick('mid', v.mid), high: pick('high', v.high) };
+        G.wildCardPending = null; G.phase = 'resolve:wildcard_cards';
+      } break;
       case 'hpset':     G.board[data.pos].summonInstance.hp = data.v; break;
       case 'phase':     G.phase = data.v; if (data.pos != null && G.sanction) G.sanction.pickedPos = data.pos; break;
       case 'hp':        { const t = G.board.find(t => t.ownerId === p.idx && t.summonInstance); if (t) t.summonInstance.hp = data.v; res = t && t.pos; } break;
@@ -411,9 +419,10 @@ const handlers = {
     if (phase === 'setup') return handlers.setup_pass(ws, asPlayer, {});
     if (phase.startsWith('sanction:')) return handlers.sanction_skip(ws, conn, {});
     if (phase === 'resolve:wildcard_cards') return handlers.wildcard_skip(ws, asPlayer, {});
-    if (['resolve:wildcard_target', 'resolve:wildcard_coup_tile', 'resolve:wildcard_coup_summon', 'resolve:wildcard_shatter'].includes(phase)) {
+    if (['resolve:wildcard_reveal', 'resolve:wildcard_target', 'resolve:wildcard_coup_tile', 'resolve:wildcard_coup_summon', 'resolve:wildcard_shatter'].includes(phase)) {
       // the card was already paid for but not played — refund it in full (the host skipped, not the player)
-      const id = G.wildCardPending && G.wildCardPending.cardId;
+      const id = (G.wildCardPending && G.wildCardPending.cardId) || (G.wcBought && G.wcBought.cardId);   // v1.0.148
+      G.wcBought = null;
       const card = id && Object.values(WILD_CARD_POOLS).flat().find(c => c.id === id);
       if (card) { p.mana += card.cost; log(`🃏 ${card.name} refunded (${card.cost}✦) — turn skipped by the host`); }
       G.wildCardPending = null;
@@ -505,12 +514,14 @@ const handlers = {
     if (p.hand.length >= 5) return sendError(ws, 'Hand full');
     const offer = G.shopOffers.find(o => o.iid === data.iid);
     if (!offer) return sendError(ws, 'Invalid offer');
-    if (p.mana < offer.cost) return sendError(ws, 'Not enough Mana');
-    p.mana -= offer.cost;
+    const price = shopPrice(p, offer);   // v1.0.150
+    if (p.mana < price) return sendError(ws, 'Not enough Mana');
+    p.mana -= price;
     const m = makeSummon(offer.id);
     p.hand.push(m);
     G.shopOffers = G.shopOffers.filter(o => o.iid !== offer.iid);
-    log(`🛒 ${p.name} bought ${m.name} (−${m.cost}✦)`);
+    log(`🛒 ${p.name} bought ${m.name} (−${price}✦${price !== m.cost ? `, list ${m.cost}✦` : ''})`);
+    shopClosed(p, true);
     G.phase = 'roll';
     broadcast();
   },
@@ -525,12 +536,14 @@ const handlers = {
     p.hand.splice(idx, 1);
     p.mana += refund;
     log(`💰 ${p.name} sold ${m.name} for ${refund}✦`);
+    shopClosed(p, false);   // v1.0.150
     G.phase = 'roll';
     broadcast();
   },
 
   skip_shop(ws, conn, data) {
     if (!guardTurn(ws, conn, ['shop'], 'Not shop phase')) return;
+    shopClosed(G.players[G.currentPlayer], false);   // v1.0.150
     G.phase = 'roll';
     broadcast();
   },
@@ -640,6 +653,7 @@ const handlers = {
     const m = p.hand.find(h => h.iid === data.iid);
     if (!m) return sendError(ws, 'Summon not in hand');
     if (!canUseSpecial(G.currentPlayer, m)) return sendError(ws, 'Special condition not met');
+    if (tile.summonInstance) return sendError(ws, 'A wild monster holds this tile — fight it');   // v1.0.152
     if (p.mana < m.cost) return sendError(ws, 'Not enough Mana');
     p.mana -= m.cost;
     const mIdx = p.hand.indexOf(m);
@@ -675,7 +689,7 @@ const handlers = {
     if (!guardTurn(ws, conn, ['resolve:battle'])) return;
     const p = G.players[G.currentPlayer];
     const tile = G.board[p.position];
-    const defOwner = G.players[tile.ownerId];
+    const defOwner = G.players[tile.ownerId] || _wildOwner();   // v1.0.152: a wild monster fights for nobody
     const defM = tile.summonInstance;
     if (!defM) return sendError(ws, 'No defender on tile');
     const attM = p.hand.find(m => m.iid === data.iid);
@@ -687,6 +701,7 @@ const handlers = {
 
     // Wild card effects before battle
     if (p.wcEffects.ambush) { p.wcEffects.ambush = false; attM._ambush = true; }
+    if (p.wcEffects.flurry) { p.wcEffects.flurry = false; attM._flurry = true; attM._flurryAmbush = !!attM._ambush; }   // v1.0.151
     if (p.wcEffects.fortify) { p.wcEffects.fortify = false; attM._fortify = true; }
     const defOwnerP = G.players[tile.ownerId];
     const rattled = !!(defOwnerP && defOwnerP.wcEffects && defOwnerP.wcEffects.rattle);
@@ -762,6 +777,7 @@ const handlers = {
 
     const _attHpBefore = attM.hp, _defHpBefore = defM.hp;   // v1.0.138: phones animate HP from these
     const { atkDmg, defDmg, outcome } = resolveBattle(attM, defM, tile, rattled);
+    delete attM._flurry; delete attM._flurryAmbush; delete attM._ambush;   // v1.0.151
     delete defM._fortuneCounter;
     if (defM._kindledUsed && tileOmen(tile) && tileOmen(tile).id === 'kindled_blade') clearOmen(tile);   // one strike only
     delete defM._kindled; delete defM._kindledUsed; delete defM._shackled;
@@ -908,6 +924,7 @@ const handlers = {
     tile.summonId = null;
     tile.summonInstance = null;
     p.mana += 15;
+    if (p.totalManaEarned != null) p.totalManaEarned += 15;   // v1.0.144
     p.destroyedCount++;
     log(`💀 ${p.name} sacrificed ${sacrificed.name} for +15✦ — tile ${p.position} goes neutral`);
     advanceTurn();
@@ -1072,6 +1089,7 @@ const handlers = {
       const POTION_MANA = { Minor: 3, Major: 6, Full: 10 };
       const bonus = POTION_MANA[chest.tier] || 3;
       p.mana += bonus;
+      if (p.totalManaEarned != null) p.totalManaEarned += bonus;   // v1.0.144
       log(`🧪 ${p.name} converted ${chest.tier} Potion for ${bonus}✦`);
     }
     G.pendingChest = null;
@@ -1088,6 +1106,8 @@ const handlers = {
     advanceTurn();
   },
 
+  // v1.0.148: buying is blind — pay for a tier's face-down card (Mana taken now), then the player taps to turn it over (wildcard_reveal).
+  // The phone only ever sees tier + cost before buying (publicState hides the drawn cards).
   wildcard_select(ws, conn, data) {
     if (!guardTurn(ws, conn, ['resolve:wildcard_cards'])) return;
     const p = G.players[G.currentPlayer];
@@ -1095,70 +1115,157 @@ const handlers = {
     const drawn = G.wildCardDrawn;
     if (!drawn) return sendError(ws, 'No wild cards drawn');
     const card = drawn[tier];
-    if (!card || card.id !== cardId) return sendError(ws, 'Invalid card selection');
+    if (!card || (cardId && card.id !== cardId)) return sendError(ws, 'Invalid card selection');
     if (p.mana < card.cost) return sendError(ws, 'Not enough Mana');
 
-    // Pre-flight: validate targetable state BEFORE deducting Mana
+    p.mana -= card.cost;
+    G.wcBackDrawn = G.wildCardDrawn;   // v1.0.147: kept so the player can back out (wildcard_back)
+    G.wildCardDrawn = null;
+    G.wcBought = { tier, cardId: card.id };
+    if (G.wcTable) G.wcTable.view = tier;   // board keeps this card front and centre, still face-down
+    G.phase = 'resolve:wildcard_reveal';
+    log(`🃏 ${p.name} bought the ${tier === 'low' ? 'Iron' : tier === 'mid' ? 'Arcane' : 'Gilded'} card (−${card.cost}✦)`);
+    broadcast();
+  },
+
+  // v1.0.148: the player turned the bought card over — the board flips it, then the card plays as before.
+  // If it can't be used right now, the Mana comes back and the three cards return (the player now knows what it was).
+  wildcard_reveal(ws, conn, data) {
+    if (!guardTurn(ws, conn, ['resolve:wildcard_reveal'])) return;
+    const p = G.players[G.currentPlayer];
+    const b = G.wcBought;
+    const card = b && G.wcBackDrawn && G.wcBackDrawn[b.tier];
+    if (!card) return sendError(ws, 'No card to reveal');
+    G.wcBought = null;
+
+    let why = null;
     // v1.0.136: Jinx / Delay / Stumble do nothing to a Sanctioned player — need an active opponent to aim at
-    if (WC_NO_SANCTIONED.includes(card.id)) {
-      const hasTarget = G.players.some((pl, i) => i !== G.currentPlayer && !pl.eliminated && !pl.sanctioned);
-      if (!hasTarget) return sendError(ws, `${card.name} needs an active opponent (Sanctioned players have no ${card.id === 'jinx' ? 'income' : card.id === 'delay' ? 'shop' : 'roll'})`);
-    }
+    if (WC_NO_SANCTIONED.includes(card.id) && !G.players.some((pl, i) => i !== G.currentPlayer && !pl.eliminated && !pl.sanctioned))
+      why = `needs an active opponent (Sanctioned players have no ${card.id === 'jinx' ? 'income' : card.id === 'delay' ? 'shop' : 'roll'})`;
     if (card.id === 'poach') {
-      const hasTarget = G.players.some((pl, i) => i !== G.currentPlayer && !pl.eliminated && pl.hand.length > 0);
-      if (!hasTarget) return sendError(ws, 'Poach requires at least one opponent with a summon in hand');
+      if (!G.players.some((pl, i) => i !== G.currentPlayer && !pl.eliminated && pl.hand.length > 0)) why = 'needs an opponent with a summon in hand';
+      else if (p.hand.length >= 5) why = 'your hand is full (5)';   // v1.0.145
     }
-    if (card.id === 'plague') {
-      const hasTarget = G.players.some((pl, i) => i !== G.currentPlayer && !pl.eliminated &&
-        G.board.some(t => t.ownerId === i && t.summonInstance));
-      if (!hasTarget) return sendError(ws, 'Plague requires at least one opponent with a stationed summon');
+    if (card.id === 'plague' && !G.players.some((pl, i) => i !== G.currentPlayer && !pl.eliminated && G.board.some(t => t.ownerId === i && t.summonInstance)))
+      why = 'needs an opponent with a stationed summon';
+    if (card.id === 'coup') {
+      if (p.hand.length === 0) why = 'needs a summon in your hand to sacrifice';
+      else if (!G.board.some(t => t.ownerId !== null && t.ownerId !== G.currentPlayer && !G.players[t.ownerId]?.eliminated && t.summonInstance))
+        why = 'needs an occupied enemy tile';
     }
-    if (card.id === 'mend') {
-      const healable = G.board.some(t => t.ownerId === G.currentPlayer && t.summonInstance);
-      if (!healable) return sendError(ws, 'Mend requires at least one stationed summon to heal');
+    if (card.id === 'shatter' && !G.board.some(t => t.summonInstance)) why = 'needs a stationed summon on the board';
+    // v1.0.150 — batch 1
+    if (card.id === 'keen_edge' && !p.hand.some(m => !m.charm) && !G.board.some(t => t.ownerId === G.currentPlayer && t.summonInstance && !t.summonInstance.charm))
+      why = 'needs a summon without a charm';
+    if (card.id === 'bane_ground' && !G.board.some(t => _baneOk(t))) why = 'needs an enemy single-element summon on a tile';
+    if (card.id === 'bargain' && p.wcShop && p.wcShop.kind === 'patronage') why = 'does nothing while you have Patronage';
+    // v1.0.151 — batch 2
+    if ((card.id === 'parry' || card.id === 'aegis') && !G.board.some(t => _shieldOk(t, card.id))) why = 'needs one of your stationed summons to protect';
+    if (card.id === 'disarm' && !G.board.some(_disarmOk)) why = 'needs an enemy stationed summon';
+    if (card.id === 'flurry' && p.wcEffects.flurry) why = 'is already waiting on your next attack';
+    // v1.0.152 — batch 3
+    if (card.id === 'sever' && !G.board.some(_severOk)) why = 'needs an enemy stationed summon';
+    if (card.id === 'phoenix_pact' && p.wcEffects.phoenix) why = 'is already protecting you';
+    // (Mend always works — with nothing to heal it converts to Mana)
+    if (why) {
+      p.mana += card.cost;
+      G.wildCardDrawn = G.wcBackDrawn; G.wcBackDrawn = null;
+      G.phase = 'resolve:wildcard_cards';
+      if (G.wcTable) { G.wcTable.pick = null; G.wcTable.view = null; G.wcTable.backSeq = (G.wcTable.backSeq || 0) + 1; }
+      log(`🃏 ${card.name} can't be used (${why}) — ${p.name} refunded ${card.cost}✦`);
+      sendError(ws, `${card.name} ${why} — ${card.cost}✦ refunded`);
+      broadcast();
+      return;
     }
 
-    p.mana -= card.cost;
-    G.wildCardDrawn = null;
-    // v1.0.110: tell the board which card was picked so it flips face-up before targeting
-    if (G.wcTable) G.wcTable.pick = { tier, id: card.id, name: card.name, desc: card.desc };
-    log(`🃏 ${p.name} played ${card.name} (−${card.cost}✦)`);
+    // v1.0.110: tell the board which card was picked so it flips face-up
+    if (G.wcTable) { G.wcTable.pick = { tier: card.tier, id: card.id, name: card.name, desc: card.desc }; G.wcTable.view = null; }
+    log(`🃏 ${p.name} played ${card.name}`);
 
     if (card.target === 'self') {
+      // v1.0.150
+      if (card.id === 'flurry') p.wcEffects.flurry = true;   // v1.0.151
+      if (card.id === 'phoenix_pact') p.wcEffects.phoenix = true;   // v1.0.152
+      if (card.id === 'wellspring') { p.mana += WELLSPRING_MANA; log(`🃏 Wellspring — ${p.name} +${WELLSPRING_MANA}✦`); }
+      if (card.id === 'bargain')    p.wcShop = { kind: 'bargain', left: 1 };
+      if (card.id === 'patronage')  p.wcShop = { kind: 'patronage', left: PATRONAGE_SHOPS };
       if (card.id === 'ambush')   p.wcEffects.ambush   = true;
       if (card.id === 'fortify')  p.wcEffects.fortify  = true;
       if (card.id === 'windfall') p.wcEffects.windfall = true;
       log(`🃏 ${card.name} — effect active for ${p.name}`);
       _wcPlayed(card.id);
       advanceTurn();
-    } else if (card.target === 'own_station') {
-      G.wildCardPending = { cardId: card.id };
-      G.phase = 'resolve:wildcard_target';
-      broadcast();
-    } else if (card.target === 'player') {
-      G.wildCardPending = { cardId: card.id };
+    } else if (card.target === 'own_station' || card.target === 'player' || card.target === 'own_summon' || card.target === 'enemy_station') {
+      G.wildCardPending = { cardId: card.id, cost: card.cost };
       G.phase = 'resolve:wildcard_target';
       broadcast();
     } else if (card.target === 'coup') {
-      if (p.hand.length === 0) return sendError(ws, 'Coup requires at least one summon in hand to sacrifice');
-      // Pre-flight: need at least one occupied enemy tile
-      const hasOccupiedEnemyTile = G.board.some(t =>
-        t.ownerId !== null && t.ownerId !== G.currentPlayer &&
-        !G.players[t.ownerId]?.eliminated && t.summonInstance
-      );
-      if (!hasOccupiedEnemyTile) return sendError(ws, 'Coup requires at least one occupied enemy tile to target');
-      G.wildCardPending = { cardId: 'coup', step: 'tile' };
+      G.wildCardPending = { cardId: 'coup', step: 'tile', cost: card.cost };
       G.phase = 'resolve:wildcard_coup_tile';
       broadcast();
     } else if (card.target === 'shatter') {
-      // Pre-flight: need at least one stationed summon anywhere on the board
       const totalStationed = G.board.filter(t => t.summonInstance).length;
-      if (totalStationed === 0) return sendError(ws, 'Shatter requires at least one stationed summon on the board');
-      const minPicks = Math.min(2, totalStationed);
-      G.wildCardPending = { cardId: 'shatter', step: 'pick', picks: [], minPicks };
+      G.wildCardPending = { cardId: 'shatter', step: 'pick', picks: [], minPicks: Math.min(2, totalStationed), cost: card.cost };
       G.phase = 'resolve:wildcard_shatter';
       broadcast();
     }
+  },
+
+  // v1.0.147: the phone is viewing one tier's card (swipe) — the board brings that card forward. null = back to the three cards.
+  wildcard_preview(ws, conn, data) {
+    if (!G || G.phase !== 'resolve:wildcard_cards' || !G.wcTable || !G.wildCardDrawn) return;
+    if (conn.playerIdx !== G.currentPlayer) return;
+    const tier = data.tier == null ? null : String(data.tier);
+    if (tier !== null && !['low', 'mid', 'high'].includes(tier)) return;
+    if (G.wcTable.view === tier) return;
+    G.wcTable.view = tier;
+    broadcast();
+  },
+
+  // v1.0.147: back out of a bought card before it resolves — full refund, back to the three cards.
+  wildcard_back(ws, conn, data) {
+    // v1.0.149: only while the bought card is still face-down — once it's turned over, backing out would be a free peek (see wildcard_discard)
+    if (!guardTurn(ws, conn, ['resolve:wildcard_reveal'])) return;
+    const p = G.players[G.currentPlayer];
+    const id = G.wcBought && G.wcBought.cardId;
+    G.wcBought = null;
+    const card = id && Object.values(WILD_CARD_POOLS).flat().find(c => c.id === id);
+    if (!card || !G.wcBackDrawn) return sendError(ws, 'Nothing to back out of');
+    p.mana += card.cost;
+    G.wildCardDrawn = G.wcBackDrawn;
+    G.wcBackDrawn = null;
+    G.wildCardPending = null;
+    G.phase = 'resolve:wildcard_cards';
+    if (G.wcTable) { G.wcTable.pick = null; G.wcTable.view = null; G.wcTable.backSeq = (G.wcTable.backSeq || 0) + 1; }
+    log(`🃏 ${p.name} backed out of ${card.name} (+${card.cost}✦ refunded)`);
+    broadcast();
+  },
+
+  // v1.0.149: throw away a revealed card instead of playing it — no refund (a refund here let players peek at Wild Cards for free)
+  wildcard_discard(ws, conn, data) {
+    if (!guardTurn(ws, conn, ['resolve:wildcard_target', 'resolve:wildcard_coup_tile', 'resolve:wildcard_coup_summon', 'resolve:wildcard_shatter'])) return;
+    const p = G.players[G.currentPlayer];
+    const id = G.wildCardPending && G.wildCardPending.cardId;
+    const card = id && Object.values(WILD_CARD_POOLS).flat().find(c => c.id === id);
+    G.wildCardPending = null;
+    G.wcBackDrawn = null;
+    if (G.wcTable) { G.wcTable.skipped = true; G.wcTable.discarded = true; }
+    log(`🃏 ${p.name} discarded ${card ? card.name : 'their Wild Card'} (${card ? card.cost : '?'}✦ lost)`);
+    advanceTurn();
+  },
+
+  // v1.0.146: Mend → Convert to Mana (all summons at full HP, or the player would rather have Mana). Like a chest potion.
+  wildcard_mend_convert(ws, conn, data) {
+    if (!guardTurn(ws, conn, ['resolve:wildcard_target'])) return;
+    const p = G.players[G.currentPlayer];
+    if (!G.wildCardPending || G.wildCardPending.cardId !== 'mend') return sendError(ws, 'No Mend to convert');
+    const MEND_MANA = 10;
+    p.mana += MEND_MANA;
+    if (p.totalManaEarned != null) p.totalManaEarned += MEND_MANA;
+    log(`🃏 ${p.name} converted Mend to ${MEND_MANA}✦`);
+    _wcPlayed('mend', { converted: true, mana: MEND_MANA });
+    G.wildCardPending = null;
+    advanceTurn();
   },
 
   wildcard_target(ws, conn, data) {
@@ -1166,6 +1273,74 @@ const handlers = {
     const p = G.players[G.currentPlayer];
     const pending = G.wildCardPending;
     if (!pending) return sendError(ws, 'No pending wild card');
+
+    // v1.0.150: Keen Edge — a charm on one of your summons (hand: data.iid, stationed: data.tilePos)
+    if (pending.cardId === 'keen_edge') {
+      let m = data.iid != null ? p.hand.find(h => h.iid === data.iid) : null;
+      if (!m && data.tilePos != null) { const t = G.board[data.tilePos]; if (t && t.ownerId === G.currentPlayer) m = t.summonInstance; }
+      if (!m) return sendError(ws, 'Pick one of your summons');
+      if (m.charm) return sendError(ws, `${m.name} is already charmed`);
+      m.charm = true;
+      log(`🃏 Keen Edge — ${m.name} strikes +25% next time`);
+      _wcPlayed('keen_edge', data.tilePos != null && data.iid == null ? { tilePos: data.tilePos } : {});
+      G.wildCardPending = null;
+      advanceTurn();
+      return;
+    }
+    // v1.0.150: Bane Ground — the enemy summon's tile becomes the element that beats it (permanent)
+    if (pending.cardId === 'bane_ground') {
+      const tile = G.board[data.tilePos];
+      if (!_baneOk(tile)) return sendError(ws, 'Pick an enemy single-element summon');
+      const m = tile.summonInstance, old = tile.element, nu = TYPE_WEAK[m.type];
+      tile.element = nu; tile.label = nu;   // never counts toward Arcane Arbiter's unlock
+      const owner = G.players[tile.ownerId];
+      pushNotification(owner, { cardId: 'bane_ground', cardName: 'Bane Ground', cardDesc: `Tile ${tile.pos} (${m.name}) turned ${old} → ${nu}. ${m.name} is now on weak ground.`, castByName: p.name, castByColor: p.color, tier: 'low' });
+      log(`🃏 Bane Ground — tile ${tile.pos} ${old} → ${nu} (${m.name} on weak ground)`);
+      _wcPlayed('bane_ground', { tilePos: tile.pos, targetIdx: tile.ownerId, from: old, to: nu });
+      G.wildCardPending = null;
+      advanceTurn();
+      return;
+    }
+
+    // v1.0.151: Parry / Aegis — shield one of your stationed summons (a new shield replaces the old)
+    if (pending.cardId === 'parry' || pending.cardId === 'aegis') {
+      const tile = G.board[data.tilePos];
+      if (!_shieldOk(tile, pending.cardId)) return sendError(ws, pending.cardId === 'parry' && tile && tile.summonInstance && tile.summonInstance.shield === 'aegis' ? 'That summon already has Aegis' : 'Pick one of your stationed summons');
+      tile.summonInstance.shield = pending.cardId;
+      log(`🃏 ${pending.cardId === 'aegis' ? 'Aegis' : 'Parry'} — ${tile.summonInstance.name} on tile ${tile.pos} is shielded`);
+      _wcPlayed(pending.cardId, { tilePos: tile.pos });
+      G.wildCardPending = null;
+      advanceTurn();
+      return;
+    }
+    // v1.0.152: Sever — the enemy summon breaks free: the tile becomes ownerless and the monster stays as a wild hazard
+    if (pending.cardId === 'sever') {
+      const tile = G.board[data.tilePos];
+      if (!_severOk(tile)) return sendError(ws, 'Pick an enemy stationed summon');
+      const owner = G.players[tile.ownerId], m = tile.summonInstance, ownerIdx = tile.ownerId;
+      m.shield = null; m.disarmed = false; m.charm = false;
+      clearOmen(tile); clearFortune(tile);
+      tile.ownerId = null;
+      pushNotification(owner, { cardId: 'sever', cardName: 'Sever', cardDesc: `${m.name} on tile ${tile.pos} broke free and went wild. You lost the tile.`, castByName: p.name, castByColor: p.color, tier: 'mid' });
+      log(`🃏 Sever — ${owner.name}'s ${m.name} on tile ${tile.pos} breaks free and goes wild!`);
+      _wcPlayed('sever', { tilePos: tile.pos, targetIdx: ownerIdx });
+      _voice(m.id, 'claim');
+      G.wildCardPending = null;
+      advanceTurn();   // a Sanctioned owner who just lost their last tile is Eliminated here
+      return;
+    }
+    // v1.0.151: Disarm — an enemy summon's next counter-strike deals 0
+    if (pending.cardId === 'disarm') {
+      const tile = G.board[data.tilePos];
+      if (!_disarmOk(tile)) return sendError(ws, 'Pick an enemy stationed summon');
+      tile.summonInstance.disarmed = true;
+      pushNotification(G.players[tile.ownerId], { cardId: 'disarm', cardName: 'Disarm', cardDesc: `${tile.summonInstance.name} on tile ${tile.pos} is disarmed: its next counter-strike deals 0.`, castByName: p.name, castByColor: p.color, tier: 'mid' });
+      log(`🃏 Disarm — ${tile.summonInstance.name} on tile ${tile.pos} is disarmed`);
+      _wcPlayed('disarm', { tilePos: tile.pos, targetIdx: tile.ownerId });
+      G.wildCardPending = null;
+      advanceTurn();
+      return;
+    }
 
     if (pending.cardId === 'mend') {
       const tile = G.board[data.tilePos];
@@ -1210,6 +1385,12 @@ const handlers = {
         notifyTarget('jinx', 'Jinx', 'Your passive Mana income next turn is halved.', 'low');
         log(`🃏 Jinx — ${target.name}'s next income is halved`);
       }
+      if (pending.cardId === 'levy') {   // v1.0.150 — a second Levy just replaces the first
+        target.wcEffects.levy = true;
+        (target.wcBy = target.wcBy || {}).levy = p.idx;
+        notifyTarget('levy', 'Levy', 'Your next shop buy costs +50%.', 'low');
+        log(`🃏 Levy — ${target.name}'s next shop buy costs +50%`);
+      }
       if (pending.cardId === 'rattle') {
         target.wcEffects.rattle = true;
         (target.wcBy = target.wcBy || {}).rattle = p.idx;   // v1.0.132: remember who played it
@@ -1234,8 +1415,9 @@ const handlers = {
           if (poachCard) p.mana += poachCard.cost;
           G.wildCardPending = null;
           log(`🃏 Poach blocked — ${target.name} has no summons in hand (mana refunded)`);
-          broadcast();
-          return sendError(ws, `${target.name} has no summons in hand — Poach refunded`);
+          sendError(ws, `${target.name} has no summons in hand — Poach refunded`);
+          advanceTurn();   // v1.0.145: end the turn cleanly instead of leaving it hanging
+          return;
         }
         if (p.hand.length >= 5) {
           log(`🃏 Poach failed — ${p.name}'s hand is full`);

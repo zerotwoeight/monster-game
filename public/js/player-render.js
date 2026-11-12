@@ -135,6 +135,7 @@ function render() {
     case 'resolve:temple':   isMyTurn ? renderTemple() : renderWaiting(); break;
     case 'resolve:heal_tile':isMyTurn ? renderHealTile() : renderWaiting(); break;
     case 'resolve:wildcard_cards':    isMyTurn ? renderWildCardPick() : renderWaiting(); break;
+    case 'resolve:wildcard_reveal':   isMyTurn ? renderWildCardReveal() : renderWaiting(); break;   // v0.5.58
     case 'resolve:wildcard_target':   isMyTurn ? renderWildCardTarget() : renderWaiting(); break;
     case 'resolve:wildcard_coup_tile':isMyTurn ? renderWildCardCoupTile() : renderWaiting(); break;
     case 'resolve:wildcard_coup_summon':isMyTurn ? renderWildCardCoupSummon() : renderWaiting(); break;
@@ -210,7 +211,7 @@ function renderJoin() {
   document.getElementById('main-content').innerHTML = `
     <div class="join-logo">
       <img class="join-logo-art" src="/img/logos/logo-main.webp" alt="Summoner's Gambit">
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.55</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.62</div>
     </div>
     <div id="sg-news-pill" style="display:flex;justify-content:center"></div>
 
@@ -336,7 +337,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.55</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.62</div>
       <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;text-transform:uppercase;margin-top:10px;color:${G.skipSetup?'var(--accent)':'var(--text-mute)'}">Setup: ${G.skipSetup?'Auto':'Normal'}</div>
     </div>
     <div id="sg-news-pill" style="display:flex;justify-content:center"></div>
@@ -392,9 +393,9 @@ function _tsSinceHTML(ts) {
       bad ? 'Its Gen was 0 this income · now used up' : `Its Gen was doubled (+${u.gen}✦) · now used up`));
   }
   // Wild Cards affecting me this turn
-  const wcBad = { stumble:1, delay:1, rattle:1, jinx:1 };
+  const wcBad = { stumble:1, delay:1, rattle:1, jinx:1, levy:1 };   // v0.5.60: + Levy
   for (const e of (ts.activeWcEffects || [])) {
-    items.push(card(`/img/wildcards/wc-${e.id}.png`, !!wcBad[e.id], `<b style="color:${wcBad[e.id] ? '#ff9ea2' : '#f0d38f'}">${e.label}</b> · Wild Card`, e.desc));
+    items.push(card(`/img/wildcards/wc-${String(e.id).replace(/_/g,"-")}.png`, !!wcBad[e.id], `<b style="color:${wcBad[e.id] ? '#ff9ea2' : '#f0d38f'}">${e.label}</b> · Wild Card`, e.desc));
   }
   if (!items.length) return '';
   return `<div style="display:flex;flex-direction:column;gap:6px;">${_tsLbl('SINCE YOUR LAST TURN')}${items.join('')}</div>`;

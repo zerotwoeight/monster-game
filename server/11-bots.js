@@ -53,7 +53,7 @@ const BOT_DELAY = {
   setup: 1300, 'resolve:turn_summary': 3000, shop: 1500, stalemate: 1800, roll: 1100,
   'resolve:claim': 2200, 'resolve:own': 2200, 'resolve:battle': 2200, 'resolve:temple': 2200,
   'resolve:chest': 2400, 'resolve:heal_tile': 2000,
-  'resolve:wildcard_cards': 2400, 'resolve:wildcard_target': 1800, 'resolve:wildcard_coup_tile': 1600,
+  'resolve:wildcard_cards': 2400, 'resolve:wildcard_reveal': 1500, 'resolve:wildcard_target': 1800, 'resolve:wildcard_coup_tile': 1600,
   'resolve:wildcard_coup_summon': 1400, 'resolve:wildcard_shatter': 1400,
   'sanction:pick_tile': 3200, 'sanction:own': 2200, 'sanction:omen': 2400,
 };
@@ -178,7 +178,7 @@ function botFallback(p) {
     setup: 'setup_pass', 'resolve:turn_summary': 'dismiss_turn_summary', shop: 'skip_shop', stalemate: 'stalemate_continue',
     roll: 'roll', 'resolve:claim': 'skip_claim', 'resolve:own': 'skip_own', 'resolve:battle': 'retreat',
     'resolve:temple': 'temple_leave', 'resolve:chest': 'chest_skip', 'resolve:heal_tile': 'heal_tile_skip',
-    'resolve:wildcard_cards': 'wildcard_skip', 'resolve:wildcard_coup_tile': 'wildcard_coup_cancel',
+    'resolve:wildcard_cards': 'wildcard_skip', 'resolve:wildcard_reveal': 'wildcard_reveal', 'resolve:wildcard_coup_tile': 'wildcard_coup_cancel',
     'resolve:wildcard_coup_summon': 'wildcard_coup_cancel', 'sanction:pick_tile': 'sanction_pass',
     'sanction:own': 'sanction_pass', 'sanction:omen': 'sanction_omen_skip',
   };
@@ -320,6 +320,7 @@ function botDecide(p) {
       return botDo(p, 'heal_tile_skip');
     }
     case 'resolve:wildcard_cards': return botWildPick(p);
+    case 'resolve:wildcard_reveal': return botDo(p, 'wildcard_reveal');   // v1.0.148
     case 'resolve:wildcard_target': return botWildTarget(p);
     case 'resolve:wildcard_coup_tile': {
       const tiles = G.board.filter(t => t.ownerId != null && t.ownerId !== p.idx && t.summonInstance && !G.players[t.ownerId].eliminated);
@@ -389,7 +390,7 @@ function botShop(p) {
   }
   if (p.hand.length >= 5 || !offers.length) return botDo(p, 'skip_shop');
   const scoreOffer = o => {
-    if (!_spare(p, o.cost)) return -Infinity;
+    if (!_spare(p, shopPrice(p, o))) return -Infinity;   // v1.0.150: Levy / Bargain / Patronage
     let s = 0;
     if (o.type && els.includes(o.type)) s += 5;
     if (o.type2 && els.includes(o.type2)) s += 3;
@@ -398,11 +399,11 @@ function botShop(p) {
     s += (w.likes[o.rarity || o.arch] || 0);
     if (p.hand.length <= 1) s += 6;   // an empty hand can't claim or fight
     if (p.hand.length >= 4) s -= 3;
-    s -= o.cost * 0.15;
+    s -= shopPrice(p, o) * 0.15;
     return s + Math.random() * 2;
   };
   if (_blunder(p)) {
-    const ok = offers.filter(o => p.mana - o.cost >= 3);
+    const ok = offers.filter(o => p.mana - shopPrice(p, o) >= 3);
     if (ok.length && Math.random() < 0.5) return botDo(p, 'buy', { iid: _rnd(ok).iid });
   }
   const b = _best(offers, scoreOffer);
@@ -425,7 +426,7 @@ function botLandingScore(p, pos) {
       return canTrade ? 4 + w.temple * 16 + (_hard(p) ? 4 : 0) : 0;
     }
   }
-  if (t.ownerId === null || t.ownerId === undefined) {
+  if ((t.ownerId === null || t.ownerId === undefined) && !t.summonInstance) {   // v1.0.152: a wild monster is scored like an enemy tile below
     const aff = p.hand.filter(m => canUseSpecial(p.idx, m) && p.mana - m.cost >= 3);
     if (!aff.length) return 1;
     const best = Math.max(...aff.map(m => _homeMatch(m, t.element)));
@@ -562,7 +563,25 @@ function botWildPick(p) {
     ambush: 6, fortify: 5, rattle: 4, poach: opp.some(pl => pl.hand.length) && p.hand.length < 5 ? 7 : -9,
     coup: p.hand.length && enemyStationed.length ? 14 : -9, plague: enemyStationed.length ? 10 : -9,
     windfall: 9, shatter: enemyStationed.length >= 2 ? 10 : -9,
+    // v1.0.150 — batch 1
+    levy: active.length ? 4 : -9, wellspring: 7,
+    keen_edge: (p.hand.some(m => !m.charm) || _stationedOf(p.idx).some(t => !t.summonInstance.charm)) ? 5 : -9,
+    bane_ground: G.board.some(t => t.ownerId != null && t.ownerId !== p.idx && t.summonInstance && !t.summonInstance.type2 && t.element !== TYPE_WEAK[t.summonInstance.type]) ? 5 : -9,
+    bargain: p.wcShop && p.wcShop.kind === 'patronage' ? -9 : 4, patronage: 6,
+    // v1.0.151 — batch 2
+    parry: _stationedOf(p.idx).some(t => !t.summonInstance.shield) ? 4 : -9,
+    aegis: _stationedOf(p.idx).some(t => t.summonInstance.shield !== 'aegis') ? 7 : -9,
+    disarm: enemyStationed.some(t => !t.summonInstance.disarmed) ? 6 : -9,
+    flurry: p.wcEffects.flurry || !p.hand.length ? -9 : 9,
+    // v1.0.152 — batch 3
+    sever: enemyStationed.length ? 7 : -9,
+    phoenix_pact: p.wcEffects.phoenix ? -9 : (p.mana < 90 ? 8 : 4),
   };
+  if (w.gamble) { val.sever += 3; }
+  if (w.focus === 'leader') val.sever += 2;
+  if (w.aggr > 0.7) { val.flurry += 4; val.disarm += 2; }
+  if (w.aggr < 0.3) { val.aegis += 3; val.parry += 2; }
+  if (w.tricks) val.levy += 4;
   if (w.tricks) { val.stumble += 5; val.delay += 5; val.jinx += 5; val.rattle += 5; val.poach += 4; }
   if (w.focus === 'leader') { val.plague += 3; val.coup += 2; val.rattle += 2; }
   if (w.aggr > 0.7) val.ambush += 4;
@@ -584,6 +603,30 @@ function botWildTarget(p) {
   if (pend.cardId === 'mend') {
     const b = _best(_stationedOf(p.idx), t => t.summonInstance.maxHp - t.summonInstance.hp);
     return b ? botDo(p, 'wildcard_target', { tilePos: b.item.pos }) : false;
+  }
+  if (pend.cardId === 'keen_edge') {   // v1.0.150: hardest hitter without a charm
+    const h = _best(p.hand.filter(m => !m.charm), m => m.atk);
+    if (h) return botDo(p, 'wildcard_target', { iid: h.item.iid });
+    const s2 = _best(_stationedOf(p.idx).filter(t => !t.summonInstance.charm), t => t.summonInstance.atk);
+    return s2 ? botDo(p, 'wildcard_target', { tilePos: s2.item.pos }) : botDo(p, 'wildcard_discard');
+  }
+  if (pend.cardId === 'parry' || pend.cardId === 'aegis') {   // v1.0.151: shield the most valuable unshielded summon
+    const b = _best(_stationedOf(p.idx).filter(t => _shieldOk(t, pend.cardId) && t.summonInstance.shield !== pend.cardId), t => t.summonInstance.cost + t.summonInstance.hp / 5);
+    return b ? botDo(p, 'wildcard_target', { tilePos: b.item.pos }) : botDo(p, 'wildcard_discard');
+  }
+  if (pend.cardId === 'sever') {   // v1.0.152: cut loose the leader's best summon, else anyone's
+    const lead1 = _leaderIdx(p.idx);
+    const b = _best(G.board.filter(_severOk), t => t.summonInstance.cost + (t.ownerId === lead1 ? 8 : 0) + (G.players[t.ownerId].sanctioned ? 4 : 0));
+    return b ? botDo(p, 'wildcard_target', { tilePos: b.item.pos }) : botDo(p, 'wildcard_discard');
+  }
+  if (pend.cardId === 'disarm') {   // v1.0.151: the hardest-hitting enemy defender
+    const b = _best(G.board.filter(_disarmOk), t => t.summonInstance.atk);
+    return b ? botDo(p, 'wildcard_target', { tilePos: b.item.pos }) : botDo(p, 'wildcard_discard');
+  }
+  if (pend.cardId === 'bane_ground') {   // v1.0.150: the leader's toughest summon, else anyone's
+    const lead0 = _leaderIdx(p.idx);
+    const b = _best(G.board.filter(t => _baneOk(t)), t => t.summonInstance.def + t.summonInstance.hp / 10 + (t.ownerId === lead0 ? 5 : 0));
+    return b ? botDo(p, 'wildcard_target', { tilePos: b.item.pos }) : botDo(p, 'wildcard_discard');
   }
   let opp = G.players.filter(pl => pl.idx !== p.idx && !pl.eliminated);
   if (WC_NO_SANCTIONED.includes(pend.cardId)) opp = opp.filter(pl => !pl.sanctioned);

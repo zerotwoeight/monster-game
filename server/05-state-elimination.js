@@ -20,10 +20,10 @@ function _wcTrigger(id, p, extra = {}) {
 
 // v1.0.131 (G3): host Skip turn — allowed only while the current player is the one we're waiting on
 const NUDGE_COOLDOWN_MS = 10000;
-const WC_NO_SANCTIONED = ['jinx', 'delay', 'stumble'];   // v1.0.136: no effect on a Sanctioned player (no income / shop / roll)
+const WC_NO_SANCTIONED = ['jinx', 'delay', 'stumble', 'levy'];   // v1.0.150: + Levy   // v1.0.136: no effect on a Sanctioned player (no income / shop / roll)
 const MAX_ROOMS = 100;   // v1.0.133 (S7): idle rooms are cleared by the hourly sweep; this stops room spam in between
 const HOST_SKIPPABLE = ['setup', 'resolve:turn_summary', 'shop', 'stalemate', 'roll', 'resolve:landing', 'resolve:claim', 'resolve:battle',
-  'resolve:own', 'resolve:temple', 'resolve:heal_tile', 'resolve:chest', 'resolve:wildcard_cards', 'resolve:wildcard_target',
+  'resolve:own', 'resolve:temple', 'resolve:heal_tile', 'resolve:chest', 'resolve:wildcard_cards', 'resolve:wildcard_reveal', 'resolve:wildcard_target',
   'resolve:wildcard_coup_tile', 'resolve:wildcard_coup_summon', 'resolve:wildcard_shatter', 'sanction:pick_tile', 'sanction:own', 'sanction:omen'];
 function hostSkipBlockReason() {
   if (!G || G.phase === 'lobby' || G.phase === 'game_over') return 'No game in progress';
@@ -43,7 +43,8 @@ function guardTurn(ws, conn, phases, phaseMsg = 'Wrong phase') {
 function monCore(m) {
   return { iid:m.iid, id:m.id, name:m.name, type:m.type,
            hp:m.hp, maxHp:m.maxHp, atk:m.atk, def:m.def,
-           cost:m.cost, gen:m.gen, isSpecial:m.isSpecial, charm:m.charm };
+           cost:m.cost, gen:m.gen, isSpecial:m.isSpecial, charm:m.charm,
+           shield:m.shield || null, disarmed:!!m.disarmed };   // v1.0.151: Parry / Aegis / Disarm badges
 }
 function monExt(m) {
   return { type2:m.type2||null, rarity:m.rarity||null, arch:m.arch||null, supportDesc:m.supportDesc||null };
@@ -75,6 +76,7 @@ function publicState() {
       ti.summon = null;
     }
     delete ti.summonInstance;
+    ti.feral = t.ownerId == null && !!t.summonInstance;   // v1.0.152: Sever — a wild monster nobody owns
     return ti;
   });
 
@@ -103,6 +105,7 @@ function publicState() {
     peakTiles: p.peakTiles,
     totalManaEarned: p.totalManaEarned,
     wcEffects: p.wcEffects || {},
+    wcShop: p.wcShop || null,   // v1.0.150
     notification: p.notification || null,
     isConnected: p.isConnected !== false, // include so board can show disconnect badge
     eliminated: p.eliminated || false,
@@ -128,11 +131,15 @@ function publicState() {
     pendingTemple: G.pendingTemple ? {
       offers: G.pendingTemple.offers.map(serializeTempleMonster)
     } : null,
-    shopOffers: G.shopOffers.map(serializeShopMonster),
+    shopOffers: G.shopOffers.map(o => ({ ...serializeShopMonster(o), price: shopPrice(G.players[G.currentPlayer], o) })),   // v1.0.150: price after Levy / Bargain / Patronage
     lastBattle: G.lastBattle || null,
     pendingAttackerSummon: G.pendingAttackerSummon || null,
     pendingLanding: G.pendingLanding || null,
-    wildCardDrawn: G.wildCardDrawn || null,
+    // v1.0.148: drawn cards stay secret until bought — clients only get each tier's cost
+    wildCardDrawn: G.wildCardDrawn ? Object.fromEntries(Object.entries(G.wildCardDrawn).map(([t, c]) => [t, { tier: t, cost: c.cost }])) : null,
+    // v1.0.148: the bought card, face-down until the player turns it over (phone needs the face for its flip)
+    lastPhoenix: G.lastPhoenix || null,   // v1.0.152
+    wcBought: (G.phase === 'resolve:wildcard_reveal' && G.wcBought && G.wcBackDrawn) ? (({ id, name, desc, tier, cost }) => ({ id, name, desc, tier, cost }))(G.wcBackDrawn[G.wcBought.tier]) : null,
     wildCardPending: G.wildCardPending || null,
     pausedFor: G.pausedFor || null,
     lastNudge: G.lastNudge || null,
@@ -199,6 +206,15 @@ function checkManaElimination(playerIdx) {
   if (p.mana > 0) return false;
   p.mana = 0;
   if (p.sanctioned) return false;   // v1.0.113: already Sanctioned — Mana just floors at 0
+  // v1.0.152: Phoenix Pact — back at 30✦ instead of being Sanctioned (fires any time, final round included)
+  if (p.wcEffects && p.wcEffects.phoenix) {
+    p.wcEffects.phoenix = false;
+    p.mana = PHOENIX_MANA;
+    G.phoenixSeq = (G.phoenixSeq || 0) + 1;
+    G.lastPhoenix = { seq: G.phoenixSeq, idx: p.idx };
+    log(`🔥 Phoenix Pact! ${p.name} ran out of Mana and rises again with ${PHOENIX_MANA}✦`);
+    return false;
+  }
   return sanctionPlayer(playerIdx);
 }
 
@@ -294,7 +310,7 @@ function forfeitPlayer(idx, reason) {
   if (G.currentPlayer === idx) {
     // Invalidate any timers scheduled for this turn, cancel pending turn state
     G._forfeitGen = (G._forfeitGen || 0) + 1;
-    G.pendingWildCard = false; G.wildCardDrawn = null; G.wildCardPending = null; G.wcTable = null;
+    G.pendingWildCard = false; G.wildCardDrawn = null; G.wildCardPending = null; G.wcTable = null; G.wcBought = null;
     G.pendingTemple = null; G.pendingChest = null; G.pendingLanding = null;
     G.pendingAttackerMonster = null;
     if (G.phase === 'setup') { if (!G.autoSetupRunning) advanceSetupTurn(); return true; }   // v1.0.112: Auto Setup skips leavers itself

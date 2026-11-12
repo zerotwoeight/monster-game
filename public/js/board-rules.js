@@ -24,10 +24,10 @@ const RR_PAGES = [
     ['✦', '<b>Dual-element Rares</b> use their better type and have no weakness.'],
     ['🏰', 'Defending on its <b>own element</b>: +15% ATK and DEF.'] ] },
   { k: 'Roll doubles', t: 'Wild Cards', items: [
-    ['🃏', 'One card from each tier. Buy one or skip.'],
-    ['⚙', '<b>Iron 15✦</b>: Mend · Stumble (move exactly 3) · Delay (skip their shop) · Jinx (halve their income)'],
-    ['✶', '<b>Arcane 30✦</b>: Ambush (+40% attack) · Fortify · Rattle (their defender at half ATK) · Poach (steal from their hand)'],
-    ['👑', '<b>Gilded 60✦</b>: Coup (take an enemy tile) · Plague (−20 HP) · Windfall (×3 income) · Shatter (destroy 2 summons)'] ] },
+    ['🃏', 'One face-down card from each tier. Buy one blind, then turn it over. Or skip.'],
+    ['⚙', '<b>Iron 5✦</b>: Mend · Stumble · Delay · Jinx · Levy (their shop +50%) · Keen Edge (+25% strike) · Wellspring (+15✦) · Bane Ground (their tile turns against them) · Parry (halve the next hit) · Bargain (half-price shop)'],
+    ['✶', '<b>Arcane 30✦</b>: Ambush · Fortify · Rattle · Poach · Aegis (block the next hit) · Disarm (their next counter does 0) · Sever (their summon goes wild) · Patronage (2 free shops)'],
+    ['👑', '<b>Gilded 60✦</b>: Coup · Plague (−20 HP) · Windfall (×3 income) · Shatter · Flurry (strike twice) · Phoenix Pact (hit 0✦, come back at 30✦)'] ] },
   { k: 'Winning and losing', t: 'Sanctioned & Winning', items: [
     ['⛓', '<b>Mana hits 0</b>: you\'re Sanctioned. No income, no shop or roll, but your summons still defend.'],
     ['🔮', '<b>Sanction turn</b>: pick a tile. A rival\'s tile gets an Omen. Your own: Wheel of Fortune, Sacrifice, or Redeem (15✦, once) to rejoin.'],

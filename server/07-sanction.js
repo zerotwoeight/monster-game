@@ -500,6 +500,7 @@ function resolveLandingTile(playerIdx) {
 
   if (tile.kind === 'start') {
     p.mana += 40;
+    if (p.totalManaEarned != null) p.totalManaEarned += 40;   // v1.0.144
     log(`✦ ${p.name} landed on Mana Well: +40 Mana`);
     G.phase = 'resolve:well';
     broadcast();
@@ -547,6 +548,13 @@ function resolveLandingTile(playerIdx) {
   }
 
   // Elemental tile
+  // v1.0.152: a wild monster (Sever) — fight it or retreat; nobody owns it, so no Toll or Veil
+  if (isFeral(tile)) {
+    log(`🐾 ${p.name} landed on a wild ${tile.summonInstance.name} — fight or retreat`);
+    G.phase = 'resolve:battle';
+    broadcast();
+    return;
+  }
   if (!tile.ownerId && tile.ownerId !== 0) {
     // Empty — player can claim if they have a summon
     G.phase = 'resolve:claim';

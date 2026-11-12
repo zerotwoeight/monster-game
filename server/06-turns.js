@@ -108,6 +108,8 @@ function startShopPhase() {
   p.lastDice = null;
   p.lastDiceRoll = null;  // reset so stale roll values don't trigger false animations
   G.wcTable = null;       // v1.0.110: last turn's wild-card table is done
+  G.wcBackDrawn = null;   // v1.0.147
+  G.wcBought = null;      // v1.0.148
   G.lastBattle = null;    // clear battle result so it doesn't persist across turns
   G.pendingAttackerSummon = null; // clear attacker preview
 
@@ -196,6 +198,7 @@ function _startActualTurn() {
   }
 
   G.phase = 'shop';
+  if (p.wcEffects.levy) _wcTrigger('levy', p);   // v1.0.150: Levy lands as the shop opens
   log(`🛒 ${p.name}'s turn — shop open`);
   broadcast();
 }

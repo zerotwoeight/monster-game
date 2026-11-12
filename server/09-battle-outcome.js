@@ -24,6 +24,7 @@ function _fmtMana(d) { return d >= 0 ? `+${d}` : `−${-d}`; }
 function _battleMana(attPlayer, attDelta, defPlayer, defDelta) {
   for (const [p, d] of [[attPlayer, attDelta], [defPlayer, defDelta]]) {
     p.mana = d < 0 ? Math.max(0, p.mana + d) : p.mana + d;
+    if (d > 0 && p.totalManaEarned != null) p.totalManaEarned += d;   // v1.0.144: battle Mana counts toward Earned
     _trackBattleMana(p, d);
   }
   log(`✦ Battle mana: ${attPlayer.name} ${_fmtMana(attDelta)}✦  ${defPlayer.name} ${_fmtMana(defDelta)}✦`);
@@ -34,6 +35,7 @@ function _stealMana(thief, victim, amt) {
   const stolen = Math.min(victim.mana, amt);
   victim.mana -= stolen;
   thief.mana += stolen;
+  if (thief.totalManaEarned != null) thief.totalManaEarned += stolen;   // v1.0.144
   _trackBattleMana(thief, +stolen);
   _trackBattleMana(victim, -stolen);
   return stolen;

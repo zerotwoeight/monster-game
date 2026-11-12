@@ -10,7 +10,16 @@
 
 'use strict';
 
-globalThis.SERVER_VERSION = 'v1.0.143';   // v1.0.143: bots wait for the board's animations (board_busy), keep the attacker they showed, style hidden from screens
+globalThis.SERVER_VERSION = 'v1.0.152';   // v1.0.152: Wild Cards v2 batch 3 — Sever (wild monsters), Phoenix Pact; Death Sentence 20%
+// prev: v1.0.151;   // v1.0.151: Wild Cards v2 batch 2 — Parry, Aegis, Disarm, Flurry
+// prev: v1.0.150;   // v1.0.150: Wild Cards v2 batch 1 — Levy, Keen Edge, Wellspring, Bane Ground, Bargain, Patronage
+// prev: v1.0.149;   // v1.0.149: no refund once a Wild Card is face-up — Back only before the reveal, Discard (Mana lost) on the target screens
+// prev: v1.0.148;   // v1.0.148: blind Wild Card buy — pay first (resolve:wildcard_reveal), tap to turn over (wildcard_reveal); drawn cards hidden from clients; unusable card → refund
+// prev: v1.0.147;   // v1.0.147: Iron Wild Cards 5✦; wildcard_preview (board follows the phone's swipe); wildcard_back (full refund before a card resolves); Coup/Shatter checks before payment
+// prev: v1.0.146;   // v1.0.146: Mend → Convert to Mana (+10✦)
+// prev: v1.0.145;   // v1.0.145: Poach can't be bought with a full hand; empty-hand refund ends the turn
+// prev: v1.0.144;   // v1.0.144: Earned (game-over) now counts income, Mana Well, battle Mana, steals, Sacrifice, potion Mana
+// prev: v1.0.143;   // v1.0.143: bots wait for the board's animations (board_busy), keep the attacker they showed, style hidden from screens
 // prev: v1.0.142;   // v1.0.142: bots — server-side seats with 12 named personalities (server/11-bots.js), Add/Remove Bot + Bot speed in the lobby
 // prev: v1.0.141;   // v1.0.141: HP buff for 3 Ascendants + 3 Rares. v1.0.140: L1 — every entry point runs inside inRoom(code); G is null between calls; stale-room broadcasts refused
 // v1.0.139: L2 — server split into server/01…10 (no behaviour change)

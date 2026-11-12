@@ -87,6 +87,7 @@ const _CURSE = {
   jinx:    { name: 'Jinx',    tier: 'low', cap: 'JINXED',    sub: t => `${t.name}'s income halved${t.before != null ? ` — ${t.before} → ${t.after}✦` : ''}` },
   delay:   { name: 'Delay',   tier: 'low', cap: 'DELAYED',   sub: t => `${t.name} skips the shop this turn` },
   stumble: { name: 'Stumble', tier: 'low', cap: 'STUMBLED',  sub: t => `${t.name} moves exactly 3 this turn` },
+  levy:    { name: 'Levy',    tier: 'low', cap: 'LEVIED',    sub: t => `${t.name}'s shop costs +50% this turn` },   // v0.6.74
 };   // Rattle goes off mid-battle — it keeps the battle's own ½ ATK callout (with "courtesy of")
 let _curseSeen = null, _curseQ = [], _cursePlaying = null;
 function _curseCollect() {

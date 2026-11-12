@@ -147,7 +147,8 @@ function addPlayer(name, color, starterSet) {
     battlesLost: 0,
     peakTiles: 0,
     totalManaEarned: 40, // starts with initial 40
-    wcEffects: { stumble:false, delay:false, jinx:false, ambush:false, fortify:false, rattle:false, windfall:false },
+    wcEffects: { stumble:false, delay:false, jinx:false, ambush:false, fortify:false, rattle:false, windfall:false, levy:false, flurry:false, phoenix:false },
+    wcShop: null,   // v1.0.150: { kind:'bargain'|'patronage', left }
     // Phase 1: per-player ability state
     hemorrhageStacks: 0,       // Plague Herald: turns remaining of HP drain
     hemorrhageAmt: 0,          // Plague Herald: HP drained per tick

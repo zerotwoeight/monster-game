@@ -717,3 +717,48 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-d
 .p-clash-side  { max-width: 122px; min-width: 0; }
 .p-clash-mid   { flex: 0 0 82px; min-width: 0; }
 .p-clash-outcome { font-size: 17px; line-height: 1.15; }
+
+/* v0.5.57: Wild Card detail view — large card, tier swipe, Mana tally, Back */
+.wc-dots { display:flex; justify-content:center; gap:7px; padding:0 0 8px; }
+.wc-dot { width:7px; height:7px; border-radius:50%; background:var(--border2); transition:background .2s, transform .2s; }
+.wc-dot.on { transform:scale(1.35); }
+.wc-detail { display:flex; align-items:center; justify-content:center; gap:10px; padding:4px 12px 0; touch-action:pan-y; }
+.wc-detail.slide-l .wc-scene-lg { animation:wcSlideL .28s cubic-bezier(.3,.7,.3,1); }
+.wc-detail.slide-r .wc-scene-lg { animation:wcSlideR .28s cubic-bezier(.3,.7,.3,1); }
+@keyframes wcSlideL { from { transform:translateX(60px); opacity:0 } to { transform:none; opacity:1 } }
+@keyframes wcSlideR { from { transform:translateX(-60px); opacity:0 } to { transform:none; opacity:1 } }
+.wc-scene-lg { width:min(58vw,220px); height:calc(min(58vw,220px) * 1.43); }
+.wc-scene-lg .wc-face-name { font-size:15px; }
+.wc-scene-lg .wc-face-meta { font-size:12px; }
+.wc-scene-lg .wc-tier-label { font-size:12px; }
+.wc-scene-lg .wc-cost { font-size:14px; }
+.wc-nav { width:36px; height:36px; flex-shrink:0; border-radius:50%; background:rgba(255,255,255,.06); border:1px solid var(--border2); color:var(--text-dim); font-size:20px; line-height:1; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.wc-nav:active { background:rgba(255,255,255,.14); }
+.wc-tally { display:flex; justify-content:center; align-items:baseline; gap:8px; margin:12px auto 0; padding:10px 14px; max-width:300px; border-radius:10px; background:var(--surface); border:1px solid var(--border2); font-family:'Cinzel',serif; font-size:17px; font-weight:700; color:var(--gold); }
+.wc-tally .op { color:var(--text-mute); font-weight:400; }
+.wc-tally.ok .res { color:#8fe0a2; }
+.wc-tally.warn { border-color:#c9922a; } .wc-tally.warn .res { color:#f0c060; }
+.wc-tally.bad { border-color:#7a3434; } .wc-tally.bad .res { color:#f0a0a0; }
+.wc-tally-note { text-align:center; font-size:11px; margin:6px auto 0; max-width:300px; padding:0 12px; }
+.wc-tally-note.warn { color:#f0c060; } .wc-tally-note.bad { color:#f0a0a0; }
+.wc-detail-btns { display:flex; gap:10px; justify-content:center; padding:14px 16px 8px; }
+.wc-detail-btns .action-btn { min-width:130px; }
+.wc-detail-btns .action-btn:disabled { opacity:.4; }
+
+/* v0.5.58: three-card pick — breathing room at the screen edges (was 3 × 130px edge to edge) */
+.wc-cards { gap:10px; padding:0 22px; }
+.wc-mask-card { width:min(112px, calc((100vw - 64px) / 3)); height:auto; aspect-ratio:130 / 186; }
+/* bought card in focus */
+.wc-bought { filter:drop-shadow(0 0 18px rgba(255,215,122,.25)); }
+
+/* v0.5.60: shop modifier pill (Bargain / Patronage / Levy) */
+.shop-mod-pill { margin:0 0 10px; padding:8px 12px; border-radius:10px; font-size:12px; line-height:1.4; background:rgba(143,224,162,.08); border:1px solid rgba(143,224,162,.35); color:#cfeedd; }
+.shop-mod-pill.bad { background:rgba(224,82,82,.08); border-color:rgba(224,82,82,.4); color:#f0c0c0; }
+
+/* v0.5.61: Parry / Aegis / Disarm markers on cards */
+.mc-wc-marks { position:absolute; left:4px; top:22px; z-index:6; display:flex; flex-direction:column; gap:2px; pointer-events:none; }
+.mc-wc-marks.mini { top:2px; left:2px; }
+.mc-wc-mark { font-size:9px; font-weight:700; padding:1px 5px; border-radius:8px; background:rgba(10,10,20,.85); border:1px solid #8fa0b8; color:#d8e2f0; white-space:nowrap; line-height:1.4; }
+.mc-wc-mark.aegis { border-color:#ffd77a; color:#ffe6a8; box-shadow:0 0 6px rgba(255,215,122,.5); }
+.mc-wc-mark.disarm { border-color:#c05050; color:#f0a0a0; }
+.mc-wc-marks.mini .mc-wc-mark { padding:0 3px; font-size:8px; }

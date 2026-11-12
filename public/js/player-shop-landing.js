@@ -409,7 +409,7 @@ function renderShop() {
   // v0.5.51: a second update while the shop is open (tally finished, someone reconnecting…) used to rebuild
   // the cards and snap the carousel back to the start. Same shop + same hand + same Mana → leave it alone;
   // anything else changed → rebuild but keep the scroll positions.
-  const _key = JSON.stringify([G.round, G.currentPlayer, (G.shopOffers||[]).map(m => m.iid ?? m.id), myHand.map(m => m.iid + ':' + m.hp), me.mana]);
+  const _key = JSON.stringify([G.round, G.currentPlayer, (G.shopOffers||[]).map(m => (m.iid ?? m.id) + ':' + (m.price ?? m.cost)), myHand.map(m => m.iid + ':' + m.hp), me.mana, me.wcShop]);
   const _buyEl = document.getElementById('shop-buy-scroll');
   if (_key === _shopRenderKey && _buyEl && _buyEl.isConnected) { updateStatusBar(true); return; }
   const _keepScroll = _buyEl ? { buy: _buyEl.scrollLeft, sell: (document.getElementById('shop-sell-scroll')||{}).scrollLeft || 0 } : null;
@@ -418,13 +418,25 @@ function renderShop() {
   updateHandStrip(false);   // v0.5.07: Sell row already shows the hand
   document.getElementById('main-content').classList.add('no-hand');
 
-  const canAfford = (m) => me.mana >= m.cost && myHand.length < 5;
+  const priceOf = (m) => m.price ?? m.cost;   // v0.5.60: Levy / Bargain / Patronage
+  const canAfford = (m) => me.mana >= priceOf(m) && myHand.length < 5;
 
   // v0.5.06: tapping a card opens the shared detail sheet (Buy lives there)
-  const buyCards = G.shopOffers.map((m, i) => renderCard(m, {
-    size:'full', dim: !canAfford(m),
-    onclick: `openShopDetail('buy', ${i})`
-  })).join('');
+  const buyCards = G.shopOffers.map((m, i) => {
+    const card = renderCard(m, { size:'full', dim: !canAfford(m), onclick: `openShopDetail('buy', ${i})` });
+    if (priceOf(m) === m.cost) return card;
+    const up = priceOf(m) > m.cost;
+    return `<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:3px">${card}
+      <div style="font-size:11px;font-weight:700;color:${up ? '#f0a0a0' : '#8fe0a2'}"><s style="opacity:.55;font-weight:400">${m.cost}</s> ${priceOf(m)} ✦</div></div>`;
+  }).join('');
+  // v0.5.60: shop modifiers pill
+  const sh = me.wcShop, lev = me.wcEffects && me.wcEffects.levy;
+  let modPill = '';
+  if (sh && sh.kind === 'patronage') modPill = `🃏 <b>Patronage</b>: buys are free · ${sh.left} shop${sh.left !== 1 ? 's' : ''} left · skip or sell: +8✦`;
+  else if (sh && lev) modPill = `🃏 <b>Bargain</b> and <b>Levy</b> cancel out: full price this shop · skip or sell: +3✦`;
+  else if (sh) modPill = `🃏 <b>Bargain</b>: half price this shop only · skip or sell: +3✦`;
+  else if (lev) modPill = `🃏 <b>Levied</b>: everything costs +50% this shop`;
+  const modHTML = modPill ? `<div class="shop-mod-pill${lev && !sh ? ' bad' : ''}">${modPill}</div>` : '';
 
   const sellCards = myHand.length === 0
     ? `<div style="padding:14px 0;color:var(--text-mute);font-size:13px">Hand is empty</div>`
@@ -445,6 +457,7 @@ function renderShop() {
       <div class="screen-label">Shop</div>
     </div>
     <div class="shop-one-action-note">One action only — buy <em>or</em> sell, then roll. Or skip.</div>
+    ${modHTML}
     <div class="shop-section-hdr">Buy${myHand.length >= 5 ? ' <span style="color:#e05555;font-size:11px;font-weight:700;margin-left:6px">✕ HAND FULL (5/5)</span>' : ` <span style="color:var(--text-mute);font-size:11px;margin-left:6px">(${myHand.length}/5)</span>`}</div>
     ${myHand.length >= 5 ? `<div style="background:#3a1515;border:1px solid #e05555;border-radius:8px;padding:8px 12px;font-size:12px;color:#e08888;margin:0 0 8px">Sell a summon first to make room</div>` : ''}
     <div class="shop-cards-wrap">
@@ -470,7 +483,16 @@ function renderShop() {
   const ab = document.getElementById('action-bar');
   ab.classList.add('visible');
   ab.innerHTML = `<div class="shop-tap-hint">Tap a card above to <b>buy</b> or <b>sell</b></div>
-    <button class="action-btn secondary" onclick="send('skip_shop')">Skip Shop</button>`;
+    <button class="action-btn secondary" onclick="${sh ? 'shopSkipTap(this)' : "send('skip_shop')"}">${sh ? `Skip Shop · +${sh.kind === 'patronage' ? 8 : 3}✦` : 'Skip Shop'}</button>`;
+}
+// v0.5.60: skipping with a Bargain / Patronage active takes two taps
+let _shopSkipArmed = 0;
+function shopSkipTap(btn) {
+  if (Date.now() - _shopSkipArmed < 3000) { _shopSkipArmed = 0; send('skip_shop'); return; }
+  _shopSkipArmed = Date.now();
+  const was = btn.textContent;
+  btn.textContent = 'Tap again to skip';
+  setTimeout(() => { if (btn.isConnected && _shopSkipArmed && Date.now() - _shopSkipArmed >= 3000) { _shopSkipArmed = 0; btn.textContent = was; } }, 3100);
 }
 
 // ─── ROLL ─────────────────────────────────────────────────────────────────
@@ -749,6 +771,11 @@ function _lcOptCardsHTML(options, openFn) {
       statusHtml = `<div class="lc-status special">🏛 Temple</div>`;
     } else if (tile.kind === 'heal') {
       statusHtml = `<div class="lc-status special">💚 Healing</div>`;
+    } else if (tile.feral && tile.summon) {   // v0.5.62: Sever — a wild monster
+      const m = tile.summon, hpPct = Math.max(0, Math.round((m.hp / m.maxHp) * 100));
+      statusHtml = `<div class="lc-enemy-monster"><div class="lc-mon-name">${m.name}</div>
+          <div class="lc-hp-bar-wrap"><div class="lc-hp-bar" style="width:${hpPct}%;background:#9a9a9a"></div></div></div>
+        <div class="lc-status unclaimed" style="color:#c9a87a">🐾 Wild: fight it</div>`;
     } else if (tile.ownerId == null) {
       statusHtml = `<div class="lc-status unclaimed">Unclaimed</div>`;
     } else if (tile.ownerId === myIdx) {
@@ -805,6 +832,7 @@ function _landingAction(pos) {
   const names = { start:'Mana Well', well:'Mana Well', chest:'Treasure Chest', temple:'Temple', heal:'Healing Spring', healing:'Healing Spring' };
   const run = () => doChooseLanding(pos);
   if (t.kind !== 'element') return { label:`Land here · ${names[t.kind] || t.label || t.kind}`, kind:'primary', run };
+  if (t.feral && t.summon)  return { label:'Land here · Battle', kind:'battle', hint:`A wild ${t.summon.name} (${t.summon.hp}/${t.summon.maxHp} HP) holds this tile. Win to claim it`, run };   // v0.5.62
   if (t.ownerId == null)    return { label:'Land here · Claim', kind:'claim', hint:'Empty tile — you can station a summon here', run };
   if (t.ownerId === myIdx)  return { label:'Land here · Your tile', kind:'primary', hint:'Swap, heal, or change element', run };
   const owner = G.players.find(p => p.idx === t.ownerId);

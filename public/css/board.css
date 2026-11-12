@@ -514,3 +514,29 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 #rules-recap .rr-btn{font:700 15px Cinzel,serif;letter-spacing:.06em;padding:10px 18px;border-radius:10px;border:1px solid #a97b40;background:#fff7e6;color:#3a2a18;cursor:pointer;}
 #rules-recap .rr-btn:disabled{opacity:.35;cursor:default;}
 #rules-recap .rr-btn.close{background:#3a2a18;color:#fbf3e0;}
+
+/* v0.6.75: Parry / Aegis / Disarm markers on tile cards */
+.tmc-mark { position:absolute; left:-5px; top:-5px; width:15px; height:15px; border-radius:50%; z-index:5; display:flex; align-items:center; justify-content:center; font-size:8px; line-height:1; }
+.tmc-parry { background:#5a6a80; box-shadow:0 0 6px #8fa0b8cc; }
+.tmc-aegis { background:#b8902a; box-shadow:0 0 9px #ffd77aee; animation:tmcAegis 1.8s ease-in-out infinite; }
+.tmc-disarm { left:auto; right:-5px; top:9px; background:#8a2c2c; box-shadow:0 0 6px #e05252cc; }
+@keyframes tmcAegis { 50% { box-shadow:0 0 14px #ffd77a; } }
+
+/* v0.6.76: Sever — wild monster on a tile; Phoenix Pact chip marker */
+.tile-feral .tmc-card { filter:saturate(.25) brightness(.85); border-style:dashed !important; }
+.tile-feral { position:relative; }
+.feral-chain { position:absolute; left:50%; bottom:-6px; transform:translateX(-50%); font-size:10px; filter:drop-shadow(0 0 3px #000); z-index:6; }
+.chip-phoenix { font-size:12px; filter:drop-shadow(0 0 4px #ff8a3d); animation:chipPhx 1.6s ease-in-out infinite; }
+@keyframes chipPhx { 50% { filter:drop-shadow(0 0 9px #ff8a3d); } }
+
+/* v0.6.77: markers big enough to read over a screen-share */
+.tmc-marks { position:absolute; left:50%; top:-15px; transform:translateX(-50%); display:flex; gap:3px; z-index:7; pointer-events:none; }
+.tmc-marks .tmc-mark { position:static; width:28px; height:28px; border-radius:50%; border:2px solid #fff; display:flex; align-items:center; justify-content:center; }
+.tmc-marks .tmc-parry { background:#7a8aa3; box-shadow:0 0 0 1px #000a, 0 0 10px #c8d6ecdd; }
+.tmc-marks .tmc-aegis { background:#d4a020; box-shadow:0 0 0 1px #000a, 0 0 14px #ffd77a; animation:tmcAegis2 1.6s ease-in-out infinite; }
+.tmc-marks .tmc-disarm { background:#b52f2f; box-shadow:0 0 0 1px #000a, 0 0 12px #ff6a6acc; }
+@keyframes tmcAegis2 { 50% { box-shadow:0 0 0 1px #000a, 0 0 24px #ffe7a8; transform:scale(1.08); } }
+.tile-feral .tmc-card { filter:grayscale(1) brightness(.7) !important; border:2px dashed #e0b060 !important; }
+.feral-ribbon { position:absolute; left:50%; top:40%; transform:translate(-50%,-50%) rotate(-12deg); z-index:7; pointer-events:none;
+  padding:2px 10px; font:900 13px Cinzel,serif; letter-spacing:.18em; color:#1a1208; background:linear-gradient(90deg,#e0b060,#ffd98a,#e0b060);
+  border:1.5px solid #fff; border-radius:3px; box-shadow:0 2px 8px #000c, 0 0 12px #e0b06099; }

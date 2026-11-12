@@ -128,7 +128,7 @@ textarea:focus{border-color:var(--accent)}
   <div class="topbar-right">
     <span id="topbar-matchup">Select both summons</span>
     <a href="/board">← Board</a>
-    <span style="font-family:monospace">v1.0.107</span>
+    <span style="font-family:monospace">v1.0.109</span>
   </div>
 </div>
 
@@ -190,6 +190,15 @@ textarea:focus{border-color:var(--accent)}
       <input type="checkbox" id="att-fortify" onchange="refreshPreview()">
       <span class="buff-lbl">🛡 Fortify</span><span class="buff-mod">−40% counter</span>
     </div>
+    <!-- v1.0.108 (server v1.0.151): Wild Cards v2 -->
+    <div class="buff-row">
+      <input type="checkbox" id="att-flurry" onchange="refreshPreview()">
+      <span class="buff-lbl">🃏 Flurry</span><span class="buff-mod">2nd strike after counter</span>
+    </div>
+    <div class="buff-row">
+      <select id="att-shield" onchange="refreshPreview()" style="margin-right:6px"><option value="">No shield</option><option value="parry">Parry</option><option value="aegis">Aegis</option></select>
+      <span class="buff-lbl">🛡 Shield on attacker</span><span class="buff-mod">first strike vs it</span>
+    </div>
     <!-- Attacker ability toggles -->
     <div class="buff-row">
       <input type="checkbox" id="att-stormtalon" onchange="refreshPreview()">
@@ -197,7 +206,7 @@ textarea:focus{border-color:var(--accent)}
     </div>
     <div class="buff-row">
       <input type="checkbox" id="att-deathsentence" onchange="refreshPreview()">
-      <span class="buff-lbl">💀 Death Knight: Death Sentence</span><span class="buff-mod-gold">10% instakill</span>
+      <span class="buff-lbl">💀 Death Knight: Death Sentence</span><span class="buff-mod-gold">20% instakill</span>
     </div>
     <div class="buff-row">
       <input type="checkbox" id="att-layonhands" onchange="refreshPreview()">
@@ -317,6 +326,14 @@ textarea:focus{border-color:var(--accent)}
       <span class="buff-lbl">🃏 Rattle applied</span><span class="buff-mod">½ ATK counter</span>
     </div>
     <div class="buff-row">
+      <select id="def-shield" onchange="refreshPreview()" style="margin-right:6px"><option value="">No shield</option><option value="parry">Parry</option><option value="aegis">Aegis</option></select>
+      <span class="buff-lbl">🛡 Parry / Aegis (defender)</span><span class="buff-mod">½ / 0 first strike</span>
+    </div>
+    <div class="buff-row">
+      <input type="checkbox" id="def-disarm" onchange="refreshPreview()">
+      <span class="buff-lbl">🗡 Disarmed (defender)</span><span class="buff-mod">counter deals 0</span>
+    </div>
+    <div class="buff-row">
       <input type="checkbox" id="def-charm" onchange="refreshPreview()">
       <span class="buff-lbl">⚡ Battle Charm (defender)</span><span class="buff-mod">+25% first strike</span>
     </div>
@@ -327,7 +344,7 @@ textarea:focus{border-color:var(--accent)}
     <!-- Defender ability toggles -->
     <div class="buff-row">
       <input type="checkbox" id="def-deathsentence" onchange="refreshPreview()">
-      <span class="buff-lbl">💀 Death Knight: Death Sentence</span><span class="buff-mod-gold">10% instakill</span>
+      <span class="buff-lbl">💀 Death Knight: Death Sentence</span><span class="buff-mod-gold">20% instakill</span>
     </div>
     <div class="buff-row">
       <input type="checkbox" id="def-lastdarkness" onchange="refreshPreview()">
@@ -438,7 +455,7 @@ const ABILITY_NOTES = {
   arcane_arbiter:  '✦ Chaos Flux — defending only: after any battle, one attacker tile gets a random element',
   bone_wraith:     '💀 Death Rattle — on death (attacking or defending), deals 12 to its killer',
   grave_specter:   '💀 Necrotic Claim — tile converts to Undead on win',
-  death_knight:    '💀 Death Sentence — 10% chance: instant kill on any damage',
+  death_knight:    '💀 Death Sentence — 20% chance: instant kill on any damage',
   shade_walker:    '💀 Cursed Touch — after a stalemate, the opponent loses 5 HP/turn for 2 turns',
   cursed_revenant: '🛡 Undead Resilience — +2 DEF per survival',
   plague_herald:   '☠ Pestilence — adjacent enemies take 3 HP/turn',
@@ -609,6 +626,14 @@ function calcBattle(){
   let attCharm=$('att-charm').checked, defCharm=$('def-charm').checked;
   let ambush=$('att-ambush').checked;
   const fortify=$('att-fortify').checked;
+  // v1.0.108 (server v1.0.151): Parry / Aegis / Disarm / Flurry
+  const flurry=$('att-flurry').checked, ambushBoth=$('att-ambush').checked;
+  let attShield=$('att-shield').value, defShield=$('def-shield').value, defDisarm=$('def-disarm').checked;
+  const shieldHit=(side,dmg)=>{ const sh=side==='att'?attShield:defShield; if(!sh||dmg<=0) return dmg;
+    if(side==='att') attShield=''; else defShield='';
+    const out = sh==='aegis' ? 0 : Math.floor(dmg/2);
+    L('le-buff',`  🛡 ${sh==='aegis'?'Aegis':'Parry'}! ${dmg} → ${out}`); return out; };
+  const disarmHit=(dmg)=>{ if(!defDisarm) return dmg; defDisarm=false; L('le-ability',`  🗡 Disarmed! ${dmg} → 0`); return 0; };
   const defTS=$('def-tilesynergy').checked, mono=$('def-mono').checked, rattle=$('def-rattle').checked;
   const attStormtalon=$('att-stormtalon').checked, attDeathSentence=$('att-deathsentence').checked;
   const attLayOnHands=$('att-layonhands').checked, attLastRite=$('att-lastrip').checked, attBoneWraith=$('att-bonewraith').checked;
@@ -663,7 +688,7 @@ function calcBattle(){
   // ─ Stormtalon defending: pre-emptive strike ─
   if(defStormtalon){
     L('le-info',`⚡ ${def.name} strikes FIRST (Lightning Strike)…`);
-    preDmg=strike(def,att,false,false,false);
+    preDmg=shieldHit('att',disarmHit(strike(def,att,false,false,false)));
     attHp-=preDmg;
     L('le-cdmg',`→ ${att.name} takes ${preDmg} damage  (${att.hp} → ${Math.max(0,attHp)} HP)`);
     if(attHp<=0){ preKilled=true; L('le-ability',`⚡ Lightning Strike killed ${att.name} — it never gets to strike!`); }
@@ -673,13 +698,13 @@ function calcBattle(){
   // ─ Attacker strikes ─
   if(!preKilled){
     L('le-info',`🗡 ${att.name} strikes ${def.name}…`);
-    atkDmg=strike(att,def,true,false,false);
+    atkDmg=shieldHit('def',strike(att,def,true,false,false));
     defHp-=atkDmg;
     L('le-dmg',`→ ${def.name} takes ${atkDmg} damage  (${def.hp} → ${Math.max(0,defHp)} HP)`);
   }
   if(attDeathSentence && atkDmg>0 && defHp>0){
     const r=rollMode==='avg'?0.5:Math.random();
-    if(r<0.10){ defHp=0; L('le-ability','💀 Death Sentence! Instant kill (10%)'); }
+    if(r<0.20){ defHp=0; L('le-ability','💀 Death Sentence! Instant kill (20%)'); }
     else L('le-info',`   💀 Death Sentence: rolled ${(r*100).toFixed(0)}% — no proc`);
   }
   if(defLastDarkness && defHp>0 && defHp<=T30(def)){ def.atk=36; L('le-ability',`🌑 Last Darkness! ${def.name} HP ≤30% — ATK set to 36`); }
@@ -699,15 +724,28 @@ function calcBattle(){
     ctrDmg=strike(def,att,false,defTS,mono);
     def.atk=savedAtk;
     if(fortify){ ctrDmg=Math.round(ctrDmg*0.60); L('le-buff',`  🛡 Fortify! Counter reduced 40% → ${ctrDmg}`); }
+    ctrDmg=shieldHit('att',disarmHit(ctrDmg));
     const before=attHp; attHp-=ctrDmg;
     L('le-cdmg',`→ ${att.name} takes ${ctrDmg} counter-damage  (${before} → ${Math.max(0,attHp)} HP)`);
     if(defDeathSentence && ctrDmg>0 && attHp>0){
       const r=rollMode==='avg'?0.5:Math.random();
-      if(r<0.10){ attHp=0; L('le-ability','💀 Death Sentence (counter)! Instant kill'); }
+      if(r<0.20){ attHp=0; L('le-ability','💀 Death Sentence (counter)! Instant kill'); }
       else L('le-info',`   💀 Death Sentence (counter): rolled ${(r*100).toFixed(0)}% — no proc`);
     }
     if(attLayOnHands && !attLoH && attHp>0 && attHp<=T30(att)){ attLoH=true; const h=Math.min(15,att.maxHp-attHp); attHp+=h; L('le-ability',`✨ Lay on Hands! ${att.name} heals ${h} HP (→ ${attHp})`); }
     if(attHp<=0 && attLastRite && !attRite){ attRite=true; attHp=15; L('le-ability',`💀 Last Rite! ${att.name} survives at 15 HP!`); }
+    // v1.0.108: Flurry — second strike if both still standing (Ambush boosts it too)
+    if(flurry && attHp>0 && defHp>0){
+      L('le-info',''); L('le-info',`🃏 Flurry! ${att.name} strikes again…`);
+      ambush=ambushBoth;
+      const ex2=shieldHit('def',strike(att,def,true,false,false));
+      defHp-=ex2; atkDmg+=ex2;
+      L('le-dmg',`→ ${def.name} takes ${ex2} damage  (→ ${Math.max(0,defHp)} HP)`);
+      if(attDeathSentence && ex2>0 && defHp>0){ const r=rollMode==='avg'?0.5:Math.random(); if(r<0.20){ defHp=0; L('le-ability','💀 Death Sentence! Instant kill (20%)'); } }
+      if(defLastDarkness && defHp>0 && defHp<=T30(def)){ def.atk=36; L('le-ability',`🌑 Last Darkness! ${def.name} ATK set to 36`); }
+      if(defLayOnHands && !defLoH && defHp>0 && defHp<=T30(def)){ defLoH=true; const h=Math.min(15,def.maxHp-defHp); defHp+=h; L('le-ability',`✨ Lay on Hands! ${def.name} heals ${h} HP (→ ${defHp})`); }
+      if(defHp<=0 && defLastRite && !defRite){ defRite=true; defHp=15; L('le-ability',`💀 Last Rite! ${def.name} survives at 15 HP!`); }
+    }
   }
 
   let outcome;

@@ -9,6 +9,8 @@
  *  v0.6.34: Sanction table SFX hooks (opts.sfx: fanfare / blessing / curse / jackpot / fly)
  *  v0.6.33: Omen reveals on the Sanction card table
  *  v0.6.32: Sacrifice reveal holds the summon on its tile until the card lands (sxTileHold)
+ *  v0.6.72: bought card held face-down in focus (resolve:wildcard_reveal), flips when the player turns it over
+ *  v0.6.71: wcTable follows the phone's swipe (G.wcTable.view → viewed card centred + scaled) and rebuilds after a back-out
  *  v0.6.31: BoardFX.sxTable() — Sanction turn card table (deal → carousel → card back → reveal), spec in SANCTION_REVEAL_SPEC.md
  *  v0.6.30: ring + sparks exported (Wheel of Fortune flip on the board)
  *  v0.6.26: BoardFX.wcTable() — face-down Wild Card table dealt on doubles (grey → live → flip / pass)
@@ -100,7 +102,10 @@
   .fx-wc-back{transform:rotateY(180deg);border:3px solid var(--tc);background:radial-gradient(circle at 50% 50%,#2a2048 0,#120c26 70%);display:flex;align-items:center;justify-content:center;font-size:3.2em;color:var(--tc);text-shadow:0 0 20px var(--tc);}
   /* v0.6.26: Wild Card table */
   .wct-stage{position:absolute;left:0;top:0;width:100%;height:100%;transition:opacity .45s ease;}
-  .wct-slot{position:absolute;will-change:transform,opacity;}
+  .wct-slot{position:absolute;will-change:transform,opacity;transition:left .38s cubic-bezier(.3,.7,.3,1),top .38s cubic-bezier(.3,.7,.3,1),width .38s cubic-bezier(.3,.7,.3,1),height .38s cubic-bezier(.3,.7,.3,1),font-size .38s,filter .38s,opacity .38s;}
+  .wct-live.wct-side{filter:brightness(.55) saturate(.7);}
+  .wct-focus .wct-live.wct-side{opacity:.18;}
+  .wct-live.wct-viewed .fx-wc-back{box-shadow:0 0 34px var(--tc),0 0 70px var(--tc);}
   .wct-breath{position:absolute;inset:0;perspective:1100px;}
   .wct-slot .fx-wc{position:absolute;inset:0;}
   .wct-slot .fx-wc-face{transition:filter .9s ease,box-shadow .9s ease;}
@@ -610,7 +615,7 @@
       const cardEl = document.createElement('div'); cardEl.className = 'fx-wc';
       Object.assign(cardEl.style, { left: (bc.x - w / 2) + 'px', top: (bc.y - h / 2) + 'px', width: w + 'px', height: h + 'px', fontSize: Math.round(15 * k) + 'px' });
       cardEl.style.setProperty('--tc', T.c);
-      cardEl.innerHTML = `<div class="fx-wc-face fx-wc-front" style="background-image:url('/img/wildcards/wc-${card.id}.png')">
+      cardEl.innerHTML = `<div class="fx-wc-face fx-wc-front" style="background-image:url('/img/wildcards/wc-${String(card.id).replace(/_/g,"-")}.png')">
           <div class="fx-wc-band"><div class="fx-wc-tier">${T.label}</div><div class="fx-wc-name">${card.name}</div>
           ${card.desc ? `<div class="fx-wc-desc">${card.desc}</div>` : ''}</div></div>
         <div class="fx-wc-face fx-wc-back">🃏</div>`;
@@ -674,7 +679,7 @@
       const cardEl = document.createElement('div'); cardEl.className = 'fx-wc';
       Object.assign(cardEl.style, { left: (bc.x - w / 2) + 'px', top: (bc.y - h / 2 - 20 * k) + 'px', width: w + 'px', height: h + 'px', fontSize: Math.round(14 * k) + 'px' });
       cardEl.style.setProperty('--tc', T.c);
-      cardEl.innerHTML = `<div class="fx-wc-face fx-wc-front" style="background-image:url('/img/wildcards/wc-${card.id}.png')">
+      cardEl.innerHTML = `<div class="fx-wc-face fx-wc-front" style="background-image:url('/img/wildcards/wc-${String(card.id).replace(/_/g,"-")}.png')">
           <div class="fx-wc-band"><div class="fx-wc-tier">${T.label}</div><div class="fx-wc-name">${card.name}</div></div></div>
         <div class="fx-wc-face fx-wc-back">🃏</div>`;
       wrap.appendChild(cardEl);
@@ -728,11 +733,21 @@
   const TIERS = ['low', 'mid', 'high'];
   const HIDE_PHASES = new Set(['resolve:battle', 'resolve:battle_result', 'stalemate', 'resolve:chest', 'resolve:temple',
     'resolve:round_callout', 'resolve:turn_summary', 'game_over']);
-  const WCT = { seq: 0, stage: null, slots: {}, state: '', consumed: false, pickedAt: 0, pickTier: null };
+  const WCT = { seq: 0, stage: null, slots: {}, state: '', consumed: false, pickedAt: 0, pickTier: null, view: null };
+  // v0.6.71: the card the player is viewing on their phone comes to the centre, scaled up; the other two step aside (like the Sanction table)
+  const WCT_VIEW_SCALE = 1.45, WCT_SIDE_SCALE = 0.8;
   // preload the three tier backs so the first deal never shows empty frames
   try { TIERS.forEach(t => { const im = new Image(); im.src = `/img/wildcards/wc-mask-${t}.png`; }); } catch (e) {}
   function _wctPos(tier) {
     const k = scale(), bc = boardCenter(), i = TIERS.indexOf(tier);
+    if (WCT.view && TIERS.includes(WCT.view)) {             // v0.6.71: carousel around the viewed card
+      let d = (i - TIERS.indexOf(WCT.view) + 3) % 3; if (d === 2) d = -1;
+      const sc = d === 0 ? WCT_VIEW_SCALE : WCT_SIDE_SCALE;
+      const w = TABLE_W * k * sc, h = TABLE_H * k * sc;
+      const cw = TABLE_W * k * WCT_VIEW_SCALE, sw = TABLE_W * k * WCT_SIDE_SCALE, gap = TABLE_GAP * k * 2;
+      const cx = bc.x + d * (cw / 2 + gap + sw / 2);
+      return { x: cx - w / 2, y: bc.y - h / 2, w, h, k: k * sc, bc, d };
+    }
     const w = TABLE_W * k, h = TABLE_H * k, gap = TABLE_GAP * k;
     return { x: bc.x + (i - 1) * (w + gap) - w / 2, y: bc.y - h / 2, w, h, k, bc };
   }
@@ -740,12 +755,15 @@
     TIERS.forEach(tier => {
       const s = WCT.slots[tier]; if (!s) return;
       const p = _wctPos(tier);
-      Object.assign(s.style, { left: p.x + 'px', top: p.y + 'px', width: p.w + 'px', height: p.h + 'px', fontSize: Math.round(11 * WC_TABLE_SCALE * p.k) + 'px' });
+      Object.assign(s.style, { left: p.x + 'px', top: p.y + 'px', width: p.w + 'px', height: p.h + 'px', fontSize: Math.round(11 * WC_TABLE_SCALE * p.k) + 'px',
+        zIndex: p.d === 0 ? '3' : '1' });
+      s.classList.toggle('wct-side', p.d === 1 || p.d === -1);
+      s.classList.toggle('wct-viewed', p.d === 0);
     });
   }
   function _wctClear(fade) {
     const st = WCT.stage;
-    WCT.stage = null; WCT.slots = {}; WCT.state = ''; WCT.pickTier = null;
+    WCT.stage = null; WCT.slots = {}; WCT.state = ''; WCT.pickTier = null; WCT.view = null;
     if (!st) return;
     if (fade) { st.style.opacity = '0'; setTimeout(() => st.remove(), 500); } else st.remove();
   }
@@ -791,6 +809,7 @@
       s.classList.toggle('wct-grey', state === 'grey');
       s.classList.toggle('wct-live', state === 'live');
     });
+    if (state !== 'live') TIERS.forEach(tier => { const s = WCT.slots[tier]; if (s) s.classList.remove('wct-side'); });
     if (state === 'live' && prev && !reduced) {
       const bc = boardCenter(); ring(bc.x, bc.y, 220 * scale(), '#ffd77a', { dur: 900, grow: 2, width: 3 });
       try { sfx.live && sfx.live(); } catch (e) {}
@@ -799,7 +818,7 @@
       const tier = t.pick.tier, slot = WCT.slots[tier]; if (!slot) return;
       WCT.pickTier = tier; WCT.pickedAt = Date.now();
       const T = TIER[tier];
-      slot.querySelector('.fx-wc-front').style.backgroundImage = `url('/img/wildcards/wc-${t.pick.id}.png')`;
+      slot.querySelector('.fx-wc-front').style.backgroundImage = `url('/img/wildcards/wc-${String(t.pick.id).replace(/_/g,"-")}.png')`;
       slot.querySelector('.fx-wc-front').innerHTML = `<div class="fx-wc-band"><div class="fx-wc-tier">${T.label}</div><div class="fx-wc-name">${t.pick.name}</div>
           ${t.pick.desc ? `<div class="fx-wc-desc">${t.pick.desc}</div>` : ''}</div>`;
       const p = _wctPos(tier), k = p.k, dx = p.bc.x - (p.x + p.w / 2);
@@ -832,7 +851,7 @@
           { transform: `translate(${(i - 1) * 60 * k}px,${420 * k}px) rotate(${(i - 1) * 14}deg)`, opacity: 0 }],
           { duration: reduced ? 400 : 650, delay: i * 70, easing: 'cubic-bezier(.5,0,.8,.4)', fill: 'forwards' });
       });
-      banner(bc.x, bc.y, 'PASSED', '#9397ab', { size: 22, dur: 1400, rise: 20 });
+      banner(bc.x, bc.y, t.discarded ? 'DISCARDED' : 'PASSED', t.discarded ? '#e07a7a' : '#9397ab', { size: 22, dur: 1400, rise: 20 });   // v0.6.73: + discarded
       try { sfx.skip && sfx.skip(); } catch (e) {}
       const st = WCT.stage; setTimeout(() => { if (WCT.stage === st) _wctClear(false); else if (st) st.remove(); }, 1000);
     }
@@ -854,15 +873,29 @@
         const p = _wctPos(t.pick.tier); slot.style.transform = `translate(${p.bc.x - (p.x + p.w / 2)}px,0)`;
         slot.classList.remove('wct-grey');
         const fr = slot.querySelector('.fx-wc-front');
-        fr.style.backgroundImage = `url('/img/wildcards/wc-${t.pick.id}.png')`;
+        fr.style.backgroundImage = `url('/img/wildcards/wc-${String(t.pick.id).replace(/_/g,"-")}.png')`;
         fr.innerHTML = `<div class="fx-wc-band"><div class="fx-wc-tier">${T.label}</div><div class="fx-wc-name">${t.pick.name}</div></div>`;
         slot.querySelector('.fx-wc').style.transform = 'rotateY(360deg)';
       }
     }
+    // v0.6.71: the player backed out of a bought card (wildcard_back) — put the three face-down cards back on the table
+    if (WCT.stage && !WCT.consumed && WCT.state === 'picked' && !t.pick && !t.skipped) {
+      WCT.view = null; _wctBuild(t, false, sfx);
+      const bc = boardCenter(); banner(bc.x, bc.y - 150 * scale(), 'BACKED OUT', '#9397ab', { size: 20, dur: 1300, rise: 16 });
+    }
     if (WCT.consumed || !WCT.stage) return;
+    const wcLive = phase === 'resolve:wildcard_cards' || phase === 'resolve:wildcard_reveal';   // v0.6.72: + bought, not yet turned over
+    WCT.stage && WCT.stage.classList.toggle('wct-focus', phase === 'resolve:wildcard_reveal');
+    if (!t.pick && !t.skipped && wcLive) {   // v0.6.71: follow the phone's swipe
+      const v = t.view || null;
+      if (v !== WCT.view) {
+        WCT.view = v;
+        if (v) { try { sfx.deal && sfx.deal(TIERS.indexOf(v)); } catch (e) {} }
+      }
+    }
     WCT.stage.style.opacity = HIDE_PHASES.has(phase) ? '0' : '1';   // battles etc. cover the cards
     if (!WCT.state || WCT.state === 'grey' || WCT.state === 'live') _wctLayout();
-    const want = t.skipped ? 'skipped' : t.pick ? 'picked' : phase === 'resolve:wildcard_cards' ? 'live' : 'grey';
+    const want = t.skipped ? 'skipped' : t.pick ? 'picked' : wcLive ? 'live' : 'grey';
     _wctSetState(want, t, sfx);
   }
   // The picked card is about to fly to its target: wait for its flip to finish, then hand over.
@@ -1130,7 +1163,7 @@
   // ── v0.6.35: Sanctioned / Redeemed tarot moment (locked in the Sanction Moments Lab: speed 0.8, hold 1600) ──
   const SXM = { busy: false };
   const SXM_SPEED = 0.8, SXM_HOLD = 1600;
-  const SXM_IMG = { back: '/img/omens/omen-back-omen.webp', sanc: '/img/omens/omen-sanctioned.webp', life: '/img/omens/omen-life.webp' };
+  const SXM_IMG = { back: '/img/omens/omen-back-omen.webp', sanc: '/img/omens/omen-sanctioned.webp', life: '/img/omens/omen-life.webp', phx: '/img/omens/omen-phoenix.webp' };   // v0.6.76: + Phoenix
   Object.values(SXM_IMG).forEach(src => { const i = new Image(); i.src = src; });
   async function sxMoment(kind, p, opts = {}) {
     SXM.busy = true;
@@ -1145,24 +1178,26 @@
     const A = (el, kf, ms, o = {}) => el.animate(kf, { duration: D(ms), easing: o.ease || 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' }).finished.catch(() => {});
     const W = 200 * k, H = 355 * k, CX = X(720), CY = Y(455);
     const at = (x, y, sc = 1, rot = 0) => `translate(${x - W / 2}px,${y - H / 2}px) scale(${sc}) rotate(${rot}deg)`;
-    const sanc = kind === 'sanc', col = sanc ? '#ff5a5f' : '#ffd77a';
+    // v0.6.76: 'phoenix' — the Sanctioned card starts to turn, bursts into flame and becomes the Phoenix (Phoenix Pact)
+    const phx = kind === 'phoenix', sanc = kind === 'sanc', col = sanc ? '#ff5a5f' : phx ? '#ff8a3d' : '#ffd77a';
     const root2 = mk('sxm', { position: 'absolute', inset: '0' });
     const add = (tag, st, html) => { const e = document.createElement('div'); Object.assign(e.style, st); if (html) e.innerHTML = html; root2.appendChild(e); return e; };
     // veil + name
     const veil = add('', { position: 'absolute', inset: '0', opacity: 0, background: 'radial-gradient(ellipse at 50% 42%,rgba(11,12,26,.82),rgba(5,5,12,.96) 70%)' });
     A(veil, [{ opacity: 0 }, { opacity: 1 }], 450);
     const nm = add('', { position: 'absolute', left: CX + 'px', top: Y(78) + 'px', transform: 'translateX(-50%)', opacity: 0, whiteSpace: 'nowrap', textAlign: 'center',
-      font: `900 ${46 * k}px Cinzel,serif`, letterSpacing: '.14em', color: p.color, textShadow: '0 2px 6px #000', filter: sanc ? 'none' : 'saturate(.1) brightness(.6)' },
-      `<small style="display:block;font:600 ${12 * k}px Cinzel,serif;letter-spacing:.4em;color:#9397ab;margin-bottom:${6 * k}px">${sanc ? 'PLAYER' : 'SANCTIONED'}</small>${String(p.name).toUpperCase()}`);
+      font: `900 ${46 * k}px Cinzel,serif`, letterSpacing: '.14em', color: p.color, textShadow: '0 2px 6px #000', filter: (sanc || phx) ? 'none' : 'saturate(.1) brightness(.6)' },
+      `<small style="display:block;font:600 ${12 * k}px Cinzel,serif;letter-spacing:.4em;color:#9397ab;margin-bottom:${6 * k}px">${(sanc || phx) ? 'PLAYER' : 'SANCTIONED'}</small>${String(p.name).toUpperCase()}`);
     await A(nm, [{ opacity: 0, transform: `translate(-50%,${-24 * k}px)` }, { opacity: 1, transform: 'translate(-50%,0)' }], 450);
     // card
     const c = add('', { position: 'absolute', left: '0', top: '0', width: W + 'px', height: H + 'px', perspective: 1400 * k + 'px' });
     const face = (img, back) => `<div style="position:absolute;inset:0;border-radius:${12 * k}px;background:center/cover url('${img}');backface-visibility:hidden;${back ? 'transform:rotateY(180deg);' : ''}box-shadow:0 0 0 ${2 * k}px var(--gc,transparent),0 0 ${40 * k}px var(--gc,transparent),0 ${18 * k}px ${40 * k}px rgba(0,0,0,.8)"></div>`;
-    c.innerHTML = `<div class="in" style="position:absolute;inset:0;transform-style:preserve-3d">${face(sanc ? SXM_IMG.back : SXM_IMG.sanc)}${face(sanc ? SXM_IMG.sanc : SXM_IMG.life, true)}</div>`;
+    c.innerHTML = `<div class="in" style="position:absolute;inset:0;transform-style:preserve-3d">${face(sanc ? SXM_IMG.back : SXM_IMG.sanc)}${face(sanc ? SXM_IMG.sanc : phx ? SXM_IMG.phx : SXM_IMG.life, true)}</div>`;
     const inner = c.firstChild;
     if (!sanc) c.style.setProperty('--gc', 'rgba(255,90,95,.55)');
     await A(c, [{ transform: at(CX, Y(1300), 1.1, -8) }, { transform: at(CX, CY - 22 * k, 1.15, 1.5), offset: .8 }, { transform: at(CX, CY, 1.15) }], 620, { ease: 'cubic-bezier(.2,.9,.3,1)' });
-    if (!sanc) opts.sfx && opts.sfx('redeem');
+    if (kind === 'redeem') opts.sfx && opts.sfx('redeem');
+    if (phx) opts.sfx && opts.sfx('sanctioned');
     // neutral build-up
     c.style.setProperty('--gc', 'rgba(216,210,255,.55)');
     let rays = null;
@@ -1181,23 +1216,25 @@
     ]);
     // colour lands
     c.style.setProperty('--gc', col);
+    if (phx) opts.sfx && opts.sfx('redeem');
     if (rays) rays.style.setProperty('--rc', sanc ? 'rgba(255,90,95,.27)' : 'rgba(255,215,122,.33)');
     if (!reduced) {
       if (sanc && root) root.animate([...Array(8)].map((_, i) => ({ translate: `${(i % 2 ? 1 : -1) * 12 * (1 - i / 8)}px ${(i % 3 - 1) * 7 * (1 - i / 8)}px` })), { duration: D(420) });
       const F = 280 * k, fl = add('', { position: 'absolute', left: CX - F + 'px', top: CY - F + 'px', width: F * 2 + 'px', height: F * 2 + 'px', background: `radial-gradient(circle,${col} 0,transparent 60%)` });
       A(fl, [{ opacity: .9, transform: 'scale(.4)' }, { opacity: 0, transform: 'scale(1.25)' }], 700);
       ring(CX, CY, 280 * k, col, { dur: D(900), grow: 2.2, width: 4 });
-      sparks(CX, CY, sanc ? '#ff7a7a' : '#ffe7a8', sanc ? 26 : 44, (sanc ? 280 : 340) * k, { dur: D(1000), size: 6 });
+      sparks(CX, CY, sanc ? '#ff7a7a' : phx ? '#ffb070' : '#ffe7a8', sanc ? 26 : phx ? 60 : 44, (sanc ? 280 : 340) * k, { dur: D(1000), size: 6 });
+      if (phx) sparks(CX, CY + 80 * k, '#ff6a2a', 40, 260 * k, { dur: D(1400), size: 8 });   // flames
       if (!sanc) { const RR = 600 * k, r2 = add('', { position: 'absolute', left: CX - RR + 'px', top: CY - RR + 'px', width: RR * 2 + 'px', height: RR * 2 + 'px', borderRadius: '50%', opacity: 0,
         background: 'repeating-conic-gradient(from 0deg,rgba(255,215,122,.27) 0 6deg,transparent 6deg 22deg)', webkitMask: 'radial-gradient(circle,#000 0,transparent 62%)', mask: 'radial-gradient(circle,#000 0,transparent 62%)' });
         A(r2, [{ opacity: 0, transform: 'rotate(0) scale(.7)' }, { opacity: 1, transform: 'rotate(20deg) scale(1)', offset: .3 }, { opacity: 0, transform: 'rotate(50deg) scale(1.1)' }], 2200); }
     }
-    A(nm, [{ filter: sanc ? 'none' : 'saturate(.1) brightness(.6)' }, { filter: sanc ? 'saturate(.1) brightness(.6)' : 'none' }], 750);
-    nm.firstChild.textContent = sanc ? 'SANCTIONED' : 'REDEEMED';
+    if (!phx) A(nm, [{ filter: sanc ? 'none' : 'saturate(.1) brightness(.6)' }, { filter: sanc ? 'saturate(.1) brightness(.6)' : 'none' }], 750);
+    nm.firstChild.textContent = sanc ? 'SANCTIONED' : phx ? 'PHOENIX PACT' : 'REDEEMED';
     if (!sanc) nm.style.textShadow = `0 0 ${24 * k}px ${p.color}, 0 2px 6px #000`;
     const cap = add('', { position: 'absolute', left: CX + 'px', top: Y(730) + 'px', transform: 'translateX(-50%)', opacity: 0, whiteSpace: 'nowrap', textAlign: 'center',
-      font: `700 ${26 * k}px Cinzel,serif`, letterSpacing: '.3em', color: sanc ? '#ff8a80' : '#ffd77a', textShadow: '0 2px 6px #000' },
-      `${sanc ? 'IS SANCTIONED' : 'IS REDEEMED'}<small style="display:block;font:500 ${15 * k}px Inter,sans-serif;letter-spacing:.02em;color:#c8c9d6;margin-top:${8 * k}px">${opts.sub || (sanc ? 'Out of Mana. No income, but they still take Sanction turns. Redeem to come back.' : 'Back in the game.')}</small>`);
+      font: `700 ${26 * k}px Cinzel,serif`, letterSpacing: '.3em', color: sanc ? '#ff8a80' : phx ? '#ffb070' : '#ffd77a', textShadow: '0 2px 6px #000' },
+      `${sanc ? 'IS SANCTIONED' : phx ? 'RISES FROM THE ASHES' : 'IS REDEEMED'}<small style="display:block;font:500 ${15 * k}px Inter,sans-serif;letter-spacing:.02em;color:#c8c9d6;margin-top:${8 * k}px">${opts.sub || (sanc ? 'Out of Mana. No income, but they still take Sanction turns. Redeem to come back.' : phx ? 'Out of Mana, but the Phoenix Pact brings them back at 30✦.' : 'Back in the game.')}</small>`);
     await A(cap, [{ opacity: 0, transform: `translate(-50%,${10 * k}px)` }, { opacity: 1, transform: 'translate(-50%,0)' }], 380);
     await wait(SXM_HOLD);
     [veil, nm, cap].forEach(e => A(e, [{ opacity: 1 }, { opacity: 0 }], 400));
@@ -1281,7 +1318,15 @@
     banner(c.x - c.w / 2 - 110 * k, c.y, name ? `👑 NEW LEADER · ${name}` : '👑 NEW LEADER', color, { size: 14, dur: 2200, rise: 14 });
   }
 
+  // v0.6.74: a caption over a tile (Bane Ground "Light → Nature")
+  function tileBanner(el, text, color) {
+    if (!el || !el.isConnected) return;
+    const c = center(el), k = scale();
+    if (level !== 'reduced') ring(c.x, c.y, 70 * k, color);
+    banner(c.x, c.y - 40 * k, text, color, { size: 18, dur: 1800, rise: 20 });
+  }
   window.BoardFX = {
+    tileBanner,
     rollDice, claim, hop, ripple,
     challenge, takeover, held, clash, manaRoll, manaFloat, flow, chest, temple, heal, well,
     wildCard, plague, shatterTile, eliminated, crown,
