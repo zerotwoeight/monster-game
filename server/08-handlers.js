@@ -4,6 +4,12 @@
 
 // ─── ACTION HANDLERS ─────────────────────────────────────────────────────────
 
+// v1.0.157: how long the board's battle animation takes to reach the outcome (ms), and how long the result is then
+// left up to read. Keep in step with BATTLE_STAGE in public/js/board-battle.js.
+const BATTLE_FIGHT_MS = { one: 2300, two: 3400, read: 1900 };
+
+function _healJustDone() { return !!(G && G.healDoneAt && Date.now() - G.healDoneAt < 2000); }   // v1.0.160
+
 const handlers = {
 
   // ── Lobby ──────────────────────────────────────────────────────────────────
@@ -303,6 +309,34 @@ const handlers = {
   } } : {}),
 
   // v1.0.112: host-only lobby toggle
+  // v1.0.159: host-only lobby toggle — battle dice on / off
+  set_battle_dice(ws, conn, data) {
+    if (!G || G.phase !== 'lobby') return sendError(ws, 'Not in lobby');
+    if (!conn.isBoard || conn.isSpectator) return sendError(ws, 'Only the host can change battle dice');
+    G.battleDice = !!(data && data.on);
+    log(`⚙ Battle dice: ${G.battleDice ? 'On' : 'Off (flat +0 to 3 roll)'}`);
+    broadcast();
+  },
+
+  // v1.0.161: the host board has shown every battle die landing plus the hold → start the fight now
+  battle_dice_settled(ws, conn, data) {
+    if (!conn.isBoard || conn.isSpectator || !G) return;
+    const R = G.battleRoll; if (!R || !R.started || R.seq !== (data && data.seq)) return;
+    _battleDiceStart(R.seq);
+    broadcast();
+  },
+
+  // v1.0.159: a player taps Roll — the server rolls their black and white die
+  roll_battle_dice(ws, conn, data) {
+    const R = G && G.battleRoll;
+    if (!R) return sendError(ws, 'No battle dice to roll');
+    const side = conn.playerIdx === R.attIdx ? 'att' : conn.playerIdx === R.defIdx ? 'def' : null;
+    if (!side) return sendError(ws, 'Not your battle');
+    if (R[side]) return;
+    _battleRollSide(side, false);
+    broadcast();
+  },
+
   set_skip_setup(ws, conn, data) {
     if (!G || G.phase !== 'lobby') return sendError(ws, 'Not in lobby');
     if (!conn.isBoard || conn.isSpectator) return sendError(ws, 'Only the host can change setup mode');
@@ -371,6 +405,22 @@ const handlers = {
     glog(conn.roomCode, `${warn} ${who}: ${kind} ${ms}${kind === 'renders/min' ? '' : 'ms'}${data.extra ? ' (' + String(data.extra).slice(0, 80) + ')' : ''} · phase ${String(data.phase || '').slice(0, 30)}`);
   },
 
+  // v1.0.156: review log — a host board opened with ?review=1 sends timestamped lines of what it showed and played
+  // (public/js/board-review.js). They go to DATA_DIR/logs/review-YYYY-MM-DD-<ROOM>.log only: not the terminal,
+  // not the game log. Host board only; 300 lines a message, 120,000 a connection.
+  client_review(ws, conn, data) {
+    if (!conn.isBoard || !conn.roomCode) return;
+    const lines = Array.isArray(data.lines) ? data.lines.slice(0, 300) : [];
+    if (!lines.length) return;
+    conn._revN = (conn._revN || 0) + lines.length;
+    if (conn._revN > 120000) return;
+    try {
+      const dir = path.join(DATA_DIR, 'logs'); if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      const code = String(conn.roomCode).replace(/[^A-Za-z0-9]/g, '');
+      fs.appendFileSync(path.join(dir, `review-${new Date().toISOString().slice(0, 10)}-${code}.log`), lines.map(l => String(l).slice(0, 400)).join('\n') + '\n', 'utf8');
+    } catch {}
+  },
+
   // v1.0.134: a phone or board page hit a script error — print it with the room's trail
   client_error(ws, conn, data) {
     conn._errN = (conn._errN || 0) + 1;
@@ -436,7 +486,7 @@ const handlers = {
     if (phase === 'resolve:heal_tile') return handlers.heal_tile_skip(ws, asPlayer, {});
     if (phase === 'resolve:chest')     return handlers.chest_skip(ws, asPlayer, {});
     // turn summary, shop, roll, landing choice, battle-or-retreat (free — no retreat cost), stalemate choice
-    G.turnSummary = null; G.pendingLanding = null; G.pendingAttackerSummon = null; G.stalemateData = null;
+    G.turnSummary = null; G.pendingLanding = null; G.pendingAttackerSummon = null; G.stalemateData = null; G.battleRoll = null;
     advanceTurn();
   },
 
@@ -654,15 +704,16 @@ const handlers = {
     if (!m) return sendError(ws, 'Summon not in hand');
     if (!canUseSpecial(G.currentPlayer, m)) return sendError(ws, 'Special condition not met');
     if (tile.summonInstance) return sendError(ws, 'A wild monster holds this tile — fight it');   // v1.0.152
-    if (p.mana < m.cost) return sendError(ws, 'Not enough Mana');
-    p.mana -= m.cost;
+    const fee = claimFee(m);   // v1.0.153: deploy fee, not buy price
+    if (p.mana < fee) return sendError(ws, 'Not enough Mana');
+    p.mana -= fee;
     const mIdx = p.hand.indexOf(m);
     p.hand.splice(mIdx, 1);
     tile.ownerId = G.currentPlayer;
     tile.summonId = m.iid;
     tile.summonInstance = m;
     tile.neverOwned = false; // Phase 1: mark tile as ever-claimed
-    log(`🚩 ${p.name} claimed tile ${p.position} with ${m.name}`);
+    log(`🚩 ${p.name} claimed tile ${p.position} with ${m.name} (−${fee}✦)`);
     _voice(m.id, 'claim');
 
     // ── Per-claim ability triggers ──────────────────────────────────────────
@@ -685,8 +736,33 @@ const handlers = {
 
   // ── Battle ─────────────────────────────────────────────────────────────────
 
+  // v1.0.159: with battle dice on, choosing a summon opens the dice roll; the battle itself (_attack_resolve)
+  // runs once both players have rolled or the 12 s window has closed.
   attack(ws, conn, data) {
     if (!guardTurn(ws, conn, ['resolve:battle'])) return;
+    if (G.battleDice === false) return handlers._attack_resolve(ws, conn, data);
+    if (G.battleRoll) return sendError(ws, 'The dice are rolling');
+    const p = G.players[G.currentPlayer];
+    const tile = G.board[p.position];
+    if (!tile.summonInstance) return sendError(ws, 'No defender on tile');
+    const m = p.hand.find(h => h.iid === data.iid);
+    if (!m) return sendError(ws, 'Summon not in hand');
+    const seq = (G.battleRollSeq = (G.battleRollSeq || 0) + 1), code = G.roomCode;
+    G.battleRoll = { seq, attIdx: G.currentPlayer, defIdx: (tile.ownerId != null && G.players[tile.ownerId]) ? tile.ownerId : null, iid: m.iid, att: null, def: null, deadline: Date.now() + BATTLE_DICE_MS.auto };
+    G.pendingAttackerSummon = { iid:m.iid, id:m.id, name:m.name, type:m.type, hp:m.hp, maxHp:m.maxHp, atk:m.atk, def:m.def, cost:m.cost, gen:m.gen, claimFee:claimFee(m),
+      rarity:m.rarity||null, type2:m.type2||null, arch:m.arch||null, supportDesc:m.supportDesc||null, isSpecial:m.isSpecial||false, charm:m.charm||false };
+    log(`🎲 ${p.name} sends ${m.name} into battle — both sides roll their dice`);
+    // bots, wild monsters, eliminated and disconnected players roll by themselves; everyone else gets 12 s to tap
+    const absent = idx => { const q = idx == null ? null : G.players[idx]; return !q || q.isBot || q.eliminated || q.isConnected === false; };
+    const early = ['att', 'def'].filter(sd => absent(sd === 'att' ? G.battleRoll.attIdx : G.battleRoll.defIdx));
+    if (early.length) scheduleRoomAction(code, () => { if (G.battleRoll && G.battleRoll.seq === seq) { early.forEach(sd => _battleRollSide(sd, true)); broadcast(); } }, BATTLE_DICE_MS.bot);
+    _diceTimer(code, 'auto', scheduleRoomAction(code, () => { if (G.battleRoll && G.battleRoll.seq === seq) { ['att', 'def'].forEach(sd => _battleRollSide(sd, true)); broadcast(); } }, BATTLE_DICE_MS.auto));   // v1.0.162: cancelled once both have rolled
+    broadcast();
+  },
+
+  _attack_resolve(ws, conn, data) {
+    if (!guardTurn(ws, conn, ['resolve:battle'])) return;
+    if (G.battleDice !== false && !_battleDice) return sendError(ws, 'Roll the dice first');   // v1.0.159: not callable from a client
     const p = G.players[G.currentPlayer];
     const tile = G.board[p.position];
     const defOwner = G.players[tile.ownerId] || _wildOwner();   // v1.0.152: a wild monster fights for nobody
@@ -798,14 +874,17 @@ const handlers = {
     G.lastBattle = {
       attackerIdx: G.currentPlayer,
       defOwnerIdx: tile.ownerId,
-      attM: { name:attM.name, type:attM.type, atk:attM.atk, def:attM.def, id:attM.id, isSpecial:attM.isSpecial||false, hp:attM.hp, maxHp:attM.maxHp, cost:attM.cost, gen:attM.gen },
-      defM: { name:defM.name, type:defM.type, atk:defM.atk, def:defM.def, id:defM.id, isSpecial:defM.isSpecial||false, hp:defM.hp, maxHp:defM.maxHp, cost:defM.cost, gen:defM.gen },
+      attM: { name:attM.name, type:attM.type, atk:attM.atk, def:attM.def, id:attM.id, isSpecial:attM.isSpecial||false, hp:attM.hp, maxHp:attM.maxHp, cost:attM.cost, gen:attM.gen, claimFee:claimFee(attM), rarity:attM.rarity||null, type2:attM.type2||null, arch:attM.arch||null, supportDesc:attM.supportDesc||null },   // v1.0.154: full data for the shared card
+      defM: { name:defM.name, type:defM.type, atk:defM.atk, def:defM.def, id:defM.id, isSpecial:defM.isSpecial||false, hp:defM.hp, maxHp:defM.maxHp, cost:defM.cost, gen:defM.gen, claimFee:claimFee(defM), rarity:defM.rarity||null, type2:defM.type2||null, arch:defM.arch||null, supportDesc:defM.supportDesc||null },   // v1.0.154: full data for the shared card
       atkDmg, defDmg, outcome,
       attHpBefore: _attHpBefore, defHpBefore: _defHpBefore,
       attManaDelta: _attDelta,
       defManaDelta: _defDelta,
     };
+    const _rvSnap = _rivalrySnap(p, defOwner);   // v1.0.158
     _applyBattleOutcome(outcome, p, attM, defOwner, defM, tile, p.position);
+    G.lastBattle.rivalry = _rivalryApply(_rvSnap, p, defOwner);   // v1.0.158: revenge / denied / streak callouts for the board
+    G.lastBattle.dice = _battleDice ? { ab: _battleDice.ab, aw: _battleDice.aw, db: _battleDice.db, dw: _battleDice.dw } : null;   // v1.0.159
     // v1.0.117: Fortune payouts — Curse bounty to the taker, Blessing payout (+ Exaltation heal) to the holder
     if (_fInfo && outcome === 'attacker_wins' && _fInfo.bounty) {
       p.mana += _fInfo.bounty; if (p.totalManaEarned != null) p.totalManaEarned += _fInfo.bounty;
@@ -833,33 +912,44 @@ const handlers = {
     G.pendingAttackerSummon = null;
     // Track stalemate — resolved on this player's next turn
     if (outcome === 'stalemate') {
-      G.stalemateData = { attackerIdx: G.currentPlayer, tilePos: p.position };
+      // v1.0.163: one pending stalemate PER PLAYER. A single G.stalemateData slot was overwritten by the next player's
+      // stalemate, so the first player never got "Fight again" (playtest 2026-11-15, Zero on tiles 15 and 27).
+      (G.stalemates || (G.stalemates = {}))[G.currentPlayer] = { attackerIdx: G.currentPlayer, tilePos: p.position };
     }
     G.phase = 'resolve:battle_result';
     broadcast();
     // v1.0.94: hold the result a little longer so the board can show effect callouts
     const _nFx = Math.min(8, G.lastBattle.effects.length);
-    scheduleRoomAction(G.roomCode, advanceTurn, _nFx ? 5500 + _nFx * 600 : 3500);
+    // v1.0.157: the result stays up for the board's fight + its callouts + time to read it. The fight is longer
+    // since board v0.6.90 (wind-up, freeze, death, winner): ~2.3 s to the outcome with one strike, ~3.4 s with a
+    // counter-strike (BATTLE_STAGE in public/js/board-battle.js — change these if those timings change).
+    // Was: 3500, or 5500 + 600 per callout.
+    const _two = G.lastBattle.atkDmg > 0 && G.lastBattle.defDmg > 0;
+    scheduleRoomAction(G.roomCode, advanceTurn, (_two ? BATTLE_FIGHT_MS.two : BATTLE_FIGHT_MS.one) + (_nFx ? 300 + _nFx * 400 : 0) + BATTLE_FIGHT_MS.read
+      + ((_rvO => (_rvO.revenge || _rvO.denied || _rvO.streakEnded || (_rvO.streak && _rvO.streak.n >= 3)) ? 800 : 0)(G.lastBattle.rivalry || {})));   // v1.0.158: a beat to read REVENGE / DENIED / streak
   },
 
   // Preview which attacker the player is hovering — broadcasts to board in real-time
   preview_attacker(ws, conn, data) {
     if (G.phase !== 'resolve:battle') return;
     if (conn.playerIdx !== G.currentPlayer) return;
+    if (G.battleRoll) return;   // v1.0.159: committed, the dice are rolling
     const p = G.players[G.currentPlayer];
     if (data.iid == null) {
       G.pendingAttackerSummon = null;
     } else {
       const m = p.hand.find(m => m.iid === data.iid);
       if (m) G.pendingAttackerSummon = { iid:m.iid, id:m.id, name:m.name, type:m.type,
-        hp:m.hp, maxHp:m.maxHp, atk:m.atk, def:m.def, cost:m.cost, gen:m.gen,
-        isSpecial:m.isSpecial||false, charm:m.charm||false };
+        hp:m.hp, maxHp:m.maxHp, atk:m.atk, def:m.def, cost:m.cost, gen:m.gen, claimFee:claimFee(m),
+        rarity:m.rarity||null, type2:m.type2||null, arch:m.arch||null, supportDesc:m.supportDesc||null,
+        isSpecial:m.isSpecial||false, charm:m.charm||false };   // v1.0.154: full data for the shared card
     }
     broadcast();
   },
 
   retreat(ws, conn, data) {
     if (!guardTurn(ws, conn, ['resolve:battle'])) return;
+    if (G.battleRoll) return sendError(ws, 'The dice are rolling');   // v1.0.159: committed
     const p = G.players[G.currentPlayer];
     const penalty = Math.min(p.mana, MANA_PENALTY);
     p.mana -= penalty;
@@ -883,14 +973,15 @@ const handlers = {
     if (!newM) return sendError(ws, 'Summon not in hand');
     if (!canUseSpecial(G.currentPlayer, newM)) return sendError(ws, 'Special condition not met');
     // Cost to deploy new summon
-    if (p.mana < newM.cost) return sendError(ws, 'Not enough Mana');
-    p.mana -= newM.cost;
+    const fee = claimFee(newM);   // v1.0.153: deploy fee, not buy price
+    if (p.mana < fee) return sendError(ws, 'Not enough Mana');
+    p.mana -= fee;
     const idx = p.hand.indexOf(newM);
     p.hand.splice(idx, 1);
     if (oldM) p.hand.push(oldM);
     tile.summonInstance = newM;
     tile.summonId = newM.iid;
-    log(`🔄 ${p.name} swapped ${oldM ? oldM.name : 'empty'} → ${newM.name} on tile ${p.position}`);
+    log(`🔄 ${p.name} swapped ${oldM ? oldM.name : 'empty'} → ${newM.name} on tile ${p.position} (−${fee}✦)`);
     _voice(newM.id, 'swap');
     advanceTurn();
   },
@@ -953,37 +1044,55 @@ const handlers = {
 
   // ── Temple ─────────────────────────────────────────────────────────────────
 
-  temple_trade(ws, conn, data) {
+  // v1.0.155: Temple v2 — offer a summon from hand, receive its element's Ascendant for TEMPLE_COST
+  temple_offer(ws, conn, data) {
     if (!guardTurn(ws, conn, ['resolve:temple'])) return;
     const p = G.players[G.currentPlayer];
-    const special = G.pendingTemple.offers.find(o => o.iid === data.specialIid);
-    if (!special) return sendError(ws, 'Invalid special offer');
-    const sacrifice = p.hand.find(m => m.iid === data.sacrificeIid);
-    if (!sacrifice) return sendError(ws, 'Sacrifice not in hand');
-    if (sacrifice.type !== special.type) return sendError(ws, 'Type mismatch');
-    if (p.mana < special.cost) return sendError(ws, 'Not enough Mana');
-    p.mana -= special.cost;
-    const sIdx = p.hand.indexOf(sacrifice);
-    p.hand.splice(sIdx, 1);
-    const gained = makeSummon(special.id);
+    const m = p.hand.find(h => h.iid === data.iid);
+    if (!m) return sendError(ws, 'Summon not in hand');
+    if (!templeCanOffer(m)) return sendError(ws, "The Temple won't accept that summon");
+    if (p.mana < TEMPLE_COST) return sendError(ws, 'Not enough Mana');
+    const asc = templeAscendantFor(m);
+    p.mana -= TEMPLE_COST;
+    p.hand.splice(p.hand.indexOf(m), 1);
+    const gained = makeSummon(asc.id);
     p.hand.push(gained);
-    log(`🏛 ${p.name} traded ${sacrifice.name} for ${gained.name}!`);
+    G.templeSeq = (G.templeSeq || 0) + 1;
+    G.templeResult = { seq: G.templeSeq, playerIdx: G.currentPlayer, offered: serializeBoardMonster(m), ascendant: serializeBoardMonster(gained) };
+    log(`🏛 ${p.name} offered ${m.name} → ${gained.name} (−${TEMPLE_COST}✦)`);
     _voice(gained.id, 'temple');
     G.pendingTemple = null;
     advanceTurn();
   },
 
+  // v1.0.155: the phone is looking at one offerable card (or none) — the board mirrors it face-up; the Ascendant stays hidden
+  temple_preview(ws, conn, data) {
+    if (!G || G.phase !== 'resolve:temple' || !G.pendingTemple) return;
+    if (conn.playerIdx !== G.currentPlayer) return;
+    const p = G.players[G.currentPlayer];
+    const m = data.iid == null ? null : p.hand.find(h => h.iid === data.iid);
+    const view = m && templeCanOffer(m) ? { iid: m.iid, card: serializeBoardMonster(m) } : null;
+    if ((G.pendingTemple.view && G.pendingTemple.view.iid) === (view && view.iid)) return;
+    G.pendingTemple.view = view;
+    broadcast();
+  },
+
   temple_leave(ws, conn, data) {
     if (!guardTurn(ws, conn, ['resolve:temple'])) return;
     G.pendingTemple = null;
+    G.templeSeq = (G.templeSeq || 0) + 1;
+    G.templeResult = { seq: G.templeSeq, playerIdx: G.currentPlayer, left: true };   // v1.0.155: board fades the card away
     log(`${G.players[G.currentPlayer].name} left the Temple`);
     advanceTurn();
   },
 
   // ── Heal tile ──────────────────────────────────────────────────────────────
+  // v1.0.160: after heal_tile_apply the phase stays 'resolve:heal_tile' for 800 ms before advanceTurn. Any heal / skip
+  // in that window is ignored (it expires on its own after 2 s, so it can never get stuck).
 
   heal_tile_apply(ws, conn, data) {
     if (!guardTurn(ws, conn, ['resolve:heal_tile'])) return;
+    if (_healJustDone()) return;   // v1.0.160: already healed, the turn is about to move on (double tap / bot double send)
     const p = G.players[G.currentPlayer];
     const SHRINE_COST = 10;
     const SHRINE_HEAL = 10;
@@ -1007,12 +1116,14 @@ const handlers = {
     p.healCount++;
     log(`💚 ${p.name} used Healing Shrine — all monsters +${SHRINE_HEAL} HP (${healed} healed, −${SHRINE_COST}✦)`);
     G.phase = 'resolve:heal_tile';
+    G.healDoneAt = Date.now();   // v1.0.160: blocks a second heal / skip while the 800 ms hand-off runs
     broadcast();
     scheduleRoomAction(G.roomCode, advanceTurn, 800);
   },
 
   heal_tile_skip(ws, conn, data) {
     if (!guardTurn(ws, conn, ['resolve:heal_tile'])) return;
+    if (_healJustDone()) return;   // v1.0.160: a skip after a heal used to end the NEXT player's turn (log 2026-11-15, Crowe skipped)
     advanceTurn();
   },
 
@@ -1388,8 +1499,8 @@ const handlers = {
       if (pending.cardId === 'levy') {   // v1.0.150 — a second Levy just replaces the first
         target.wcEffects.levy = true;
         (target.wcBy = target.wcBy || {}).levy = p.idx;
-        notifyTarget('levy', 'Levy', 'Your next shop buy costs +50%.', 'low');
-        log(`🃏 Levy — ${target.name}'s next shop buy costs +50%`);
+        notifyTarget('levy', 'Levy', 'Your next shop: buys cost +50%. Skipping or selling uses it up.', 'low');
+        log(`🃏 Levy — ${target.name}'s next shop costs +50%`);
       }
       if (pending.cardId === 'rattle') {
         target.wcEffects.rattle = true;

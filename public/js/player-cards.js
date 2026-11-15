@@ -1,79 +1,5 @@
-// v0.5.61: broken-sword icon for Disarm (phone + board share the shape)
-const WC_DISARM_SVG = '<svg width="11" height="11" viewBox="0 0 12 12" style="vertical-align:-1px"><path d="M10.5 1.5 6.8 5.2M5.2 6.8 3 9" stroke="#f0a0a0" stroke-width="1.6" stroke-linecap="round"/><path d="M2 8l2 2M1.5 10.5l1-1" stroke="#f0a0a0" stroke-width="1.4" stroke-linecap="round"/><path d="M6.2 4.3l1.5 3.4" stroke="#e05252" stroke-width="1.1"/></svg>';
 // player-cards.js: split from the inline page script (L2). Loaded in order by player.html; all files share one global scope.
-// ─── CARD RENDERER ─────────────────────────────────────────────────────────
-function renderCard(m, {size='full', selected=false, showCost=true, dim=false, onclick='', typeAdvantage=false, typeWeak=false}={}) {
-  const isRare    = m.rarity === 'rare';
-  const isSupport = m.rarity === 'support';
-  const SUPC = '#9aabbc';
-  const c  = isSupport ? SUPC : (TYPE_COLOR[m.type] || '#9184d9');
-  const c2 = m.type2 ? (TYPE_COLOR[m.type2] || '#9184d9') : null;
-  const pct = Math.max(0, Math.min(1, m.hp / m.maxHp));
-  const hpColor = pct < .35 ? '#b05050' : c;
-  const hpPct = Math.round(pct * 100);
-  let borderColor, glowShadow;
-  if (isSupport) {
-    borderColor = SUPC;
-    glowShadow = `box-shadow:0 0 0 2px ${SUPC}99,0 0 18px ${SUPC}33`;
-  } else if (isRare) {
-    borderColor = c;
-    glowShadow = `box-shadow:0 0 0 2px ${c}99,0 0 0 3.5px ${c2}66,0 0 22px ${c}44,0 0 22px ${c2}22`;
-  } else if (m.isSpecial) {
-    borderColor = `${c}bb`;
-    glowShadow = `box-shadow:0 0 0 2.5px ${c}44,0 0 20px ${c}44`;
-  } else {
-    borderColor = `${c}88`;
-    glowShadow = `box-shadow:0 0 14px ${c}28`;
-  }
-  const classes = `summon-card ${size}${selected?' selected':''}${dim?' unaffordable':''}${m.isSpecial?' special-card':''}${isRare?' rare-card':''}${isSupport?' support-card':''}${typeAdvantage?' type-advantage':''}${typeWeak?' type-weak':''}`;
-  const art = m.id ? summonImg(m.id, size === 'mini' ? '-mini' : '') : artSVG(m.type, size==='mini'?70:130, size==='mini'?100:186);
-  const clickAttr = onclick ? ` onclick="${onclick}"` : '';
-  // Dual-element type dots (not shown for support)
-  const typeDots = !isSupport && isRare && c2
-    ? `<div class="dual-type-dots"><div class="mc-ov-eldot" style="background:${c}"></div><div class="mc-ov-eldot" style="background:${c2}"></div></div>`
-    : `<div class="mc-ov-eldot" style="background:${c}"></div>`;
-  // Mini strip
-  const miniStrip = isRare && c2
-    ? `<div class="mc-mini-strip" style="background:linear-gradient(to right,${c} 50%,${c2} 50%)"></div>`
-    : `<div class="mc-mini-strip" style="background:${c}"></div>`;
-
-  // v0.5.61: Parry / Aegis / Disarm markers
-  const wcMarks = (m.shield ? `<span class="mc-wc-mark ${m.shield}" title="${m.shield === 'aegis' ? 'Aegis: the next strike against it deals 0' : 'Parry: the next strike against it is halved'}">🛡${size === 'mini' ? '' : ` ${m.shield === 'aegis' ? 'Aegis' : 'Parry'}`}</span>` : '')
-    + (m.disarmed ? `<span class="mc-wc-mark disarm" title="Disarmed: its next counter-strike deals 0">${WC_DISARM_SVG}${size === 'mini' ? '' : ' Disarmed'}</span>` : '');
-  const wcMarksHTML = wcMarks ? `<div class="mc-wc-marks${size === 'mini' ? ' mini' : ''}">${wcMarks}</div>` : '';
-  if (size === 'mini') {
-    return `<div class="${classes}" style="border-color:${borderColor};${glowShadow}"${clickAttr}>
-      ${wcMarksHTML}
-      ${m.charm ? `<svg class="charm-badge-mini" width="17" height="17" viewBox="0 0 17 17" xmlns="http://www.w3.org/2000/svg" aria-label="Battle Charm"><circle cx="8.5" cy="8.5" r="7.5" fill="rgba(150,100,30,0.92)" stroke="#d4a843" stroke-width="1.4"/><path d="M9.5 3.5L6 9.5h3.5L8 13.5l4.5-6h-3.5z" fill="#fff8d0" stroke="#e8c060" stroke-width="0.5" stroke-linejoin="round"/></svg>` : ''}
-      <div class="mc-art">${art}</div>
-      ${miniStrip}
-    </div>`;
-  }
-  // Element badge label (support cards show "Support" label)
-  const elemBadgeLabel = isSupport ? 'Support' : (isRare && c2 ? `${m.type}/${m.type2}` : (m.type || ''));
-  const elemBadgeBg = isSupport ? SUPC : (isRare && c2 ? `linear-gradient(to right,${c},${c2})` : c);
-  // Support effect line replaces stats row
-  const statsRow = isSupport && m.supportDesc
-    ? `<div style="font-size:7px;color:${SUPC};text-align:center;line-height:1.3;padding:0 2px;margin-top:1px;">${m.supportDesc}</div>`
-    : `<div class="mc-ov-stats">${['ATK','DEF','✦','GEN'].map((l,i)=>`<div class="mc-ov-sc"><span class="mc-ov-si">${l}</span><span class="mc-ov-sv">${[m.atk,m.def,m.cost,m.gen][i]}</span></div>`).join('')}</div>`;
-  return `<div class="${classes}" style="border-color:${borderColor};${glowShadow}"${clickAttr}>
-    ${m.charm ? `<svg class="charm-badge" width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" aria-label="Battle Charm"><circle cx="14" cy="14" r="12" fill="rgba(150,100,30,0.92)" stroke="#d4a843" stroke-width="1.8"/><path d="M15.5 6.5L9.5 15.5h5.5L13 22l6.5-9.5h-5.5z" fill="#fff8d0" stroke="#e8c060" stroke-width="0.6" stroke-linejoin="round"/></svg>` : ''}
-    ${elemBadgeLabel ? `<div class="mc-element-badge" style="background:${elemBadgeBg}">${elemBadgeLabel}</div>` : ''}
-    ${wcMarksHTML}
-    ${m.isSpecial && dim && m.conditionDesc ? `<div class="special-lock-overlay"><span class="special-lock-icon">🔒</span><div class="special-lock-text">${m.conditionDesc}</div></div>` : ''}
-    <!-- v0.5.10: matchup shown by border/tint + sheet banner only (no on-card ribbon) -->
-    ${showCost ? `<div class="mc-cost-strip"><span class="mc-cost-val" style="color:${c}">${m.cost}</span><span class="mc-cost-lbl">Mana</span></div>` : ''}
-    <div class="mc-art">${art}</div>
-    <div class="mc-overlay">
-      ${m.isSpecial ? `<div class="special-badge">✦ Ascendant</div>` : ''}
-      ${isRare ? `<div class="rare-badge">★ Rare</div>` : ''}
-      ${isSupport ? `<div class="rare-badge" style="color:${SUPC};background:rgba(154,171,188,.15);border-color:${SUPC}66;">◈ Support</div>` : ''}
-      <div class="mc-ov-name" style="color:${c}"><span>${m.name}</span>${typeDots}</div>
-      <div class="mc-ov-hp-row"><div class="mc-hp-track"><div class="mc-hp-fill" style="width:${hpPct}%;background:${hpColor}"></div></div><span class="mc-hp-num">${m.hp}/${m.maxHp}</span></div>
-      ${statsRow}
-    </div>
-  </div>`;
-}
+// v0.5.65: renderCard() + WC_DISARM_SVG moved to the shared /js/card.js (board uses it too).
 
 // ─── SIGIL ─────────────────────────────────────────────────────────────────
 function sigilShape(idx, cx, cy, r, color) {
@@ -381,8 +307,8 @@ function _cardDetailBody(m) {
         <div style="font-size:10px;color:var(--text-mute);letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px;">${m.rarity === 'rare' || isSupport ? lore.role : `${lore.role} · <span style="color:${elColor}">${m.type}</span>`}</div>
 
         <!-- Stat row -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;">
-          ${[['⚔','ATK',m.atk],['🛡','DEF',m.def],['✦','GEN',m.gen],['💰','COST',m.cost]].map(([icon,label,val]) => `
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px;">
+          ${[['⚔','ATK',m.atk],['🛡','DEF',m.def],['✦','GEN',m.gen],['🚩','DEPLOY',m.claimFee ?? m.cost],['💰','BUY',m.cost]].map(([icon,label,val]) => `
             <div style="background:var(--surface2);border-radius:8px;padding:8px 4px;text-align:center;">
               <div style="font-size:14px;line-height:1;">${icon}</div>
               <div style="font-size:16px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;">${val ?? '—'}</div>
@@ -540,8 +466,9 @@ function _dsUpdateChrome() {
     if (!act) { box.innerHTML = ''; return; }
     box.innerHTML = `
       ${act.reason ? `<div class="ds-reason">${act.reason}</div>` : act.hint ? `<div class="ds-hint">${act.hint}</div>` : ''}
+      <div class="ds-act-row">${act.alt ? `<button class="action-btn secondary ds-act-btn ds-alt-btn" onclick="_dsAlt()">${act.alt.label}</button>` : ''}
       <button class="action-btn ${act.kind === 'gold' ? 'gold-btn' : 'primary'} ds-act-btn ds-k-${act.kind || 'primary'}"
-        ${act.disabled ? 'disabled' : ''} onclick="_dsAction()">${act.label}</button>`;
+        ${act.disabled ? 'disabled' : ''} onclick="_dsAction()">${act.label}</button></div>`;   // v0.5.69: optional secondary button (act.alt)
   }
 }
 
@@ -597,6 +524,16 @@ function _dsAttachSwipe() {
   vp.addEventListener('touchcancel', end);
 }
 
+// v0.5.69: secondary sheet button (e.g. Temple "Leave Temple")
+function _dsAlt() {
+  if (!_ds || !_ds.actionFor) return;
+  const m = _ds.items[_ds.idx];
+  const act = _ds.actionFor(m);
+  if (!act || !act.alt) return;
+  _ds.onClose = null;
+  closeCardDetail();
+  act.alt.run(m);
+}
 function _dsAction() {
   if (!_ds || !_ds.actionFor) return;
   if (Date.now() < _ds.lockUntil) return;     // accidental tap right after a swipe

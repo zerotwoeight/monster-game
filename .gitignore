@@ -5,3 +5,17 @@ game-state.json
 
 crash-log.txt
 logs/
+
+# 2026-11-15: labs and preview pages (local tuning only, never deployed)
+public/battle-lab.html
+public/js/battle-lab.js
+public/js/battle-lab-fixture.js
+public/hop-lab.html
+public/js/hop-lab.js
+public/sound-auditions.html
+public/js/sound-auditions-data.js
+public/audio/auditions/
+public/player-dice-lab.html
+public/player-dice-lab-frame.html
+# replaced by js/player-battledice3d.js (player v0.5.71), no longer loaded
+public/js/player-battledice.js

@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.5.62</title>
+<title>Summoners Gambit — Player v0.5.72</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<link rel="stylesheet" href="/css/player.css?v=0.5.62">
+<link rel="stylesheet" href="/css/card.css?v=1.0">
+<link rel="stylesheet" href="/css/player.css?v=0.5.71">
 </head>
 <body>
 <div id="conn-status" class="disconnected">●  Connecting…</div>
@@ -57,7 +58,7 @@
         <div class="help-row"><span class="help-icon">✦</span><span>Collect <b style="color:var(--gold-glow)">Mana</b> at the start of every turn from round 2: 5 flat, plus your stationed summons' generation, minus 1✦ upkeep per tile you own. At 150✦ or more, income is halved.</span></div>
         <div class="help-row"><span class="help-icon">🛒</span><span><b style="color:var(--text)">Shop</b> before rolling. Buy one summon, sell one from your hand, or skip.</span></div>
         <div class="help-row"><span class="help-icon">🎲</span><span><b style="color:var(--text)">Roll</b> to move around the 28-tile board.</span></div>
-        <div class="help-row"><span class="help-icon">⚑</span><span><b style="color:var(--text)">Claim</b> empty tiles by deploying a summon from your hand: you pay that summon's Mana Cost.</span></div>
+        <div class="help-row"><span class="help-icon">⚑</span><span><b style="color:var(--text)">Claim</b> empty tiles by deploying a summon from your hand: you pay its <b>deploy fee</b> (the ✦ on the card): Assailant or Vanguard 6✦, Guardian, Ascendant or Support 8✦, Rare 10✦. Swapping costs the same. The shop still charges the buy price.</span></div>
         <div class="help-row"><span class="help-icon">⚔</span><span><b style="color:var(--text)">Battle</b> on enemy tiles. Win to claim them; lose and your summon is destroyed.</span></div>
         <div class="help-row"><span class="help-icon">✋</span><span>Your <b style="color:var(--text)">Hand</b> holds up to 5 summons. A summon leaves your hand the moment it's stationed.</span></div>
       </div>
@@ -89,7 +90,7 @@
         <div class="help-s-title">Special Tiles</div>
         <div class="help-row"><span class="help-icon">💧</span><span><b style="color:var(--text)">Mana Well</b>: +40 Mana when you land on it.</span></div>
         <div class="help-row"><span class="help-icon">🎲</span><span><b style="color:var(--text)">Doubles</b>: roll doubles and you get a Wild Card at the end of your turn. One face-down card per tier (Iron 5✦, Arcane 30✦, Gilded 60✦): buy one blind and turn it over, or skip.</span></div>
-        <div class="help-row"><span class="help-icon">⛩</span><span><b style="color:var(--text)">Temple</b>: trade a normal summon for an Ascendant (see below).</span></div>
+        <div class="help-row"><span class="help-icon">⛩</span><span><b style="color:var(--text)">Temple</b>: offer a summon to receive its element's Ascendant for 15✦ (see below).</span></div>
         <div class="help-row"><span class="help-icon">❤</span><span><b style="color:var(--text)">Healing Spring</b>: pay 10✦ to heal all your summons, stationed and in your hand, +10 HP each.</span></div>
         <div class="help-row"><span class="help-icon">📦</span><span><b style="color:var(--text)">Treasure Chest</b>: random reward: heal potion (45%), battle charm (25%), warp (15%), or a free summon (15%).</span></div>
       </div>
@@ -107,11 +108,11 @@
 
       <!-- Temple Trades -->
       <div class="help-section">
-        <div class="help-s-title">Temple Trades</div>
-        <div class="help-p">The Temple offers 3 Ascendant summons. To trade:</div>
-        <div class="help-row"><span class="help-icon">1</span><span>You need a <b style="color:var(--text)">matching-element</b> summon in your hand to sacrifice.</span></div>
-        <div class="help-row"><span class="help-icon">2</span><span>Pay the Ascendant's <b style="color:var(--text)">Mana Cost</b> (always 20✦).</span></div>
-        <div class="help-row"><span class="help-icon">3</span><span>Your summon is surrendered and the Ascendant is added to your hand.</span></div>
+        <div class="help-s-title">Temple Offerings</div>
+        <div class="help-p">Land on the Temple and offer one summon from your hand:</div>
+        <div class="help-row"><span class="help-icon">1</span><span>Tap a summon to see the <b style="color:var(--text)">Ascendant of its element</b> it would become.</span></div>
+        <div class="help-row"><span class="help-icon">2</span><span>Pay <b style="color:var(--text)">15✦</b>. Your summon is given up and the Ascendant goes into your hand.</span></div>
+        <div class="help-row"><span class="help-icon">3</span><span>Rares, Support cards and Ascendants can't be offered. Or just leave, for free.</span></div>
         <div class="help-p" style="margin-top:10px">Each Ascendant has a <b style="color:var(--gold-glow)">unique ability</b> and a usability condition that must be met before you can deploy it:</div>
         <div class="help-row"><span class="help-icon" style="color:var(--el-Light)">✦</span><span><b style="color:var(--el-Light)">Ardent Saint</b>: Aura of Renewal. Condition: healed 2+ summons this game.</span></div>
         <div class="help-row"><span class="help-icon" style="color:var(--el-Dark)">✦</span><span><b style="color:var(--el-Dark)">Succubus</b>: Mana Drain (steal 10✦ on win). Condition: have at least 40✦ Mana.</span></div>
@@ -137,13 +138,15 @@
 
 <script src="/common.js"></script>
 <script src="/news.js?v=1.1"></script>
-<script src="/js/player-core.js?v=0.5.62"></script>
-<script src="/js/player-cards.js?v=0.5.62"></script>
-<script src="/js/player-render.js?v=0.5.62"></script>
-<script src="/js/player-shop-landing.js?v=0.5.62"></script>
-<script src="/js/player-setup-battle.js?v=0.5.62"></script>
-<script src="/js/player-menu-wildcards.js?v=0.5.62"></script>
+<script src="/js/player-core.js?v=0.5.71"></script>
+<script src="/js/card.js?v=1.3"></script>
+<script src="/js/player-cards.js?v=0.5.71"></script>
+<script src="/js/player-render.js?v=0.5.72"></script>
+<script src="/js/player-shop-landing.js?v=0.5.71"></script>
+<script src="/js/player-setup-battle.js?v=0.5.71"></script>
+<script src="/js/player-menu-wildcards.js?v=0.5.71"></script>
+<script src="/js/player-battledice3d.js?v=1.0"></script>  <!-- v0.5.71: 3D battle dice roll (replaces player-battledice.js v1.0, kept on disk) -->
 </body>
 </html>
-<script src="/js/player-errors.js?v=0.5.62"></script>
-<script src="/js/player-stallwatch.js?v=0.5.62"></script>
+<script src="/js/player-errors.js?v=0.5.71"></script>
+<script src="/js/player-stallwatch.js?v=0.5.71"></script>

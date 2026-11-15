@@ -185,17 +185,33 @@ function _fireRoundCallout(type) {
   }, holdMs);
 }
 
+// v0.7.3: the game can end in the middle of a Wild Card (Poach on the last turn): let the card finish, then the Game Over moment.
+// The standings stay hidden (window._goWaiting) until the moment hands off to them.
+function _fireGameOverWhenClear() {
+  window._goWaiting = true;
+  const t0 = Date.now();
+  (function wait() {
+    let held = false;
+    try { held = (typeof _fxHeld === 'function' && _fxHeld()) || (typeof _fxQ !== 'undefined' && _fxQ.length > 0); } catch (e) {}
+    if (held && Date.now() - t0 < 10000) { try { if (typeof _fxPump === 'function') _fxPump(); } catch (e) {} return setTimeout(wait, 200); }
+    _fireGameOverFanfare();
+  })();
+}
+function _showStandings() { window._goWaiting = false; document.querySelectorAll('.winners-overlay').forEach(w => { w.style.visibility = ''; }); }
 function _fireGameOverFanfare() {
+  setTimeout(_showStandings, 9000);   // v0.7.3: watchdog — never leave the standings hidden
   _bgAudio.pause(); _bgFinal.pause(); _musicTrack = null;
   const fo = document.getElementById('go-fanfare-overlay');
   // v0.6.25: animated Game Over (moments.js) hands off into the winners screen
   if (window.SGMoments) {
     const cols = (G && G.players ? G.players.map(p => p.color).filter(Boolean) : []);
     SGMoments.gameOver(() => {
+      _showStandings();   // v0.7.3
       window._goEnterUntil = Date.now() + 4000;
       document.querySelectorAll('.winners-overlay').forEach(w => w.classList.add('go-enter'));
     }, cols);
   } else if (fo) {
+    _showStandings();   // v0.7.3
     fo.className = 'visible';
     const holdMs = 4500;
     setTimeout(() => {

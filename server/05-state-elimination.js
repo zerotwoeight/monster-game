@@ -30,6 +30,7 @@ function hostSkipBlockReason() {
   if (G.pausedFor) return 'The game is paused — use Remove for a disconnected player';
   if (G.phase === 'setup' && G.autoSetupRunning) return 'Auto Setup is running';
   if (!HOST_SKIPPABLE.includes(G.phase)) return 'Something is resolving — try again in a moment';
+  if (G.battleRoll && G.battleRoll.att && G.battleRoll.def) return 'The battle is starting — try again in a moment';   // v1.0.159
   return null;
 }
 
@@ -43,7 +44,7 @@ function guardTurn(ws, conn, phases, phaseMsg = 'Wrong phase') {
 function monCore(m) {
   return { iid:m.iid, id:m.id, name:m.name, type:m.type,
            hp:m.hp, maxHp:m.maxHp, atk:m.atk, def:m.def,
-           cost:m.cost, gen:m.gen, isSpecial:m.isSpecial, charm:m.charm,
+           cost:m.cost, claimFee:claimFee(m), gen:m.gen, isSpecial:m.isSpecial, charm:m.charm,
            shield:m.shield || null, disarmed:!!m.disarmed };   // v1.0.151: Parry / Aegis / Disarm badges
 }
 function monExt(m) {
@@ -102,6 +103,8 @@ function publicState() {
     lastStumble: !!p.lastStumble,   // v1.0.111
     battlesWon: p.battlesWon,
     battlesLost: p.battlesLost,
+    streak: p.streak || 0,          // v1.0.158: battle wins in a row
+    grudges: p.grudges || {},       // v1.0.158: { opponentIdx: count } — players who beat this one (3+ player games)
     peakTiles: p.peakTiles,
     totalManaEarned: p.totalManaEarned,
     wcEffects: p.wcEffects || {},
@@ -128,9 +131,12 @@ function publicState() {
     board,
     stalemateData: G.stalemateData,
     pendingChest: G.pendingChest,
-    pendingTemple: G.pendingTemple ? {
-      offers: G.pendingTemple.offers.map(serializeTempleMonster)
+    pendingTemple: G.pendingTemple ? {   // v1.0.155: Temple v2
+      cost: TEMPLE_COST,
+      ascendants: Object.fromEntries(SPECIALS.map(s => [s.type, { ...serializeTempleMonster(s), canUse: canUseSpecial(G.currentPlayer, s) }])),
+      view: G.pendingTemple.view || null,   // the card the player is looking at (board mirror) — the Ascendant stays hidden
     } : null,
+    templeResult: G.templeResult || null,   // v1.0.155: { seq, playerIdx, left } or { seq, playerIdx, offered, ascendant }
     shopOffers: G.shopOffers.map(o => ({ ...serializeShopMonster(o), price: shopPrice(G.players[G.currentPlayer], o) })),   // v1.0.150: price after Levy / Bargain / Patronage
     lastBattle: G.lastBattle || null,
     pendingAttackerSummon: G.pendingAttackerSummon || null,
@@ -157,6 +163,10 @@ function publicState() {
     lastWildCard: G.lastWildCard || null,
     wcTable: G.wcTable || null,   // v1.0.110
     skipSetup: !!G.skipSetup,               // v1.0.112
+    battleDice: G.battleDice !== false,      // v1.0.159
+    diceTables: { black: DICE_BLACK, white: DICE_WHITE },
+    battleRoll: G.battleRoll ? { seq: G.battleRoll.seq, attIdx: G.battleRoll.attIdx, defIdx: G.battleRoll.defIdx, att: G.battleRoll.att, def: G.battleRoll.def,
+                                 msLeft: Math.max(0, G.battleRoll.deadline - Date.now()), autoMs: BATTLE_DICE_MS.auto } : null,
     sanction: G.sanction || null,
     lastWheel: G.lastWheel || null,          // v1.0.117: { seq, playerIdx, pos, upright, before, after, jackpot }            // v1.0.115: { seq, playerIdx, offers, pickedPos, omenOffers, result }
     rankings: G.rankings || null,           // v1.0.113: was built in endGame() but never exported — board fell back to its own sort
@@ -189,6 +199,7 @@ function checkElimination(playerIdx) {
   const elimCount = G.players.filter(pl => pl.eliminated).length;
   p.eliminated = true;
   p.eliminatedRank = elimCount + 1; // lower = eliminated earlier (1 = first out)
+  _rivalryClear(playerIdx);         // v1.0.158
   p.sanctioned = false;             // v1.0.113: Sanctioned → Eliminated
 
   log(`💀 ${p.name} owns 0 tiles and is ELIMINATED! (rank: out at ${p.eliminatedRank})`);
@@ -226,6 +237,7 @@ function sanctionPlayer(playerIdx) {
   p.sanctionedAt = G.turnCount;
   p.mana = 0;
   if (G.stalemateData && G.stalemateData.attackerIdx === playerIdx) G.stalemateData = null;   // they won't resolve it
+  if (G.stalemates) delete G.stalemates[playerIdx];   // v1.0.163
   log(`⛓ ${p.name} ran out of Mana and is SANCTIONED!`);
   return true;
 }
@@ -285,6 +297,8 @@ function forfeitPlayer(idx, reason) {
   p.eliminated = true;
   p.eliminatedRank = elimCount + 1;
   p.forfeited = true;
+  _rivalryClear(idx);   // v1.0.158
+  G.battleRoll = null;  // v1.0.159: a dice roll in progress is dropped (its timers die with the forfeit); the attacker picks again
   p.sanctioned = false;   // v1.0.113: leavers are Eliminated, never Sanctioned
   p.hand = [];
   p.mana = 0;
@@ -293,6 +307,7 @@ function forfeitPlayer(idx, reason) {
   if (p.wcEffects) for (const k of Object.keys(p.wcEffects)) p.wcEffects[k] = (typeof p.wcEffects[k] === 'number') ? 0 : false;
   p.hemorrhageStacks = 0; p.hemorrhageAmt = 0; p._hemorrhageIncomeReduction = 0;
   if (G.stalemateData && G.stalemateData.attackerIdx === idx) G.stalemateData = null;
+  if (G.stalemates) delete G.stalemates[idx];   // v1.0.163
 
   log(reason === 'removed'
     ? `🚪 ${p.name} was removed by the host — out of the game`

@@ -10,7 +10,7 @@
 
 'use strict';
 
-globalThis.SERVER_VERSION = 'v1.0.152';   // v1.0.152: Wild Cards v2 batch 3 — Sever (wild monsters), Phoenix Pact; Death Sentence 20%
+globalThis.SERVER_VERSION = 'v1.0.165';   // v1.0.165: Levy text says skipping or selling the shop uses it up (01-data, 08-handlers, 04). Was v1.0.164: v1.0.164: turn summary sends incomeLines + income so board and phone show the same breakdown (04-abilities-income.js). Was v1.0.163: v1.0.163: one pending stalemate per player (a later stalemate no longer wipes yours) + skipped if the tile is no longer an enemy's (06-turns, 08-handlers, 05, 07, 02). Was v1.0.162: battle-dice timers (12 s auto-roll, 8 s fallback) are cancelled once they are no longer needed (02-rooms-log.js, 08-handlers.js, 09-battle-outcome.js). Was v1.0.161: the fight waits for the board's battle_dice_settled (all dice landed + hold), 8 s fallback (09-battle-outcome.js, 08-handlers.js, 03-combat.js). Was v1.0.160: Healing Spring heal + skip no longer ends the next player's turn (08-handlers.js, 11-bots.js). Was v1.0.159: battle dice (black / white, lobby toggle, 12 s auto-roll) — 03-combat.js, 08-handlers.js attack → _attack_resolve, 09-battle-outcome.js. Was v1.0.158: Rivalry.
 // prev: v1.0.151;   // v1.0.151: Wild Cards v2 batch 2 — Parry, Aegis, Disarm, Flurry
 // prev: v1.0.150;   // v1.0.150: Wild Cards v2 batch 1 — Levy, Keen Edge, Wellspring, Bane Ground, Bargain, Patronage
 // prev: v1.0.149;   // v1.0.149: no refund once a Wild Card is face-up — Back only before the reveal, Discard (Mana lost) on the target screens

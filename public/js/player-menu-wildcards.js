@@ -779,13 +779,13 @@ function doHealTile() {
   send('heal_tile_apply', {});
 }
 
-function doTempleTrade() {
-  if (!selectedIid || !tradeIid) return;
+// v0.5.69: Temple v2
+function doTempleOffer(iid) {
+  if (iid == null) return;
   SFX.temple();
-  send('temple_trade', { specialIid: selectedIid, sacrificeIid: tradeIid });
-  selectedIid = null;
-  tradeIid = null;
+  send('temple_offer', { iid });
 }
+function doTempleLeave() { send('temple_leave'); }
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
 connect();

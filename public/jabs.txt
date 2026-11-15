@@ -1,0 +1,9 @@
+# Jabs shown under "DENIED" when a player loses again to someone they hold a grudge against.
+# One jab per line. Add, remove or rewrite freely. Blank lines and lines starting with # are skipped.
+# The board reads this file when it loads, so refresh the board page after editing.
+The better player won today.
+Winners keep winning.
+Same result, different tile.
+Maybe next time.
+Some grudges just get heavier.
+Still not your day.

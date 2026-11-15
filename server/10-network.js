@@ -526,7 +526,7 @@ server.on('upgrade', (req, socket, head) => {
       if (!handler) { sendError(socket, 'Unknown action: ' + action); continue; }
 
       // v1.0.134: crash trail — who did what (hands and keys left out)
-      if (conn.roomCode && action !== 'client_error' && action !== 'sanction_preview' && action !== 'wildcard_preview' && action !== 'preview_attacker') {
+      if (conn.roomCode && action !== 'client_error' && action !== 'client_review' && action !== 'sanction_preview' && action !== 'wildcard_preview' && action !== 'temple_preview' && action !== 'preview_attacker') {
         const _who = conn.isBoard ? 'BOARD' : conn.isSpectator ? 'spectator' : ((rooms.get(conn.roomCode) || {}).players || [])[conn.playerIdx]?.name || 'phone';
         const _d = Object.keys(data).filter(k => k !== 'action' && k !== 'hostKey' && k !== 'sessionKey').map(k => k + '=' + JSON.stringify(data[k]).slice(0, 30)).join(' ');
         trail(conn.roomCode, `> ${_who}: ${action}${_d ? ' ' + _d : ''}`);
@@ -549,7 +549,7 @@ server.on('upgrade', (req, socket, head) => {
         _gotCode = G && G.roomCode;
       });
       // v1.0.135: live log line for the action (client_perf / client_error log themselves)
-      if (action !== 'client_perf' && action !== 'client_error') {
+      if (action !== 'client_perf' && action !== 'client_error' && action !== 'client_review') {
         const _code = conn.roomCode || _gotCode;
         const _room = _code && rooms.get(_code);
         const _who = conn.isBoard ? 'BOARD' : conn.isSpectator ? 'spectator' : (_room && _room.players[conn.playerIdx] ? _room.players[conn.playerIdx].name : 'phone');

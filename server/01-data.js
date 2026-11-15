@@ -26,7 +26,7 @@ const ROSTER = [
   {id:'solar_knight',   type:'Light',  name:'Solar Knight',   arch:'assailant', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
   {id:'dawnguard',      type:'Light',  name:'Dawnguard',      arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
   {id:'high_paladin',   type:'Light',  name:'High Paladin',   arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'ardent_saint',   type:'Light',  name:'Ardent Saint',   arch:'ascendant', hp:65, maxHp:65, atk:25, def:15, cost:20, gen:5, isSpecial:true,
+  {id:'ardent_saint',   type:'Light',  name:'Ardent Saint',   arch:'ascendant', hp:65, maxHp:65, atk:25, def:15, cost:10, gen:5, isSpecial:true,
     special:'Aura of Renewal',  specialDesc:'Heal all friendly stationed summons 5 HP/turn',
     condition:'healed2', conditionDesc:'Healed 2+ summons this game'},
   // Light — new
@@ -39,7 +39,7 @@ const ROSTER = [
   {id:'void_sentinel',  type:'Dark',   name:'Void Sentinel',  arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
   {id:'shadow_paladin', type:'Dark',   name:'Shadow Paladin', arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
   // v1.0.141 HP buff: Succubus 45→65, Arcane Arbiter 40→60, Red Dragon 40→60; Rares Luminar 35→55, Hex Stalker 42→60, Verdant Sorcerer 30→55
-  {id:'succubus',       type:'Dark',   name:'Succubus',       arch:'ascendant', hp:65, maxHp:65, atk:32, def:10, cost:20, gen:5, isSpecial:true,
+  {id:'succubus',       type:'Dark',   name:'Succubus',       arch:'ascendant', hp:65, maxHp:65, atk:32, def:10, cost:10, gen:5, isSpecial:true,
     special:'Mana Drain', specialDesc:'Win or stalemate → steal 10 Mana from opponent',
     condition:'mana40', conditionDesc:'Have at least 40✦ Mana'},
   // Dark — new
@@ -51,7 +51,7 @@ const ROSTER = [
   {id:'sorcerer',       type:'Arcane', name:'Sorcerer',       arch:'assailant', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
   {id:'rune_priestess', type:'Arcane', name:'Rune Priestess', arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
   {id:'arch_mage',      type:'Arcane', name:'Arch Mage',      arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'arcane_arbiter', type:'Arcane', name:'Arcane Arbiter', arch:'ascendant', hp:60, maxHp:60, atk:40, def:15, cost:20, gen:5, isSpecial:true,
+  {id:'arcane_arbiter', type:'Arcane', name:'Arcane Arbiter', arch:'ascendant', hp:60, maxHp:60, atk:40, def:15, cost:10, gen:5, isSpecial:true,
     special:'Chaos Flux', specialDesc:'After any battle or stalemate against it, one random attacker-owned tile changes to a random element',
     condition:'changed1Arcane', conditionDesc:'Changed 1+ tile to Arcane element this game'},
   // Arcane — new
@@ -63,7 +63,7 @@ const ROSTER = [
   {id:'bone_wraith',    type:'Undead', name:'Bone Wraith',    arch:'assailant', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
   {id:'death_knight',   type:'Undead', name:'Death Knight',   arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
   {id:'shade_walker',   type:'Undead', name:'Shade Walker',   arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'demon_lord',     type:'Undead', name:'Demon Lord',     arch:'ascendant', hp:85, maxHp:85, atk:40, def:8,  cost:20, gen:5, isSpecial:true,
+  {id:'demon_lord',     type:'Undead', name:'Demon Lord',     arch:'ascendant', hp:85, maxHp:85, atk:40, def:8,  cost:10, gen:5, isSpecial:true,
     special:'Last Rite', specialDesc:'When HP hits 0, survive at 15 HP instead (once per game)',
     condition:'lost2', conditionDesc:'Had 2+ summons destroyed in battle this game', lastRiteUsed:false},
   // Undead — new
@@ -75,7 +75,7 @@ const ROSTER = [
   {id:'razorclaw',      type:'Beast',  name:'Razorclaw',      arch:'assailant', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
   {id:'iron_hide',      type:'Beast',  name:'Iron Hide',      arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
   {id:'pack_hunter',    type:'Beast',  name:'Pack Hunter',    arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'red_dragon',     type:'Beast',  name:'Red Dragon',     arch:'ascendant', hp:60, maxHp:60, atk:50, def:9,  cost:20, gen:5, isSpecial:true,
+  {id:'red_dragon',     type:'Beast',  name:'Red Dragon',     arch:'ascendant', hp:60, maxHp:60, atk:50, def:9,  cost:10, gen:5, isSpecial:true,
     special:'Intimidate', specialDesc:'Adjacent enemy stationed summons cost their owner 5✦ at the start of each affected player\'s turn',
     condition:'stationed3', conditionDesc:'Have 3+ summons stationed on board'},
   // Beast — new
@@ -87,7 +87,7 @@ const ROSTER = [
   {id:'thornling',      type:'Nature', name:'Thornling',      arch:'assailant', hp:20, maxHp:20, atk:40, def:5,  cost:8,  gen:2, isSpecial:false},
   {id:'ancient_oak',    type:'Nature', name:'Ancient Oak',    arch:'guardian',  hp:60, maxHp:60, atk:18, def:12, cost:12, gen:3, isSpecial:false},
   {id:'grove_warden',   type:'Nature', name:'Grove Warden',   arch:'vanguard',  hp:35, maxHp:35, atk:25, def:9,  cost:10, gen:2, isSpecial:false},
-  {id:'world_tree',     type:'Nature', name:'World Tree',     arch:'ascendant', hp:65, maxHp:65, atk:12, def:13, cost:20, gen:5, isSpecial:true,
+  {id:'world_tree',     type:'Nature', name:'World Tree',     arch:'ascendant', hp:65, maxHp:65, atk:12, def:13, cost:10, gen:5, isSpecial:true,
     special:'Deep Roots', specialDesc:'+1 Mana Gen per Nature tile owned + per Nature summon stationed on any of your tiles',
     condition:'own2Nature', conditionDesc:'Own 2+ Nature tiles currently'},
   // Nature — new
@@ -123,6 +123,10 @@ const ROSTER = [
 ];
 
 const SPECIALS  = ROSTER.filter(m => m.isSpecial);
+// v1.0.155: Temple v2 — offer a summon, receive its element's Ascendant for TEMPLE_COST. Ascendant cost 20 → 10 (sell refund max 10).
+const TEMPLE_COST = 15;
+function templeAscendantFor(m) { return SPECIALS.find(s => s.type === m.type) || null; }
+function templeCanOffer(m) { return !!(m && m.type && !m.isSpecial && m.rarity !== 'rare' && m.rarity !== 'support' && templeAscendantFor(m)); }
 const RARES     = ROSTER.filter(m => m.rarity === 'rare');
 const SUPPORTS  = ROSTER.filter(m => m.rarity === 'support');
 const NORMALS   = ROSTER.filter(m => !m.isSpecial && !m.rarity);
@@ -136,7 +140,7 @@ const WILD_CARD_POOLS = {
     { id:'delay',   name:'Delay',   cost:5, tier:'low',  target:'player',      desc:'Force a target player to skip their shop phase next turn' },
     { id:'jinx',    name:'Jinx',    cost:5, tier:'low',  target:'player',      desc:"Target player's passive mana income next turn is halved" },
     // v1.0.150 — Wild Cards v2, batch 1
-    { id:'levy',        name:'Levy',        cost:5, tier:'low', target:'player',        desc:"Target player's next shop buy costs +50%" },
+    { id:'levy',        name:'Levy',        cost:5, tier:'low', target:'player',        desc:"Target player's next shop: buys cost +50%. Skipping or selling uses it up" },
     { id:'keen_edge',   name:'Keen Edge',   cost:5, tier:'low', target:'own_summon',    desc:"One of your summons (hand or stationed) strikes +25% on its next strike" },
     { id:'wellspring',  name:'Wellspring',  cost:5, tier:'low', target:'self',          desc:'Gain 15✦ right now' },
     { id:'bane_ground', name:'Bane Ground', cost:5, tier:'low', target:'enemy_station', desc:"An enemy summon's tile permanently becomes the element that beats it" },
@@ -296,6 +300,10 @@ function dealStarterHand(setKey, existingPlayers) {
 
 const PLAYER_COLORS = ['#e05252','#5ca8e0','#5dc97d','#e0b050','#c07fd8','#60cdc0'];
 const CHANGE_ELEMENT_COST = 18;
+// v1.0.153: Claim fee — Claim / Swap charge a fixed deploy fee per archetype instead of the buy price.
+// Buy price, sell refund (cost × HP/maxHP) and Free Summon are unchanged. Setup stays free.
+const CLAIM_FEE = { assailant:6, vanguard:6, guardian:8, ascendant:8, rare:10, support:8 };
+function claimFee(m) { return m ? (CLAIM_FEE[m.arch] ?? m.cost) : 0; }
 const MANA_PENALTY        = 8;
 const HEAL_COST_PER_HP    = 1.5;
 const DEFAULT_ROUND_LIMIT = 20; // rounds per player (selectable in lobby: 10/20/30)

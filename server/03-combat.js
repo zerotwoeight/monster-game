@@ -36,6 +36,14 @@ function typeMultiplier(attacker, defender, nullify = false) {
 // v1.0.128: homeAtk = this strike is by the stationed defender (counter-strike / Stormtalon first strike).
 // On its own element tile it hits with +15% ATK, on top of the +15% DEF it already gets there.
 const HOME_ATK_BONUS = 1.15;
+// v1.0.159: BATTLE DICE (host lobby toggle, on by default). Each player rolls a black die (the hit they deal) and a
+// white die (the hit they take). First strike / Flurry = attacker black × defender white; counter-strike and
+// Stormtalon's first strike = defender black × attacker white. Replaces the flat +0 to 3 roll. A 6 stacks with
+// Battle Charm, Ambush and the rest. Tables tuned in /battle-tester.html; set while a battle resolves.
+const DICE_BLACK = [0.5, 0.9, 1.0, 1.1, 1.2, 1.5];     // roll 1 Glancing … 6 Critical
+const DICE_WHITE = [1.25, 1.1, 1.0, 0.9, 0.8, 0.6];    // roll 1 Exposed … 6 Braced (damage taken)
+const BATTLE_DICE_MS = { auto: 12000, show: 1700, bot: 900, wait: 8000 };   // tap window · pause to show the dice before the fight (no board) · bot / absent players roll after · v1.0.161: longest wait for the board's "dice settled"
+let _battleDice = null;   // { ab, aw, db, dw } for the battle being resolved, else null (flat roll)
 function doStrike(attacker, defender, tile, nullify = false, bonusRun = false, monoBuff = false, homeAtk = false) {
   // v1.0.129: homeAtk = the defender is striking, so the one being hit is the visiting attacker —
   // the tile is not its home, so the tile's DEF bonus / penalty never applies to it.
@@ -48,8 +56,13 @@ function doStrike(attacker, defender, tile, nullify = false, bonusRun = false, m
   }
   const baseDmg = Math.max(1, atkStat - defStat);
   const typeMod = typeMultiplier(attacker, defender, nullify);
-  const roll    = rand(0, 3);
+  const roll    = _battleDice ? 0 : rand(0, 3);
   let dmg = Math.round(baseDmg * typeMod) + roll;
+  if (_battleDice) {   // v1.0.159: homeAtk = the defender is striking
+    const b = homeAtk ? _battleDice.db : _battleDice.ab, w = homeAtk ? _battleDice.aw : _battleDice.dw;
+    const d0 = dmg; dmg = Math.round(dmg * DICE_BLACK[b - 1] * DICE_WHITE[w - 1]);
+    log(`🎲 ${attacker.name}: ⚫${b} ×${DICE_BLACK[b - 1]} · ⚪${w} ×${DICE_WHITE[w - 1]} → ${d0} becomes ${dmg}`);
+  }
   if (attacker.charm) {
     dmg = Math.round(dmg * 1.25);
     attacker.charm = false;

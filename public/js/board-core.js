@@ -212,6 +212,7 @@ const PHASE_LABELS = {
   'resolve:heal_tile':'Healing Tile',game_over:'Game Over',
   'resolve:wildcard_cards':'🃏 Wild Card',
   'resolve:wildcard_target':'🃏 Wild Card',
+  'resolve:wildcard_reveal':'🃏 Wild Card','resolve:well':'Mana Well',   // v0.6.86: were showing the raw phase name
   'resolve:wildcard_coup_tile':'🃏 Coup — Pick Tile',
   'resolve:wildcard_coup_summon':'🃏 Coup — Deploy',
   'resolve:wildcard_shatter':'🃏 Shatter',
@@ -255,52 +256,9 @@ function send(action, data = {}) {
 const SVG_FNS = {Light:svgLight,Dark:svgDark,Arcane:svgArcane,Undead:svgUndead,Beast:svgBeast,Nature:svgNature};
 function artSVG(type,w,h){ const c=TYPE_COLOR[type]||'#9397ab'; const fn=SVG_FNS[type]; return fn?fn(c,w,h):''; }
 
+// v0.6.80: the board now uses the shared phone card (/js/card.js + /css/card.css) — one card design for both screens.
 function renderBoardCard(m, hpOverride) {
-  if (!m) return '';
-  const isRare    = m.rarity === 'rare';
-  const isSupport = m.rarity === 'support';
-  const SUPPORT_COLOR = '#9aabbc';
-  const c  = isSupport ? SUPPORT_COLOR : (TYPE_COLOR[m.type]  || '#9184d9');
-  const c2 = m.type2 ? (TYPE_COLOR[m.type2] || '#9184d9') : null;
-  const displayHp = (hpOverride !== undefined) ? Math.max(0, hpOverride) : m.hp;
-  const pct = Math.max(0, Math.min(1, displayHp / m.maxHp));
-  const hpColor = pct < .35 ? '#b05050' : c;
-  let border, shadow;
-  if (isSupport) {
-    border = SUPPORT_COLOR;
-    shadow = `box-shadow:0 0 0 2px ${SUPPORT_COLOR}99,0 0 18px ${SUPPORT_COLOR}33`;
-  } else if (isRare) {
-    border = c;
-    shadow = `box-shadow:0 0 0 2px ${c}99,0 0 0 3.5px ${c2}66,0 0 22px ${c}44`;
-  } else if (m.isSpecial) {
-    border = `${c}cc`;
-    shadow = `box-shadow:0 0 0 2.5px ${c}33,0 0 22px ${c}44`;
-  } else {
-    border = `${c}88`;
-    shadow = `box-shadow:0 0 14px ${c}28`;
-  }
-  const art = m.id ? summonImg(m.id) : artSVG(m.type, 130, 186);
-  const typeLabel = isSupport
-    ? `<span style="color:${SUPPORT_COLOR}">Support</span>`
-    : m.type2
-      ? `<span style="color:${c}">${m.type}</span><span style="color:rgba(255,255,255,.4)">/</span><span style="color:${c2}">${m.type2}</span>`
-      : `<span style="color:${c}">${m.type}</span>`;
-  return `<div class="board-summon-card" style="border-color:${border};${shadow}">
-    ${m.isSpecial ? `<div class="bmc-special">✦ Ascendant</div>` : ''}
-    ${isRare ? `<div class="bmc-special" style="color:#c8aaff;border-color:rgba(200,170,255,.45);background:rgba(145,132,217,.18);">★ Rare</div>` : ''}
-    ${isSupport ? `<div class="bmc-special" style="color:${SUPPORT_COLOR};border-color:${SUPPORT_COLOR}66;background:rgba(154,171,188,.15);">◈ Support</div>` : ''}
-    ${m.charm ? `<div style="position:absolute;top:4px;right:4px;width:14px;height:14px;border-radius:50%;background:#c9a05a;box-shadow:0 0 8px #c9a05acc;z-index:3;display:flex;align-items:center;justify-content:center;font-size:8px;line-height:1;" title="Battle Charm">⚡</div>` : ''}
-    <div class="bmc-art">${art}</div>
-    <div class="bmc-overlay">
-      <div class="bmc-name" style="color:${c}">${m.name}</div>
-      <div class="bmc-hp-row"><div class="bmc-hp-track"><div class="bmc-hp-fill" style="width:${Math.round(pct*100)}%;background:${hpColor};transition:width .5s ease,background .5s ease;"></div></div><span class="bmc-hp-num">${displayHp}/${m.maxHp}</span></div>
-      ${isSupport && m.supportDesc ? `<div style="font-size:7.5px;color:${SUPPORT_COLOR};text-align:center;line-height:1.3;margin-top:2px;padding:0 2px;">${m.supportDesc}</div>` : `<div class="bmc-stats">
-        <div class="bmc-stat"><span class="bmc-stat-lbl">ATK</span><span class="bmc-stat-val">${m.atk}</span></div>
-        <div class="bmc-stat"><span class="bmc-stat-lbl">DEF</span><span class="bmc-stat-val">${m.def}</span></div>
-        <div class="bmc-stat"><span class="bmc-stat-lbl">TYPE</span><span class="bmc-stat-val" style="font-size:7px;">${typeLabel}</span></div>
-      </div>`}
-    </div>
-  </div>`;
+  return renderCard(m, { size:'full', hpOverride, extraClass:'board-summon-card' });
 }
 
 // ─── Player sigil SVG ──────────────────────────────────────────────────────────────────────────
@@ -729,13 +687,8 @@ function connect(){
           }
         }
         // Phase-transition sound cues
-        if (newG.phase === 'resolve:battle_result' && prevPhase !== 'resolve:battle_result' && newG.lastBattle) {
-          const oc = newG.lastBattle.outcome;
-          if      (oc === 'attacker_wins') SFX.battleWin();
-          else if (oc === 'defender_wins') SFX.battleLose();
-          else if (oc === 'mutual')        SFX.battleMutual();
-          else if (oc === 'stalemate')     SFX.battleStalemate();
-        }
+        // v0.6.90: the battle outcome chord moved to _battleReveal() (board-render.js) — it used to play here, the
+        // instant the battle opened, 1–3 s before the outcome was on screen.
         // ── Round callout / game-over fanfare ────────────────────────────
         if (newG.phase === 'resolve:round_callout' && _roundCalloutTriggered !== newG.roundCallout) {
           _roundCalloutTriggered = newG.roundCallout;
@@ -746,7 +699,7 @@ function connect(){
         }
         if (newG.phase === 'game_over' && !_goFanfareTriggered) {
           _goFanfareTriggered = true;
-          _fireGameOverFanfare();
+          _fireGameOverWhenClear();   // v0.7.3: waits for a Wild Card / Temple card still on screen
         }
         if (!startedHop) render();
       }

@@ -265,7 +265,7 @@ function renderClaim() {
   const tile = G.board[me.position];
   const pickerCards = myHand.map((m, i) => renderCard(m, {
     size:'full',
-    dim: me.mana < m.cost || !(m.canUse ?? true),
+    dim: me.mana < (m.claimFee ?? m.cost) || !(m.canUse ?? true),
     onclick: `openClaimDetail(${i})`,
     ..._groundOpts(m, tile && tile.element),   // v0.5.44: home / weak ground highlight, same as setup
   })).join('');
@@ -301,9 +301,10 @@ function _pickerBar(hintHtml, buttonsHtml) {
 // CLAIM
 function _claimAction(m) {
   const me = G.players[myIdx];
-  const label = `Claim · ${m.cost} ✦`;
+  const fee = m.claimFee ?? m.cost;   // v0.5.63: Claim fee (deploy), not the buy price
+  const label = `Claim · ${fee} ✦`;
   if (m.canUse === false) return { label, kind:'claim', disabled:true, reason:`🔒 Locked${m.conditionDesc ? ' — ' + m.conditionDesc : ''}` };
-  if (me.mana < m.cost)  return { label, kind:'claim', disabled:true, reason:`Need ${m.cost - me.mana} more ✦ (you have ${me.mana})` };
+  if (me.mana < fee)  return { label, kind:'claim', disabled:true, reason:`Need ${fee - me.mana} more ✦ (you have ${me.mana})` };
   const t = G.board[me.position];
   return { label, kind:'claim', hint: t && t.element ? `Station on Tile ${me.position} · ${t.element}` : '', run: (mm) => { selectedIid = mm.iid; doClaim(); } };
 }
@@ -343,28 +344,36 @@ function openBattleDetail(i) {
   });
 }
 
-// TEMPLE — step 1: choose Ascendant; step 2: choose matching sacrifice
-function _templeOfferAction(o) {
-  const me = G.players[myIdx];
-  const label = `Choose · ${o.cost} ✦`;
-  if (!myHand.some(m => m.type === o.type && !m.isSpecial)) return { label, kind:'primary', disabled:true, reason:`Needs ${/^[AEIOU]/.test(o.type)?'an':'a'} ${o.type} summon in your hand to trade` };
-  if (me.mana < o.cost) return { label, kind:'primary', disabled:true, reason:`Need ${o.cost - me.mana} more ✦ (you have ${me.mana})` };
-  return { label, kind:'primary', hint:'Next: pick which summon to give up', run: (oo) => { selectedIid = oo.iid; tradeIid = null; render(); } };
+// TEMPLE v2 (v0.5.69): offer a summon → its element's Ascendant. Rares, Support and Ascendants can't be offered.
+function _templeCanOffer(m) { return !!(m && m.type && !m.isSpecial && m.rarity !== 'rare' && m.rarity !== 'support' && G.pendingTemple && G.pendingTemple.ascendants && G.pendingTemple.ascendants[m.type]); }
+function _templeOfferable() { return myHand.filter(_templeCanOffer); }
+function _templeSlide(m) {
+  const asc = G.pendingTemple.ascendants[m.type];
+  const me = G.players[myIdx], cost = G.pendingTemple.cost, left = me.mana - cost;
+  const cond = asc.canUse
+    ? `<div class="tp-cond ok">✅ Unlocked: ${asc.conditionDesc || 'ready to use'}</div>`
+    : `<div class="tp-cond no">❌ Not yet: ${asc.conditionDesc}. You can still take it; it stays locked until then.</div>`;
+  const tally = me.mana < cost
+    ? `<div class="tp-tally bad"><span>${me.mana}✦</span><span class="op">−</span><span class="c">${cost}✦</span><span class="op">=</span><span>short ${cost - me.mana}✦</span></div>`
+    : `<div class="tp-tally"><span>${me.mana}✦</span><span class="op">−</span><span class="c">${cost}✦</span><span class="op">=</span><span>${left}✦</span></div>`;
+  return `<div class="tp-slide">
+    <div class="tp-q">Offer ${m.name}?</div>
+    <div class="tp-trade"><div class="tp-give">${renderCard(m, {size:'full'})}</div><div class="tp-arrow">➜</div><div class="tp-get">${renderCard(asc, {size:'full'})}</div></div>
+    <div class="tp-info"><span class="tp-ab">${asc.special || asc.name}</span> · ${asc.specialDesc || ''}${cond}</div>
+    ${tally}
+  </div>`;
 }
-function openTempleOfferDetail(i) { openDetailSheet(G.pendingTemple.offers, i, _templeOfferAction, { title:'Temple · Ascendants' }); }
-function _templeSacAction(m) {
-  const me = G.players[myIdx];
-  const sp = G.pendingTemple.offers.find(o => o.iid === selectedIid);
-  if (!sp) return null;
-  const label = `Trade for ${sp.name} · ${sp.cost} ✦`;
-  if (me.mana < sp.cost) return { label, kind:'gold', disabled:true, reason:`Need ${sp.cost - me.mana} more ✦ (you have ${me.mana})` };
-  return { label, kind:'gold', hint:`${m.name} is given up permanently`, run: (mm) => { tradeIid = mm.iid; doTempleTrade(); } };
+function _templeAction(m) {
+  const me = G.players[myIdx], cost = G.pendingTemple.cost;
+  const label = `Offer · ${cost} ✦`;
+  const alt = { label:'Leave Temple', run: () => doTempleLeave() };
+  if (me.mana < cost) return { label, kind:'gold', disabled:true, reason:`Need ${cost - me.mana} more ✦ (you have ${me.mana})`, alt };
+  return { label, kind:'gold', alt, run: (mm) => doTempleOffer(mm.iid) };
 }
-function openTempleSacDetail(i) {
-  const sp = G.pendingTemple.offers.find(o => o.iid === selectedIid);
-  if (!sp) return;
-  const list = myHand.filter(m => m.type === sp.type && !m.isSpecial);
-  openDetailSheet(list, i, _templeSacAction, { title:'Give Up a Summon' });
+function openTempleOfferDetail(i) {
+  openDetailSheet(_templeOfferable(), i, _templeAction, { title:'Temple Offering', renderItem:_templeSlide,
+    onChange: m => send('temple_preview', { iid: m.iid }),          // the board mirrors the card being looked at
+    onClose: () => send('temple_preview', { iid: null }) });
 }
 
 // ─── NOTIFICATION OVERLAY ────────────────────────────────────────────────────
@@ -787,7 +796,7 @@ function renderOwn() {
 
   const swapCards = myHand.map((m, i) => renderCard(m, {
     size:'full',
-    dim: me.mana < m.cost || !(m.canUse ?? true),
+    dim: me.mana < (m.claimFee ?? m.cost) || !(m.canUse ?? true),
     onclick: `openSwapDetail(${i})`,
     ..._groundOpts(m, tile && tile.element),   // v0.5.44
   })).join('');
@@ -839,9 +848,10 @@ function _swapAction(m) {
   const me = G.players[myIdx];
   const t = G.board[me.position];
   const st = t && t.summon;
-  const label = `Swap in · ${m.cost} ✦`;
+  const fee = m.claimFee ?? m.cost;   // v0.5.63: Claim fee (deploy), not the buy price
+  const label = `Swap in · ${fee} ✦`;
   if (m.canUse === false) return { label, kind:'primary', disabled:true, reason:`🔒 Locked${m.conditionDesc ? ' — ' + m.conditionDesc : ''}` };
-  if (me.mana < m.cost)  return { label, kind:'primary', disabled:true, reason:`Need ${m.cost - me.mana} more ✦ (you have ${me.mana})` };
+  if (me.mana < fee)  return { label, kind:'primary', disabled:true, reason:`Need ${fee - me.mana} more ✦ (you have ${me.mana})` };
   return { label, kind:'primary', hint: st ? `${st.name} returns to your hand (${st.hp}/${st.maxHp} HP)` : '', run: (mm) => { selectedIid = mm.iid; doSwap(); } };
 }
 function openSwapDetail(i) { const t = G.board[G.players[myIdx].position]; openDetailSheet(myHand, i, _swapAction, { title:'Swap Summon', renderItem: m => _groundSlide(m, t && t.element) }); }   // v0.5.44
@@ -958,52 +968,35 @@ function renderChest() {
   }
 }
 
-// ─── TEMPLE ──────────────────────────────────────────────────────────────────
+// ─── TEMPLE (v2, v0.5.69) ────────────────────────────────────────────────────
 function renderTemple() {
-  const me = G.players[myIdx];
   if (!G.pendingTemple) return;
-
   updateStatusBar(true);
   updateHandStrip(false);
   document.getElementById('main-content').classList.add('no-hand');
-
-  const selSpecial = G.pendingTemple.offers.find(o => o.iid === selectedIid);
-  const selSacrifice = selSpecial ? myHand.find(m => m.iid === tradeIid) : null;
-
-  const specialCards = G.pendingTemple.offers.map((o, oi) => {
-    const canTrade = myHand.some(m => m.type === o.type) && me.mana >= o.cost;
-    return `<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px">
-      ${renderCard(o, {size:'full', selected: selectedIid===o.iid, dim: !canTrade, onclick:`openTempleOfferDetail(${oi})`})}
-      <div style="font-size:10px;color:var(--text-mute);font-family:'Cinzel',serif;letter-spacing:.08em">${o.type}</div>
-    </div>`;
-  }).join('');
-
-  const sacrificeable = selSpecial
-    ? myHand.filter(m => m.type === selSpecial.type && !m.isSpecial)
-    : myHand.filter(m => G.pendingTemple.offers.some(o => o.type === m.type));
-  const sacrificeCards = sacrificeable.map((m, si) =>
-    renderCard(m, {size:'full', showCost:false, onclick:`openTempleSacDetail(${si})`})
-  ).join('');
-
-  document.getElementById('main-content').innerHTML = `
+  const list = _templeOfferable();
+  const banner = `
     <div class="resolve-banner temple">
       <span class="resolve-icon">🏛</span>
       <div>
-        <div class="resolve-title">Temple of Ascendants</div>
-        <div class="resolve-sub">Trade a matching summon for an Ascendant. You can only use it if the condition is met.</div>
+        <div class="resolve-title">The Temple</div>
+        <div class="resolve-sub">Offer a summon. The Temple answers with its element's Ascendant.</div>
       </div>
-    </div>
-    <div class="picker-label">Ascendant offers (3)</div>
-    <div class="picker-scroll" id="temple-special-scroll"><div class="scroll-inner">${specialCards}</div></div>
-    ${scrollNavHTML('temple-special-scroll','temple-sp-dot',G.pendingTemple.offers.length)}
-    <div style="height:12px"></div>
-    ${selSpecial ? `<div class="picker-label">Sacrifice a ${selSpecial.type} summon (${selSpecial.cost} ✦)</div><div class="picker-scroll" id="temple-sac-scroll"><div class="scroll-inner">${sacrificeCards}</div></div>${scrollNavHTML('temple-sac-scroll','temple-sac-dot',sacrificeable.length)}` : `<div style="padding:0 16px 16px;font-size:12px;color:var(--text-mute)">Tap an Ascendant above to see details and choose it.</div>`}`;
-
-  attachShopScrollListener('temple-special-scroll','temple-sp-dot',G.pendingTemple.offers.length);
-  if (selSpecial) attachShopScrollListener('temple-sac-scroll','temple-sac-dot',sacrificeable.length);
-
-  _pickerBar(selSpecial ? `Tap a <b>${selSpecial.type}</b> summon to give up` : 'Tap an Ascendant to view and <b>choose</b>',
-    `${selSpecial ? `<button class="action-btn secondary" onclick="selectedIid=null;tradeIid=null;render()">Back</button>` : ''}<button class="action-btn secondary" onclick="send('temple_leave')">Leave</button>`);
+    </div>`;
+  if (!list.length) {
+    document.getElementById('main-content').innerHTML = banner + `
+      <div class="tp-empty">You have no summon the Temple will accept.<br><span>Rares, Support cards and Ascendants can't be offered.</span></div>`;
+    _pickerBar('', `<button class="action-btn gold-btn" onclick="doTempleLeave()">Leave Temple</button>`);
+    return;
+  }
+  const cards = list.map((m, i) => renderCard(m, {size:'full', onclick:`openTempleOfferDetail(${i})`})).join('');
+  document.getElementById('main-content').innerHTML = banner + `
+    <div class="picker-label">${list.length} summon${list.length > 1 ? 's' : ''} you can offer</div>
+    <div class="picker-scroll" id="temple-offer-scroll"><div class="scroll-inner">${cards}</div></div>
+    ${scrollNavHTML('temple-offer-scroll','temple-off-dot',list.length)}`;
+  attachShopScrollListener('temple-offer-scroll','temple-off-dot',list.length);
+  _pickerBar('Tap a summon to see what it becomes',
+    `<button class="action-btn secondary" onclick="doTempleLeave()">Leave Temple</button>`);
 }
 
 // ─── HEAL TILE ───────────────────────────────────────────────────────────────

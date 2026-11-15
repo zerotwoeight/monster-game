@@ -394,12 +394,13 @@ function collectPassiveIncome(playerIdx) {
     }
   }
 
+  let _hemoLoss = 0;
   // Tile upkeep — 1 Mana per owned tile (applies from round 2 onward)
   const ownedTileCount = G.board.filter(t => t.ownerId === playerIdx).length;
   let upkeep = 0;
   if (ownedTileCount > 0) {
-    upkeep = ownedTileCount;
-    p.mana = Math.max(0, p.mana - upkeep);
+    upkeep = Math.min(p.mana, ownedTileCount);   // v1.0.164: what was actually paid (Mana floors at 0)
+    p.mana = Math.max(0, p.mana - ownedTileCount);
     log(`🏗️ ${p.name} pays ${upkeep}✦ upkeep for ${ownedTileCount} tile${ownedTileCount > 1 ? 's' : ''}`);
   }
 
@@ -407,6 +408,7 @@ function collectPassiveIncome(playerIdx) {
   if (p._hemorrhageIncomeReduction) {
     const reduction = Math.min(earned, p._hemorrhageIncomeReduction);
     earned = Math.max(0, earned - reduction);
+    _hemoLoss = reduction;
     log(`🗡️ Hemorrhage: ${p.name}'s Mana income reduced by ${reduction}✦ (Dusk Blade curse)`);
     p._hemorrhageIncomeReduction = 0;
   }
@@ -414,11 +416,13 @@ function collectPassiveIncome(playerIdx) {
   // Wild card effects on income — snapshot flags before clearing
   const hadWindfall = p.wcEffects.windfall;
   const hadJinx = p.wcEffects.jinx;
+  const _preWc = earned;
   if (p.wcEffects.windfall) { earned = earned * 3; p.wcEffects.windfall = false; log(`🃏 Windfall! ${p.name}'s income tripled`); }
   if (p.wcEffects.jinx)    { const _before = earned; earned = Math.floor(earned * 0.5); p.wcEffects.jinx = false; log(`🃏 Jinx! ${p.name}'s income halved`); _wcTrigger('jinx', p, { before: _before, after: earned }); }   // v1.0.132
 
   const MANA_SOFT_CAP = 150;
   const softCapped = p.mana >= MANA_SOFT_CAP;
+  const _wcDelta = earned - _preWc, _preCap = earned;
   if (softCapped) {
     earned = Math.max(5, Math.floor(earned * 0.5)); // still earn baseline but halved above cap
   }
@@ -428,6 +432,19 @@ function collectPassiveIncome(playerIdx) {
     log(`⚠️ ${p.name} is over the ${MANA_SOFT_CAP}✦ soft cap — income reduced`);
   }
   log(`✦ ${p.name} earns ${earned} Mana (now ${p.mana})`);
+
+  // v1.0.164: one breakdown both screens show line for line. Sum of lines = income (the Mana change from this income step).
+  const incomeLines = [{ k: 'base', label: 'Base', val: 5 }, { k: 'summons', label: 'Summons', val: summonGen }];
+  if (spellWraithDrainTotal) incomeLines.push({ k: 'wraith', label: 'Spell Wraith drain', val: -spellWraithDrainTotal });
+  if (manaRefineryBonus)     incomeLines.push({ k: 'refinery', label: 'Mana Refinery', val: manaRefineryBonus });
+  if (_hemoLoss)             incomeLines.push({ k: 'hemorrhage', label: 'Hemorrhage', val: -_hemoLoss });
+  if (hadWindfall && hadJinx) incomeLines.push({ k: 'windfall', label: 'Windfall ×3 · Jinx ½', val: _wcDelta });
+  else if (hadWindfall)      incomeLines.push({ k: 'windfall', label: 'Windfall ×3', val: _wcDelta });
+  else if (hadJinx)          incomeLines.push({ k: 'jinx', label: 'Jinx ½', val: _wcDelta });
+  if (softCapped && earned !== _preCap) incomeLines.push({ k: 'softcap', label: 'Soft cap ½', val: earned - _preCap });
+  if (upkeep)                incomeLines.push({ k: 'upkeep', label: `Upkeep (${ownedTileCount} tile${ownedTileCount !== 1 ? 's' : ''})`, val: -upkeep });
+  if (intimidateLoss)        incomeLines.push({ k: 'intimidate', label: 'Red Dragon Intimidate', val: -intimidateLoss });
+  const income = incomeLines.reduce((a, l) => a + l.val, 0);
 
   // ── Build turn summary snapshot ───────────────────────────────────────────
   const wellBonus = p.lastTurnLandedOnWell ? 40 : 0;
@@ -448,7 +465,7 @@ function collectPassiveIncome(playerIdx) {
   // v1.0.150
   if (p.wcEffects.phoenix)  activeWcEffects.push({ id:'phoenix_pact', label:'Phoenix Pact', desc:'If your Mana hits 0 you come back at 30✦', color:'green' });   // v1.0.152
   if (p.wcEffects.flurry)   activeWcEffects.push({ id:'flurry',   label:'Flurry',   desc:'Next attack strikes twice',   color:'accent' });   // v1.0.151
-  if (p.wcEffects.levy)     activeWcEffects.push({ id:'levy',     label:'Levy',     desc:'Next shop buy costs +50%',    color:'red' });
+  if (p.wcEffects.levy)     activeWcEffects.push({ id:'levy',     label:'Levy',     desc:'Next shop: buys +50% (skip or sell uses it up)',    color:'red' });
   if (p.wcShop && p.wcShop.kind === 'bargain')   activeWcEffects.push({ id:'bargain',   label:'Bargain',   desc:'Next shop buy half price (skip or sell: +3✦)', color:'green' });
   if (p.wcShop && p.wcShop.kind === 'patronage') activeWcEffects.push({ id:'patronage', label:'Patronage', desc:`Shop buys free · ${p.wcShop.left} shop${p.wcShop.left !== 1 ? 's' : ''} left (skip or sell: +8✦)`, color:'green' });
 
@@ -480,6 +497,8 @@ function collectPassiveIncome(playerIdx) {
     jinxActive: hadJinx,
     softCapped,
     netEarned: earned,
+    incomeLines,   // v1.0.164
+    income,        // v1.0.164: total of incomeLines; board and phone both show this as the turn's income
     // HP bonuses
     tileSynergyCount,
     monoHealCount,

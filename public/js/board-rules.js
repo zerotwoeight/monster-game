@@ -8,10 +8,10 @@ const RR_PAGES = [
     ['🎲', '<b>Roll</b> two dice, then pick one of three landing tiles: the roll, one less, or two less.'],
     ['🃏', '<b>Doubles</b> earn a Wild Card at the end of your turn.'] ] },
   { k: 'Where you land', t: 'Landing', items: [
-    ['⚑', '<b>Empty tile</b>: pay a summon\'s cost to station it and claim the tile.'],
-    ['🏠', '<b>Your tile</b>: swap the summon, heal it (5✦ for 20 HP), sacrifice it (+15✦), or change the element (18✦).'],
+    ['⚑', '<b>Empty tile</b>: pay the summon\'s deploy fee to station it and claim the tile (Assailant/Vanguard 6✦, Guardian/Ascendant/Support 8✦, Rare 10✦).'],
+    ['🏠', '<b>Your tile</b>: swap the summon (deploy fee), heal it (5✦ for 20 HP), sacrifice it (+15✦), or change the element (18✦).'],
     ['⚔', '<b>Enemy tile</b>: battle for it, or retreat for up to 8✦.'],
-    ['💧', '<b>Mana Well</b> +40✦ · <b>Chest</b> random reward · <b>Healing Spring</b> 10✦ heals all your summons +10 HP · <b>Temple</b> trade for an Ascendant.'] ] },
+    ['💧', '<b>Mana Well</b> +40✦ · <b>Chest</b> random reward · <b>Healing Spring</b> 10✦ heals all your summons +10 HP · <b>Temple</b> offer a summon (15✦) to receive its element\'s Ascendant.'] ] },
   { k: 'Fighting', t: 'Battles', items: [
     ['⚔', '<b>Damage</b> = ATK minus DEF, times the type modifier, plus a small roll. Minimum 1.'],
     ['🔄', 'If the defender survives, it <b>counter-strikes</b>.'],

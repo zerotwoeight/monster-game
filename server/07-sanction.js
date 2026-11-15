@@ -398,7 +398,7 @@ function advanceTurn() {
 function endGame() {
   bumpRoomEpoch(G.roomCode);   // v1.0.130 (S5): nothing scheduled during the game runs after it ends
   G.phase = 'game_over';
-  G.stalemateData = null; // clear any pending stalemate — game is over
+  G.stalemateData = null; G.stalemates = {};   // clear any pending stalemate — game is over (v1.0.163: all players')
   const finalTiles = p => G.board.filter(t => t.ownerId === p.idx).length;
 
   // Survivors sort by tiles → mana; eliminated sort by eliminatedRank descending
@@ -516,8 +516,7 @@ function resolveLandingTile(playerIdx) {
 
   if (tile.kind === 'temple') {
     // 3 random Specials as offers
-    const shuffled = shuffle([...SPECIALS]);
-    G.pendingTemple = { offers: shuffled.slice(0,3).map(m => ({ ...m, iid: ++_iid })) };
+    G.pendingTemple = { view: null };   // v1.0.155: Temple v2 — no random offers; the player offers a summon
     G.phase = 'resolve:temple';
     log(`🏛 ${p.name} landed on Temple`);
     broadcast();

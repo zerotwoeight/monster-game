@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────────────────────────
- * Summoner's Gambit — board-fx.js  (v0.6.50, Tier 1–3 board interaction effects)
+ * Summoner's Gambit — board-fx.js  (v0.7.8: delayed curse moment dims the board like a battle. v0.7.7: one Wild Card from buy to impact — the table card itself flies to the target / caster chip, no second card. Was v0.6.50, Tier 1–3 board interaction effects)
  *  v0.6.50: curseLand — a delayed Wild Card (Jinx / Delay / Stumble) goes off: the card rises out of the
  *           target's chip, flips face-up in the centre with a stamp + "courtesy of …", then cracks apart
  *  v0.6.61: Golden Tithe / Hollow Hunger used up at once → card stays through the tally, then cracks away (GEN ×2 / NO GEN)
@@ -603,8 +603,11 @@
   // 🃏 Wild Card: the card flies from the caster's panel to the board centre, flips, holds, then
   // flies to its target(s). Gilded cards land with a shockwave + shake.
   // targets: array of elements (tile-inner or chip). Resolves when the card reaches its target.
+  let _wcFlying = 0;   // v0.7.7: a Wild Card is on its way (a curse going off waits for it)
   function wildCard(card, fromEl, targets = [], opts = {}) {
-    return new Promise(resolve => {
+    _wcFlying++;
+    return new Promise(res => {
+      let _r = false; const resolve = () => { if (!_r) { _r = true; setTimeout(() => { _wcFlying = Math.max(0, _wcFlying - 1); }, 0); } res(); };
       const k = scale(), bc = boardCenter(), reduced = level === 'reduced';
       const T = TIER[card.tier] || TIER.low;
       const w = 210 * k, h = 300 * k;
@@ -622,17 +625,17 @@
       wrap.appendChild(cardEl);
       const fx = a.x - bc.x, fy = a.y - bc.y, ex = end.x - bc.x, ey = end.y - bc.y;
       const ft = !!opts.fromTable;   // v0.6.26: card is already face-up in the centre (Wild Card table)
-      const D = ft ? (reduced ? 2000 : 2800) : (reduced ? 2400 : 3400);
+      const D = ft ? (reduced ? 1100 : 1500) : (reduced ? 2400 : 3400);   // v0.7.7: the room has already read it during targeting
+      const R0 = opts.fromRect, s0 = R0 ? R0.width / w : TABLE_W / 210;
+      const x0 = R0 ? R0.left + R0.width / 2 - bc.x : 0, y0 = R0 ? R0.top + R0.height / 2 - bc.y : 0;
       const t = (x, y, ry, sc, rz = 0) => `translate(${x}px,${y}px) rotateY(${ry}deg) rotateZ(${rz}deg) scale(${sc})`;
-      done(wrap.animate(ft ? [{ opacity: 1 }, { opacity: 1, offset: .88 }, { opacity: 0 }]
+      done(wrap.animate(ft ? [{ opacity: 1 }, { opacity: 1, offset: .9 }, { opacity: 0 }]
         : [{ opacity: 0 }, { opacity: 1, offset: .05 }, { opacity: 1, offset: .9 }, { opacity: 0 }], { duration: D, fill: 'both' }), wrap);
       cardEl.animate(ft ? [
-        { transform: t(0, 0, 720, TABLE_W / 210), offset: 0 },
-        { transform: t(0, 0, 720, 1.08), offset: .08 },
-        { transform: t(0, 0, 720, 1), offset: .14 },
-        { transform: t(0, -8 * k, 720, 1), offset: .55 },          // hold so the room can read it
-        { transform: t(ex * .7, ey * .7, 720, .45, 8), offset: .8 },
-        { transform: t(ex, ey, 720, .12, 14), offset: .86 },
+        { transform: t(x0, y0, 720, s0), offset: 0 },                       // v0.7.7: exactly where the table card was
+        { transform: t(x0, y0 + 10 * k, 720, s0 * 1.05, -2), offset: .2, easing: 'cubic-bezier(.4,0,.2,1)' },   // anticipation dip
+        { transform: t(x0 + (ex - x0) * .55, y0 + (ey - y0) * .55 - 30 * k, 720, s0 * .55, 8), offset: .62, easing: 'cubic-bezier(.5,0,.9,.6)' },
+        { transform: t(ex, ey, 720, .1, 14), offset: .82 },
         { transform: t(ex, ey, 720, .05, 14), offset: 1 }
       ] : [
         { transform: t(fx, fy, 180, .15, -20), offset: 0 },
@@ -645,8 +648,8 @@
         { transform: t(ex, ey, 720, .12, 14), offset: .9 },
         { transform: t(ex, ey, 720, .05, 14), offset: 1 }
       ], { duration: D, easing: 'cubic-bezier(.3,.6,.35,1)', fill: 'forwards' });
-      // reveal burst
-      setTimeout(() => {
+      // reveal burst (not from the table: it was revealed there already)
+      if (!ft) setTimeout(() => {
         ring(bc.x, bc.y, 160 * k, T.c, { dur: 900, grow: 2.4, width: 4 });
         if (!reduced) sparks(bc.x, bc.y, T.c, card.tier === 'high' ? 30 : 16, 220 * k, { dur: 1000, size: 7 });
         if (card.tier === 'high') { shake(7, 420); ring(bc.x, bc.y, 160 * k, '#ffffff', { dur: 700, grow: 3.5, width: 2, delay: 80 }); }
@@ -660,8 +663,10 @@
         }, i * 120));
         targets.forEach(el => { if (el && el.isConnected) glow(el, T.c, 900); });
         try { opts.onImpact && opts.onImpact(); } catch (e) {}
-        resolve();
-      }, D * (ft ? .85 : .89));
+        if (!ft) resolve();
+      }, D * (ft ? .82 : .89));
+      if (ft) setTimeout(resolve, D + 40);
+      else { _wcFlying++; setTimeout(() => { _wcFlying = Math.max(0, _wcFlying - 1); }, D + 40); }   // v0.7.7: whatever comes next (a curse going off, the next summary) waits until this card is fully gone
     });
   }
   // ═══════════════ v0.6.50: curse lands (U5) ═══════════════
@@ -676,6 +681,11 @@
       const w = 190 * k, h = 272 * k;
       const a = fromEl && fromEl.isConnected ? center(fromEl) : { x: bc.x, y: bc.y + 200 * k };
       const wrap = mk('fx-dice-stage', { left: 0, top: 0, width: '100%', height: '100%', perspective: '1100px' });
+      // v0.7.8: dim the board (battle darkness, rgba(8,8,20,.9)) so the stamp and caption read; the side panel stays lit
+      const ba = document.querySelector('.board-area');
+      if (ba) { const r = ba.getBoundingClientRect(), dm = document.createElement('div');
+        Object.assign(dm.style, { position: 'absolute', left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', background: 'rgba(8,8,20,.9)', pointerEvents: 'none' });
+        wrap.appendChild(dm); }
       const cardEl = document.createElement('div'); cardEl.className = 'fx-wc';
       Object.assign(cardEl.style, { left: (bc.x - w / 2) + 'px', top: (bc.y - h / 2 - 20 * k) + 'px', width: w + 'px', height: h + 'px', fontSize: Math.round(14 * k) + 'px' });
       cardEl.style.setProperty('--tc', T.c);
@@ -763,6 +773,7 @@
   }
   function _wctClear(fade) {
     const st = WCT.stage;
+    if (st && fade) WCT.busyUntil = Math.max(WCT.busyUntil || 0, Date.now() + 520);   // v0.7.3: the fade counts as busy
     WCT.stage = null; WCT.slots = {}; WCT.state = ''; WCT.pickTier = null; WCT.view = null;
     if (!st) return;
     if (fade) { st.style.opacity = '0'; setTimeout(() => st.remove(), 500); } else st.remove();
@@ -854,6 +865,7 @@
       banner(bc.x, bc.y, t.discarded ? 'DISCARDED' : 'PASSED', t.discarded ? '#e07a7a' : '#9397ab', { size: 22, dur: 1400, rise: 20 });   // v0.6.73: + discarded
       try { sfx.skip && sfx.skip(); } catch (e) {}
       const st = WCT.stage; setTimeout(() => { if (WCT.stage === st) _wctClear(false); else if (st) st.remove(); }, 1000);
+      WCT.busyUntil = Math.max(WCT.busyUntil || 0, Date.now() + 1450);   // v0.7.3: PASSED / DISCARDED banner
     }
   }
   // t = G.wcTable (or null). opts: { instant, deal, sfx }
@@ -861,7 +873,16 @@
   //   deal    → new table: deal it in (called from the board's FX queue once the dice settle)
   function wcTable(t, phase, opts = {}) {
     const sfx = opts.sfx || {};
-    if (!t) { if (WCT.stage) _wctClear(true); WCT.seq = 0; return; }
+    if (!t) {
+      // v0.7.3: a card played straight from the table (Wellspring, Bargain…) is face-up: let it be read, then fade
+      if (WCT.stage && !WCT.consumed && WCT.state === 'picked') {
+        // v0.7.7: the card was played: the queued flight (wcTableConsume) takes this same card. Fade only if no flight claims it.
+        const st = WCT.stage; WCT.busyUntil = Math.max(WCT.busyUntil || 0, Date.now() + 5200);
+        setTimeout(() => { if (WCT.stage === st && !WCT.consumed) { WCT.consumed = true; _wctClear(true); } }, 5000);
+      } else if (WCT.stage && !WCT.consumed) _wctClear(true);
+      else if (WCT.stage && WCT.consumed && WCT.state !== 'picked') _wctClear(true);
+      WCT.seq = 0; return;
+    }
     if (t.seq !== WCT.seq) {
       if (!opts.deal && !opts.instant) return;            // wait for the queued deal
       if (opts.instant && (t.skipped)) { WCT.seq = t.seq; WCT.consumed = true; return; }
@@ -905,7 +926,11 @@
       if (!WCT.stage || WCT.consumed || WCT.pickTier !== card.tier) { resolve(false); return; }
       WCT.consumed = true;
       const wait = Math.max(0, (level === 'reduced' ? 700 : 1500) - (Date.now() - WCT.pickedAt));
-      setTimeout(() => { _wctClear(false); resolve(true); }, wait);
+      setTimeout(() => {
+        const c = WCT.slots[card.tier] && WCT.slots[card.tier].querySelector('.fx-wc');
+        const r = c && c.isConnected ? c.getBoundingClientRect() : null;   // v0.7.7: where and how big the card really is right now
+        _wctClear(false); resolve({ rect: r && r.width ? r : null });
+      }, wait);
     });
   }
 
@@ -1331,8 +1356,9 @@
     challenge, takeover, held, clash, manaRoll, manaFloat, flow, chest, temple, heal, well,
     wildCard, plague, shatterTile, eliminated, crown,
     wcTable, wcTableConsume,   // v0.6.26
+    wctHeld: () => Date.now() < (WCT.busyUntil || 0) || (!!WCT.stage && typeof G !== 'undefined' && !!G && !G.wcTable),   // + still up although the game has moved on   // v0.7.3: the next summary / Game Over waits for the table's exit
     ring, sparks,              // v0.6.30: exposed for the board's Wheel of Fortune flip
-    curseLand, curseBusy,      // v0.6.50 (U5)
+    curseLand, curseBusy, wcFlying: () => _wcFlying > 0,   // v0.7.7      // v0.6.50 (U5)
     sxTable, sxFortuneHold, sxTileHold, sxBusy, sxMoment,   // v0.6.31: Sanction card table (v0.6.32: sxTileHold)
     get level() { return level; },
     setLevel(v) { level = v === 'reduced' ? 'reduced' : 'full'; try { localStorage.setItem(LS_KEY, level); } catch (e) {} },

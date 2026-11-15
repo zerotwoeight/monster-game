@@ -20,7 +20,8 @@ function freshGame(roomCode) {
     round: 1,                // v1.0.127: real round number after setup — +1 each time play wraps past the last seat
     roundLimit: DEFAULT_ROUND_LIMIT, // rounds per player, chosen in lobby
     events: [],              // { text, ts }
-    stalemateData: null,     // { attackerIdx, tilePos, defenderIid }
+    stalemateData: null,     // { attackerIdx, tilePos, defenderIid } — the CURRENT player's stalemate being resolved
+    stalemates: {},          // v1.0.163: pending stalemates by player idx, moved into stalemateData at that player's turn start
     lastBattle: null,        // { attackerIdx, defOwnerIdx, attM, defM, atkDmg, defDmg, outcome }
     pendingChest: null,      // chest reward data waiting on player action
     pendingTemple: null,     // temple offers
@@ -32,6 +33,8 @@ function freshGame(roomCode) {
     pendingWildCard: false,  // v1.0.110: set true when the player rolls doubles
     wcTable: null,           // v1.0.110: { seq, playerIdx, dice, pick, skipped } — drives the board's wild-card table
     skipSetup: false,        // v1.0.112: host lobby toggle — replace setup phase with Auto Setup
+    battleDice: true,        // v1.0.159: host lobby toggle — battle dice (black / white) instead of the flat +0 to 3 roll
+    battleRoll: null,        // v1.0.159: { seq, attIdx, defIdx, iid, att:{b,w}|null, def:{b,w}|null, deadline } while the dice are being rolled
     autoSetupRunning: false, // v1.0.112: true while autoSetup() is placing (setup actions blocked)
     pendingLanding: null,    // { roll, options:[pos,pos,pos] } — set after roll, cleared on choose_landing
     wildCardDrawn: null,     // { low: card, mid: card, high: card }
@@ -112,7 +115,7 @@ function scheduleRoomAction(roomCode, fn, ms) {
   const _r = rooms.get(roomCode);
   const gen = _r ? (_r._forfeitGen || 0) : 0;
   const epoch = roomEpoch(roomCode);   // v1.0.130 (S5)
-  setTimeout(() => {
+  return setTimeout(() => {   // v1.0.162: returns the handle so a caller can cancel a step that is no longer needed
     if (roomEpoch(roomCode) !== epoch) return;   // v1.0.130: the game was reset/ended since — drop this step
     inRoom(roomCode, () => {   // v1.0.140 (L1)
       if (!G) return;

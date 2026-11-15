@@ -1,6 +1,7 @@
 // board-render.js: split from the inline page script (L2). Loaded in order by board.html; all files share one global scope.
 // ─── Render entry ───────────────────────────────────────────────────────────────────────────
 let _tsExiting = false; // guard to prevent re-entry during exit animation
+let _tssKey = null, _tssH = null, _tssBusy = false, _tssBusyT = null;   // v0.6.92: centre-stage turn summary (board-summary.js)
 // v0.6.55 (live log): render timing + stall reports go to the server's game log
 const _perfRenders = { n: 0, skipped: 0, slow: 0 };
 function _perfReport(kind, ms, extra) {
@@ -26,12 +27,21 @@ function render(){
       return;
     }
   }
+  // v0.6.92: same for the centre-stage summary card — let it leave before the next phase is drawn
+  if (!_tsExiting && _tssH && !_tssBusy && G && G.phase !== 'resolve:turn_summary') {
+    _tsExiting = true;
+    try { _tssH.close(); } catch (e) {}
+    _tssH = null;
+    setTimeout(() => { _tsExiting = false; render(); }, 290);
+    return;
+  }
   _tsExiting = false;
 
   // v0.6.55: while the income tally plays, don't rebuild the board — a rebuild threw the tally away and showed
   // the summary on top. The tally's own onDone calls render() with the newest state.
-  if (_tallyRunning) { _perfRenders.skipped++; return; }
+  if (_tallyRunning || _tssBusy) { _perfRenders.skipped++; return; }   // v0.6.92: also while the summary card is counting up
 
+  try { _bsCachePreview(); } catch (e) {}   // v0.6.88: remember where the battle preview cards are before the redraw
   app.innerHTML = '';
   updateDisconnectOverlay();
   if (!G) { renderConnecting(app); return; }
@@ -43,6 +53,7 @@ function render(){
   else renderGame(app);
   _wctSync();   // v0.6.26: after renderGame so the wheel centre exists to measure
   _sxSync();    // v0.6.33
+  try { if (typeof TempleFX !== 'undefined') TempleFX.sync(G); } catch (e) { console.warn('temple', e); }   // v0.6.84: Temple v2 centre card
   _fxPump();
 }
 
@@ -79,11 +90,48 @@ function _computeLeader() {
   if (c.length === 1) return c[0].idx;
   return c.some(p => p.idx === _leaderIdx) ? _leaderIdx : null;
 }
+// v0.6.86: battle result hold — the side panel (Mana, tiles, W/L, crown) and the Mana floats wait until the battle
+// overlay shows its outcome, so the chips no longer give the result away before the first strike lands.
+// Released by runBattleAnimation (outcome text or tap-to-skip) → _battleReveal(); watchdog 4.5 s; ends with the phase.
+let _bhKey = null, _bhShown = null, _bhTimer = null;
+const _bhDeferred = [], _chipLast = {};
+function _bhKeyOf() {
+  const lb = G && G.lastBattle;
+  if (!G || G.phase !== 'resolve:battle_result' || !lb) return null;
+  return [G.turnCount, lb.attackerIdx, lb.defOwnerIdx, lb.attM && lb.attM.iid, lb.defM && lb.defM.iid, lb.atkDmg, lb.defDmg, lb.outcome].join('|');
+}
+function _battleHold() {
+  const k = _bhKeyOf();
+  if (!k || k === _bhShown) return false;
+  if (_bhKey !== k) { _bhKey = k; clearTimeout(_bhTimer); _bhTimer = setTimeout(() => _battleReveal(k), 4500); }
+  return true;
+}
+function _battleReveal(k) {
+  k = k || _bhKey;
+  if (!k || _bhShown === k) return;
+  _bhShown = k; clearTimeout(_bhTimer);
+  // v0.6.90: the outcome chord plays with the outcome (was at the start of the battle, in board-core's message handler)
+  try {
+    const oc = G && G.phase === 'resolve:battle_result' && G.lastBattle && G.lastBattle.outcome;
+    // v0.6.93: Rivalry sounds — Revenge replaces the outcome sound; Denied / streak lines follow it
+    const rv = (oc && G.lastBattle.rivalry) || {}, sm = typeof sfxSample === 'function';
+    if (sm && rv.denied) setTimeout(() => sfxSample('denied'), 450);
+    if (sm && rv.streakEnded) setTimeout(() => sfxSample('streakEnded'), rv.revenge ? 700 : 450);
+    else if (sm && rv.streak && rv.streak.n >= 3) setTimeout(() => sfxSample('streak'), rv.denied ? 900 : 450);
+    if (sm && rv.revenge) sfxSample('revenge');
+    else if (oc === 'attacker_wins') SFX.battleWin();
+    else if (oc === 'defender_wins') SFX.battleLose();
+    else if (oc === 'mutual')        SFX.battleMutual();
+    else if (oc === 'stalemate')     SFX.battleStalemate();
+  } catch (e) {}
+  setTimeout(() => { try { render(); } catch (e) {} }, 0);
+}
 function _fxDiff() {
   if (!window.BoardFX || !G) return;
   const snap = {
     phase: G.phase, lb: G.lastBattle || null, chest: G.pendingChest || null,
     mana: G.players.map(p => p.mana),
+    cp: G.currentPlayer, own: G.board.map(t => t.ownerId), el: G.board.map(t => t.element),   // v0.6.92: for the own-tile and retreat sounds
     wc: G.lastWildCard ? G.lastWildCard.seq : 0,
     wct: G.wcTable ? G.wcTable.seq : 0,          // v0.6.26: doubles → Wild Card table
     voice: G.lastVoice ? G.lastVoice.seq : 0,   // v0.6.22
@@ -96,8 +144,8 @@ function _fxDiff() {
   const P = _fxPrev; _fxPrev = snap;
   const newLeader = _computeLeader();
   if (!P) { _leaderIdx = newLeader; _wctInstant = true; return; }        // first state after (re)connect: baseline only
-  // 👑 leader change
-  if (newLeader !== _leaderIdx) {
+  // 👑 leader change (v0.6.86: not while a battle result is held — picked up on the render after the reveal)
+  if (newLeader !== _leaderIdx && !_battleHold() && snap.phase !== 'resolve:battle_result') {   // v0.6.92: and not while the battle overlay is up (the fanfare landed 65 ms after the outcome)
     const was = _leaderIdx; _leaderIdx = newLeader;
     if (newLeader != null && P.phase !== 'setup') {
       const L = _fxPl(newLeader);
@@ -140,13 +188,15 @@ function _fxDiff() {
   if (snap.wc && snap.wc !== P.wc && G.lastWildCard) {
     const wc = G.lastWildCard, caster = _fxPl(wc.casterIdx), tgt = wc.targetIdx != null ? _fxPl(wc.targetIdx) : null;
     const ownedTiles = (idx) => G.board.map((t, i) => (t.ownerId === idx && t.summon) ? i : -1).filter(i => i >= 0);
+    _fxPend++; setTimeout(() => { _fxPend = 0; }, 12000);   // v0.7.3: hold from the moment it is queued (watchdog: never for good)
     _fxQ.push(() => {
+      _fxPend = Math.max(0, _fxPend - 1);
       const from = _fxChipEl(wc.casterIdx);
       let targets = [], onImpact = null;
       if (['mend', 'keen_edge', 'parry', 'aegis', 'disarm', 'sever'].includes(wc.id) && wc.tilePos != null) targets = [_fxTile(wc.tilePos)];   // v0.6.77 / v0.6.77
       else if (wc.id === 'bane_ground' && wc.tilePos != null) {   // v0.6.77: the tile turns to its bane element
         targets = [_fxTile(wc.tilePos)];
-        onImpact = () => { try { BoardFX.tileBanner(_fxTile(wc.tilePos), `${wc.from} → ${wc.to}`, TYPE_COLOR[wc.to] || '#e07a7a'); } catch (e) {} };
+        onImpact = () => { try { sfxSample('baneGround'); } catch (e) {} try { BoardFX.tileBanner(_fxTile(wc.tilePos), `${wc.from} → ${wc.to}`, TYPE_COLOR[wc.to] || '#e07a7a'); } catch (e) {} };
       }
       else if (wc.id === 'coup' && wc.tilePos != null) {
         targets = [_fxTile(wc.tilePos)];
@@ -161,7 +211,7 @@ function _fxDiff() {
         if (wc.id === 'poach' && !wc.failed) onImpact = () => { BoardFX.flow(_fxChipEl(tgt.idx), from, { color: '#c07fd8', n: 5 }); SFX.wildCardDeal(0); setTimeout(() => SFX.wildCardDeal(1), 260); };   // v0.6.30: card flick as the summon is stolen
       } else targets = [from];                       // self cards: Ambush / Fortify / Windfall
       // v0.6.26: if the card is face-up on the Wild Card table, fly it from the centre instead
-      const go = (ft) => { SFX.wildCardFly(); return BoardFX.wildCard(wc, from, targets, { onReveal: () => SFX.wildCardReveal(wc.tier), onImpact, fromTable: ft }); };
+      const go = (ft) => { SFX.wildCardFly(); return BoardFX.wildCard(wc, from, targets, { onReveal: () => SFX.wildCardReveal(wc.tier), onImpact, fromTable: !!ft, fromRect: ft && ft.rect }); };   // v0.7.7: the table card's real rect
       _fxHold((BoardFX.wcTableConsume ? BoardFX.wcTableConsume(wc).then(go) : go(false)), 500);   // v0.6.51 (U6): the next tally waits for the card
     });
   }
@@ -178,6 +228,15 @@ function _fxDiff() {
   if (snap.phase === 'resolve:battle_result' && P.phase !== 'resolve:battle_result' && G.lastBattle && G.lastBattle.attM) {
     const aid = G.lastBattle.attM.id;
     _fxQ.push(() => setTimeout(() => _playVoice(aid, 'battle_start'), 300));
+  }
+  // v0.6.92: own-tile actions and retreat had no sound
+  if (typeof sfxSample === 'function' && P.own && P.cp != null && G.players[P.cp]) {
+    const pos0 = G.players[P.cp].position, me = G.players[P.cp].idx;
+    if (P.phase === 'resolve:own' && pos0 != null) {
+      if (P.own[pos0] === me && snap.own[pos0] == null) _fxQ.push(() => sfxSample('sacrifice'));
+      else if (P.el[pos0] && snap.el[pos0] && P.el[pos0] !== snap.el[pos0]) _fxQ.push(() => sfxSample('changeElement'));
+    }
+    if (P.phase === 'resolve:battle' && snap.phase !== 'resolve:battle' && snap.phase !== 'resolve:battle_result' && snap.phase !== 'game_over') _fxQ.push(() => sfxSample('retreat'));
   }
   const cur = _fxPl(G.currentPlayer);
   if (snap.phase !== P.phase) {
@@ -213,8 +272,15 @@ function _fxDiff() {
   }
   // Mana changes → floating deltas + coin flow from the biggest loser to the biggest gainer
   const deltas = G.players.map((p, i) => ({ idx: p.idx, d: (P.mana[i] != null ? p.mana - P.mana[i] : 0) })).filter(x => x.d);
-  if (deltas.length) _fxQ.push(() => {
+  const _bhOn = _battleHold();   // v0.6.86
+  if (!_bhOn && _bhDeferred.length) _fxQ.push(..._bhDeferred.splice(0));
+  if (deltas.length) (_bhOn ? _bhDeferred : _fxQ).push(() => {
     deltas.forEach(x => BoardFX.manaFloat(_fxChip(x.idx), x.d));
+    // v0.6.92: Mana floats were silent. Not at the turn start (the income sweep has its own sound).
+    if (snap.phase !== 'resolve:turn_summary' && typeof sfxSample === 'function') {
+      if (deltas.some(x => x.d > 0)) sfxSample('manaGain', { gap: 400 });
+      if (deltas.some(x => x.d < 0)) setTimeout(() => sfxSample('manaLoss', { gap: 400 }), deltas.some(x => x.d > 0) ? 180 : 0);
+    }
     const lo = deltas.reduce((a, b) => (b.d < a.d ? b : a)), hi = deltas.reduce((a, b) => (b.d > a.d ? b : a));
     if (lo.d < 0 && hi.d > 0) BoardFX.flow(_fxChip(lo.idx), _fxChip(hi.idx));
   });
@@ -236,7 +302,9 @@ function _fxHold(promise, extraMs = 0) {
   promise.then(release, release);
   setTimeout(release, 9000);   // watchdog — never hold the tally forever
 }
-function _fxHeld() { return _fxHolding > 0 || Date.now() < _fxHoldUntil || _fxBusy(); }   // v0.6.55: queued-but-not-started effects no longer hold the tally
+let _fxPend = 0;   // v0.7.3: Wild Card flights queued but not started yet — they hold the next summary / game over too
+function _templeBusy() { try { return typeof TempleFX !== 'undefined' && TempleFX.pending && TempleFX.pending(G); } catch (e) { return false; } }
+function _fxHeld() { return _fxHolding > 0 || _fxPend > 0 || Date.now() < _fxHoldUntil || _fxBusy() || _templeBusy() || !!(window.BoardFX && BoardFX.wctHeld && BoardFX.wctHeld()); }   // v0.6.55: queued-but-not-started effects no longer hold the tally
 // v0.6.55: poll the hold cheaply and redraw ONCE when it clears (v0.6.51 redrew the whole board every 250 ms while waiting)
 function _fxRetryRender() {
   if (_fxHoldTimer) return;
@@ -480,9 +548,9 @@ function openAboutModal(showHowToPlay = true) {
       <h3>How to Play</h3>
       <p>One person hosts the server and screen-shares the board on a video call — Discord, Zoom, whatever you use. Everyone else opens the game on their phone, no download required. Enter the room code and pick your starter set to join.</p>
       <p><strong style="color:var(--accent-pale)">Your turn:</strong> From round 2, collect Mana (5✦ plus your stationed summons' Gen, minus 1✦ upkeep per tile), then visit the shop to buy or sell one summon. Roll the dice and move around the 28-tile board. What happens next depends on where you land.</p>
-      <p><strong style="color:var(--accent-pale)">Empty tile:</strong> Station one of your hand summons to claim it. That tile now generates Mana for you each round.</p>
+      <p><strong style="color:var(--accent-pale)">Empty tile:</strong> Station one of your hand summons to claim it by paying its deploy fee (6–10✦, the ✦ on the card). That tile now generates Mana for you each round.</p>
       <p><strong style="color:var(--accent-pale)">Enemy tile:</strong> Fight! Pick one of your hand summons to attack. Damage is based on ATK vs DEF, modified by elemental type matchups — there are 6 types in a cycle, each strong against one and weak against another. A summon defending its own element's tile gets +15% ATK and DEF. Winner takes the tile; loser's summon is destroyed.</p>
-      <p><strong style="color:var(--accent-pale)">Special tiles:</strong> The Mana Well gives +40 Mana when you land on it. Roll doubles and you get a Wild Card at the end of your turn — one face-down card from each tier, buy one or pass. The Treasure Chest gives a random reward — a heal potion, a battle charm, a warp, or a free summon. The Temple lets you trade a normal summon for a powerful Ascendant. The Healing Spring heals all your summons +10 HP for 10✦.</p>
+      <p><strong style="color:var(--accent-pale)">Special tiles:</strong> The Mana Well gives +40 Mana when you land on it. Roll doubles and you get a Wild Card at the end of your turn — one face-down card from each tier, buy one or pass. The Treasure Chest gives a random reward — a heal potion, a battle charm, a warp, or a free summon. At the Temple you offer one of your summons and pay 15✦, and it is answered with the powerful Ascendant of its element. The Healing Spring heals all your summons +10 HP for 10✦.</p>
       <p><strong style="color:var(--accent-pale)">Winning:</strong> Two ways to win. Hold the most tiles when the round limit runs out — or be the last player standing. If you end your turn owning zero tiles (after round 1), you're eliminated. Last one standing wins immediately.</p>
       <p><strong style="color:var(--accent-pale)">Sanctioned:</strong> Hit 0 Mana and you're Sanctioned, not out. You get no income and don't roll, but each turn you can place an Omen on a rival's tile, flip the Wheel of Fortune or Sacrifice on your own, or pay 15✦ once to Redeem and rejoin the game.</p>
     </div>` : '';
@@ -556,7 +624,7 @@ const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Wat
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <img class="lobby-brand-logo" src="/img/logos/logo-main.webp" alt="Summoner's Gambit">
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.77 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.62</div>`;  // v0.6.31: Sound Settings moved to the bottom-left row
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.86 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.69</div>`;  // v0.6.31: Sound Settings moved to the bottom-left row
   splash.appendChild(brand);
 
   // ── Two panels
@@ -739,6 +807,22 @@ const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Wat
     optRow.style.cssText = 'display:flex;justify-content:center;align-items:flex-start;gap:48px;width:100%;max-width:960px;margin-top:8px;';
     rlWrap.style.cssText = 'width:auto;margin-top:0;'; ssWrap.style.cssText = 'width:auto;margin-top:0;';
     optRow.appendChild(rlWrap); optRow.appendChild(ssWrap);
+    // v0.6.94: Battle dice toggle (host only; server v1.0.159 holds G.battleDice, on by default)
+    const bdWrap = document.createElement('div');
+    bdWrap.className = 'round-limit-wrap'; bdWrap.style.cssText = 'width:auto;margin-top:0;';
+    const bdOn = G.battleDice !== false;
+    bdWrap.innerHTML = `<div class="round-limit-lbl">Battle Dice</div>
+      <div class="round-limit-btns">
+        <button class="round-limit-btn${bdOn?' selected':''}" data-bd="1" title="Both players roll a black die (their hit) and a white die (the hit they take) before each battle">On</button>
+        <button class="round-limit-btn${!bdOn?' selected':''}" data-bd="0" title="No dice: the old flat +0 to 3 damage roll">Off</button>
+      </div>`;
+    bdWrap.querySelectorAll('.round-limit-btn').forEach(btn => {
+      btn.onclick = () => {
+        bdWrap.querySelectorAll('.round-limit-btn').forEach(b => b.classList.toggle('selected', b === btn));
+        send('set_battle_dice', { on: btn.dataset.bd === '1' });
+      };
+    });
+    optRow.appendChild(bdWrap);
     if (G.players.some(pl => pl.isBot)) { bsWrap.style.cssText = 'width:auto;margin-top:0;'; optRow.appendChild(bsWrap); }
     // v0.6.61: options sit in the Sound Settings / Ko-fi row (between them) — one row less under the panels
     optRow.style.cssText = 'display:flex;justify-content:center;align-items:flex-start;gap:40px;width:auto;margin:0;';
@@ -816,7 +900,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.6.77</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.7.8</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -1027,17 +1111,19 @@ function renderGame(app){
     const defOwner = tile && tile.ownerId != null ? G.players.find(p => p.idx === tile.ownerId) : null;
     const defM = tile ? tile.summon : null;
     const attM = G.pendingAttackerSummon || null;
+    const _bsPs = BATTLE_STAGE.mode === 'ring' ? BATTLE_STAGE.previewScale : 1;   // v0.6.88
+    const _grudgeOn = !!(curPlayer && defOwner && ((curPlayer.grudges || {})[defOwner.idx] > 0 || (defOwner.grudges || {})[curPlayer.idx] > 0));   // v0.6.91
     const attSlot = attM
       ? `${renderBoardCard(attM)}`
       : `<div style="width:90px;height:128px;border-radius:8px;border:2px dashed var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:10px;color:var(--text-mute);">
            <span style="font-size:20px;opacity:.4;">⚔</span>choosing…
          </div>`;
     wc.innerHTML = `<div class="battle-center visible">
-      <div class="battle-eyebrow">Battle Engaged</div>
+      <div class="battle-eyebrow"${_grudgeOn ? ' style="color:#ff8a6a"' : ''}>${_grudgeOn ? 'Grudge Match' : 'Battle Engaged'}</div>
       <div style="display:flex;align-items:center;gap:14px;margin:6px 0;">
         <div style="text-align:center;">
           <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-mute);margin-bottom:5px;font-family:'Cinzel',serif;">Attacker</div>
-          ${attSlot}
+          <div class="bs-prev-att" style="display:inline-block;vertical-align:top;zoom:${_bsPs}">${attSlot}</div>
           <div style="font-size:10px;color:${curPlayer ? curPlayer.color : 'var(--text-dim)'};margin-top:5px;font-weight:600;">${curPlayer ? curPlayer.name : '?'}</div>
         </div>
         <div class="battle-nums">
@@ -1045,7 +1131,7 @@ function renderGame(app){
         </div>
         <div style="text-align:center;">
           <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-mute);margin-bottom:5px;font-family:'Cinzel',serif;">Defending</div>
-          ${renderBoardCard(defM)}
+          <div class="bs-prev-def" style="display:inline-block;vertical-align:top;zoom:${_bsPs}">${renderBoardCard(defM)}</div>
           ${defOwner ? `<div style="font-size:10px;color:${defOwner.color};margin-top:5px;font-weight:600;">${defOwner.name}</div>` : ''}
         </div>
       </div>
@@ -1104,10 +1190,11 @@ function renderGame(app){
   // ── Wild Card banner overlay ──
   if (G.phase && G.phase.startsWith('resolve:wildcard')) {
     const wcBanner = document.createElement('div');
-    wcBanner.style.cssText = 'position:absolute;top:16px;left:50%;transform:translateX(-50%);z-index:20;background:rgba(20,15,40,.92);border:1.5px solid rgba(201,146,42,.6);border-radius:12px;padding:12px 28px;display:flex;align-items:center;gap:12px;box-shadow:0 0 24px rgba(201,146,42,.25);';
+    wcBanner.id = 'wc-banner';   // v0.6.86: sits inside the ring above the cards (was top:16px, over the top tiles and their claim banners)
+    wcBanner.style.cssText = 'position:absolute;top:193px;left:50%;transform:translateX(-50%);z-index:20;background:rgba(20,15,40,.92);border:1.5px solid rgba(201,146,42,.6);border-radius:12px;padding:12px 28px;display:flex;align-items:center;gap:12px;box-shadow:0 0 24px rgba(201,146,42,.25);';
     const wcP = G.players[G.currentPlayer];
-    const wcPhaseText = { 'resolve:wildcard_cards':'choosing a Wild Card', 'resolve:wildcard_target':'targeting...', 'resolve:wildcard_coup_tile':'selecting a tile to seize', 'resolve:wildcard_coup_summon':'deploying a summon', 'resolve:wildcard_shatter':'selecting summons to shatter' };
-    const wcMsg = wcPhaseText[G.phase] || 'Wild Card';
+    const wcPhaseText = { 'resolve:wildcard_cards':'choosing a Wild Card', 'resolve:wildcard_target':'targeting...', 'resolve:wildcard_reveal':'turning over a Wild Card', 'resolve:wildcard_coup_tile':'selecting a tile to seize', 'resolve:wildcard_coup_summon':'deploying a summon', 'resolve:wildcard_shatter':'selecting summons to shatter' };
+    const wcMsg = wcPhaseText[G.phase] || 'playing a Wild Card';
     wcBanner.innerHTML = `<span style="font-size:22px">🃏</span><div><div style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.12em;color:#c9922a;">WILD CARD</div><div style="font-size:11px;color:var(--text-lo);margin-top:2px;"><span style="color:${wcP?.color||'#c9a05a'};font-weight:600">${wcP?.name||'?'}</span> is ${wcMsg}</div></div>`;
     boardArea.appendChild(wcBanner);
   }
@@ -1118,8 +1205,49 @@ function renderGame(app){
   rail.appendChild(renderPaper());
   main.appendChild(rail);
 
+  // ── v0.6.92: centre-stage turn summary (board-summary.js). The card goes up first, the income sweep runs inside it,
+  //    then it stays (re-attached after each redraw) until the phase moves on. Board Effects "Reduced" or
+  //    SUMMARY_STAGE.mode 'classic' → the old tally + small box below.
+  const _tssOn = G.phase === 'resolve:turn_summary' && G.turnSummary && typeof SUMMARY_STAGE !== 'undefined' && SUMMARY_STAGE.mode === 'stage'
+    && window.BoardSummary && !(window.BoardFX && BoardFX.level === 'reduced');
+  if (_tssOn) {
+    const ts = G.turnSummary, _rt = ts.roundTally || [];
+    const _tKey = `${G.round}|${G.turnCount}|${G.currentPlayer}`;
+    if (_tssKey !== _tKey) {
+      if (_curseHoldTally()) { scaleRoot(root); app.appendChild(root); return; }
+      if (_fxHeld()) { scaleRoot(root); app.appendChild(root); _fxPump(); _fxRetryRender(); return; }
+      _tssKey = _tKey; _tallyPlayedFor = _tKey;
+      scaleRoot(root); app.appendChild(root);
+      if (_tssH) { try { _tssH.el.remove(); } catch (e) {} _tssH = null; }
+      // v0.7.3: netEarned is the income BEFORE upkeep (the server takes upkeep separately), so the card showed +24 for a +19 turn
+      const net = ts.income != null ? ts.income : ts.netEarned != null ? ts.netEarned - (ts.upkeep || 0)
+        : (ts.baseline + ts.summonGen + ts.wellBonus + (ts.battleManaGain||0)) - ts.intimidateLoss - ts.upkeep - (ts.battleManaLoss||0);
+      const extras = [];
+      // v0.7.4: the server's own breakdown (same lines as the phone), Base and Summons are drawn by the sweep
+      if (ts.incomeLines) for (const l of ts.incomeLines) { if (l.k === 'base' || l.k === 'summons' || !l.val) continue; extras.push({ label: l.label, val: (l.val < 0 ? '−' : '+') + Math.abs(l.val), neg: l.val < 0 }); }
+      else if (ts.upkeep)            extras.push({ label: `Upkeep (${ts.tileCount} tile${ts.tileCount === 1 ? '' : 's'})`, val: '−' + ts.upkeep, neg: true });   // v0.7.3
+      if (!ts.incomeLines && ts.manaRefineryBonus) extras.push({ label: 'Mana Refinery', val: '+' + ts.manaRefineryBonus });
+      if (!ts.incomeLines && ts.wellBonus)         extras.push({ label: 'Mana Well', val: '+' + ts.wellBonus });
+      if (!ts.incomeLines && ts.intimidateLoss)    extras.push({ label: 'Intimidate', val: '−' + ts.intimidateLoss, neg: true });
+      if (!ts.incomeLines && ts.windfallActive)    extras.push({ label: 'Windfall', val: '×3' });
+      if (!ts.incomeLines && ts.jinxActive)        extras.push({ label: 'Jinx', val: '×½', neg: true });
+      if (!ts.incomeLines && ts.softCapped)        extras.push({ label: 'Soft cap', val: '×½', neg: true });
+      const done = () => { clearTimeout(_tssBusyT); if (!_tssBusy) return; _tssBusy = false; if (_rt.length) send('tally_complete'); render(); };
+      _tssBusy = true; clearTimeout(_tssBusyT); _tssBusyT = setTimeout(done, 9000);   // watchdog: never block redraws for good
+      requestAnimationFrame(() => {
+        try {
+          _tssH = BoardSummary.play({ playerIdx: ts.playerIdx, playerName: ts.playerName, playerColor: ts.playerColor, round: ts.round, roundLimit: ts.roundLimit,
+            roundsRemaining: ts.roundsRemaining, baseline: ts.baseline, summons: ts.summonGen, battleGain: ts.battleManaGain || 0, battleLoss: ts.battleManaLoss || 0, manaBefore: ts.manaAfter - net, manaAfter: ts.manaAfter, net,
+            tileCount: ts.tileCount, stationedCount: ts.stationedCount, extras }, _rt, boardArea, done);
+        } catch (e) { console.warn('summary', e); done(); }
+      });
+      return;
+    }
+    if (_tssH && _tssH.el) boardArea.appendChild(_tssH.el);   // redraw while the card is up: carry it over to the new board
+  }
+
   // ── Round tally animation (fires before turn summary callout)
-  if (G.phase === 'resolve:turn_summary' && G.turnSummary) {
+  if (!_tssOn && G.phase === 'resolve:turn_summary' && G.turnSummary) {
     const _rt = G.turnSummary.roundTally;
     const _tKey = `${G.round}|${G.turnCount}|${G.currentPlayer}`;   // v0.6.55: was the turnSummary object, which is new on every update → the tally replayed
     if (_rt && _rt.length > 0 && _tallyPlayedFor !== _tKey && !_tallyRunning) {
@@ -1134,10 +1262,10 @@ function renderGame(app){
   }
 
   // ── Turn summary callout (compact — player name + net mana + total)
-  if (G.phase === 'resolve:turn_summary' && G.turnSummary) {
+  if (!_tssOn && G.phase === 'resolve:turn_summary' && G.turnSummary) {
     const ts = G.turnSummary;
     const p = G.players[ts.playerIdx];
-    const netMana = (ts.baseline + ts.summonGen + ts.wellBonus + (ts.battleManaGain||0)) - ts.intimidateLoss - ts.upkeep - (ts.battleManaLoss||0);
+    const netMana = ts.income != null ? ts.income : (ts.baseline + ts.summonGen + ts.wellBonus + (ts.battleManaGain||0)) - ts.intimidateLoss - ts.upkeep - (ts.battleManaLoss||0);   // v0.7.4
     const netIsNeg = netMana < 0;
     const netSign = netMana >= 0 ? '+' : '−';
     const netAbs = Math.abs(netMana);
@@ -1195,6 +1323,7 @@ function renderGame(app){
     wo.className = 'winners-overlay' + ((window._goEnterUntil && Date.now() < window._goEnterUntil) ? ' go-enter' : '');
     wo.style.setProperty('--n', rankings.length);
     wo.style.cssText = 'position:absolute;inset:0;z-index:30;';
+    if (window._goWaiting) wo.style.visibility = 'hidden';   // v0.7.3: the standings wait for the Game Over moment's hand-off
 
     const wasLastStanding = rankings[0]?.wasLastStanding || false;
     const tableRows = rankings.map((p,rank) => {
@@ -1276,6 +1405,9 @@ function renderPaper(){
   G.players.forEach(p => {
     const isActive = p.idx === G.currentPlayer;
     const isElim = p.eliminated || false;
+    // v0.6.86: tiles / hand / W-L hold their pre-battle values until the battle overlay shows the outcome
+    const _bh = _battleHold();
+    const cs = (_bh && _chipLast[p.idx]) ? _chipLast[p.idx] : (_chipLast[p.idx] = { t: p.tileCount, h: p.handSize ?? 0, w: p.battlesWon ?? 0, l: p.battlesLost ?? 0, s: p.streak || 0, g: p.grudges || {} });
     const chip = document.createElement('div');
     chip.className = 'player-chip' + (isActive ? ' active' : '');
     chip.dataset.pidx = p.idx;
@@ -1287,9 +1419,9 @@ function renderPaper(){
     chip.innerHTML = `<div class="chip-dot${isSanc ? ' sanc' : ''}">${isElim ? `<span style="font-size:16px">${p.forfeited ? '🏳' : '💀'}</span>` : playerSigilSVG(p, 18)}</div>
       <div class="chip-info">
         <div class="chip-name" style="color:${isElim ? 'var(--text-mute)' : (isActive ? p.color : 'var(--parch-ink)')}">
-          ${p.idx === _leaderIdx && !isElim ? '<span title="Leading: most tiles, then most Mana" style="margin-right:3px">👑</span>' : ''}${p.name}${p.wcEffects && p.wcEffects.phoenix && !isElim ? ' <span class="chip-phoenix" title="Phoenix Pact: if their Mana hits 0 they come back at 30✦">🔥</span>' : ''}${isActive ? ' ◄' : ''}${isElim ? ` <span style="font-size:9px;color:#e05252;font-family:Inter,sans-serif">${p.forfeited ? 'LEFT' : 'ELIMINATED'}</span>` : isSanc ? '<span class="chip-sanc-tag">⛓ SANCTIONED</span>' : monoTag}
+          ${p.idx === _leaderIdx && !isElim ? '<span title="Leading: most tiles, then most Mana" style="margin-right:3px">👑</span>' : ''}${p.name}${p.wcEffects && p.wcEffects.phoenix && !isElim ? ' <span class="chip-phoenix" title="Phoenix Pact: if their Mana hits 0 they come back at 30✦">🔥</span>' : ''}${!isElim && cs.s >= 2 ? ` <span class="chip-streak" title="${cs.s} battle wins in a row" style="font:700 10px Inter,sans-serif;color:#ff8a1f;white-space:nowrap">🔥×${cs.s}</span>` : ''}${!isElim ? Object.keys(cs.g || {}).filter(k => cs.g[k] > 0).map(k => { const o = G.players.find(q => q.idx === Number(k)); return o ? ` <span class="chip-grudge" title="Grudge against ${o.name}${cs.g[k] > 1 ? ' ×' + cs.g[k] : ''}" style="font:700 10px Inter,sans-serif;color:${o.color};text-shadow:0 0 2px rgba(0,0,0,.5);white-space:nowrap">⚔${cs.g[k] > 1 ? '×' + cs.g[k] : ''}</span>` : ''; }).join('') : ''}${isActive ? ' ◄' : ''}${isElim ? ` <span style="font-size:9px;color:#e05252;font-family:Inter,sans-serif">${p.forfeited ? 'LEFT' : 'ELIMINATED'}</span>` : isSanc ? '<span class="chip-sanc-tag">⛓ SANCTIONED</span>' : monoTag}
         </div>
-        <div class="chip-sub">${isElim ? 'Out of the game' : `${p.tileCount} ${p.tileCount === 1 ? 'tile' : 'tiles'} · ${p.handSize ?? 0} in hand · <span style="color:#5dc97d">⚔${p.battlesWon??0}W</span> <span style="color:#e05252">${p.battlesLost??0}L</span>`}</div>
+        <div class="chip-sub">${isElim ? 'Out of the game' : `${cs.t} ${cs.t === 1 ? 'tile' : 'tiles'} · ${cs.h} in hand · <span style="color:#5dc97d">⚔${cs.w}W</span> <span style="color:#e05252">${cs.l}L</span>`}</div>
       </div>
       <div class="chip-mana">
         <div class="chip-mana-val">${isElim ? '—' : p.mana}</div>
@@ -1297,7 +1429,7 @@ function renderPaper(){
       </div>`;
     plist.appendChild(chip);
     // v0.6.10: rolling mana counter (holds the old number while the die/token is animating)
-    if (window.BoardFX && !isElim) BoardFX.manaRoll(p.idx, chip.querySelector('.chip-mana-val'), (_fxBusy() || p.idx in _sxChipHold) ? null : p.mana);   // v0.6.41: held during the Sanction moment
+    if (window.BoardFX && !isElim) BoardFX.manaRoll(p.idx, chip.querySelector('.chip-mana-val'), (_fxBusy() || _bh || p.idx in _sxChipHold) ? null : p.mana);   // v0.6.41: held during the Sanction moment
   });
   paper.appendChild(plist);
 

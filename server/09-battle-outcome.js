@@ -101,6 +101,33 @@ function _deathEffectDamage(winnerM, winnerP, loserP, tile, tilePos, dmg, label,
   }
 }
 
+// v1.0.158: Rivalry — grudges / Revenge / Denied (games of 3+ players) and win streaks. Callouts only: no Mana, no rules.
+// A grudge starts when a player beats you (any tile, attacking or defending). Your next win over them is Revenge and
+// clears it; losing to them again is Denied and the count goes up. A Revenge loss does not start a new grudge.
+// Wins and losses are read from the battlesWon / battlesLost counters, so a Death Rattle that flips the result is respected.
+function _rivalrySnap(a, d) { return [a.battlesWon, a.battlesLost, d.battlesWon, d.battlesLost]; }
+function _rivalryApply(snap, att, def) {
+  const out = {};
+  const real = pl => !!pl && pl.idx != null;
+  const aWon = att.battlesWon > snap[0], aLost = att.battlesLost > snap[1], dWon = def.battlesWon > snap[2], dLost = def.battlesLost > snap[3];
+  const W = aWon ? att : dWon ? def : null, L = W ? (W === att ? def : att) : null;
+  [[att, aWon, aLost], [def, dWon, dLost]].forEach(([pl, won, lost]) => {
+    if (!real(pl)) return;
+    if (won) { pl.streak = (pl.streak || 0) + 1; out.streak = { idx: pl.idx, n: pl.streak }; }
+    else if (lost) { if ((pl.streak || 0) >= 3 && real(W)) out.streakEnded = { idx: pl.idx, n: pl.streak, by: W.idx }; pl.streak = 0; }
+  });
+  if (real(W) && real(L) && G.players.length >= 3) {
+    W.grudges = W.grudges || {}; L.grudges = L.grudges || {};
+    if (W.grudges[L.idx] > 0) { out.revenge = { idx: W.idx, on: L.idx, n: W.grudges[L.idx] }; delete W.grudges[L.idx]; log(`⚔ Revenge: ${W.name} settles the score with ${L.name}`); }
+    else { const was = L.grudges[W.idx] || 0; L.grudges[W.idx] = was + 1; if (was > 0) out.denied = { idx: W.idx, on: L.idx, n: was + 1 }; }
+  }
+  return out;
+}
+function _rivalryClear(idx) {   // a player leaves or is eliminated: their grudges go, and so do grudges against them
+  G.players.forEach(pl => { if (pl.grudges) delete pl.grudges[idx]; });
+  const p = G.players[idx]; if (p) { p.grudges = {}; p.streak = 0; }
+}
+
 function _applyBattleOutcome(outcome, attPlayer, attM, defPlayer, defM, tile, tilePos) {
   if (outcome === 'attacker_wins') {
     attPlayer.hand = attPlayer.hand.filter(m => m.iid !== attM.iid);
@@ -253,3 +280,39 @@ function resolveRoll_fromPos(playerIdx, pos) {
   resolveLandingTile(playerIdx);
 }
 
+// v1.0.162: the battle-dice timers of each room (kept out of G, which is saved to disk). _diceTimer(code, key, handle) stores a
+// handle (clearing any older one); _diceTimer(code, key, null) cancels it.
+const _diceTimers = new Map();
+function _diceTimer(code, key, handle) {
+  const k = code + '|' + key, old = _diceTimers.get(k);
+  if (old) clearTimeout(old);
+  if (handle) _diceTimers.set(k, handle); else _diceTimers.delete(k);
+}
+// v1.0.159: BATTLE DICE — roll one side's two dice; when both sides are in, show them for a moment, then fight.
+function _battleRollSide(side, auto) {
+  const R = G.battleRoll; if (!R || R[side]) return;
+  R[side] = { b: rand(1, 6), w: rand(1, 6), auto: !!auto };
+  const who = side === 'att' ? G.players[R.attIdx] : (R.defIdx != null ? G.players[R.defIdx] : null);
+  log(`🎲 ${who ? who.name : 'Wild monster'} rolled ⚫${R[side].b} ⚪${R[side].w}${auto ? ' (auto)' : ''}`);
+  if (R.att && R.def && !R.started) {
+    R.started = true;
+    _diceTimer(G.roomCode, 'auto', null);   // v1.0.162: both rolled — the 12 s auto-roll is no longer needed
+    const seq = R.seq;
+    // v1.0.161: the fight waits for the host board to say every die has landed and been read (battle_dice_settled).
+    // No host board in the room → the old short pause. Board never answers → start anyway after BATTLE_DICE_MS.wait.
+    const board = [...clients.values()].some(c => c.roomCode === G.roomCode && c.isBoard && !c.isSpectator);
+    _diceTimer(G.roomCode, 'wait', scheduleRoomAction(G.roomCode, () => _battleDiceStart(seq), board ? BATTLE_DICE_MS.wait : BATTLE_DICE_MS.show));   // v1.0.162: cancelled when the board settles first
+  }
+}
+// v1.0.161: start the fight for roll `seq` (once: the board's "settled" and the fallback timer both call this)
+function _battleDiceStart(seq) {
+      const Q = G && G.battleRoll; if (!Q || Q.seq !== seq || !Q.att || !Q.def || Q.go || G.phase !== 'resolve:battle') return;
+      Q.go = true;
+      _diceTimer(G.roomCode, 'wait', null); _diceTimer(G.roomCode, 'auto', null);   // v1.0.162: nothing left to fire for this roll
+      _battleDice = { ab: Q.att.b, aw: Q.att.w, db: Q.def.b, dw: Q.def.w };
+      G.battleRoll = null;
+      const sock = { lastError: null, send() {}, readyState: 3 };
+      try { handlers._attack_resolve(typeof botSock === 'function' ? botSock() : sock, { playerIdx: Q.attIdx, roomCode: G.roomCode }, { iid: Q.iid }); }
+      finally { _battleDice = null; }
+      if (G.phase === 'resolve:battle') broadcast();   // the fight could not start (summon gone): the attacker picks again
+}

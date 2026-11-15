@@ -128,7 +128,7 @@ textarea:focus{border-color:var(--accent)}
   <div class="topbar-right">
     <span id="topbar-matchup">Select both summons</span>
     <a href="/board">← Board</a>
-    <span style="font-family:monospace">v1.0.109</span>
+    <span style="font-family:monospace">v1.0.110</span>
   </div>
 </div>
 
@@ -253,6 +253,28 @@ textarea:focus{border-color:var(--accent)}
       <button class="btn-sm active" id="rl-rand" onclick="setRoll('rand')">Random</button>
       <button class="btn-sm" id="rl-avg" onclick="setRoll('avg')">Avg</button>
     </div>
+    <!-- v1.0.110: BATTLE DICE trial (not in the game yet). Each player rolls a black die (the hit they deal) and a
+         white die (the hit they take). First strike = attacker black x defender white; counter = defender black x attacker white.
+         Replaces the flat +0 to 3 roll when On. -->
+    <div class="vs-label">Battle dice (trial)</div>
+    <div class="btns2">
+      <button class="btn-sm active" id="dc-off" onclick="setDice(false)">Off</button>
+      <button class="btn-sm" id="dc-on" onclick="setDice(true)">On</button>
+    </div>
+    <div id="dice-box" style="display:none;font-size:10px;color:var(--muted);text-align:left;width:100%;margin-top:4px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 6px;margin-bottom:6px">
+        <label>Att ⚫ <select id="dc-ab" class="dc-sel"></select></label><label>Att ⚪ <select id="dc-aw" class="dc-sel"></select></label>
+        <label>Def ⚫ <select id="dc-db" class="dc-sel"></select></label><label>Def ⚪ <select id="dc-dw" class="dc-sel"></select></label>
+      </div>
+      <div>⚫ Black: your hit × (roll 1 to 6)</div>
+      <div id="dc-black" style="display:grid;grid-template-columns:repeat(6,1fr);gap:2px;margin:2px 0 5px"></div>
+      <div>⚪ White: the hit you take × (roll 1 to 6)</div>
+      <div id="dc-white" style="display:grid;grid-template-columns:repeat(6,1fr);gap:2px;margin:2px 0 5px"></div>
+      <div id="dc-avg" style="margin-bottom:4px"></div>
+      <button class="btn-sm" onclick="resetDice()">↺ Reset dice tables</button>
+    </div>
+    <button class="btn-sm" style="margin-top:6px" onclick="runSim()">▶ Run 1000 fights</button>
+    <div id="sim-out" style="font-size:10px;line-height:1.5;text-align:left;width:100%;margin-top:4px"></div>
   </div>
 
   <!-- ══ DEFENDER ══ -->
@@ -584,7 +606,8 @@ function doStrike(att, def, tileEl, charm, ambush, bonusRun, monoBuff, forgeBonu
   const effDef=Math.round(piercedDef*tileEff);
   const baseDmg=Math.max(1, att.atk - effDef);
   const typeMod=typeMultiplier(att, def);
-  const roll=rand(0,3);
+  const useDice=DICE.on && _sd;                 // v1.0.110: battle dice replace the flat roll
+  const roll=useDice ? 0 : rand(0,3);
   let dmg=Math.round(baseDmg*typeMod)+roll;
 
   if(attIsRadiantLancer && rawDef !== piercedDef){
@@ -595,6 +618,12 @@ function doStrike(att, def, tileEl, charm, ambush, bonusRun, monoBuff, forgeBonu
   steps.push({cls:'le-info',t:`  ATK ${att.atk} − ${defStr} = base ${baseDmg} × ${typeMod}× type + roll ${roll} → ${dmg}`});
   if(tileEff>1)  steps.push({cls:'le-buff',t:`  🗺 Tile bonus: defender's ${tileEl} tile +15% DEF`});
   if(tileEff<1)  steps.push({cls:'le-buff',t:`  🗺 Tile penalty: ${tileEl} tile beats ${def.type} −15% DEF`});
+  if(useDice){   // v1.0.110: black die of the striker x white die of the one being hit
+    const bm=DICE.black[_sd.b-1], wm=DICE.white[_sd.w-1], d0=dmg;
+    dmg=Math.round(dmg*bm*wm);
+    const bn=_sd.b===6?' Critical':_sd.b===1?' Glancing':'', wn=_sd.w===6?' Braced':_sd.w===1?' Exposed':'';
+    steps.push({cls:(bm*wm)>=1?'le-buff':'le-ability',t:`  🎲 ⚫ ${_sd.b}${bn} ×${bm} · ⚪ ${_sd.w}${wn} ×${wm} → ${d0} becomes ${dmg}`});
+  }
 
   if(charm){
     dmg=Math.round(dmg*1.25);
@@ -656,6 +685,7 @@ function calcBattle(){
   let attLoH=false, defLoH=false, attRite=false, defRite=false;
   const T30=m=>Math.floor(m.maxHp*0.30);
   const log=[]; const L=(cls,t)=>log.push({cls,t});
+  const dz = DICE.on ? rollBattleDice() : null;   // v1.0.110: all four dice roll once, before the fight
   const strike=(a,d,isAtt,bonusRun,monoB)=>{
     const charm = isAtt ? attCharm : defCharm;
     const amb = isAtt ? ambush : false;
@@ -666,7 +696,9 @@ function calcBattle(){
       if(omen==='shackled_will') ex.push({m:0.5,t:'🔮 Shackled Will ½'});
       if(fI&&fI.c) ex.push({m:1+fI.c,t:`🎡 ${fI.n} counter +${Math.round(fI.c*100)}%`});
     }
+    _sd = dz ? (isAtt ? {b:dz.ab, w:dz.dw} : {b:dz.db, w:dz.aw}) : null;   // v1.0.110
     const r=doStrike(a,d,tileEl,charm,amb,bonusRun,monoB,0,pierce,ex,!isAtt);   // v1.0.105: defender strikes get home ATK
+    _sd = null;
     if(isAtt){ attCharm=false; ambush=false; } else defCharm=false;   // consumed on first strike
     r.steps.forEach(x=>log.push(x)); return r.dmg;
   };
@@ -674,6 +706,7 @@ function calcBattle(){
   const typeMod=typeMultiplier(att,def);
   L('le-info',`⚔ ${att.name} [${att.type||'Support'}${att.type2?'/'+att.type2:''}] vs ${def.name} [${def.type||'Support'}${def.type2?'/'+def.type2:''}]`);
   L('le-info',`   Type modifier: ${typeMod===2?'2× STRONG (⚡)':typeMod===0.5?'0.5× WEAK (💧)':'1× Neutral'}`);
+  if(dz)    L('le-buff',`   🎲 Dice: ${att.name} ⚫${dz.ab} ⚪${dz.aw} · ${def.name} ⚫${dz.db} ⚪${dz.dw}`);
   if(ws)    L('le-buff',`   ⚒ Weapon Smith ×${ws}: +${ws*5} ATK on attacker`);
   if(attVH) L('le-buff',`   ⚡ Void Hunger: +${attVH} ATK on attacker`);
   if(fg)    L('le-buff',`   🔨 Forge ×${fg}: +${fg*5} DEF on defender (${defM.def} → ${def.def})`);
@@ -805,7 +838,7 @@ function calcBattle(){
   const manaD={att_wins:'+4 / −4',def_wins:'−8 / +4',mutual:'−8 / +4',stalemate:'−4 / +4'}[outcome];
   L('le-info',`   Mana (attacker / defender): ${manaD}`);
 
-  return {preDmg, preKilled, atkDmg, ctrDmg, attHpAfter:finalAttHp, defHpAfter:finalDefHp, outcome, log, resultText,
+  return {dice:dz, preDmg, preKilled, atkDmg, ctrDmg, attHpAfter:finalAttHp, defHpAfter:finalDefHp, outcome, log, resultText,
           attMaxAfter:att.maxHp, defMaxAfter:def.maxHp};
 }
 
@@ -1180,6 +1213,48 @@ function setSpeed(m){
   document.getElementById('sp-fast').classList.toggle('active',m==='fast');
 }
 
+// ─── v1.0.110: BATTLE DICE trial ───────────────────────────────────────────────────────────────
+const DICE_DEFAULT={black:[0.5,0.9,1,1.1,1.2,1.5], white:[1.25,1.1,1,0.9,0.8,0.6]};
+const DICE={on:false, black:DICE_DEFAULT.black.slice(), white:DICE_DEFAULT.white.slice()};
+let _sd=null;
+try{ const v=JSON.parse(localStorage.getItem('sg-bt-dice')||'null'); if(v&&v.black&&v.white&&v.black.length===6&&v.white.length===6){ DICE.black=v.black; DICE.white=v.white; } }catch(e){}
+function rollBattleDice(){
+  const one=id=>{ const v=+document.getElementById(id).value; return v || (rollMode==='avg' ? 3 : 1+Math.floor(Math.random()*6)); };
+  return {ab:one('dc-ab'), aw:one('dc-aw'), db:one('dc-db'), dw:one('dc-dw')};
+}
+function drawDice(){
+  document.querySelectorAll('.dc-sel').forEach(el=>{ if(!el.options.length) el.innerHTML='<option value="">Random</option>'+[1,2,3,4,5,6].map(n=>`<option>${n}</option>`).join(''); });
+  ['black','white'].forEach(k=>{ document.getElementById('dc-'+k).innerHTML=DICE[k].map((v,i)=>`<input type="number" step="0.05" min="0" max="3" value="${v}" title="Roll ${i+1}" style="width:100%;font-size:10px;padding:1px;text-align:center" onchange="DICE.${k}[${i}]=Math.max(0,+this.value||0);saveDice()">`).join(''); });
+  const m=a=>a.reduce((x,y)=>x+y,0)/6;
+  document.getElementById('dc-avg').textContent=`Average: ⚫ ×${m(DICE.black).toFixed(2)} · ⚪ ×${m(DICE.white).toFixed(2)} · together ×${(m(DICE.black)*m(DICE.white)).toFixed(2)} of today's damage`;
+}
+function saveDice(){ try{localStorage.setItem('sg-bt-dice',JSON.stringify({black:DICE.black,white:DICE.white}));}catch(e){} drawDice(); refreshPreview(); }
+function resetDice(){ DICE.black=DICE_DEFAULT.black.slice(); DICE.white=DICE_DEFAULT.white.slice(); saveDice(); }
+function setDice(on){
+  DICE.on=on;
+  document.getElementById('dc-off').classList.toggle('active',!on);
+  document.getElementById('dc-on').classList.toggle('active',on);
+  document.getElementById('dice-box').style.display=on?'block':'none';
+  drawDice();
+}
+// 1000 fights with the current set-up, today's rule against the dice. Fixed dice in the selectors are respected.
+function runSim(){
+  const out=document.getElementById('sim-out');
+  if(!attM||!defM){ out.textContent='Select both summons first.'; return; }
+  const N=1000, wasOn=DICE.on, wasRoll=rollMode; rollMode='rand';
+  const run=on=>{ DICE.on=on; const c={att_wins:0,def_wins:0,stalemate:0,mutual:0}; let first=0, ctr=0;
+    for(let i=0;i<N;i++){ const r=calcBattle(); c[r.outcome]++; first+=r.atkDmg; ctr+=r.ctrDmg; }
+    return {c, first:first/N, ctr:ctr/N}; };
+  let a,b; try{ a=run(false); b=run(true); } finally { DICE.on=wasOn; rollMode=wasRoll; }
+  const pc=n=>(n/N*100).toFixed(1)+'%';
+  const row=(lbl,k,col)=>`<tr><td style="color:${col}">${lbl}</td><td style="text-align:right">${pc(a.c[k])}</td><td style="text-align:right">${pc(b.c[k])}</td></tr>`;
+  out.innerHTML=`<table style="width:100%;border-collapse:collapse"><tr style="color:var(--muted)"><td></td><td style="text-align:right">Today</td><td style="text-align:right">Dice</td></tr>
+    ${row('Attacker wins','att_wins','#5cb85c')}${row('Defender wins','def_wins','var(--red)')}${row('Stalemate','stalemate','var(--muted)')}${row('Both destroyed','mutual','var(--gold)')}
+    <tr><td>Avg attack dmg</td><td style="text-align:right">${a.first.toFixed(1)}</td><td style="text-align:right">${b.first.toFixed(1)}</td></tr>
+    <tr><td>Avg counter dmg</td><td style="text-align:right">${a.ctr.toFixed(1)}</td><td style="text-align:right">${b.ctr.toFixed(1)}</td></tr></table>
+    <div style="color:var(--muted)">${N} fights each, from the HP shown. "Today" = flat +0 to 3.</div>`;
+}
+
 function setRoll(m){
   rollMode=m;
   document.getElementById('rl-rand').classList.toggle('active',m==='rand');
@@ -1231,7 +1306,7 @@ function copyForClaude(){
 // ═══════════════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════════════
-buildDropdowns();
+buildDropdowns(); drawDice();
 loadNotes();
 // Default: Solar Knight vs Death Knight on an Undead tile
 document.getElementById('att-sel').value='solar_knight'; pickMonster('att');

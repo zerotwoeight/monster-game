@@ -79,12 +79,14 @@ function botStateKey() {
   const wp = G.wildCardPending;
   return [G.phase, G.currentPlayer, G.turnCount, G.setupTurnIdx, G.sanction && G.sanction.seq,
     wp ? (wp.cardId + ':' + (wp.step || '') + ':' + ((wp.picks || []).length)) : '',
-    G.pendingAttackerSummon ? G.pendingAttackerSummon.iid : ''].join('|');
+    G.pendingAttackerSummon ? G.pendingAttackerSummon.iid : '', G.battleRoll ? 'r' + G.battleRoll.seq : ''].join('|');   // v1.0.159
 }
 function botWhoActs() {
   if (!G || G.phase === 'lobby' || G.phase === 'game_over' || G.pausedFor) return null;
   if (G.phase === 'setup' && G.autoSetupRunning) return null;
   if (!BOT_ACT_PHASES.has(G.phase)) return null;
+  if (G.battleRoll) return null;   // v1.0.159: battle dice are rolling — bots roll through _battleRollAuto, not through a decision
+  if (G.phase === 'resolve:heal_tile' && typeof _healJustDone === 'function' && _healJustDone()) return null;   // v1.0.160: healed, turn is moving on
   // nobody watching (board closed, phones gone) → bots wait instead of playing on alone
   if (![...clients.values()].some(c => c.roomCode === G.roomCode)) return null;
   const p = G.players[G.currentPlayer];
@@ -421,13 +423,13 @@ function botLandingScore(p, pos) {
     case 'chest': return 6 + w.chest * 12;
     case 'heal':  return p.mana >= 10 ? Math.min(20, missing / 4) * (0.6 + w.heal) : 0;
     case 'temple': {
-      if (p.mana < 20 + 3) return 0;
-      const canTrade = p.hand.some(m => !m.isSpecial && m.type);
+      if (p.mana < TEMPLE_COST + 3) return 0;
+      const canTrade = p.hand.some(templeCanOffer);   // v1.0.155
       return canTrade ? 4 + w.temple * 16 + (_hard(p) ? 4 : 0) : 0;
     }
   }
   if ((t.ownerId === null || t.ownerId === undefined) && !t.summonInstance) {   // v1.0.152: a wild monster is scored like an enemy tile below
-    const aff = p.hand.filter(m => canUseSpecial(p.idx, m) && p.mana - m.cost >= 3);
+    const aff = p.hand.filter(m => canUseSpecial(p.idx, m) && p.mana - claimFee(m) >= 3);
     if (!aff.length) return 1;
     const best = Math.max(...aff.map(m => _homeMatch(m, t.element)));
     let s = 16 + best * 3;
@@ -459,20 +461,20 @@ function botLanding(p) {
 
 function botClaim(p) {
   const w = _w(p), t = G.board[p.position];
-  const cands = p.hand.filter(m => canUseSpecial(p.idx, m) && p.mana - m.cost >= 3);
+  const cands = p.hand.filter(m => canUseSpecial(p.idx, m) && p.mana - claimFee(m) >= 3);
   if (!cands.length) return botDo(p, 'skip_claim');
   const els = _setElements(p);
   const b = _best(cands, m => {
-    let s = _homeMatch(m, t.element) * 8 + (w.likes[m.arch] || 0) - m.cost * 0.4 + m.hp / 12 + m.def / 3;
+    let s = _homeMatch(m, t.element) * 8 + (w.likes[m.arch] || 0) - claimFee(m) * 0.4 + m.hp / 12 + m.def / 3;
     if (m.arch === 'assailant') s -= 4;          // glass cannons are poor tile holders
     if (m.isSpecial) s += 10;
     if (w.mono && m.type && !els.includes(m.type)) s -= 3;
-    if (!_spare(p, m.cost)) s -= 6;
+    if (!_spare(p, claimFee(m))) s -= 6;
     return s + Math.random();
   });
   if (_easy(p) && Math.random() < 0.15) return botDo(p, 'claim', { iid: _rnd(cands).iid });
   // keep Mana if every option is a poor fit and money is tight
-  if (b.score < -6 && !_spare(p, b.item.cost)) return botDo(p, 'skip_claim');
+  if (b.score < -6 && !_spare(p, claimFee(b.item))) return botDo(p, 'skip_claim');
   return botDo(p, 'claim', { iid: b.item.iid });
 }
 
@@ -484,7 +486,7 @@ function botOwn(p) {
   // A better holder in hand (home ground where the current one isn't)
   if (m && (!_easy(p))) {
     const cur = _homeMatch(m, t.element);
-    const better = p.hand.filter(h => canUseSpecial(p.idx, h) && _spare(p, h.cost) && h.arch !== 'assailant' && _homeMatch(h, t.element) > cur);
+    const better = p.hand.filter(h => canUseSpecial(p.idx, h) && _spare(p, claimFee(h)) && h.arch !== 'assailant' && _homeMatch(h, t.element) > cur);
     if (better.length && (cur === 0 || w.builder || _hard(p))) {
       const b = _best(better, h => h.hp + h.def * 2);
       return botDo(p, 'swap', { newSummonIid: b.item.iid });
@@ -513,21 +515,19 @@ function botBattle(p) {
   return botDo(p, 'attack', { iid: b.m.iid });
 }
 
-function botTemple(p) {
-  const w = _w(p), offers = (G.pendingTemple && G.pendingTemple.offers) || [];
+function botTemple(p) {   // v1.0.155: Temple v2 — offer the cheapest eligible summon whose Ascendant fits
+  const w = _w(p);
+  if (p.mana < TEMPLE_COST || !_spare(p, TEMPLE_COST)) return botDo(p, 'temple_leave');
   const trades = [];
-  for (const o of offers) {
-    if (p.mana < o.cost || !_spare(p, o.cost)) continue;
-    const give = p.hand.filter(m => m.type === o.type && !m.isSpecial);
-    if (!give.length) continue;
-    const g = _best(give, m => -(m.cost + m.hp / 10)).item;
+  for (const g of p.hand.filter(templeCanOffer)) {
+    const o = templeAscendantFor(g);
     let s = 6 + (o.hp + o.atk) / 10 - g.cost * 0.5;
     if (_setElements(p).includes(o.type)) s += 4;
-    if (o.condition === 'mana40' && p.mana - o.cost >= 40) s += 3;
-    trades.push({ o, g, s });
+    if (canUseSpecial(p.idx, o)) s += 3;
+    trades.push({ g, s });
   }
   const b = _best(trades, x => x.s);
-  if (b && (Math.random() < w.temple || _hard(p))) return botDo(p, 'temple_trade', { specialIid: b.item.o.iid, sacrificeIid: b.item.g.iid });
+  if (b && (Math.random() < w.temple || _hard(p))) return botDo(p, 'temple_offer', { iid: b.item.g.iid });
   return botDo(p, 'temple_leave');
 }
 

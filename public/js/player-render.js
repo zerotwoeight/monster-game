@@ -211,7 +211,7 @@ function renderJoin() {
   document.getElementById('main-content').innerHTML = `
     <div class="join-logo">
       <img class="join-logo-art" src="/img/logos/logo-main.webp" alt="Summoner's Gambit">
-      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.62</div>
+      <div class="join-logo-sub">Player Controller &nbsp;·&nbsp; v0.5.70</div>
     </div>
     <div id="sg-news-pill" style="display:flex;justify-content:center"></div>
 
@@ -337,7 +337,7 @@ function renderLobby() {
       <div style="font-size:32px;margin-bottom:12px">🏰</div>
       <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--text);margin-bottom:4px">LOBBY</div>
       <div style="font-size:12px;color:var(--text-mute)">Waiting for host to start…</div>
-      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.62</div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:6px;opacity:.5;letter-spacing:.1em">v0.5.70</div>
       <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;text-transform:uppercase;margin-top:10px;color:${G.skipSetup?'var(--accent)':'var(--text-mute)'}">Setup: ${G.skipSetup?'Auto':'Normal'}</div>
     </div>
     <div id="sg-news-pill" style="display:flex;justify-content:center"></div>
@@ -459,6 +459,7 @@ function _tsSummonsHTML(ts) {
 }
 
 function _tsIncomeHTML(ts, summonTotal, netMana) {
+  if (ts.incomeLines) return _tsIncomeLinesHTML(ts);   // v0.5.72
   const row = (lbl, val, col) => `<div style="display:flex;justify-content:space-between;font-size:14px;"><span>${lbl}</span><span style="color:${col};font-variant-numeric:tabular-nums;">${val}</span></div>`;
   const sgn = (n) => `${n < 0 ? '−' : '+'}${Math.abs(n)} ✦`;
   const G_ = '#c99a55', GR = '#5cc795', R = '#ef7a7a';
@@ -482,18 +483,38 @@ function _tsIncomeHTML(ts, summonTotal, netMana) {
   </div>`;
 }
 
+// v0.5.72: the server's breakdown, the same lines the board shows. Battles since your last turn sit under it, outside the income.
+function _tsIncomeLinesHTML(ts) {
+  const row = (lbl, val, col) => `<div style="display:flex;justify-content:space-between;font-size:14px;"><span>${lbl}</span><span style="color:${col};font-variant-numeric:tabular-nums;">${val}</span></div>`;
+  const sgn = (n) => `${n < 0 ? '−' : '+'}${Math.abs(n)} ✦`;
+  const G_ = '#c99a55', GR = '#5cc795', R = '#ef7a7a';
+  let h = '';
+  for (const l of ts.incomeLines) { if (!l.val && l.k !== 'base' && l.k !== 'summons') continue; h += row(l.label === 'Base' ? 'Baseline' : l.label, sgn(l.val), l.val < 0 ? R : G_); }
+  const nc = ts.income >= 0 ? GR : R;
+  let b = '';
+  const bw = ts.battleManaGain || 0, bl = ts.battleManaLoss || 0;
+  if (bw || bl) {
+    const n = bw - bl, detail = bw && bl ? ` <span style="color:#a5a3b8;font-size:12px;">(+${bw} won, −${bl} lost)</span>` : '';
+    b = `<div style="border-top:1px solid #2a2d4a;padding-top:8px;margin-top:2px;font-size:11px;letter-spacing:.12em;color:#a5a3b8;">SINCE YOUR LAST TURN</div>` + row(`Battles${detail}`, sgn(n), n < 0 ? R : GR);
+  }
+  return `<div style="background:#151627;border:1px solid #2a2d4a;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px;">
+    <div style="border-bottom:1px solid #2a2d4a;padding-bottom:4px;">${_tsLbl('INCOME')}</div>${h}
+    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;border-top:1px solid #2a2d4a;padding-top:8px;margin-top:2px;color:${nc};"><span>Income</span><span>${sgn(ts.income)}</span></div>${b}
+  </div>`;
+}
+
 // recall = opened later from the header button (no Begin Turn; summons live)
 function buildTurnSummaryHTML(ts, recall) {
   const tally = ts.roundTally || [];
   const summonTotal = tally.length ? tally.reduce((s, e) => s + e.netMana, 0) : (ts.summonGen || 0) + (ts.manaRefineryBonus || 0);
-  const netMana = (ts.baseline + summonTotal + ts.wellBonus + (ts.battleManaGain || 0)) - ts.intimidateLoss - ts.upkeep - (ts.battleManaLoss || 0);
+  const netMana = ts.income != null ? ts.income : (ts.baseline + summonTotal + ts.wellBonus + (ts.battleManaGain || 0)) - ts.intimidateLoss - ts.upkeep - (ts.battleManaLoss || 0);
   const roundsRemLabel = ts.roundsRemaining === 1 ? '1 LEFT' : `${ts.roundsRemaining} LEFT`;
   return `<div style="padding:14px 16px ${recall ? '24px' : '120px'};display:flex;flex-direction:column;gap:14px;">
     <div style="display:flex;justify-content:space-between;align-items:flex-end;padding:4px 2px;">
       <div><div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.12em;color:#a5a3b8;">ROUND ${ts.round} OF ${ts.roundLimit} · ${roundsRemLabel}</div>
         <div style="font-family:'Cinzel',serif;font-size:22px;font-weight:700;margin-top:2px;">${recall ? 'Turn Summary' : 'Your Turn'}</div></div>
       <div style="text-align:right;"><div style="font-family:'Cinzel',serif;font-size:30px;font-weight:700;color:#b0a6ec;line-height:1;">${ts.manaAfter} ✦</div>
-        <div style="font-size:13px;font-weight:600;color:${netMana >= 0 ? '#5cc795' : '#ef7a7a'};margin-top:4px;">${netMana >= 0 ? '+' : '−'}${Math.abs(netMana)} this turn</div></div>
+        <div style="font-size:13px;font-weight:600;color:${netMana >= 0 ? '#5cc795' : '#ef7a7a'};margin-top:4px;">${netMana >= 0 ? '+' : '−'}${Math.abs(netMana)} income</div></div>
     </div>
     ${_tsSinceHTML(ts)}
     ${_tsSummonsHTML(ts)}
@@ -893,7 +914,7 @@ function openTileDetail(tilePos) {
         <div class="tdm-stats-grid" style="flex:1">
           <div class="tdm-stat-box"><div class="tdm-stat-val">${m.atk}</div><div class="tdm-stat-lbl">ATK</div></div>
           <div class="tdm-stat-box"><div class="tdm-stat-val">${m.def}</div><div class="tdm-stat-lbl">DEF</div></div>
-          <div class="tdm-stat-box"><div class="tdm-stat-val">${m.cost}</div><div class="tdm-stat-lbl">Cost</div></div>
+          <div class="tdm-stat-box"><div class="tdm-stat-val">${m.claimFee ?? m.cost}</div><div class="tdm-stat-lbl">Deploy</div></div>
         </div>
       </div>
       <div class="tdm-hp-section">

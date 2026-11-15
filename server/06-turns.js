@@ -112,6 +112,7 @@ function startShopPhase() {
   G.wcBought = null;      // v1.0.148
   G.lastBattle = null;    // clear battle result so it doesn't persist across turns
   G.pendingAttackerSummon = null; // clear attacker preview
+  G.battleRoll = null;            // v1.0.159
 
   // Round 1 grace period — summons placed during setup shouldn't immediately earn;
   // mana generation starts from round 2 onward (turnCount >= playerCount)
@@ -176,6 +177,16 @@ function _startActualTurn() {
 
   // Stalemate check — if this player has a pending stalemate, skip normal shop/roll
   // and go straight to stalemate resolution with buy/sell/attack options
+  // v1.0.163: take this player's own pending stalemate (if any) into G.stalemateData, which the phones / bots read
+  { const mine = G.stalemates && G.stalemates[G.currentPlayer];
+    if (mine) delete G.stalemates[G.currentPlayer];
+    if (G.stalemateData && G.stalemateData.attackerIdx !== G.currentPlayer) G.stalemateData = null;
+    if (mine) {
+      const t = G.board[mine.tilePos];
+      // the fight is over if the tile has no defender any more or it is no longer an enemy's (taken, Severed, Sacrificed, swapped to us)
+      if (t && t.summonInstance && t.ownerId != null && t.ownerId !== G.currentPlayer) G.stalemateData = mine;
+      else log(`⚔️ ${p.name}'s stalemate on tile ${mine.tilePos} is over — the defender is gone`);
+    } }
   if (G.stalemateData && G.stalemateData.attackerIdx === G.currentPlayer) {
     G.phase = 'stalemate';
     console.log(`[SG] *** STALEMATE PHASE for player ${G.currentPlayer} (${p.name}) on tile ${G.stalemateData.tilePos} ***`);

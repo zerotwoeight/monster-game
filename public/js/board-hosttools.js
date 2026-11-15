@@ -89,7 +89,7 @@ const _CURSE = {
   stumble: { name: 'Stumble', tier: 'low', cap: 'STUMBLED',  sub: t => `${t.name} moves exactly 3 this turn` },
   levy:    { name: 'Levy',    tier: 'low', cap: 'LEVIED',    sub: t => `${t.name}'s shop costs +50% this turn` },   // v0.6.74
 };   // Rattle goes off mid-battle — it keeps the battle's own ½ ATK callout (with "courtesy of")
-let _curseSeen = null, _curseQ = [], _cursePlaying = null;
+let _curseSeen = null, _curseQ = [], _cursePlaying = null, _curseWait = null;
 function _curseCollect() {
   const list = (G && G.wcTriggers) || [];
   const max = list.reduce((m, t) => Math.max(m, t.seq), 0);
@@ -100,6 +100,10 @@ function _curseCollect() {
 function _cursePlayNext(force) {
   if (_cursePlaying || !_curseQ.length || !window.BoardFX || !BoardFX.curseLand) return false;
   if (!force && _fxBusy()) return false;
+  if ((BoardFX.wcFlying && BoardFX.wcFlying()) || (typeof _fxHolding !== 'undefined' && _fxHolding > 0) || (typeof _fxPend !== 'undefined' && _fxPend > 0)) {   // v0.7.7: let the Wild Card that caused it land first (no two cards at once)
+    if (!_curseWait) _curseWait = setTimeout(() => { _curseWait = null; _cursePlayNext(force); }, 150);
+    return false;
+  }
   const t = _curseQ.shift(), c = _CURSE[t.id], by = t.byIdx != null && G.players[t.byIdx];
   _cursePlaying = t;
   BoardFX.curseLand({ id: t.id, name: c.name, tier: c.tier }, _fxChipEl(t.idx), c.cap, c.sub(t),
