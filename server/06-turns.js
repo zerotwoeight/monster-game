@@ -171,29 +171,36 @@ function startShopPhase() {
   _startActualTurn();
 }
 
+// v1.0.167: can this player contest the tile they're standing on?
+// Needs: an elemental tile with a summon that isn't theirs (any rival's or a wild one), no Veil of Stillness,
+// and at least one living summon in hand. Sanctioned players never get here (they have Sanction turns).
+function _contestable(p, t) {
+  if (!p || !t || t.kind !== 'element' || !t.summonInstance) return false;
+  if (t.ownerId === p.idx) return false;
+  try { if (omenIs(t, 'veil_of_stillness')) return false; } catch {}
+  return !!(p.hand && p.hand.some(m => m.hp > 0));
+}
+
 // Called after turn summary is dismissed (or directly in round 1)
 function _startActualTurn() {
   const p = G.players[G.currentPlayer];
 
-  // Stalemate check — if this player has a pending stalemate, skip normal shop/roll
-  // and go straight to stalemate resolution with buy/sell/attack options
-  // v1.0.163: take this player's own pending stalemate (if any) into G.stalemateData, which the phones / bots read
-  { const mine = G.stalemates && G.stalemates[G.currentPlayer];
-    if (mine) delete G.stalemates[G.currentPlayer];
-    if (G.stalemateData && G.stalemateData.attackerIdx !== G.currentPlayer) G.stalemateData = null;
-    if (mine) {
-      const t = G.board[mine.tilePos];
-      // the fight is over if the tile has no defender any more or it is no longer an enemy's (taken, Severed, Sacrificed, swapped to us)
-      if (t && t.summonInstance && t.ownerId != null && t.ownerId !== G.currentPlayer) G.stalemateData = mine;
-      else log(`⚔️ ${p.name}'s stalemate on tile ${mine.tilePos} is over — the defender is gone`);
+  // v1.0.167: CONTEST (replaces the old stalemate rule). If you start your turn standing on a tile that holds
+  // someone else's summon — you lost or stalemated there, or it was taken from under you — you may Contest it
+  // for free (pick a summon and fight; your turn ends after, and backing out costs the normal retreat) or Skip
+  // (free; shop and roll as normal). The phase is still called 'stalemate' internally so old plumbing keeps working.
+  { const hadStalemate = !!(G.stalemates && G.stalemates[G.currentPlayer]);
+    if (G.stalemates) delete G.stalemates[G.currentPlayer];
+    G.stalemateData = null;
+    const t = G.board[p.position];
+    if (_contestable(p, t)) {
+      G.stalemateData = { attackerIdx: G.currentPlayer, tilePos: t.pos, contest: true, wasStalemate: hadStalemate,
+                          wild: t.ownerId == null };
+      G.phase = 'stalemate';
+      log(`⚔️ ${p.name} can contest tile ${t.pos}${t.ownerId == null ? ' (wild)' : ` (${G.players[t.ownerId].name})`}`);
+      broadcast();
+      return;
     } }
-  if (G.stalemateData && G.stalemateData.attackerIdx === G.currentPlayer) {
-    G.phase = 'stalemate';
-    console.log(`[SG] *** STALEMATE PHASE for player ${G.currentPlayer} (${p.name}) on tile ${G.stalemateData.tilePos} ***`);
-    log(`⚔️ ${p.name} must resolve the stalemate on tile ${G.stalemateData.tilePos}`);
-    broadcast();
-    return;
-  }
 
   // v1.0.132 (U5): Stumble announces itself as the turn starts (it applies when they roll)
   if (p.wcEffects.stumble) _wcTrigger('stumble', p);

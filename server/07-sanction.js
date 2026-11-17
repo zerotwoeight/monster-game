@@ -163,6 +163,7 @@ function _doSetupClaim(pIdx, tilePos, m) {
     tile.neverOwned = false; // Phase 1: mark tile as ever-claimed
     _updatePeakTiles(pIdx);
     log(`🌟 ${p.name} claimed tile ${tilePos} (${tile.element}) with ${m.name} [Setup]`);
+    G.setupLast = { seq: (G.setupLast?.seq || 0) + 1, idx: pIdx, pos: tilePos, passed: false };   // v1.0.166 tile panel
     // Per-claim ability triggers (setup phase)
     // Feral Striker: Territorial is now dynamic (tile count) — no per-claim stack
     // Stoneback: Granite Hide is now dynamic (tile count) — no per-claim stack
@@ -277,6 +278,7 @@ function beginRound1() {
   G.currentPlayer = i < G.players.length ? i : 0;
 }
 function advanceSetupTurn() {
+  G.setupPreview = null;   // v1.0.166
   G.setupTurnIdx++;
   if (G.setupTurnIdx >= G.setupTotalTurns) {
     // Setup done — start normal game

@@ -185,6 +185,30 @@ const handlers = {
     G.sanction.previewPos = pos;
     broadcast();
   },
+  // v1.0.166: tile panel — which landing option the player is looking at on the phone (null = none)
+  landing_preview(ws, conn, data) {
+    if (!G || G.phase !== 'resolve:landing' || !G.pendingLanding) return;
+    if (conn.playerIdx !== G.currentPlayer) return;
+    const pos = data.tilePos == null ? null : parseInt(data.tilePos, 10);
+    if (pos !== null && !G.pendingLanding.options.includes(pos)) return;
+    if ((G.pendingLanding.previewPos ?? null) === pos) return;
+    G.pendingLanding.previewPos = pos;
+    broadcast();
+  },
+  // v1.0.166: tile panel — the open tile (and summon) the player is browsing during setup
+  setup_preview(ws, conn, data) {
+    if (!G || G.phase !== 'setup' || G.autoSetupRunning) return;
+    if (conn.playerIdx !== G.currentPlayer) return;
+    const pos = data.tilePos == null ? null : parseInt(data.tilePos, 10);
+    if (pos !== null && (!Number.isInteger(pos) || !G.board[pos] || G.board[pos].kind !== 'element' || G.board[pos].ownerId != null)) return;
+    const p = G.players[G.currentPlayer];
+    const m = data.iid ? p.hand.find(h => h.iid === data.iid) : null;
+    const next = { idx: G.currentPlayer, turn: G.setupTurnIdx || 0, pos, monId: m ? m.id : null, mon: m ? serializeBoardMonster(m) : null };
+    const cur = G.setupPreview;
+    if (cur && cur.idx === next.idx && cur.turn === next.turn && cur.pos === next.pos && cur.monId === next.monId) return;
+    G.setupPreview = next;
+    broadcast();
+  },
   sanction_sacrifice(ws, conn, data) {
     if (!guardTurn(ws, conn, ['sanction:own'], 'Not on your own tile')) return;
     const p = G.players[G.currentPlayer];
@@ -608,32 +632,27 @@ const handlers = {
     const sd = G.stalemateData;
     // Verify the tile is still contested (defender's summon still there)
     const tile = G.board[sd.tilePos];
-    if (!tile || !tile.summonInstance) {
-      // Defender monster gone somehow — just clear and advance
+    // v1.0.167: re-check — the tile must still hold someone else's summon and the player must still be standing on it
+    if (!_contestable(p, tile) || p.position !== sd.tilePos) {
       G.stalemateData = null;
-      advanceTurn();
+      G.phase = 'shop';   // nothing to contest any more — play the turn as normal
+      broadcast();
       return;
     }
     G.stalemateData = null;
     G.pendingAttackerSummon = null;
-    G.phase = 'resolve:battle';
-    log(`⚔️ ${p.name} chooses to battle again on tile ${sd.tilePos}!`);
+    G.phase = 'resolve:battle';   // same screen as a landing battle: pick a summon, or Retreat (normal retreat cost)
+    log(`⚔️ ${p.name} contests tile ${sd.tilePos}!`);
     broadcast();
   },
 
-  // Player retreats from stalemate — pays 5 Mana, skips rolling, goes straight to shop
+  // v1.0.167: Skip the contest — free; go straight to the shop and play the turn as normal
   stalemate_continue(ws, conn, data) {
     if (!guardTurn(ws, conn, ['stalemate'], 'Not stalemate phase')) return;
     const p = G.players[G.currentPlayer];
-    const RETREAT_COST = 8;
-    const paid = Math.min(p.mana, RETREAT_COST);
-    p.mana -= paid;
-    if (paid > 0) _trackBattleMana(p, -paid);
-    log(`🚶 ${p.name} retreats from stalemate${paid > 0 ? ` — paid ${paid}✦` : ''}`);
-    checkManaElimination(G.currentPlayer);
-    if (checkLastStanding()) return; // game ended
+    const sd = G.stalemateData;
+    log(`🚶 ${p.name} leaves tile ${sd ? sd.tilePos : p.position} uncontested`);
     G.stalemateData = null;
-    // Jump straight to shop (passive income already collected at turn start)
     G.phase = 'shop';
     broadcast();
   },
@@ -667,6 +686,7 @@ const handlers = {
     if (!guardTurn(ws, conn, ['setup'], 'Not setup phase')) return;
     if (G.autoSetupRunning) return sendError(ws, 'Auto Setup in progress');
     log(`⏭ ${G.players[G.currentPlayer].name} passed setup turn`);
+    G.setupLast = { seq: (G.setupLast?.seq || 0) + 1, idx: G.currentPlayer, pos: null, passed: true };   // v1.0.166 tile panel
     advanceSetupTurn();
   },
 

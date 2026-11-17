@@ -546,13 +546,9 @@ function openAboutModal(showHowToPlay = true) {
   const howToPlayHTML = showHowToPlay ? `
     <div class="about-modal-section">
       <h3>How to Play</h3>
-      <p>One person hosts the server and screen-shares the board on a video call — Discord, Zoom, whatever you use. Everyone else opens the game on their phone, no download required. Enter the room code and pick your starter set to join.</p>
-      <p><strong style="color:var(--accent-pale)">Your turn:</strong> From round 2, collect Mana (5✦ plus your stationed summons' Gen, minus 1✦ upkeep per tile), then visit the shop to buy or sell one summon. Roll the dice and move around the 28-tile board. What happens next depends on where you land.</p>
-      <p><strong style="color:var(--accent-pale)">Empty tile:</strong> Station one of your hand summons to claim it by paying its deploy fee (6–10✦, the ✦ on the card). That tile now generates Mana for you each round.</p>
-      <p><strong style="color:var(--accent-pale)">Enemy tile:</strong> Fight! Pick one of your hand summons to attack. Damage is based on ATK vs DEF, modified by elemental type matchups — there are 6 types in a cycle, each strong against one and weak against another. A summon defending its own element's tile gets +15% ATK and DEF. Winner takes the tile; loser's summon is destroyed.</p>
-      <p><strong style="color:var(--accent-pale)">Special tiles:</strong> The Mana Well gives +40 Mana when you land on it. Roll doubles and you get a Wild Card at the end of your turn — one face-down card from each tier, buy one or pass. The Treasure Chest gives a random reward — a heal potion, a battle charm, a warp, or a free summon. At the Temple you offer one of your summons and pay 15✦, and it is answered with the powerful Ascendant of its element. The Healing Spring heals all your summons +10 HP for 10✦.</p>
-      <p><strong style="color:var(--accent-pale)">Winning:</strong> Two ways to win. Hold the most tiles when the round limit runs out — or be the last player standing. If you end your turn owning zero tiles (after round 1), you're eliminated. Last one standing wins immediately.</p>
-      <p><strong style="color:var(--accent-pale)">Sanctioned:</strong> Hit 0 Mana and you're Sanctioned, not out. You get no income and don't roll, but each turn you can place an Omen on a rival's tile, flip the Wheel of Fortune or Sacrifice on your own, or pay 15✦ once to Redeem and rejoin the game.</p>
+      <p>One person hosts and screen-shares the board on a video call (Discord, Zoom, whatever you use). Everyone else plays on their phone, with no download needed. Enter the room code and pick a starter set to join.</p>
+      <p>The goal of the game is to hold the most tiles when the round limit runs out, or be the last player standing. If you end your turn with no tiles (after round 1), you're eliminated.</p>
+      <p>Open ☰ → How to Play on your phone for the full rules.</p>
     </div>` : '';
 
   backdrop.innerHTML = `
@@ -561,15 +557,15 @@ function openAboutModal(showHowToPlay = true) {
       <div class="about-modal-eyebrow">About the Game</div>
       <div class="about-modal-title">Summoner's Gambit</div>
       <div class="about-modal-section">
-        <p>This game was born out of a few things, and if you clicked the about button, you probably want to know what they are.</p>
-        <p>The first was a lack of things I could actually do online with friends and family over Discord or a video call, quizzes only go so far. The second was board games. It always struck me that a proper board game as a videogame should just work, yet every game I came across made it near impossible to actually play with friends. The hardest part of any board game is convincing people to try it, and then you get gatekept by asking everyone to buy it. The third was simpler: I've always wanted to make a video game and just throw it out there. See if the idea would stick.</p>
-        <p>So here it is! my first, and hopefully not my last, board game: Summoner's Gambit. It's a bit of an abomination of past video games and board games I've loved, ideas taken and tweaked into something I hope is a unique and fun experience for a crew of friends or family to try in an afternoon.</p>
+        <p>This game was born out of a few things, and if you clicked the About button, you probably want to know what they are.</p>
+        <p>The first was a lack of things I could actually do online with friends and family over Discord or a video call. Quizzes only go so far. The second was board games. It always struck me that a proper board game should just work as a video game, yet every one I came across made it nearly impossible to play with friends. The hardest part of any board game is convincing people to try it, and then everyone has to buy it first. The third was simpler: I've always wanted to make a video game and put it out there, to see if the idea would stick.</p>
+        <p>So here it is! My first, and hopefully not my last, board game: Summoner's Gambit. It's a bit of an abomination of video games and board games I've loved, with ideas taken and tweaked into something I hope is a unique and fun afternoon for a crew of friends or family.</p>
       </div>
       ${howToPlayHTML}
       <div class="about-modal-section">
         <h3>Credits</h3>
-        <p>This game was vibe coded with Claude. I'm not a developer, I just have ideas, and Claude has made them a reality. The art is all AI generated via Comfy-UI with Kera2, animated with LTX 2.5 and Min Max H3. Sound was made with Claude and Yue2 via Comfy-UI. Without them I would not have been able to do any of this.</p>
-        <p>I'm not saying I don't need artists, or that I'd replace them with AI. I'm one person with no budget and very little time, and people with skills need to be paid. If I ever ask an artist to help, I want to be able to pay them. Without artists the world would be a pale shade of what it is, so if you find one you like, please go support them, it's ruff out there.</p>
+        <p>This game was vibe coded with Claude. I'm not a developer, I just have ideas, and Claude made them real. The art was all made with AI in ComfyUI using Krea 2, and animated with LTX 2.5 and MiniMax H3. The sound was made with Claude, and with Yue2 in ComfyUI. Without them I couldn't have done any of this.</p>
+        <p>I'm not saying I don't need artists, or that I'd replace them with AI. I'm one person with no budget and very little time, and people with skills need to be paid. If I ever ask an artist for help, I want to be able to pay them. Without artists the world would be a pale shade of what it is, so if you find one you like, please support them. It's ruff out there.</p>
         <p>That said, none of that is the point of this game. I just wanted to make something fun and share it. I hope you find some joy in it.</p>
       </div>
       <div class="about-modal-section">
@@ -624,7 +620,7 @@ const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Wat
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <img class="lobby-brand-logo" src="/img/logos/logo-main.webp" alt="Summoner's Gambit">
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.6.86 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.69</div>`;  // v0.6.31: Sound Settings moved to the bottom-left row
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.7.16 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.69</div>`;  // v0.6.31: Sound Settings moved to the bottom-left row
   splash.appendChild(brand);
 
   // ── Two panels
@@ -654,17 +650,14 @@ const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Wat
       <div class="lobby-qr-box"><div id="lobby-qr-canvas"></div></div>
       <div class="lobby-qr-hint">Point your phone camera at this code</div>
     </div>
-    <div class="lobby-count-ring">
-      <div class="lobby-count-num">${playerCount}<span style="font-size:20px;color:var(--text-dim);"> / 6</span></div>
-      <div class="lobby-count-sub">Players joined</div>
-    </div>`;
+    <div id="lobby-discord-slot" style="display:flex;justify-content:center;padding:8px 0 2px;"></div>`;   // v0.7.15: Discord replaces the "N / 6 joined" counter
   panels.appendChild(leftPanel);
 
   // Right: Player roster
   const rightPanel = document.createElement('div');
   rightPanel.className = 'lobby-panel';
   rightPanel.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;';
-  rightPanel.innerHTML = `<div class="lobby-panel-title">Players</div>`;
+  rightPanel.innerHTML = `<div class="lobby-panel-title" style="display:flex;justify-content:space-between;align-items:center;"><span>Players</span><span id="lobby-kofi-slot"></span></div>`;   // v0.7.15: Ko-fi top-right of the Players panel
 
   const grid = document.createElement('div');
   grid.className = 'lobby-slot-grid';
@@ -735,13 +728,14 @@ const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Wat
 
   // ── Ko-fi link — flush under right panel
   const kofiRow = document.createElement('div');
-  kofiRow.style.cssText = 'width:100%;max-width:960px;display:flex;justify-content:space-between;align-items:center;margin-top:4px;';
+  kofiRow.style.cssText = 'width:100%;max-width:960px;display:flex;justify-content:center;align-items:center;margin-top:4px;';   // v0.7.15: options only, centred
   const sndBtn = document.createElement('button');   // v0.6.31: Sound Settings bottom-left, opposite Ko-fi
   sndBtn.className = 'mute-btn'; sndBtn.id = 'mute-btn'; sndBtn.title = 'Sound settings';
   sndBtn.onclick = openAudioSettings;
-  sndBtn.style.cssText = 'width:auto;padding:0 14px;gap:6px;white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;font-size:14px;';
-  sndBtn.innerHTML = (_musicLvl()<=0 && _sfxLvl()<=0 ? '🔇' : '⚙') + '&nbsp;Sound Settings';
-  kofiRow.appendChild(sndBtn);
+  // v0.7.15: icon only, top-right corner just left of full screen
+  sndBtn.style.cssText = 'position:fixed;top:16px;right:62px;z-index:50;';
+  sndBtn.textContent = (_musicLvl()<=0 && _sfxLvl()<=0 ? '🔇' : '⚙');
+  splash.appendChild(sndBtn);
   const fsBtn = document.createElement('button');   // v0.6.43: Full screen
   fsBtn.className = 'mute-btn'; fsBtn.title = 'Full screen (F)'; fsBtn.onclick = toggleFullscreen;
   // v0.6.59: plain ⛶ button in the top-right corner (same as the game top bar), out of the Sound row so Start stays put
@@ -754,7 +748,25 @@ const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Wat
   kofiLink.target = '_blank';
   kofiLink.rel = 'noopener';
   kofiLink.textContent = '☕ Buy me a coffee';
-  kofiRow.appendChild(kofiLink);
+  // v0.7.13: Discord invite beside Ko-fi (logo file: /img/icons/discord.svg — falls back to text if missing)
+  const linkGroup = document.createElement('div');
+  linkGroup.style.cssText = 'display:inline-flex;align-items:center;gap:10px;flex-shrink:0;';
+  const discordLink = document.createElement('a');
+  discordLink.href = 'https://discord.gg/srFkrEqgSm';
+  discordLink.target = '_blank'; discordLink.rel = 'noopener';
+  discordLink.title = 'Join the Summoner\'s Gambit Discord';
+  // v0.7.16: same look as the ⚙ / ⛶ buttons (.mute-btn), white logo
+  discordLink.className = 'mute-btn';
+  discordLink.style.cssText = 'width:auto;height:38px;padding:0 14px;gap:8px;display:inline-flex;align-items:center;color:#fff;font:600 13px Inter,sans-serif;text-decoration:none;';
+  const dImg = document.createElement('img');
+  dImg.src = '/img/icons/discord.svg'; dImg.alt = 'Discord';
+  dImg.style.cssText = 'height:18px;width:auto;display:block;filter:brightness(0) invert(1);';   // v0.7.16: white
+  dImg.onerror = () => dImg.remove();
+  discordLink.appendChild(dImg);
+  discordLink.appendChild(document.createTextNode('Join our Discord'));
+  // v0.7.15: Discord under the QR code (left panel), Ko-fi in the Players panel header
+  leftPanel.querySelector('#lobby-discord-slot').appendChild(discordLink);
+  rightPanel.querySelector('#lobby-kofi-slot').appendChild(kofiLink);
   splash.appendChild(kofiRow);
   if (window.SGNews) { SGNews.mountTicker(newsSlot); SGNews.refresh(); }
 
@@ -829,7 +841,7 @@ const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Wat
     // v0.6.67: with Bot Speed showing, tighten the row so everything stays on one line (no wrapped labels)
     if (bsWrap.parentNode === optRow) { optRow.classList.add('lobby-opts-compact'); optRow.style.gap = '22px'; }
     kofiRow.style.alignItems = 'center';
-    kofiRow.insertBefore(optRow, kofiLink);
+    kofiRow.appendChild(optRow);   // v0.7.15: the row holds only the options now
   }
 
   // ── Start button (host only) / spectator waiting notice
@@ -900,7 +912,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.7.8</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.7.16</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -1409,7 +1421,7 @@ function renderPaper(){
     const _bh = _battleHold();
     const cs = (_bh && _chipLast[p.idx]) ? _chipLast[p.idx] : (_chipLast[p.idx] = { t: p.tileCount, h: p.handSize ?? 0, w: p.battlesWon ?? 0, l: p.battlesLost ?? 0, s: p.streak || 0, g: p.grudges || {} });
     const chip = document.createElement('div');
-    chip.className = 'player-chip' + (isActive ? ' active' : '');
+    chip.className = 'player-chip tp-fixed' + (isActive ? ' active' : '');   // v0.7.9: fixed 46 px (tile panel)
     chip.dataset.pidx = p.idx;
     if (isElim) chip.style.cssText = 'opacity:.38;filter:grayscale(.7);';
     const isSanc = !isElim && (p.idx in _sxChipHold ? _sxChipHold[p.idx] : !!p.sanctioned);   // v0.6.33 (v0.6.40: held during the moment)
@@ -1431,91 +1443,139 @@ function renderPaper(){
     // v0.6.10: rolling mana counter (holds the old number while the die/token is animating)
     if (window.BoardFX && !isElim) BoardFX.manaRoll(p.idx, chip.querySelector('.chip-mana-val'), (_fxBusy() || _bh || p.idx in _sxChipHold) ? null : p.mana);   // v0.6.41: held during the Sanction moment
   });
+  // v0.7.9: always 6 rows — open seats keep the tile panel the same size in every game
+  for (let i = G.players.length; i < 6; i++) {
+    const open = document.createElement('div');
+    open.className = 'player-chip tp-fixed tp-open';
+    open.innerHTML = '<div class="chip-dot"><span style="width:14px;height:14px;border-radius:50%;border:1.5px dashed rgba(169,123,64,.45)"></span></div><div class="chip-info"><div class="chip-name">Open seat</div><div class="chip-sub">&nbsp;</div></div>';
+    plist.appendChild(open);
+  }
   paper.appendChild(plist);
 
-  // Scroll area
-  const scroll = document.createElement('div');
-  scroll.className = 'paper-scroll';
-
-  if (selectedTile !== null) {
-    // Tile inspector
-    const back = document.createElement('button');
-    back.className = 'inspector-back';
-    back.textContent = '← Back to log';
-    back.onclick = () => { selectedTile = null; render(); };
-    scroll.appendChild(back);
-
-    const tile = G.board[selectedTile];
-    const isSpecial = tile.kind !== 'element';
-    const color = isSpecial ? '#c0392b' : (TYPE_COLOR[tile.element] || '#9397ab');
-    const label = tile.label || tile.element || tile.kind;
-
-    const box = document.createElement('div');
-    box.className = 'inspector-box';
-
-    let ownerHTML = '';
-    if (tile.ownerId !== null && tile.ownerId !== undefined) {
-      const owner = G.players.find(p => p.idx === tile.ownerId);
-      if (owner) ownerHTML = `<div style="font-size:11px;margin-bottom:4px;">Owned by <span style="color:${owner.color};font-weight:600;">${owner.name}</span></div>`;
-    }
-
-    let monsterHTML = '';
-    if (tile.summon) {
-      const m = tile.summon;
-      const isSupport = m.rarity === 'support';
-      const mc = isSupport ? '#9aabbc' : (TYPE_COLOR[m.type] || '#9397ab');
-      const pct = Math.max(0, m.hp / m.maxHp * 100).toFixed(0);
-      const supportLine = isSupport && m.supportDesc ? `<div style="font-size:9px;color:#9aabbc;margin-top:2px;">${m.supportDesc}</div>` : '';
-      monsterHTML = `
-        <div style="margin-top:8px;border-top:1px solid rgba(103,69,30,.2);padding-top:8px;">
-          <div class="inspector-summon-hdr">Stationed Summon</div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
-            <div style="width:32px;height:32px;border-radius:6px;overflow:hidden;flex-shrink:0;">${m.id ? summonImg(m.id,'-mini') : artSVG(m.type,32,32)}</div>
-            <div style="flex:1;">
-              <div style="font-size:12px;font-weight:600;color:${mc};">${m.name}</div>
-              <div style="font-size:10px;color:var(--parch-dim);">HP ${m.hp}/${m.maxHp} · ATK ${m.atk} · DEF ${m.def}</div>
-              ${supportLine}
-              <div style="height:4px;background:rgba(0,0,0,.1);border-radius:2px;margin-top:3px;overflow:hidden;">
-                <div style="height:100%;width:${pct}%;background:${mc};border-radius:2px;transition:width .3s;"></div>
-              </div>
-            </div>
-          </div>
-        </div>`;
-    }
-
-    box.innerHTML = `<div class="inspector-tile-num">Tile ${selectedTile}</div>
-      <div class="inspector-tile-name" style="color:${color};">${label}</div>
-      ${ownerHTML}${monsterHTML}`;
-    scroll.appendChild(box);
+  // v0.7.9: active tile panel (board-tilepanel.js) with Tile / Log tabs — TILE_PANEL_PLAN.md
+  const view = _tpView();
+  const head = document.createElement('div');
+  head.className = 'tp-head';
+  head.innerHTML = view.head;
+  paper.appendChild(head);
+  if (_tpTab === 'tile') {
+    paper.appendChild(_tpBody(view));
   } else {
-    // Event log
-    const elbl = document.createElement('div');
-    elbl.className = 'paper-lbl';
-    elbl.textContent = 'Event Log';
-    scroll.appendChild(elbl);
-
+    const scroll = document.createElement('div');
+    scroll.className = 'paper-scroll';
     if (!G.events || G.events.length === 0) {
-      const empty = document.createElement('div');
-      empty.style.cssText = 'font-size:11px;color:var(--parch-dim);font-style:italic;padding:4px 0;';
-      empty.textContent = 'No events yet.';
-      scroll.appendChild(empty);
+      scroll.innerHTML = '<div style="font-size:11px;color:var(--parch-dim);font-style:italic;padding:4px 0;">No events yet.</div>';
     } else {
-      // v0.6.64: only the latest few events, each at most 2 lines, no scrollbar — the log no longer
-      // grows and shrinks (that resized the side panel and made the board look like it was redrawing)
-      scroll.style.overflow = 'hidden';
-      G.events.slice(-7).reverse().forEach(ev => {
+      G.events.slice(-40).reverse().forEach(ev => {
         const row = document.createElement('div');
         row.className = 'log-row';
         const txt = typeof ev === 'string' ? ev : (ev.text || String(ev));
-        row.innerHTML = `<span class="log-icon">·</span><span class="log-text" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${txt}</span>`;
+        row.innerHTML = `<span class="log-icon">·</span><span class="log-text">${txt}</span>`;
         row.style.flexShrink = '0';
         scroll.appendChild(row);
       });
     }
+    paper.appendChild(scroll);
   }
-
-  paper.appendChild(scroll);
+  const tabs = document.createElement('div');
+  tabs.className = 'tp-tabs';
+  tabs.innerHTML = `<button class="${_tpTab === 'tile' ? 'on' : ''}" data-t="tile">Tile</button><button class="${_tpTab === 'log' ? 'on' : ''}" data-t="log">Log</button>`;
+  tabs.onclick = e => { const t = e.target.closest('button'); if (t && t.dataset.t !== _tpTab) { _tpTab = t.dataset.t; render(); } };
+  paper.appendChild(tabs);
+  _tpPulse(view.pos, view.col);
   return paper;
+}
+
+// ─── v0.7.9: active tile panel — which tile, header text, cached body, board pulse ───
+let _tpTab = 'tile';          // per screen; never switched automatically
+let _tpSelKey = null;         // phase key when a tile was clicked — snaps back when it changes
+let _tpLast = { pos: null, html: '', el: null, view: null };
+function _tpPhaseKey() { return `${G.phase}|${G.currentPlayer}|${G.turnCount}|${G.setupTurnIdx || 0}`; }
+function _tpReleaseManual() { selectedTile = null; _tpSelKey = null; render(); }
+function _tpView() {
+  const cp = G.players[G.currentPlayer] || G.players[0];
+  // v0.7.14: short status words; name trims with "…" so the header never wraps
+  const name = cp ? `<b style="color:${cp.color};overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto">${escHtml(cp.name)}</b>` : '';
+  const L = (txt) => `<span style="display:flex;gap:.3em;min-width:0;overflow:hidden;white-space:nowrap">${name}${txt ? `<span style="flex:0 0 auto">${txt}</span>` : ''}</span>`;
+  const isSetup = G.phase === 'setup';
+  const right = isSetup ? `Setup ${Math.min((G.setupTurnIdx || 0) + 1, G.setupTotalTurns || 1)} / ${G.setupTotalTurns || '?'}`
+                        : (G.round ? `Round ${G.round} / ${G.roundLimit || '?'}` : '');
+  const v = { pos: null, opts: { viewerIdx: G.currentPlayer }, col: cp ? cp.color : '#fff', patch: null, hold: false };
+  // tile click → that tile until the phase moves on
+  if (selectedTile === null) _tpSelKey = null;
+  if (selectedTile !== null) {
+    const k = _tpPhaseKey();
+    if (_tpSelKey === null) _tpSelKey = k;
+    if (_tpSelKey === k) {
+      v.pos = selectedTile;
+      v.head = `<span>Tile ${selectedTile}</span><button class="tp-follow" onclick="_tpReleaseManual()">Following ${cp ? escHtml(cp.name) : ''} ↩</button>`;
+      return v;
+    }
+    selectedTile = null; _tpSelKey = null;
+  }
+  let verb = 'Tile';
+  if (isSetup) {
+    const sp = G.setupPreview, last = G.setupLast;
+    if (sp && sp.idx === G.currentPlayer && sp.turn === (G.setupTurnIdx || 0) && sp.pos != null) {
+      v.pos = sp.pos; v.opts.setup = true;
+      if (sp.mon) v.patch = { summon: sp.mon, ownerId: null };
+    } else if (last) {
+      const lp = G.players[last.idx];
+      if (last.passed) { v.pos = (_tpLast.pos != null ? _tpLast.pos : null); v.opts.passed = lp ? lp.name : ''; v.opts.passedColor = lp && lp.color; }
+      else v.pos = last.pos;
+      if (lp && last.idx !== G.currentPlayer) { v.col = lp.color; }
+    }
+    v.head = `${L('· Setup')}<span style="flex:0 0 auto;white-space:nowrap">${right}</span>`;
+    if (v.pos == null) v.pos = _tpLast.pos;
+    return v;
+  }
+  if (G.phase === 'resolve:landing' && G.pendingLanding) {
+    const pp = G.pendingLanding.previewPos;
+    v.pos = pp != null ? pp : cp.position; verb = 'Choosing';
+  } else if (G.phase && G.phase.startsWith('sanction:') && G.sanction) {
+    const sx = G.sanction;
+    v.pos = sx.pickedPos != null ? sx.pickedPos : (sx.previewPos != null ? sx.previewPos : _tpLast.pos);
+    verb = 'Sanction';
+  } else if (G.phase === 'stalemate' && G.stalemateData) {   // v0.7.11: Contest choice (server v1.0.167)
+    v.pos = G.stalemateData.tilePos; verb = 'Contest';
+  } else {
+    const animating = boardTokenAnim && boardTokenAnim.playerIdx === G.currentPlayer;
+    v.pos = animating && _tpLast.pos != null ? _tpLast.pos : getEffectivePosition(G.currentPlayer);
+    if (animating) v.hold = true;
+  }
+  v.head = `${L(v.pos != null ? `· ${verb} ${v.pos}` : '')}<span style="flex:0 0 auto;white-space:nowrap">${right}</span>`;
+  return v;
+}
+function _tpBody(v) {
+  // battle outcome not shown yet → keep the panel as it was (owner / summon would give the result away)
+  if ((v.hold || _battleHold()) && _tpLast.el) return _tpLast.el;
+  let html;
+  if (v.pos == null || !G.board[v.pos]) {
+    html = '<div class="tp-hero tp-empty"><div class="tp-line">Waiting for a tile…</div></div>';
+  } else {
+    let g = G;
+    if (v.patch) { const board = G.board.slice(); board[v.pos] = Object.assign({}, G.board[v.pos], v.patch); g = Object.assign({}, G, { board }); }
+    html = TilePanel.html(g, v.pos, v.opts);
+  }
+  if (_tpLast.el && _tpLast.html === html) { _tpLast.pos = v.pos; return _tpLast.el; }   // same content → same element (animated art keeps playing)
+  const wrap = document.createElement('div');
+  wrap.className = 'tp-wrap';
+  wrap.innerHTML = html;
+  _tpLast = { pos: v.pos, html, el: wrap };
+  requestAnimationFrame(() => { try { TilePanel.fit(wrap); } catch (e) {} });
+  return wrap;
+}
+let _tpPulsed = null;
+function _tpPulse(pos, col) {
+  requestAnimationFrame(() => {
+    const el = pos != null ? _fxTile(pos) : null;
+    if (_tpPulsed && _tpPulsed !== el) _tpPulsed.classList.remove('tp-pulse', 'tp-static');
+    if (!el) { _tpPulsed = null; return; }
+    el.classList.add('tp-pulse');
+    el.classList.toggle('tp-static', !!(window.BoardFX && BoardFX.level === 'reduced'));
+    el.style.setProperty('--tp-col', col || '#fff');
+    _tpPulsed = el;
+  });
 }
 
 

@@ -32,25 +32,24 @@ function renderSetupInstructions(isMyTurn) {
        <p>The board shows every tile, who owns what, and where all the action is happening.</p>
        <div class="instr-tile-row">
          ${_demoTile}
-         <div class="instr-tile-caption">Every tile has a number. That number is how you target where you want to go.</div>
+         <div class="instr-tile-caption">Every tile has a number. Use it to find the tiles you can pick on your phone.</div>
        </div>
      </div>`,
 
     // Panel 1 — Setup & Game Play
     `<div class="setup-instr-title">Setup &amp; Game Play</div>
      <div class="setup-instr-body">
-       <p>Before the first roll, each player stations up to 3 summons on unclaimed elemental tiles, completely free.</p>
-       <p>On your turn, tap an open tile on the board ring, then pick a summon from your hand and tap <b>Claim</b>. A gold glow means that summon gets a home boost on the tile; red means weak ground.</p>
-       <p>Once setup is done, you'll roll to move each turn. Landing on a free tile lets you claim it. Landing on an enemy tile picks a fight.</p>
+       <p>Before the first roll, each player stations up to 3 summons on unclaimed elemental tiles, for free.</p>
+       <p>After setup, you roll each turn and choose one of 3 tiles to land on. Landing on a free tile lets you claim it. A gold glow on a card means it gets a home boost on that tile. Red means weak ground. Landing on an enemy tile starts a fight.</p>
      </div>`,
 
     // Panel 2 — The Game
     `<div class="setup-instr-title">The Game</div>
      <div class="setup-instr-body">
-       <p>You start with <strong>40✦ Mana</strong>. It's both your life force and your currency. It buys summons, heals fighters, and pays to claim tiles.</p>
-       <p>If your Mana hits zero, you're <strong>Sanctioned</strong>: no income, but you still get a Sanction turn and can buy your way back once with Redeem. Lose all your tiles and you're out. The last summoner standing wins outright.</p>
+       <p>You start with <strong>40✦ Mana</strong>. It's both your life force and your money. It buys summons, heals fighters and pays to claim tiles.</p>
+       <p>If your Mana hits zero, you're <strong>Sanctioned</strong>: no income, but you still get a Sanction turn, and once per game you can pay to Redeem and come back. Lose all your tiles and you're out. The last summoner standing wins outright.</p>
        <p>If the round limit runs out, the player with the most tiles takes the crown.</p>
-       <p>Tap the <strong>?</strong> button at the top of your screen any time to review the full rules and element matchups.</p>
+       <p>Open the <strong>☰</strong> menu and tap <strong>How to Play</strong> any time to see the full rules and the element wheel.</p>
      </div>`
   ];
 
@@ -82,6 +81,7 @@ function dismissSetupInstructions() {
   render();
 }
 
+let _tpSetupKey = null;   // v0.5.73: last setup_preview sent
 function renderSetup() {
   // v0.5.12: ring-based setup — pick an open tile on the ring, then a summon from the hand strip
   updateStatusBar(true);
@@ -94,6 +94,9 @@ function renderSetup() {
   }
   const sel = _setupCarouselIdx;
   const free = _isFreeTile(sel);
+  // v0.5.73: the board's tile panel follows the open tile you're on
+  const _tpKey = `${setupTurnKey}|${free ? sel : '-'}`;
+  if (_tpSetupKey !== _tpKey) { _tpSetupKey = _tpKey; send('setup_preview', { tilePos: free ? sel : null }); }
   const el = G.board[sel] && G.board[sel].element;
 
   updateHandStrip(true, {
@@ -153,7 +156,10 @@ function _setupClaimSlide(m) {
 }
 function openSetupClaimDetail(i) {
   if (!_isFreeTile(_setupCarouselIdx)) return;   // hand is greyed until an open tile is picked
-  openDetailSheet(myHand, i, _setupClaimAction, { title:`Claim Tile ${_setupCarouselIdx}`, renderItem: _setupClaimSlide });
+  openDetailSheet(myHand, i, _setupClaimAction, { title:`Claim Tile ${_setupCarouselIdx}`, renderItem: _setupClaimSlide,
+    // v0.5.73: the board's tile panel shows the summon you're looking at on that tile
+    onChange: m => send('setup_preview', { tilePos: _setupCarouselIdx, iid: m.iid }),
+    onClose: () => { if (G && G.phase === 'setup' && G.currentPlayer === myIdx && _isFreeTile(_setupCarouselIdx)) send('setup_preview', { tilePos: _setupCarouselIdx }); } });
 }
 function doSetupClaimTile(pos, iid) {
   SFX.claim && SFX.claim();
@@ -651,8 +657,8 @@ function _renderPersonalBattleResult(lb, isAttacker) {
 
   const cfg = {
     win:       { icon:'🏆', headline:'Victory!',  accent:'#5dc97d', glow:'rgba(93,201,125,0.15)',  sub:'You won the battle!' },
-    loss:      { icon:'💀', headline:'Defeated!', accent:'#e05252', glow:'rgba(224,82,82,0.15)',   sub:'Your summon was destroyed.' },
-    stalemate: { icon:'⚔️', headline:'Stalemate', accent:'#9184d9', glow:'rgba(145,132,217,0.15)', sub:'Both summons survived. Resolve next turn.' },
+    loss:      { icon:'💀', headline:'Defeated!', accent:'#e05252', glow:'rgba(224,82,82,0.15)',   sub: isAttacker ? 'Your summon was destroyed. You can contest the tile next turn.' : 'Your summon was destroyed.' },
+    stalemate: { icon:'⚔️', headline:'Stalemate', accent:'#9184d9', glow:'rgba(145,132,217,0.15)', sub: isAttacker ? 'Both summons survived. You can contest the tile next turn.' : 'Both summons survived.' },
     mutual:    { icon:'💥', headline:'Mutual!',   accent:'#e0b050', glow:'rgba(224,176,80,0.15)',  sub:'Both summons were destroyed.' },
   }[personalOutcome];
 

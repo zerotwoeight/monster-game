@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Summoners Gambit — Player v0.5.72</title>
+<title>Summoners Gambit — Player v0.5.75</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
@@ -52,84 +52,76 @@
         <div class="help-wheel-caption">Each element deals <strong style="color:#e8e4f4">2×</strong> damage to the next clockwise,<br>and <strong style="color:#e8e4f4">½×</strong> damage to the one before it.</div>
       </div>
 
-      <!-- Overview -->
+      <!-- v0.5.74: How to Play rewrite -->
       <div class="help-section">
-        <div class="help-s-title">Overview</div>
-        <div class="help-row"><span class="help-icon">✦</span><span>Collect <b style="color:var(--gold-glow)">Mana</b> at the start of every turn from round 2: 5 flat, plus your stationed summons' generation, minus 1✦ upkeep per tile you own. At 150✦ or more, income is halved.</span></div>
-        <div class="help-row"><span class="help-icon">🛒</span><span><b style="color:var(--text)">Shop</b> before rolling. Buy one summon, sell one from your hand, or skip.</span></div>
-        <div class="help-row"><span class="help-icon">🎲</span><span><b style="color:var(--text)">Roll</b> to move around the 28-tile board.</span></div>
-        <div class="help-row"><span class="help-icon">⚑</span><span><b style="color:var(--text)">Claim</b> empty tiles by deploying a summon from your hand: you pay its <b>deploy fee</b> (the ✦ on the card): Assailant or Vanguard 6✦, Guardian, Ascendant or Support 8✦, Rare 10✦. Swapping costs the same. The shop still charges the buy price.</span></div>
-        <div class="help-row"><span class="help-icon">⚔</span><span><b style="color:var(--text)">Battle</b> on enemy tiles. Win to claim them; lose and your summon is destroyed.</span></div>
-        <div class="help-row"><span class="help-icon">✋</span><span>Your <b style="color:var(--text)">Hand</b> holds up to 5 summons. A summon leaves your hand the moment it's stationed.</span></div>
+        <div class="help-s-title">Your Turn</div>
+        <div class="help-row"><span class="help-icon">✦</span><span><b style="color:var(--text)">Income</b>: from round 2 you collect Mana at the start of your turn. You get 5✦, plus the Gen of each summon you have stationed, minus 1✦ upkeep for each tile you own. At 150✦ or more, your income is halved.</span></div>
+        <div class="help-row"><span class="help-icon">🛒</span><span><b style="color:var(--text)">Shop</b>: before you roll you can buy one summon, sell one from your hand, or skip. Your hand holds up to 5 summons.</span></div>
+        <div class="help-row"><span class="help-icon">🎲</span><span><b style="color:var(--text)">Roll</b>: roll two dice, then pick one of 3 tiles to land on.</span></div>
+        <div class="help-row"><span class="help-icon">🎴</span><span><b style="color:var(--text)">Doubles</b>: if you roll doubles, you get a Wild Card at the end of your turn. There's one face-down card in each tier (Iron 5✦, Arcane 30✦, Gilded 60✦). Buy one without seeing it and turn it over, or skip.</span></div>
       </div>
-
-      <!-- Win Condition -->
       <div class="help-section">
-        <div class="help-s-title">Win Condition</div>
-        <div class="help-p">Two ways to win, and two ways to drop out:</div>
-        <div class="help-row"><span class="help-icon">🏆</span><span><b style="color:var(--text)">Most tiles</b>: the game ends after the round limit (10, 20 or 30 rounds, chosen in the lobby; setup doesn't count). The player with the most tiles wins. Mana breaks ties. Active players rank above Sanctioned players, who rank above eliminated ones.</span></div>
-        <div class="help-row"><span class="help-icon">⚔</span><span><b style="color:var(--text)">Last player standing</b>: if every other player is Sanctioned or eliminated, you win immediately without waiting out the rounds.</span></div>
-        <div class="help-row"><span class="help-icon">⛓</span><span><b style="color:var(--text)">Mana hits zero</b>: you're <b style="color:var(--text)">Sanctioned</b>, not out. See Sanctioned below.</span></div>
-        <div class="help-row"><span class="help-icon">💀</span><span><b style="color:var(--text)">No tiles</b>: if you end your own turn owning zero tiles (after round 1), you're eliminated. A Sanctioned player who loses their last tile is eliminated too.</span></div>
-        <div class="help-p" style="margin-top:4px">Tiles compound your income: more tiles means more Mana Gen per turn, which lets you buy stronger summons, which lets you take more tiles. Don't let yourself be wiped out!</div>
+        <div class="help-s-title">Where You Land</div>
+        <div class="help-row"><span class="help-icon">⚑</span><span><b style="color:var(--text)">Empty tile</b>: claim it by paying a summon's deploy fee, which is the ✦ on the card. Assailants and Vanguards cost 6✦; Guardians, Ascendants and Support cost 8✦; Rares cost 10✦. The shop still charges the buy price.</span></div>
+        <div class="help-row"><span class="help-icon">🏠</span><span><b style="color:var(--text)">Your own tile</b>: do one thing: Swap in a different summon (deploy fee), Heal 20 HP (5✦), Sacrifice the summon for +15✦ (the tile goes neutral), or Change the tile's element (18✦).</span></div>
+        <div class="help-row"><span class="help-icon">⚔</span><span><b style="color:var(--text)">Enemy tile</b>: fight or retreat. If you win, you take the tile. If you lose, your summon is destroyed.</span></div>
+        <div class="help-row"><span class="help-icon">🐾</span><span><b style="color:var(--text)">Wild monster</b>: nobody owns it. If you beat it, you claim the tile and get +4✦. If you lose, you pay 8✦ and it stays.</span></div>
       </div>
-
-      <!-- Battle -->
       <div class="help-section">
         <div class="help-s-title">Battle</div>
-        <div class="help-row"><span class="help-icon">⚔</span><span>Damage = <b style="color:var(--text)">(ATK − DEF) × type modifier + small roll</b>. Minimum 1.</span></div>
-        <div class="help-row"><span class="help-icon">🏰</span><span>A summon defending on its <b style="color:var(--text)">own element</b> tile gets <b style="color:var(--text)">+15% ATK &amp; DEF</b>. On a tile whose element beats it, it gets −15% DEF. Dual-element summons get the bonus if either type matches and are never weakened.</span></div>
-        <div class="help-row"><span class="help-icon">🔄</span><span>If the defender survives, they <b style="color:var(--text)">counter-strike</b> immediately.</span></div>
-        <div class="help-row"><span class="help-icon">🏳</span><span><b style="color:var(--text)">Retreat</b> before attacking to avoid the fight. Costs up to 8✦. If that drops your Mana to zero, you're Sanctioned. If you have no summons in hand you retreat automatically.</span></div>
-        <div class="help-row"><span class="help-icon">🤝</span><span><b style="color:var(--text)">Stalemate</b>: both survive. The attacker loses 4✦, the defender gains 4✦. On your next turn, choose <b style="color:var(--text)">Fight again</b> (your turn ends after) or <b style="color:var(--text)">Walk away</b> (pay up to 8✦, then shop and roll as normal).</span></div>
-        <div class="help-row"><span class="help-icon">✦</span><span><b style="color:var(--text)">Battle Mana swings</b>: every fight shifts Mana. Attacker wins: +4✦ attacker, −4✦ defender. Attacker loses or mutual: −8✦ attacker, +4✦ defender. Running out of Mana in a battle makes you Sanctioned.</span></div>
+        <div class="help-row"><span class="help-icon">⚔</span><span><b style="color:var(--text)">Damage</b>: your ATK minus their DEF, times the type modifier (minimum 1). When Battle Dice is on, both players roll: the black die is the hit you deal and the white die is the hit you take.</span></div>
+        <div class="help-row"><span class="help-icon">🏰</span><span><b style="color:var(--text)">Home ground</b>: a defender on a tile of its own element gets +15% ATK and DEF. A defender on a tile whose element beats it gets −15% DEF. Dual-element summons get the bonus if either type matches, and the penalty never applies to them.</span></div>
+        <div class="help-row"><span class="help-icon">🔄</span><span><b style="color:var(--text)">Counter-strike</b>: if the defender survives, it strikes back right away.</span></div>
+        <div class="help-row"><span class="help-icon">🏳</span><span><b style="color:var(--text)">Retreat</b>: skip the fight for up to 8✦. If you have no summons in your hand, you retreat automatically.</span></div>
+        <div class="help-row"><span class="help-icon">🤝</span><span><b style="color:var(--text)">Stalemate</b>: if both summons survive, the attacker loses 4✦ and the defender gains 4✦.</span></div>
+        <div class="help-row"><span class="help-icon">⚔️</span><span><b style="color:var(--text)">Contest</b>: if your turn starts on a tile with someone else's summon (you lost or stalemated there, or it was taken from under you), you can <b style="color:var(--text)">Contest</b> it for free: pick a summon and fight, and your turn ends after the fight. Or <b style="color:var(--text)">Skip</b> for free and play your turn as normal. Backing out of a contest costs the normal retreat.</span></div>
+        <div class="help-row"><span class="help-icon">✦</span><span><b style="color:var(--text)">Mana swings</b>: if the attacker wins, the attacker gets +4✦ and the defender loses 4✦. If the attacker loses, or both summons are destroyed, the attacker loses 8✦ and the defender gets +4✦.</span></div>
       </div>
-
-      <!-- Special Tiles -->
       <div class="help-section">
         <div class="help-s-title">Special Tiles</div>
-        <div class="help-row"><span class="help-icon">💧</span><span><b style="color:var(--text)">Mana Well</b>: +40 Mana when you land on it.</span></div>
-        <div class="help-row"><span class="help-icon">🎲</span><span><b style="color:var(--text)">Doubles</b>: roll doubles and you get a Wild Card at the end of your turn. One face-down card per tier (Iron 5✦, Arcane 30✦, Gilded 60✦): buy one blind and turn it over, or skip.</span></div>
-        <div class="help-row"><span class="help-icon">⛩</span><span><b style="color:var(--text)">Temple</b>: offer a summon to receive its element's Ascendant for 15✦ (see below).</span></div>
-        <div class="help-row"><span class="help-icon">❤</span><span><b style="color:var(--text)">Healing Spring</b>: pay 10✦ to heal all your summons, stationed and in your hand, +10 HP each.</span></div>
-        <div class="help-row"><span class="help-icon">📦</span><span><b style="color:var(--text)">Treasure Chest</b>: random reward: heal potion (45%), battle charm (25%), warp (15%), or a free summon (15%).</span></div>
+        <div class="help-row"><span class="help-icon">💧</span><span><b style="color:var(--text)">Mana Well</b>: +40✦.</span></div>
+        <div class="help-row"><span class="help-icon">📦</span><span><b style="color:var(--text)">Treasure Chest</b>: a random reward: heal potion (45%), Battle Charm (25%), Warp (15%) or a free summon (15%).</span></div>
+        <div class="help-row"><span class="help-icon">❤</span><span><b style="color:var(--text)">Healing Spring</b>: pay 10✦ to heal every summon you have, stationed or in your hand, by 10 HP.</span></div>
+        <div class="help-row"><span class="help-icon">⛩</span><span><b style="color:var(--text)">Temple</b>: offer a summon and pay 15✦ to get its element's Ascendant (see Temple Offerings).</span></div>
       </div>
-
-      <!-- Sanctioned (v0.5.43) -->
+      <div class="help-section">
+        <div class="help-s-title">Winning</div>
+        <div class="help-row"><span class="help-icon">🏆</span><span><b style="color:var(--text)">Most tiles</b>: the game ends after the round limit (10, 20 or 30 rounds; setup doesn't count). The player with the most tiles wins, and Mana breaks ties. Active players rank above Sanctioned players, and Sanctioned players rank above eliminated ones.</span></div>
+        <div class="help-row"><span class="help-icon">⚔</span><span><b style="color:var(--text)">Last player standing</b>: if every other player is Sanctioned or eliminated, you win right away.</span></div>
+        <div class="help-row"><span class="help-icon">⛓</span><span><b style="color:var(--text)">Mana hits zero</b>: you become Sanctioned, but you're not out.</span></div>
+        <div class="help-row"><span class="help-icon">💀</span><span><b style="color:var(--text)">No tiles</b>: if you end your own turn with no tiles (after round 1), you're eliminated. A Sanctioned player who loses their last tile is eliminated too.</span></div>
+        <div class="help-p" style="margin-top:4px">More tiles means more income, which buys stronger summons, which take more tiles.</div>
+      </div>
       <div class="help-section">
         <div class="help-s-title">Sanctioned</div>
-        <div class="help-p">When your Mana hits zero you're Sanctioned. You keep your tiles, summons and hand, but you get no income and you don't shop, roll or move. Your stationed summons still defend, and you still collect the defender's Mana from battles on your tiles.</div>
-        <div class="help-row"><span class="help-icon">🃏</span><span><b style="color:var(--text)">Sanction turn</b>: you're shown 3 random claimed tiles. Pick one, or pass.</span></div>
-        <div class="help-row"><span class="help-icon">🔮</span><span><b style="color:var(--text)">Rival's tile</b>: choose one of 3 Omens to place on it, a Blessing or a Curse that lasts one round.</span></div>
+        <div class="help-p">You keep your tiles, summons and hand, but you get no income and you don't shop, roll or move. Your stationed summons still defend, and you still collect defender Mana.</div>
+        <div class="help-row"><span class="help-icon">🃏</span><span><b style="color:var(--text)">Sanction turn</b>: you're shown 3 random claimed tiles. Pick one or pass.</span></div>
+        <div class="help-row"><span class="help-icon">🔮</span><span><b style="color:var(--text)">Rival's tile</b>: put one of 3 Omens on it. Omens are Blessings or Curses that last one round.</span></div>
         <div class="help-row"><span class="help-icon">🎡</span><span><b style="color:var(--text)">Your own tile</b>: Sacrifice the summon for its sell value, Redeem, or flip the Wheel of Fortune.</span></div>
-        <div class="help-row"><span class="help-icon">🌱</span><span><b style="color:var(--text)">Redeem</b>: pay 15✦ to return to normal play next turn with +5✦. Once per game, not in the final round, and you need at least one tile.</span></div>
-        <div class="help-row"><span class="help-icon">⚖</span><span><b style="color:var(--text)">Wheel of Fortune</b>: a tarot card moves the tile's Fortune meter up (Blessing) or down (Curse), up to 3 either way. Blessings boost the summon's DEF and defence rewards; Curses weaken it and pay whoever takes the tile. Flip at the cap for a +5✦ jackpot.</span></div>
+        <div class="help-row"><span class="help-icon">🌱</span><span><b style="color:var(--text)">Redeem</b>: pay 15✦ to rejoin play next turn with +5✦. You can only do this once per game, not in the final round, and you need at least one tile.</span></div>
+        <div class="help-row"><span class="help-icon">⚖</span><span><b style="color:var(--text)">Wheel of Fortune</b>: a tarot card moves the tile's Fortune up (Blessing) or down (Curse), up to 3 either way. A flip that lands on the side already at 3 pays a +5✦ jackpot.</span></div>
       </div>
-
-      <!-- Temple Trades -->
       <div class="help-section">
         <div class="help-s-title">Temple Offerings</div>
-        <div class="help-p">Land on the Temple and offer one summon from your hand:</div>
-        <div class="help-row"><span class="help-icon">1</span><span>Tap a summon to see the <b style="color:var(--text)">Ascendant of its element</b> it would become.</span></div>
-        <div class="help-row"><span class="help-icon">2</span><span>Pay <b style="color:var(--text)">15✦</b>. Your summon is given up and the Ascendant goes into your hand.</span></div>
-        <div class="help-row"><span class="help-icon">3</span><span>Rares, Support cards and Ascendants can't be offered. Or just leave, for free.</span></div>
-        <div class="help-p" style="margin-top:10px">Each Ascendant has a <b style="color:var(--gold-glow)">unique ability</b> and a usability condition that must be met before you can deploy it:</div>
-        <div class="help-row"><span class="help-icon" style="color:var(--el-Light)">✦</span><span><b style="color:var(--el-Light)">Ardent Saint</b>: Aura of Renewal. Condition: healed 2+ summons this game.</span></div>
-        <div class="help-row"><span class="help-icon" style="color:var(--el-Dark)">✦</span><span><b style="color:var(--el-Dark)">Succubus</b>: Mana Drain (steal 10✦ on win). Condition: have at least 40✦ Mana.</span></div>
-        <div class="help-row"><span class="help-icon" style="color:var(--el-Arcane)">✦</span><span><b style="color:var(--el-Arcane)">Arcane Arbiter</b>: Chaos Flux (when attacked, scrambles one of the attacker's tiles). Condition: changed 1+ tile to Arcane this game.</span></div>
-        <div class="help-row"><span class="help-icon" style="color:var(--el-Undead)">✦</span><span><b style="color:var(--el-Undead)">Demon Lord</b>: Last Rite (survive at 15 HP once). Condition: had 2+ summons destroyed in battle.</span></div>
-        <div class="help-row"><span class="help-icon" style="color:var(--el-Beast)">✦</span><span><b style="color:var(--el-Beast)">Red Dragon</b>: Intimidate (each adjacent enemy summon costs its owner 5✦ every turn). Condition: have 3+ summons stationed on board.</span></div>
-        <div class="help-row"><span class="help-icon" style="color:var(--el-Nature)">✦</span><span><b style="color:var(--el-Nature)">World Tree</b>: Deep Roots (+1 Gen per Nature tile owned). Condition: own 2+ Nature tiles.</span></div>
+        <div class="help-row"><span class="help-icon">1</span><span>Tap a summon to see the Ascendant of its element.</span></div>
+        <div class="help-row"><span class="help-icon">2</span><span>Pay 15✦. Your summon is given up and the Ascendant goes into your hand.</span></div>
+        <div class="help-row"><span class="help-icon">3</span><span>Rares, Support cards and Ascendants can't be offered. You can also leave for free.</span></div>
+        <div class="help-p" style="margin-top:10px">Each Ascendant needs its condition met before you can deploy it:</div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Light)">✦</span><span><b style="color:var(--el-Light)">Ardent Saint</b>: your other stationed summons heal 5 HP each turn. <i>Needs: healed 2+ summons.</i></span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Dark)">✦</span><span><b style="color:var(--el-Dark)">Succubus</b>: steals 10✦ when it wins an attack or causes a stalemate. <i>Needs: 40✦ or more.</i></span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Arcane)">✦</span><span><b style="color:var(--el-Arcane)">Arcane Arbiter</b>: when attacked, it scrambles one of the attacker's tiles. <i>Needs: changed 1+ tile to Arcane.</i></span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Undead)">✦</span><span><b style="color:var(--el-Undead)">Demon Lord</b>: survives at 15 HP once per game. <i>Needs: 2+ of your summons destroyed in battle.</i></span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Beast)">✦</span><span><b style="color:var(--el-Beast)">Red Dragon</b>: each enemy summon next to it costs its owner 5✦ every turn. <i>Needs: 3+ summons stationed.</i></span></div>
+        <div class="help-row"><span class="help-icon" style="color:var(--el-Nature)">✦</span><span><b style="color:var(--el-Nature)">World Tree</b>: +1 Gen for each Nature tile and Nature summon you have. <i>Needs: own 2+ Nature tiles.</i></span></div>
       </div>
-
-      <!-- Tips -->
       <div class="help-section">
         <div class="help-s-title">Tips</div>
-        <div class="help-row"><span class="help-icon">💡</span><span>Type advantage is a <b style="color:var(--text)">massive swing</b>: a 2× hit can eliminate most summons in one shot. Always check the element wheel before attacking.</span></div>
-        <div class="help-row"><span class="help-icon">💡</span><span>Landing on your <b style="color:var(--text)">own tile</b> lets you heal your stationed summon (5✦ for +20 HP) or sacrifice it for +15✦ Mana and the tile goes neutral. Use the sacrifice when you need Mana fast.</span></div>
-        <div class="help-row"><span class="help-icon">💡</span><span>A <b style="color:var(--text)">Battle Charm</b> from a Chest gives +25% damage for one fight: assign it to your strongest attacker or a summon about to face a tough defender.</span></div>
-        <div class="help-row"><span class="help-icon">💡</span><span>Sell summons you can't afford to deploy back at the shop for partial Mana. A damaged summon is worth less, so sell before they take hits.</span></div>
-        <div class="help-row"><span class="help-icon">💡</span><span>Guardians make great tile defenders. Assailants are cheap attackers that can swing battles on type advantage.</span></div>
+        <div class="help-row"><span class="help-icon">💡</span><span>A 2× type hit can take out most summons in one go, so check the wheel before you attack.</span></div>
+        <div class="help-row"><span class="help-icon">💡</span><span>Use Sacrifice on your own tile when you need Mana fast.</span></div>
+        <div class="help-row"><span class="help-icon">💡</span><span>A Battle Charm adds +25% to a summon's next strike. Give it to your best attacker.</span></div>
+        <div class="help-row"><span class="help-icon">💡</span><span>Damaged summons sell for less, so sell before they take hits.</span></div>
+        <div class="help-row"><span class="help-icon">💡</span><span>Guardians hold tiles well. Assailants are cheap hitters that win on type advantage.</span></div>
+        <div class="help-row"><span class="help-icon">💡</span><span>Clever player will notice that tiles claimed through force are free from strings ;)</span></div>
       </div>
 
     </div>
@@ -142,8 +134,8 @@
 <script src="/js/card.js?v=1.3"></script>
 <script src="/js/player-cards.js?v=0.5.71"></script>
 <script src="/js/player-render.js?v=0.5.72"></script>
-<script src="/js/player-shop-landing.js?v=0.5.71"></script>
-<script src="/js/player-setup-battle.js?v=0.5.71"></script>
+<script src="/js/player-shop-landing.js?v=0.5.75"></script>
+<script src="/js/player-setup-battle.js?v=0.5.75"></script>
 <script src="/js/player-menu-wildcards.js?v=0.5.71"></script>
 <script src="/js/player-battledice3d.js?v=1.0"></script>  <!-- v0.5.71: 3D battle dice roll (replaces player-battledice.js v1.0, kept on disk) -->
 </body>

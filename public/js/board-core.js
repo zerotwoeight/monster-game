@@ -206,7 +206,7 @@ const TYPE_ICON   = {Light:'✦',Dark:'◉',Arcane:'✶',Undead:'☠',Beast:'⚔
 const TYPE_WEAK   = {Light:'Nature',Dark:'Arcane',Arcane:'Undead',Undead:'Light',Beast:'Dark',Nature:'Beast'};
 const PHASE_LABELS = {
   lobby:'Lobby',setup:'Setup Phase',shop:'Shop Phase',roll:'Roll Phase',
-  'resolve:claim':'Claim Tile',stalemate:'Stalemate',
+  'resolve:claim':'Claim Tile',stalemate:'Contest?',
   'resolve:battle':'Battle!','resolve:own':'Own Tile',
   'resolve:chest':'Chest Opened','resolve:temple':'Temple',
   'resolve:heal_tile':'Healing Tile',game_over:'Game Over',

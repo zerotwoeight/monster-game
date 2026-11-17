@@ -155,6 +155,8 @@ function publicState() {
     setupRound: G.setupRound || 1,
     setupTurnIdx: G.setupTurnIdx || 0,
     setupTotalTurns: G.setupTotalTurns || 0,
+    setupPreview: G.setupPreview || null,   // v1.0.166 tile panel: {idx, turn, pos, monId, mon}
+    setupLast: G.setupLast || null,         // v1.0.166 tile panel: {seq, idx, pos, passed}
     bonusRuns: getBonusRuns(),
     monoElementBonus: getMonoElementBonus(),
     turnSummary: G.turnSummary || null,

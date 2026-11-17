@@ -1,4 +1,4 @@
-// Summoner's Gambit server · 11-bots.js · Bots (v1.0.142; v1.0.143 waits for the board's animations)
+// Summoner's Gambit server · 11-bots.js · Bots (v1.0.142; v1.0.143 waits for the board's animations; v1.0.167 Contest)
 // Loaded last by server.js. Shares the global scope with the other parts.
 //
 // A bot is a normal seat (p.isBot, p.botId) with no phone. After every broadcast the server checks
@@ -308,12 +308,7 @@ function botDecide(p) {
     case 'resolve:claim': return botClaim(p);
     case 'resolve:own': return botOwn(p);
     case 'resolve:battle': return botBattle(p);
-    case 'stalemate': {
-      const sd = G.stalemateData, tile = sd && G.board[sd.tilePos];
-      const b = tile && tile.summonInstance ? botBestAttacker(p, tile) : null;
-      if (b && b.ev > -8) return botDo(p, 'stalemate_fight');
-      return botDo(p, 'stalemate_continue');
-    }
+    case 'stalemate': return botContest(p);   // v1.0.167: Contest or Skip
     case 'resolve:temple': return botTemple(p);
     case 'resolve:chest': return botChest(p);
     case 'resolve:heal_tile': {
@@ -499,12 +494,33 @@ function botOwn(p) {
   return botDo(p, 'skip_own');
 }
 
+// v1.0.167: Contest — fight for the tile I'm standing on (free, but it costs my move this turn) or Skip (free).
+// Same odds as a landing battle (botFightValue already leans on each bot's aggression); the bar depends on
+// difficulty, and the easy bots are swayed by pride and coin flips. Dumber bots make dumber choices.
+function botContest(p) {
+  const sd = G.stalemateData, tile = sd && G.board[sd.tilePos];
+  const b = tile && tile.summonInstance ? botBestAttacker(p, tile) : null;
+  if (!b) return botDo(p, 'stalemate_continue');
+  const w = _w(p);
+  // the bar to beat: a contest gives up this turn's shop + roll, which is worth about this much
+  let bar = _hard(p) ? 6 : _easy(p) ? -2 : 3;
+  if (!_easy(p) && p.mana <= 8) bar += 10;                              // a loss (−8✦) would Sanction me
+  if (!_hard(p) && tile.ownerId != null && p.grudges && p.grudges[tile.ownerId] > 0) bar -= 5;   // pride: they beat me
+  if (w.gamble) bar -= 4;                                                // Sid can't resist
+  if (_blunder(p)) return botDo(p, Math.random() < 0.5 ? 'stalemate_fight' : 'stalemate_continue');
+  if (b.ev > bar) { p._botContestTurn = G.turnCount; return botDo(p, 'stalemate_fight'); }
+  return botDo(p, 'stalemate_continue');
+}
+
 function botBattle(p) {
   const t = G.board[p.position];
   if (!p.hand.length) return botDo(p, 'retreat');
   // v1.0.143: once an attacker is shown on the board, strike with it (Easy bots used to re-roll the choice and flip back and forth)
   const shown = G.pendingAttackerSummon && p.hand.find(m => m.iid === G.pendingAttackerSummon.iid);
   if (shown) return botDo(p, 'attack', { iid: shown.iid });
+  // v1.0.167: I chose to contest this turn — don't pay to back out of my own decision
+  if (p._botContestTurn === G.turnCount) { const bc = botBestAttacker(p, t);
+    if (bc) return BOT_SPEEDS[G.botSpeed || 'normal'] !== 0 ? (botDo(p, 'preview_attacker', { iid: bc.m.iid }) || true) : botDo(p, 'attack', { iid: bc.m.iid }); }
   const b = botBestAttacker(p, t);
   const retreatV = -Math.min(8, p.mana) - (p.mana <= 8 ? 20 : 0);
   if (!b || b.ev < retreatV) {

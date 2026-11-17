@@ -849,6 +849,9 @@ function openLandingDetail(i) {
     title: 'Choose Destination',
     renderItem: _tileDetailBody,
     colorOf: _tileColor,
+    // v0.5.73: the board's tile panel follows the option you're looking at
+    onChange: pos => send('landing_preview', { tilePos: pos }),
+    onClose: () => { if (G && G.phase === 'resolve:landing' && G.currentPlayer === myIdx) send('landing_preview', { tilePos: null }); },
   });
 }
 
@@ -866,20 +869,26 @@ function doChooseLanding(tilePos) {
   send('choose_landing', { tilePos });
 }
 
-// ─── STALEMATE ──────────────────────────────────────────────────────────────
-// stalemateTab: 'attack' | 'buy' | 'sell'
+// ─── CONTEST (v0.5.75 · server v1.0.167) ─────────────────────────────────────
+// Start your turn standing on a tile that holds someone else's summon (you lost or stalemated there, or it was
+// taken from under you) → Contest for free (fight; your turn ends after) or Skip for free (shop and roll as normal).
+// Phase is still 'stalemate' on the server; stalemateData = { tilePos, contest, wasStalemate, wild }.
 function renderStalemate() {
   const me = G.players[myIdx];
   updateStatusBar(true);
   updateHandStrip(false);
   document.getElementById('main-content').classList.add('no-hand');
 
-  const sd = G.stalemateData;
-  const tile = G.board[sd?.tilePos ?? me.position];
+  const sd = G.stalemateData || {};
+  const tile = G.board[sd.tilePos ?? me.position];
   const defM = tile?.summon;
   const defOwner = (tile?.ownerId != null) ? G.players.find(p => p.idx === tile.ownerId) : null;
   const elColor = TYPE_COLOR[tile?.element] || 'var(--accent)';
-  const hasHand = myHand.length > 0;
+  const hasHand = myHand.some(m => m.hp > 0);
+
+  const why = sd.wasStalemate ? 'Your last battle here was a stalemate.'
+            : !defOwner        ? 'A wild monster holds this tile.'
+            : `${defOwner.name} holds this tile.`;
 
   const handCards = myHand.length
     ? myHand.map(m => renderCard(m, { size:'full', showCost:false })).join('')
@@ -887,20 +896,20 @@ function renderStalemate() {
 
   document.getElementById('main-content').innerHTML = `
     <div class="resolve-banner battle">
-      <span class="resolve-icon">🤝</span>
+      <span class="resolve-icon">⚔️</span>
       <div>
-        <div class="resolve-title">Stalemate!</div>
-        <div class="resolve-sub">Both summons survived the last battle.</div>
+        <div class="resolve-title">Contest Tile ${tile ? tile.pos : ''}?</div>
+        <div class="resolve-sub">${why}</div>
       </div>
     </div>
 
     <div style="padding:0 16px 4px;">
-      <div style="font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;margin-bottom:10px;">Contested Tile</div>
+      <div style="font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-mute);font-family:'Cinzel',serif;margin-bottom:10px;">The Tile You're On</div>
       <div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--surface);border-radius:12px;border:1px solid ${elColor}55;">
         ${renderPlayerTileCard(tile)}
         <div style="flex:1;min-width:0;">
           ${defM ? renderCard(defM, { size:'full', showCost:false }) : `<div style="color:var(--text-mute);font-size:12px;">No summon</div>`}
-          ${defOwner ? `<div style="font-size:11px;color:${defOwner.color};font-weight:600;margin-top:5px;">${defOwner.name}'s summon</div>` : ''}
+          <div style="font-size:11px;color:${defOwner ? defOwner.color : 'var(--text-mute)'};font-weight:600;margin-top:5px;">${defOwner ? defOwner.name + "'s summon" : 'Wild monster'}</div>
         </div>
       </div>
     </div>
@@ -912,9 +921,9 @@ function renderStalemate() {
     </div>
 
     <div style="padding:12px 16px 0;font-size:12px;color:var(--text-dim);line-height:1.5;">
-      ${hasHand
-        ? '⚔️ <strong style="color:var(--text)">Battle Again</strong> — fight fresh, this uses your turn.<br>🚶 <strong style="color:var(--text)">Continue On</strong> — retreat for <span style="color:var(--gold-glow)">8✦</span>, then shop as normal.'
-        : '🚶 You have no summons in hand. You must <strong style="color:var(--text)">Continue On</strong> (costs <span style="color:var(--gold-glow)">8✦</span>).'}
+      ⚔️ <strong style="color:var(--text)">Contest</strong> (free): pick a summon and fight for this tile. Your turn ends after the fight: no shop, no roll.
+      Backing out at the battle screen costs the normal retreat (up to <span style="color:var(--gold-glow)">8✦</span>).<br>
+      🚶 <strong style="color:var(--text)">Skip</strong> (free): shop and roll as normal.
     </div>`;
 
   attachShopScrollListener('stalemate-hand-scroll','stalemate-hand-dot',myHand.length);
@@ -922,9 +931,9 @@ function renderStalemate() {
   const ab = document.getElementById('action-bar');
   ab.classList.add('visible');
   ab.innerHTML = hasHand
-    ? `<button class="action-btn secondary" onclick="doStalemateContinue()">Continue (8✦)</button>
-       <button class="action-btn primary" onclick="doStalemateFight()">⚔️ Battle Again</button>`
-    : `<button class="action-btn primary" onclick="doStalemateContinue()">Continue On (8✦)</button>`;
+    ? `<button class="action-btn secondary" onclick="doStalemateContinue()">Skip</button>
+       <button class="action-btn primary" onclick="doStalemateFight()">⚔️ Contest</button>`
+    : `<button class="action-btn primary" onclick="doStalemateContinue()">Skip</button>`;
 }
 
 // ─── CLAIM ──────────────────────────────────────────────────────────────────

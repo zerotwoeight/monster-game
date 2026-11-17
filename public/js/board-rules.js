@@ -13,11 +13,13 @@ const RR_PAGES = [
     ['⚔', '<b>Enemy tile</b>: battle for it, or retreat for up to 8✦.'],
     ['💧', '<b>Mana Well</b> +40✦ · <b>Chest</b> random reward · <b>Healing Spring</b> 10✦ heals all your summons +10 HP · <b>Temple</b> offer a summon (15✦) to receive its element\'s Ascendant.'] ] },
   { k: 'Fighting', t: 'Battles', items: [
-    ['⚔', '<b>Damage</b> = ATK minus DEF, times the type modifier, plus a small roll. Minimum 1.'],
+    ['⚔', '<b>Damage</b> = ATK minus DEF, times the type modifier. Minimum 1.'],
+    ['🎲', '<b>Battle dice</b> (when on): each side rolls a black die (the hit you deal, ×0.5 to ×1.5) and a white die (the hit you take, ×1.25 to ×0.6). When off, damage gets a small +0 to 3 roll instead.'],
     ['🔄', 'If the defender survives, it <b>counter-strikes</b>.'],
     ['🏰', '<b>Home ground</b>: a defender on its own element gets +15% ATK and DEF. On a tile that beats it, −15% DEF.'],
     ['✦', '<b>Mana</b>: attacker wins +4✦ (defender −4✦). Attacker loses or both fall: attacker −8✦, defender +4✦.'],
-    ['🤝', '<b>Stalemate</b>: both survive. Next turn, fight again or walk away (up to 8✦).'] ] },
+    ['🤝', '<b>Stalemate</b>: both survive. Attacker −4✦, defender +4✦.'],
+    ['⚔', '<b>Contest</b>: start your turn on a tile with someone else\'s summon (you lost or stalemated there, or it was taken)? Contest it for free (your turn ends after the fight) or skip for free.'] ] },
   { k: 'Who beats who', t: 'Element Wheel', wheel: true, items: [   // v0.6.53: same wheel as the phone's help sheet
     ['➜', 'Each element deals <b>2× damage</b> to the next one clockwise.'],
     ['↺', 'It takes <b>½× damage</b> from the one before it.'],
