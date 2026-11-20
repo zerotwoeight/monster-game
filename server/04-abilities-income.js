@@ -546,7 +546,7 @@ function drawChestReward() {
     else                 { tier = 'Full';  healVal = 'full'; }
     return { kind:'potion', tier, healVal, icon:'🧪', rarity:'Common' };
   } else if (r < 0.70) {
-    return { kind:'charm', icon:'⚡', rarity:'Uncommon' };
+    return { kind:'charm', icon:'\uE007', rarity:'Uncommon' };  // v1.0.172: Battle Charm icon via icons.js (was ⚡)
   } else if (r < 0.85) {
     return { kind:'warp',  icon:'🌀', rarity:'Rare' };
   } else {

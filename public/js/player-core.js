@@ -2,7 +2,7 @@
 
 // ─── CONSTANTS ─────────────────────────────────────────────────────────────
 const TYPE_WEAK   = {Light:'Nature',Dark:'Arcane',Arcane:'Undead',Undead:'Light',Beast:'Dark',Nature:'Beast'};
-const TYPE_ICON   = {Light:'✦',Dark:'◉',Arcane:'✶',Undead:'☠',Beast:'⚔',Nature:'❧'};
+const TYPE_ICON   = {Light:'\uE004',Dark:'\uE005',Arcane:'\uE006' /* v0.7.20 / v0.5.79: Light / Dark / Arcane icons via icons.js (were ✦ ◉ ✶; ✦ is Mana) */,Undead:'\uE002' /* v0.7.18 / v0.5.77: Undead icon via icons.js (was ☠) */,Beast:'\uE001' /* v0.7.17 / v0.5.76: claw icon via icons.js (was ⚔) */,Nature:'\uE003' /* Nature icon via icons.js (was ❧) */};
 const PLAYER_COLORS = ['#e05252','#5ca8e0','#5dc97d','#e0b050','#c07fd8','#60cdc0'];
 
 // ─── AUDIO SETTINGS (v0.5.16) — per-phone, saved in this browser ─────────────

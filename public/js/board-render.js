@@ -251,7 +251,7 @@ function _fxDiff() {
       const ch = snap.chest, pos = ch.tilePos ?? (cur ? cur.position : 7);
       const RC = { Common: '#9aabbc', Uncommon: '#5dc97d', Rare: '#c07fd8' };
       const info = ch.kind === 'potion' ? { icon: '🧪', title: `${ch.tier} Potion` }
-        : ch.kind === 'charm' ? { icon: '⚡', title: 'Battle Charm' }
+        : ch.kind === 'charm' ? { icon: '\uE007', title: 'Battle Charm' } /* v0.7.21 charm icon */
         : ch.kind === 'warp' ? { icon: '🌀', title: 'Warp' }
         : { icon: '🎁', title: ch.summon ? `Free Summon · ${ch.summon.name}` : 'Free Summon' };
       _fxQ.push(() => { BoardFX.chest(_fxTile(pos), { ...info, sub: ch.rarity || '', color: RC[ch.rarity] || '#c9a05a' }); SFX.chestOpen(); });
@@ -620,7 +620,7 @@ const SET_NAMES = {A:'The Cabal',B:'The Warpack',C:'The Order',D:'The Arcane Wat
   brand.className = 'lobby-brand';
   brand.innerHTML = `
     <img class="lobby-brand-logo" src="/img/logos/logo-main.webp" alt="Summoner's Gambit">
-    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.7.16 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.69</div>`;  // v0.6.31: Sound Settings moved to the bottom-left row
+    <div class="lobby-brand-sub"><button class="about-inline-btn" onclick="openAboutModal(true)">About</button> &nbsp;·&nbsp; Host View &nbsp;·&nbsp; Lobby &nbsp;·&nbsp; v0.7.25 &nbsp;·&nbsp; srv ${G.serverVersion||'?'} &nbsp;·&nbsp; player v0.5.83</div>`;  // v0.6.31: Sound Settings moved to the bottom-left row
   splash.appendChild(brand);
 
   // ── Two panels
@@ -912,7 +912,7 @@ function renderGame(app){
   tb.innerHTML = `
     <div class="logo">⚔️</div>
     <div class="room-block">
-      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.7.16</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
+      <span class="room-lbl">Board <span style="color:var(--text-mute);font-size:8px;letter-spacing:.1em;">· v0.7.25</span> <span style="color:var(--text-mute);font-size:8px;letter-spacing:.05em;">srv ${G.serverVersion||'?'}</span></span>
       <span class="room-code" style="color:var(--accent-lit);">${G.roomCode || '????'}</span>
     </div>
     <div class="tb-center">
@@ -926,7 +926,7 @@ function renderGame(app){
         <span class="roll-val">${lastRoll != null ? lastRoll : '—'}</span>
       </div>
       <div class="vdiv"></div>
-      <button class="mute-btn" id="rules-btn" onclick="openRulesRecap()" title="Rules recap (R)" style="font-family:'Cinzel',serif;font-size:13px;width:auto;padding:0 12px;font-weight:700;letter-spacing:.06em">📜 Rules</button>
+      <button class="mute-btn" id="rules-btn" onclick="openRulesRecap()" title="Rules recap (R)" style="font-family:'Cinzel',serif;font-size:13px;width:auto;padding:0 12px;font-weight:700;letter-spacing:.06em;display:inline-flex;align-items:center"><span style="font-size:18px;line-height:1;margin-right:7px;display:inline-flex">📜</span>Rules</button><!-- v0.7.23 bigger scroll + 7px gap -->
       <div class="vdiv"></div>
       <button class="mute-btn" id="fs-btn" onclick="toggleFullscreen()" title="Full screen (F)">⛶</button>
       <div class="vdiv"></div>
